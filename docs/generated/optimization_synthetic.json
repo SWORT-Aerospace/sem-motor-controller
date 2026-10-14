@@ -1,0 +1,193 @@
+{
+ "label": "SYNTHETIC",
+ "t_max_s": 1000.0,
+ "reserve_s": 30.0,
+ "track_m": 6000.0,
+ "grid_convergence": [
+  {
+   "ds_m": 20.0,
+   "dv_mps": 0.4,
+   "dp_energy_J": 39778.00758036555,
+   "dp_time_s": 967.7010417242626,
+   "feasible": true,
+   "lambda": 48.99808615446091,
+   "solve_s": 5.651866436004639,
+   "realized_energy_J": 39761.25285355716,
+   "realized_time_s": 970.3999999996652
+  },
+  {
+   "ds_m": 10.0,
+   "dv_mps": 0.2,
+   "dp_energy_J": 39593.03028028444,
+   "dp_time_s": 969.6798978490121,
+   "feasible": true,
+   "lambda": 45.03486752510071,
+   "solve_s": 12.890273332595825,
+   "realized_energy_J": 39588.36869133325,
+   "realized_time_s": 975.4999999996605
+  },
+  {
+   "ds_m": 5.0,
+   "dv_mps": 0.1,
+   "dp_energy_J": 39707.59271805366,
+   "dp_time_s": 965.2597953458334,
+   "feasible": true,
+   "lambda": 43.88289600610733,
+   "solve_s": 31.60517191886902,
+   "realized_energy_J": 39715.355482834304,
+   "realized_time_s": 964.8499999996702
+  }
+ ],
+ "grid_rel_change_last": 0.002885151930077455,
+ "comparison": {
+  "constant_speed": {
+   "energy_J": 55100.56160734085,
+   "time_s": 969.9999999996655,
+   "finished": true,
+   "accel_events": 5,
+   "brake_energy_J": 13176.295655964628,
+   "params": {
+    "v_set_mps": 5.994155623018742
+   }
+  },
+  "pulse_and_coast_best_of_6": {
+   "energy_J": 46228.86456708533,
+   "time_s": 969.9999999996655,
+   "finished": true,
+   "accel_events": 21,
+   "brake_energy_J": 7168.786785811881,
+   "params": {
+    "band_center_mps": 5.927267074584961,
+    "band_width_mps": 2.0,
+    "pulse_torque_Nm": 1.0
+   }
+  },
+  "dp_schedule": {
+   "energy_J": 39715.355482834304,
+   "time_s": 964.8499999996702,
+   "finished": true,
+   "accel_events": 22,
+   "brake_energy_J": 4855.408310792238,
+   "params": {
+    "ds_m": 5.0,
+    "dv_mps": 0.1
+   }
+  },
+  "dp_schedule_with_pace": {
+   "energy_J": 41673.492768897384,
+   "time_s": 965.3499999996698,
+   "finished": true,
+   "accel_events": 17,
+   "brake_energy_J": 4963.862732802865,
+   "params": {
+    "pace_k": 0.05,
+    "pace_bound_Nm": 0.3
+   }
+  }
+ },
+ "robustness": {
+  "nominal": {
+   "dp_no_pace": {
+    "energy_J": 39715.4,
+    "time_s": 964.8,
+    "finished": true
+   },
+   "dp_with_pace": {
+    "energy_J": 41673.5,
+    "time_s": 965.3,
+    "finished": true
+   },
+   "constant_speed": {
+    "energy_J": 55100.6,
+    "time_s": 970.0,
+    "finished": true
+   }
+  },
+  "crr+20%": {
+   "dp_no_pace": {
+    "energy_J": 39980.4,
+    "time_s": 1037.6,
+    "finished": true
+   },
+   "dp_with_pace": {
+    "energy_J": 49591.9,
+    "time_s": 965.4,
+    "finished": true
+   },
+   "constant_speed": {
+    "energy_J": 57714.9,
+    "time_s": 972.3,
+    "finished": true
+   }
+  },
+  "cda+20%": {
+   "dp_no_pace": {
+    "energy_J": 39782.1,
+    "time_s": 988.5,
+    "finished": true
+   },
+   "dp_with_pace": {
+    "energy_J": 44942.7,
+    "time_s": 965.2,
+    "finished": true
+   },
+   "constant_speed": {
+    "energy_J": 55879.0,
+    "time_s": 970.9,
+    "finished": true
+   }
+  },
+  "mass+5%": {
+   "dp_no_pace": {
+    "energy_J": 39883.0,
+    "time_s": 1005.0,
+    "finished": true
+   },
+   "dp_with_pace": {
+    "energy_J": 45834.2,
+    "time_s": 965.2,
+    "finished": true
+   },
+   "constant_speed": {
+    "energy_J": 56904.7,
+    "time_s": 970.2,
+    "finished": true
+   }
+  },
+  "crr-20%": {
+   "dp_no_pace": {
+    "energy_J": 39562.8,
+    "time_s": 927.2,
+    "finished": true
+   },
+   "dp_with_pace": {
+    "energy_J": 41222.6,
+    "time_s": 965.5,
+    "finished": true
+   },
+   "constant_speed": {
+    "energy_J": 52521.7,
+    "time_s": 967.8,
+    "finished": true
+   }
+  },
+  "headwind 2 m/s": {
+   "dp_no_pace": {
+    "energy_J": 40080.9,
+    "time_s": 1056.0,
+    "finished": true
+   },
+   "dp_with_pace": {
+    "energy_J": 50055.2,
+    "time_s": 965.4,
+    "finished": true
+   },
+   "constant_speed": {
+    "energy_J": 58009.5,
+    "time_s": 974.2,
+    "finished": true
+   }
+  }
+ },
+ "schedule_csv": "build/schedules/dp_schedule_synthetic.csv"
+}

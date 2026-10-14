@@ -1,0 +1,11 @@
+# Pinned CSIA core used by host/csia_adapter. NOT vendored: fetched at this exact
+# commit by tools/fetch_csia.py into .deps/ (git-ignored).
+repository = https://github.com/SWORT-Aerospace/csia-trust-layer
+commit = 848f5563a528ae5ca3c2d3883c86d7287d6a4585
+version = 0.8.0
+license = Proprietary (SWORT LLC). Evaluation/internal assessment only; "No redistribution,
+          sublicensing, production deployment, or use in safety-critical operations without a
+          written commercial license from SWORT LLC." (LICENSE at the pinned commit)
+used_api = csia.trust_engine.engine.TrustCore, EngineConfig  (numpy-only import path)
+not_used = csia.native (double-precision C kernel; not on any production path per its own
+           docs/embedded/NATIVE_RUNTIME_STATUS.md), aircraft trust graph, runtime service
