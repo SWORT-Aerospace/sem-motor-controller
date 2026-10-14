@@ -1,0 +1,142 @@
+# Parameter registry — SINGLE SOURCE OF TRUTH for vehicle/controller configuration.
+#
+# tools/gen_config.py generates from this file:
+#   config/vehicle.schema.json                       (structure of vehicle.*.yaml)
+#   firmware/include/semmc/mc_params_generated.h     (C parameter ids + ranges)
+#
+# Units are SI unless the name says otherwise (degC is explicit in the name).
+# Conventions (validated in every config, see `conventions:` block):
+#   battery current  > 0 : discharge (out of the battery, into the controller)
+#   phase current    > 0 : into the motor terminal
+#   torque           > 0 : forward motoring
+#   Clarke transform     : amplitude-invariant (dq magnitude = phase peak)
+#   resistance/inductance: line-to-neutral (star-equivalent) per phase
+#   flux linkage         : peak per-phase PM flux, amplitude-invariant,
+#                          T = 1.5 * p * (lambda * iq + (Ld - Lq) * id * iq)
+#
+# Field meanings:
+#   id        stable numeric id in the calibration blob (never reuse an id)
+#   path      dotted path in vehicle.*.yaml
+#   kind      real | int | bool | enum
+#   min/max   inclusive physical plausibility bounds (NOT design limits)
+#   req_sim   required (non-null) for a host simulation build
+#   req_hw    required (non-null) for a hardware-enabled build
+#
+# Bounds are deliberately wide: they reject typos / unit errors (e.g. mH typed
+# as H), not engineering choices. Engineering consistency is checked by the
+# cross-parameter rules in tools/config_tool.py and firmware mc_config.c.
+
+enums:
+  provenance:      {unset: 0, synthetic: 1, bench_measured: 2}
+  motor_type:      {unknown: 0, pmsm_sinusoidal: 1, bldc_trapezoidal: 2, brushed_dc: 3, induction: 4}
+  rotor_sensor:    {unknown: 0, hall: 1, encoder: 2, none: 3}
+  chemistry:       {unknown: 0, li_ion_nmc: 1, li_ion_lfp: 2, li_ion_nca: 3, other: 4}
+  category:        {unknown: 0, prototype: 1, urban_concept: 2}
+  coast_mode:      {zero_current: 0, gate_off: 1}
+  timing_status:   {provisional_simulation_only: 0, hazard_analysed: 1}
+
+params:
+  # ---- calibration identity ------------------------------------------------
+  - {id: 1,   path: calibration.version,                     kind: int,  min: 1, max: 16777215,   req_sim: true,  req_hw: true}
+  - {id: 2,   path: calibration.provenance,                  kind: enum, enum: provenance, req_sim: true, req_hw: true}
+  - {id: 3,   path: calibration.physical_output_permitted,   kind: bool, req_sim: true, req_hw: true}
+
+  # ---- motor -----------------------------------------------------------------
+  - {id: 10,  path: motor.type,                              kind: enum, enum: motor_type, req_sim: true, req_hw: true}
+  - {id: 11,  path: motor.pole_pairs,                        kind: int,  min: 1,    max: 64,    req_sim: true, req_hw: true}
+  - {id: 12,  path: motor.phase_resistance_ohm,              kind: real, min: 1.0e-4, max: 10.0, req_sim: true, req_hw: true}
+  - {id: 13,  path: motor.resistance_ref_temp_degC,          kind: real, min: -40.0, max: 150.0, req_sim: true, req_hw: true}
+  - {id: 14,  path: motor.d_inductance_H,                    kind: real, min: 1.0e-7, max: 0.1,  req_sim: true, req_hw: true}
+  - {id: 15,  path: motor.q_inductance_H,                    kind: real, min: 1.0e-7, max: 0.1,  req_sim: true, req_hw: true}
+  - {id: 16,  path: motor.flux_linkage_Wb,                   kind: real, min: 1.0e-5, max: 1.0,  req_sim: true, req_hw: true}
+  - {id: 17,  path: motor.rated_mech_speed_rad_s,            kind: real, min: 1.0,  max: 3000.0, req_sim: true, req_hw: true}
+  - {id: 18,  path: motor.max_mech_speed_rad_s,              kind: real, min: 1.0,  max: 3000.0, req_sim: true, req_hw: true}
+  - {id: 19,  path: motor.continuous_phase_current_A_rms,    kind: real, min: 0.1,  max: 500.0, req_sim: true, req_hw: true}
+  - {id: 20,  path: motor.peak_phase_current_A,              kind: real, min: 0.1,  max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 21,  path: motor.peak_current_duration_s,           kind: real, min: 0.0,  max: 3600.0, req_sim: true, req_hw: true}
+  - {id: 22,  path: motor.max_winding_temp_degC,             kind: real, min: 20.0, max: 250.0, req_sim: true, req_hw: true}
+  - {id: 23,  path: motor.rotor_sensor,                      kind: enum, enum: rotor_sensor, req_sim: true, req_hw: true}
+  - {id: 24,  path: motor.hall_supply_V,                     kind: real, min: 2.5,  max: 24.0,  req_sim: false, req_hw: true}
+  - {id: 25,  path: motor.hall_angle_offset_rad,             kind: real, min: -6.2832, max: 6.2832, req_sim: true, req_hw: true}
+  - {id: 26,  path: motor.inertia_kg_m2,                     kind: real, min: 1.0e-7, max: 10.0, req_sim: true, req_hw: false}
+  # hall code (0..7) -> sector (0..5), -1 = illegal code. 8 entries, ids 30..37
+  - {id: 30,  path: motor.hall_code_to_sector,               kind: int,  min: -1, max: 5, array: 8, req_sim: true, req_hw: true}
+
+  # ---- battery ---------------------------------------------------------------
+  - {id: 50,  path: battery.chemistry,                       kind: enum, enum: chemistry, req_sim: true, req_hw: true}
+  - {id: 51,  path: battery.series_cells,                    kind: int,  min: 1, max: 40, req_sim: true, req_hw: true}
+  - {id: 52,  path: battery.min_voltage_V,                   kind: real, min: 1.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 53,  path: battery.nominal_voltage_V,               kind: real, min: 1.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 54,  path: battery.max_charged_voltage_V,           kind: real, min: 1.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 55,  path: battery.bms_max_discharge_current_A,     kind: real, min: 0.1, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 56,  path: battery.bms_peak_discharge_current_A,    kind: real, min: 0.1, max: 2000.0, req_sim: true, req_hw: true}
+  - {id: 57,  path: battery.bms_peak_duration_s,             kind: real, min: 0.0, max: 3600.0, req_sim: true, req_hw: true}
+  - {id: 58,  path: battery.bms_max_charge_current_A,        kind: real, min: 0.0, max: 1000.0, req_sim: true, req_hw: true}
+
+  # ---- vehicle ---------------------------------------------------------------
+  - {id: 70,  path: vehicle.category,                        kind: enum, enum: category, req_sim: true, req_hw: true}
+  - {id: 71,  path: vehicle.mass_with_driver_kg,             kind: real, min: 10.0, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 72,  path: vehicle.gear_ratio,                      kind: real, min: 0.1, max: 100.0, req_sim: true, req_hw: true}
+  - {id: 73,  path: vehicle.wheel_circumference_m,           kind: real, min: 0.2, max: 5.0, req_sim: true, req_hw: true}
+  - {id: 74,  path: vehicle.freewheel_present,               kind: bool, req_sim: true, req_hw: true}
+  - {id: 75,  path: vehicle.drivetrain_efficiency,           kind: real, min: 0.3, max: 1.0, req_sim: true, req_hw: false}
+
+  # ---- inverter / sensing calibration ------------------------------------------
+  - {id: 90,  path: inverter.bus_voltage_rating_V,           kind: real, min: 5.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 91,  path: inverter.transient_margin_fraction,      kind: real, min: 0.0, max: 2.0, req_sim: true, req_hw: true}
+  - {id: 92,  path: inverter.shunt_ohm,                      kind: real, min: 1.0e-5, max: 1.0, req_sim: true, req_hw: true}
+  - {id: 93,  path: inverter.amp_gain_V_per_V,               kind: real, min: 1.0, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 94,  path: inverter.adc_vref_V,                     kind: real, min: 1.0, max: 5.0, req_sim: true, req_hw: true}
+  - {id: 95,  path: inverter.adc_bits,                       kind: int,  min: 8, max: 24, req_sim: true, req_hw: true}
+  - {id: 96,  path: inverter.current_offset_counts,          kind: real, min: 0.0, max: 16777215.0, array: 3, req_sim: true, req_hw: true}
+  - {id: 100, path: inverter.vbus_divider_ratio,             kind: real, min: 1.0, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 101, path: inverter.hw_overcurrent_trip_A,          kind: real, min: 0.1, max: 2000.0, req_sim: true, req_hw: true}
+  - {id: 102, path: inverter.pwm_frequency_Hz,               kind: real, min: 1000.0, max: 200000.0, req_sim: true, req_hw: true}
+  - {id: 103, path: inverter.deadtime_s,                     kind: real, min: 1.0e-8, max: 5.0e-6, req_sim: true, req_hw: true}
+  - {id: 104, path: inverter.fet_temp_derate_start_degC,     kind: real, min: 20.0, max: 175.0, req_sim: true, req_hw: true}
+  - {id: 105, path: inverter.fet_temp_trip_degC,             kind: real, min: 20.0, max: 175.0, req_sim: true, req_hw: true}
+  - {id: 106, path: inverter.duty_min,                       kind: real, min: 0.0, max: 0.2, req_sim: true, req_hw: true}
+  - {id: 107, path: inverter.duty_max,                       kind: real, min: 0.8, max: 1.0, req_sim: true, req_hw: true}
+  - {id: 108, path: inverter.current_kp_V_per_A,             kind: real, min: 1.0e-4, max: 100.0, req_sim: true, req_hw: true}
+  - {id: 109, path: inverter.current_ki_V_per_A_s,           kind: real, min: 1.0e-2, max: 1.0e+6, req_sim: true, req_hw: true}
+
+  # ---- operating limits (controller-enforced) ----------------------------------
+  - {id: 120, path: limits.max_motor_torque_Nm,              kind: real, min: 0.01, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 121, path: limits.manual_max_torque_Nm,             kind: real, min: 0.0, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 122, path: limits.max_phase_current_A,              kind: real, min: 0.1, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 123, path: limits.battery_current_limit_A,          kind: real, min: 0.1, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 124, path: limits.regen_enabled,                    kind: bool, req_sim: true, req_hw: true}
+  - {id: 125, path: limits.regen_current_limit_A,            kind: real, min: 0.0, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 126, path: limits.min_efficiency_for_limit,         kind: real, min: 0.3, max: 1.0, req_sim: true, req_hw: true}
+  - {id: 127, path: limits.overspeed_trip_rad_s,             kind: real, min: 1.0, max: 3500.0, req_sim: true, req_hw: true}
+  - {id: 128, path: limits.speed_taper_start_rad_s,          kind: real, min: 1.0, max: 3500.0, req_sim: true, req_hw: true}
+  - {id: 129, path: limits.undervoltage_derate_V,            kind: real, min: 1.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 130, path: limits.undervoltage_trip_V,              kind: real, min: 1.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 131, path: limits.overvoltage_trip_V,               kind: real, min: 1.0, max: 200.0, req_sim: true, req_hw: true}
+  - {id: 132, path: limits.motor_temp_derate_start_degC,     kind: real, min: 20.0, max: 250.0, req_sim: true, req_hw: true}
+  - {id: 133, path: limits.motor_temp_trip_degC,             kind: real, min: 20.0, max: 250.0, req_sim: true, req_hw: true}
+  - {id: 134, path: limits.torque_slew_up_Nm_s,              kind: real, min: 0.01, max: 1.0e+5, req_sim: true, req_hw: true}
+  - {id: 135, path: limits.torque_slew_down_Nm_s,            kind: real, min: 0.01, max: 1.0e+5, req_sim: true, req_hw: true}
+  - {id: 136, path: limits.torque_slew_down_fast_Nm_s,       kind: real, min: 0.01, max: 1.0e+6, req_sim: true, req_hw: true}
+  - {id: 137, path: limits.unknown_temperature_derate_factor, kind: real, min: 0.0, max: 1.0, req_sim: true, req_hw: true}
+  - {id: 138, path: limits.throttle_release_threshold,       kind: real, min: 0.0, max: 0.5, req_sim: true, req_hw: true}
+  - {id: 139, path: limits.throttle_engage_threshold,        kind: real, min: 0.0, max: 0.9, req_sim: true, req_hw: true}
+  - {id: 140, path: limits.software_overcurrent_A,           kind: real, min: 0.1, max: 1000.0, req_sim: true, req_hw: true}
+  - {id: 141, path: limits.coast_mode,                       kind: enum, enum: coast_mode, req_sim: true, req_hw: true}
+
+  # ---- supervision timing (PROVISIONAL until hazard/latency analysis) -----------
+  - {id: 160, path: supervision.update_period_s,             kind: real, min: 0.001, max: 1.0, req_sim: true, req_hw: true}
+  - {id: 161, path: supervision.timeout_s,                   kind: real, min: 0.005, max: 2.0, req_sim: true, req_hw: true}
+  - {id: 162, path: supervision.timing_status,               kind: enum, enum: timing_status, req_sim: true, req_hw: true}
+  - {id: 163, path: supervision.limits_timeout_s,            kind: real, min: 0.01, max: 10.0, req_sim: true, req_hw: true}
+
+# String-valued fields (not in the binary blob; carried as metadata and hashed
+# into the calibration identity). null = unknown.
+strings:
+  - {path: calibration.id,                 req_sim: true,  req_hw: true,  max_len: 15}
+  - {path: calibration.measured_by,        req_sim: false, req_hw: true}
+  - {path: calibration.measured_at,        req_sim: false, req_hw: true}
+  - {path: calibration.instrument_refs,    req_sim: false, req_hw: true}
+  - {path: motor.model,                    req_sim: false, req_hw: true}
+  - {path: vehicle.competition_event,      req_sim: false, req_hw: true}
+  - {path: supervision.hazard_analysis_ref, req_sim: false, req_hw: true}

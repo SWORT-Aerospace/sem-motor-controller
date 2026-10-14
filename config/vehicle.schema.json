@@ -1,0 +1,948 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://swort.net/schemas/sem-motor-controller/vehicle.schema.json",
+  "title": "SEM motor controller vehicle/calibration configuration",
+  "description": "GENERATED from config/parameters.yaml by tools/gen_config.py - do not edit. Every key must be present; unknown values are null. Structural validity only: ranges, required-for-build and cross-parameter rules are enforced by tools/config_tool.py and firmware/src/calibration/mc_config.c.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "label",
+    "conventions",
+    "calibration",
+    "motor",
+    "battery",
+    "vehicle",
+    "inverter",
+    "limits",
+    "supervision"
+  ],
+  "properties": {
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "instrument_refs",
+        "measured_at",
+        "measured_by",
+        "physical_output_permitted",
+        "provenance",
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 16777215
+        },
+        "provenance": {
+          "enum": [
+            "bench_measured",
+            "synthetic",
+            "unset",
+            null
+          ]
+        },
+        "physical_output_permitted": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 15
+        },
+        "measured_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "measured_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "instrument_refs": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "motor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "continuous_phase_current_A_rms",
+        "d_inductance_H",
+        "flux_linkage_Wb",
+        "hall_angle_offset_rad",
+        "hall_code_to_sector",
+        "hall_supply_V",
+        "inertia_kg_m2",
+        "max_mech_speed_rad_s",
+        "max_winding_temp_degC",
+        "model",
+        "peak_current_duration_s",
+        "peak_phase_current_A",
+        "phase_resistance_ohm",
+        "pole_pairs",
+        "q_inductance_H",
+        "rated_mech_speed_rad_s",
+        "resistance_ref_temp_degC",
+        "rotor_sensor",
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "bldc_trapezoidal",
+            "brushed_dc",
+            "induction",
+            "pmsm_sinusoidal",
+            "unknown",
+            null
+          ]
+        },
+        "pole_pairs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 64
+        },
+        "phase_resistance_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0001,
+          "maximum": 10.0
+        },
+        "resistance_ref_temp_degC": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -40.0,
+          "maximum": 150.0
+        },
+        "d_inductance_H": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-07,
+          "maximum": 0.1
+        },
+        "q_inductance_H": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-07,
+          "maximum": 0.1
+        },
+        "flux_linkage_Wb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-05,
+          "maximum": 1.0
+        },
+        "rated_mech_speed_rad_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 3000.0
+        },
+        "max_mech_speed_rad_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 3000.0
+        },
+        "continuous_phase_current_A_rms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 500.0
+        },
+        "peak_phase_current_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 1000.0
+        },
+        "peak_current_duration_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 3600.0
+        },
+        "max_winding_temp_degC": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 20.0,
+          "maximum": 250.0
+        },
+        "rotor_sensor": {
+          "enum": [
+            "encoder",
+            "hall",
+            "none",
+            "unknown",
+            null
+          ]
+        },
+        "hall_supply_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 2.5,
+          "maximum": 24.0
+        },
+        "hall_angle_offset_rad": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -6.2832,
+          "maximum": 6.2832
+        },
+        "inertia_kg_m2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-07,
+          "maximum": 10.0
+        },
+        "hall_code_to_sector": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": -1,
+            "maximum": 5
+          },
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "battery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bms_max_charge_current_A",
+        "bms_max_discharge_current_A",
+        "bms_peak_discharge_current_A",
+        "bms_peak_duration_s",
+        "chemistry",
+        "max_charged_voltage_V",
+        "min_voltage_V",
+        "nominal_voltage_V",
+        "series_cells"
+      ],
+      "properties": {
+        "chemistry": {
+          "enum": [
+            "li_ion_lfp",
+            "li_ion_nca",
+            "li_ion_nmc",
+            "other",
+            "unknown",
+            null
+          ]
+        },
+        "series_cells": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 40
+        },
+        "min_voltage_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 200.0
+        },
+        "nominal_voltage_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 200.0
+        },
+        "max_charged_voltage_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 200.0
+        },
+        "bms_max_discharge_current_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 1000.0
+        },
+        "bms_peak_discharge_current_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 2000.0
+        },
+        "bms_peak_duration_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 3600.0
+        },
+        "bms_max_charge_current_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 1000.0
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "competition_event",
+        "drivetrain_efficiency",
+        "freewheel_present",
+        "gear_ratio",
+        "mass_with_driver_kg",
+        "wheel_circumference_m"
+      ],
+      "properties": {
+        "category": {
+          "enum": [
+            "prototype",
+            "unknown",
+            "urban_concept",
+            null
+          ]
+        },
+        "mass_with_driver_kg": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 10.0,
+          "maximum": 1000.0
+        },
+        "gear_ratio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 100.0
+        },
+        "wheel_circumference_m": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.2,
+          "maximum": 5.0
+        },
+        "freewheel_present": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "drivetrain_efficiency": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.3,
+          "maximum": 1.0
+        },
+        "competition_event": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "inverter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adc_bits",
+        "adc_vref_V",
+        "amp_gain_V_per_V",
+        "bus_voltage_rating_V",
+        "current_ki_V_per_A_s",
+        "current_kp_V_per_A",
+        "current_offset_counts",
+        "deadtime_s",
+        "duty_max",
+        "duty_min",
+        "fet_temp_derate_start_degC",
+        "fet_temp_trip_degC",
+        "hw_overcurrent_trip_A",
+        "pwm_frequency_Hz",
+        "shunt_ohm",
+        "transient_margin_fraction",
+        "vbus_divider_ratio"
+      ],
+      "properties": {
+        "bus_voltage_rating_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 5.0,
+          "maximum": 200.0
+        },
+        "transient_margin_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 2.0
+        },
+        "shunt_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-05,
+          "maximum": 1.0
+        },
+        "amp_gain_V_per_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 1000.0
+        },
+        "adc_vref_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 5.0
+        },
+        "adc_bits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 8,
+          "maximum": 24
+        },
+        "current_offset_counts": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0.0,
+            "maximum": 16777215.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "vbus_divider_ratio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 1000.0
+        },
+        "hw_overcurrent_trip_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 2000.0
+        },
+        "pwm_frequency_Hz": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1000.0,
+          "maximum": 200000.0
+        },
+        "deadtime_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-08,
+          "maximum": 5e-06
+        },
+        "fet_temp_derate_start_degC": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 20.0,
+          "maximum": 175.0
+        },
+        "fet_temp_trip_degC": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 20.0,
+          "maximum": 175.0
+        },
+        "duty_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 0.2
+        },
+        "duty_max": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.8,
+          "maximum": 1.0
+        },
+        "current_kp_V_per_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0001,
+          "maximum": 100.0
+        },
+        "current_ki_V_per_A_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 1000000.0
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "battery_current_limit_A",
+        "coast_mode",
+        "manual_max_torque_Nm",
+        "max_motor_torque_Nm",
+        "max_phase_current_A",
+        "min_efficiency_for_limit",
+        "motor_temp_derate_start_degC",
+        "motor_temp_trip_degC",
+        "overspeed_trip_rad_s",
+        "overvoltage_trip_V",
+        "regen_current_limit_A",
+        "regen_enabled",
+        "software_overcurrent_A",
+        "speed_taper_start_rad_s",
+        "throttle_engage_threshold",
+        "throttle_release_threshold",
+        "torque_slew_down_Nm_s",
+        "torque_slew_down_fast_Nm_s",
+        "torque_slew_up_Nm_s",
+        "undervoltage_derate_V",
+        "undervoltage_trip_V",
+        "unknown_temperature_derate_factor"
+      ],
+      "properties": {
+        "max_motor_torque_Nm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 1000.0
+        },
+        "manual_max_torque_Nm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 1000.0
+        },
+        "max_phase_current_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 1000.0
+        },
+        "battery_current_limit_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 1000.0
+        },
+        "regen_enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "regen_current_limit_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 1000.0
+        },
+        "min_efficiency_for_limit": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.3,
+          "maximum": 1.0
+        },
+        "overspeed_trip_rad_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 3500.0
+        },
+        "speed_taper_start_rad_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 3500.0
+        },
+        "undervoltage_derate_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 200.0
+        },
+        "undervoltage_trip_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 200.0
+        },
+        "overvoltage_trip_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 200.0
+        },
+        "motor_temp_derate_start_degC": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 20.0,
+          "maximum": 250.0
+        },
+        "motor_temp_trip_degC": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 20.0,
+          "maximum": 250.0
+        },
+        "torque_slew_up_Nm_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 100000.0
+        },
+        "torque_slew_down_Nm_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 100000.0
+        },
+        "torque_slew_down_fast_Nm_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 1000000.0
+        },
+        "unknown_temperature_derate_factor": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "throttle_release_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 0.5
+        },
+        "throttle_engage_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 0.9
+        },
+        "software_overcurrent_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 1000.0
+        },
+        "coast_mode": {
+          "enum": [
+            "gate_off",
+            "zero_current",
+            null
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "supervision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hazard_analysis_ref",
+        "limits_timeout_s",
+        "timeout_s",
+        "timing_status",
+        "update_period_s"
+      ],
+      "properties": {
+        "update_period_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.001,
+          "maximum": 1.0
+        },
+        "timeout_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.005,
+          "maximum": 2.0
+        },
+        "timing_status": {
+          "enum": [
+            "hazard_analysed",
+            "provisional_simulation_only",
+            null
+          ]
+        },
+        "limits_timeout_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 10.0
+        },
+        "hazard_analysis_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "label": {
+      "type": "string"
+    },
+    "conventions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "angle",
+        "battery_current_positive",
+        "clarke",
+        "flux_linkage",
+        "inductance",
+        "phase_current_positive",
+        "resistance",
+        "temperature",
+        "torque_positive",
+        "units"
+      ],
+      "properties": {
+        "units": {
+          "const": "SI"
+        },
+        "battery_current_positive": {
+          "const": "discharge"
+        },
+        "phase_current_positive": {
+          "const": "into_motor_terminal"
+        },
+        "torque_positive": {
+          "const": "forward_motoring"
+        },
+        "clarke": {
+          "const": "amplitude_invariant"
+        },
+        "resistance": {
+          "const": "line_to_neutral"
+        },
+        "inductance": {
+          "const": "line_to_neutral"
+        },
+        "flux_linkage": {
+          "const": "peak_phase_amplitude_invariant"
+        },
+        "temperature": {
+          "const": "degC"
+        },
+        "angle": {
+          "const": "rad_electrical_from_phase_a_axis"
+        }
+      }
+    }
+  }
+}

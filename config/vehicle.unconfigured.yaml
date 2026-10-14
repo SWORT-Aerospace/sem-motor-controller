@@ -1,0 +1,130 @@
+# REAL-HARDWARE configuration — UNCONFIGURED.
+#
+# Every value that has not been verified from a source or measured on the real
+# vehicle is null. Do NOT replace nulls with plausible defaults: a
+# hardware-enabled build runs `tools/config_tool.py validate --mode hw` on this
+# file and MUST fail until each null is replaced by a measured/verified value
+# with its provenance recorded in docs/OPEN_PARAMETERS.md.
+#
+# The only non-null entries are (a) fixed conventions, (b) proposed engineering
+# decisions recorded in docs/decisions/, marked "DECISION".
+schema_version: 1
+label: "REAL VEHICLE - UNCONFIGURED (fails hardware validation by design)"
+conventions:
+  units: SI
+  battery_current_positive: discharge
+  phase_current_positive: into_motor_terminal
+  torque_positive: forward_motoring
+  clarke: amplitude_invariant
+  resistance: line_to_neutral
+  inductance: line_to_neutral
+  flux_linkage: peak_phase_amplitude_invariant
+  temperature: degC
+  angle: rad_electrical_from_phase_a_axis
+
+calibration:
+  id: "UNSET"
+  version: null
+  provenance: unset
+  physical_output_permitted: false    # DECISION: only a bench-measured calibration may set true
+  measured_by: null
+  measured_at: null
+  instrument_refs: null
+  notes: "No calibration has been performed. See docs/OPEN_PARAMETERS.md."
+
+motor:
+  type: null                 # UNKNOWN: motor model not identified in any inspected source
+  model: null
+  pole_pairs: null
+  phase_resistance_ohm: null
+  resistance_ref_temp_degC: null
+  d_inductance_H: null
+  q_inductance_H: null
+  flux_linkage_Wb: null
+  rated_mech_speed_rad_s: null
+  max_mech_speed_rad_s: null
+  continuous_phase_current_A_rms: null
+  peak_phase_current_A: null
+  peak_current_duration_s: null
+  max_winding_temp_degC: null
+  rotor_sensor: null
+  hall_supply_V: null
+  hall_angle_offset_rad: null
+  hall_code_to_sector: null
+  inertia_kg_m2: null
+  notes: null
+
+battery:
+  chemistry: null
+  series_cells: null
+  min_voltage_V: null
+  nominal_voltage_V: null
+  max_charged_voltage_V: null
+  bms_max_discharge_current_A: null
+  bms_peak_discharge_current_A: null
+  bms_peak_duration_s: null
+  bms_max_charge_current_A: null
+  notes: null
+
+vehicle:
+  category: null             # UNKNOWN: telemetry proposal (unavailable here) reportedly says Prototype; Cornell repos target Urban Concept
+  competition_event: null
+  mass_with_driver_kg: null
+  gear_ratio: null
+  wheel_circumference_m: null
+  freewheel_present: null
+  drivetrain_efficiency: null
+  notes: null
+
+inverter:
+  bus_voltage_rating_V: null       # UNFROZEN (ADR-0004)
+  transient_margin_fraction: null  # requires measured switching/regen transients
+  shunt_ohm: null                  # UNFROZEN
+  amp_gain_V_per_V: null           # UNFROZEN
+  adc_vref_V: null
+  adc_bits: null
+  current_offset_counts: null      # per-board calibration
+  vbus_divider_ratio: null
+  hw_overcurrent_trip_A: null      # UNFROZEN
+  pwm_frequency_Hz: null           # UNFROZEN
+  deadtime_s: null                 # UNFROZEN
+  fet_temp_derate_start_degC: null # UNFROZEN
+  fet_temp_trip_degC: null         # UNFROZEN
+  duty_min: null
+  duty_max: null
+  current_kp_V_per_A: null         # requires measured L, R
+  current_ki_V_per_A_s: null
+  notes: null
+
+limits:
+  max_motor_torque_Nm: null
+  manual_max_torque_Nm: null
+  max_phase_current_A: null
+  battery_current_limit_A: null
+  regen_enabled: false             # DECISION (ADR-0007): active regeneration deferred
+  regen_current_limit_A: 0.0       # DECISION: follows regen_enabled=false
+  min_efficiency_for_limit: null
+  overspeed_trip_rad_s: null
+  speed_taper_start_rad_s: null
+  undervoltage_derate_V: null
+  undervoltage_trip_V: null
+  overvoltage_trip_V: null
+  motor_temp_derate_start_degC: null
+  motor_temp_trip_degC: null
+  torque_slew_up_Nm_s: null
+  torque_slew_down_Nm_s: null
+  torque_slew_down_fast_Nm_s: null
+  unknown_temperature_derate_factor: null
+  throttle_release_threshold: null
+  throttle_engage_threshold: null
+  software_overcurrent_A: null
+  coast_mode: null                 # to be decided by measurement (EFFICIENCY_RESEARCH.md H3)
+  notes: null
+
+supervision:
+  update_period_s: null            # 50 Hz is PROVISIONAL and simulation-only
+  timeout_s: null                  # 100 ms is PROVISIONAL and simulation-only
+  timing_status: provisional_simulation_only
+  limits_timeout_s: null
+  hazard_analysis_ref: null        # required before any hardware build
+  notes: "Pending vehicle hazard and latency analysis."

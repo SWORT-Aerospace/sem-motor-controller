@@ -1,0 +1,259 @@
+# SEM motor-controller CAN contract — SINGLE SOURCE OF TRUTH.
+# tools/gen_protocol.py generates matching C and Python codecs and golden
+# vectors from this file. Generated files carry the schema hash; CI fails if
+# they are stale.
+#
+# Transport decisions (docs/decisions/ADR-0005-can-contract.md):
+#  * 11-bit standard identifiers 0x300-0x33F. Cornell CHUDS (inspected at
+#    cornellev/urban-concept c422c0f) uses 0x000-0x2FF and REJECTS 0x300-0x7FF,
+#    so these frames neither collide with nor are mis-decoded as CHUDS.
+#  * Every frame is 8 data bytes, classic-CAN compatible. On a CAN-FD bus the
+#    controller sends them as classic frames (FDF=0); FD-capable controllers
+#    accept them. Nominal bit rate 500 kbit/s (CHUDS arbitration rate).
+#  * Byte order: Intel / little-endian bit numbering. Bit n is bit (n % 8) of
+#    byte (n / 8). Multi-byte fields are little-endian.
+#  * byte 0 = CRC-8/SAE-J1850 over [DataID LE16] ++ bytes 1..7, where
+#    DataID = (protocol_major << 11) | can_id. Not a security mechanism.
+#  * byte 1 = per-message sequence counter (u8, wraps 255 -> 0).
+#  * physical = raw * scale + offset. Encoders clamp to [min, max] and report
+#    saturation; NaN encodes as the `invalid` sentinel if the field has one,
+#    otherwise encoding fails. Decoders map the sentinel to NaN.
+#  * No message commands transistors, PWM duty, arming, mode selection or
+#    fault reset. Those are local controls of the controller.
+protocol:
+  name: semmc
+  major: 1
+  minor: 0
+  nominal_bitrate: 500000
+  frame_format: classic_8byte
+
+messages:
+  - name: ctrl_fault
+    id: 0x300
+    sender: controller
+    period_s: 1.0
+    on_change: true
+    description: Latched faults, first fault since reset and last MCU reset reason.
+    fields:
+      - {name: latched,      start: 16, width: 24, kind: raw}
+      - {name: first_fault,  start: 40, width: 8,  kind: raw, description: "mc_fault_t, 0xFF = none"}
+      - {name: reset_reason, start: 48, width: 8,  kind: raw, description: "platform reset cause code"}
+      - {name: fault_count,  start: 56, width: 8,  kind: raw}
+
+  - name: sup_torque_req
+    id: 0x308
+    sender: companion
+    period_s: 0.02
+    provisional: true
+    description: >
+      Supervisory torque request (motor shaft). PROVISIONAL 50 Hz / 100 ms timeout,
+      simulation only, pending hazard and latency analysis.
+    fields:
+      - {name: session_tag,   start: 16, width: 8,  kind: raw, description: "tag assigned by controller in ctrl_session"}
+      - {name: limits_ref,    start: 24, width: 4,  kind: raw, description: "low 4 bits of the sup_limits seq this request was computed against"}
+      - {name: coast_request, start: 28, width: 1,  kind: bool}
+      - {name: reserved,      start: 29, width: 3,  kind: raw}
+      - {name: torque_Nm,     start: 32, width: 16, kind: scaled, signed: true, scale: 0.002, offset: 0, min: -65.534, max: 65.534, unit: N*m, invalid: -32768}
+      - {name: src_time_ms,   start: 48, width: 16, kind: raw, description: "companion monotonic ms when the request was computed (wraps)"}
+
+  - name: sup_limits
+    id: 0x309
+    sender: companion
+    period_s: 0.1
+    description: Supervisor-declared bounds; can only tighten controller limits.
+    fields:
+      - {name: session_tag,       start: 16, width: 8,  kind: raw}
+      - {name: limits_seq,        start: 24, width: 8,  kind: raw}
+      - {name: max_torque_Nm,     start: 32, width: 16, kind: scaled, scale: 0.002, offset: 0, min: 0, max: 131.07, unit: N*m}
+      - {name: max_batt_power_W,  start: 48, width: 16, kind: scaled, scale: 1.0, offset: 0, min: 0, max: 65535, unit: W}
+
+  - name: sup_hello
+    id: 0x30A
+    sender: companion
+    period_s: 0.5
+    description: Companion session announcement / handshake. Cannot arm or select a mode.
+    fields:
+      - {name: proto_major,       start: 16, width: 4,  kind: raw}
+      - {name: proto_minor,       start: 20, width: 4,  kind: raw}
+      - {name: role,              start: 24, width: 8,  kind: raw, description: "1 = energy supervisor"}
+      - {name: companion_session, start: 32, width: 32, kind: raw}
+
+  - name: ctrl_status
+    id: 0x310
+    sender: controller
+    period_s: 0.02
+    description: Operating state, owner, supervisor link and boot identity.
+    fields:
+      - {name: state,           start: 16, width: 4,  kind: raw, description: "mc_state_t"}
+      - {name: owner,           start: 20, width: 2,  kind: raw, description: "0 none, 1 driver, 2 supervisor"}
+      - {name: sup_link,        start: 22, width: 2,  kind: raw, description: "0 none, 1 hello, 2 established, 3 lost"}
+      - {name: session_tag,     start: 24, width: 8,  kind: raw}
+      - {name: boot_id,         start: 32, width: 16, kind: raw, description: "changes every controller boot"}
+      - {name: build_is_sim,    start: 48, width: 1,  kind: bool}
+      - {name: cal_provenance,  start: 49, width: 2,  kind: raw}
+      - {name: output_permitted, start: 51, width: 1, kind: bool}
+      - {name: pwm_enabled,     start: 52, width: 1,  kind: bool}
+      - {name: derating,        start: 53, width: 1,  kind: bool}
+      - {name: hw_trip,         start: 54, width: 1,  kind: bool}
+      - {name: reserved,        start: 55, width: 1,  kind: raw}
+      - {name: last_transition, start: 56, width: 8,  kind: raw, description: "mc_transition_t"}
+
+  - name: ctrl_cmd_trace
+    id: 0x311
+    sender: controller
+    period_s: 0.02
+    description: Requested (owner) vs accepted torque and reason bits (MC_R_*).
+    fields:
+      - {name: requested_Nm, start: 16, width: 16, kind: scaled, signed: true, scale: 0.002, offset: 0, min: -65.534, max: 65.534, unit: N*m, invalid: -32768}
+      - {name: accepted_Nm,  start: 32, width: 16, kind: scaled, signed: true, scale: 0.002, offset: 0, min: -65.534, max: 65.534, unit: N*m, invalid: -32768}
+      - {name: reason,       start: 48, width: 16, kind: raw}
+
+  - name: driver_controls
+    id: 0x312
+    sender: controller
+    period_s: 0.02
+    description: Wired driver controls AS SEEN BY THE CONTROLLER (report only; never an input).
+    fields:
+      - {name: throttle,       start: 16, width: 16, kind: scaled, scale: 0.0001, offset: 0, min: 0, max: 1, unit: "1", invalid: 65535}
+      - {name: brake,          start: 32, width: 1, kind: bool}
+      - {name: cancel,         start: 33, width: 1, kind: bool}
+      - {name: mode_eco,       start: 34, width: 1, kind: bool}
+      - {name: arm_switch,     start: 35, width: 1, kind: bool}
+      - {name: estop_chain_ok, start: 36, width: 1, kind: bool}
+      - {name: driver_present, start: 37, width: 1, kind: bool}
+      - {name: fault_reset,    start: 38, width: 1, kind: bool}
+      - {name: throttle_valid, start: 39, width: 1, kind: bool}
+      - {name: reserved,       start: 40, width: 24, kind: raw}
+
+  - name: ctrl_session
+    id: 0x313
+    sender: controller
+    period_s: 0.5
+    on_change: true
+    description: Handshake reply - session tag assigned to the echoed companion session.
+    fields:
+      - {name: session_tag,            start: 16, width: 8,  kind: raw, description: "0 = no session"}
+      - {name: companion_session_echo, start: 24, width: 32, kind: raw}
+      - {name: proto_major,            start: 56, width: 4,  kind: raw}
+      - {name: proto_minor,            start: 60, width: 4,  kind: raw}
+
+  - name: ctrl_motion
+    id: 0x318
+    sender: controller
+    period_s: 0.01
+    description: Rotor mechanical speed, measured q current, bus voltage.
+    fields:
+      - {name: speed_mech_rad_s, start: 16, width: 16, kind: scaled, signed: true, scale: 0.05, offset: 0, min: -1638.35, max: 1638.35, unit: rad/s, invalid: -32768}
+      - {name: iq_A,             start: 32, width: 16, kind: scaled, signed: true, scale: 0.01, offset: 0, min: -327.67, max: 327.67, unit: A, invalid: -32768}
+      - {name: vbus_V,           start: 48, width: 16, kind: scaled, scale: 0.01, offset: 0, min: 0, max: 655.34, unit: V, invalid: 65535}
+
+  - name: ctrl_currents
+    id: 0x319
+    sender: controller
+    period_s: 0.01
+    description: d current, battery current (+ discharge), phase-measurement provenance, KCL residual.
+    fields:
+      - {name: id_A,           start: 16, width: 16, kind: scaled, signed: true, scale: 0.01, offset: 0, min: -327.67, max: 327.67, unit: A, invalid: -32768}
+      - {name: ibatt_A,        start: 32, width: 16, kind: scaled, signed: true, scale: 0.01, offset: 0, min: -327.67, max: 327.67, unit: A, invalid: -32768}
+      - {name: measured_mask,  start: 48, width: 3, kind: raw}
+      - {name: reconstructed_mask, start: 51, width: 3, kind: raw}
+      - {name: kcl_available,  start: 54, width: 1, kind: bool}
+      - {name: reserved,       start: 55, width: 1, kind: raw}
+      - {name: kcl_residual_A, start: 56, width: 8, kind: scaled, signed: true, scale: 0.1, offset: 0, min: -12.7, max: 12.7, unit: A, invalid: -128}
+
+  - name: ctrl_energy
+    id: 0x320
+    sender: controller
+    period_s: 0.1
+    description: Battery-side energy since controller boot and instantaneous battery power.
+    fields:
+      - {name: energy_J,   start: 16, width: 32, kind: scaled, scale: 0.1, offset: 0, min: 0, max: 429496729.4, unit: J, invalid: 4294967295}
+      - {name: p_batt_W,   start: 48, width: 16, kind: scaled, signed: true, scale: 1.0, offset: 0, min: -32767, max: 32767, unit: W, invalid: -32768}
+
+  - name: ctrl_thermal
+    id: 0x321
+    sender: controller
+    period_s: 0.1
+    description: Temperatures and derating.
+    fields:
+      - {name: t_fet_degC,     start: 16, width: 16, kind: scaled, signed: true, scale: 0.1, offset: 0, min: -3276.7, max: 3276.7, unit: degC, invalid: -32768}
+      - {name: t_motor_degC,   start: 32, width: 16, kind: scaled, signed: true, scale: 0.1, offset: 0, min: -3276.7, max: 3276.7, unit: degC, invalid: -32768}
+      - {name: derate,         start: 48, width: 8, kind: scaled, scale: 0.004, offset: 0, min: 0, max: 1.0, unit: "1", invalid: 255}
+      - {name: derate_reasons, start: 56, width: 8, kind: raw}
+
+  - name: ctrl_validity
+    id: 0x322
+    sender: controller
+    period_s: 0.1
+    description: >
+      Per-signal validity nibbles (bit0 missing, bit1 stale, bit2 invalid/nonfinite/
+      out-of-range/integrity, bit3 saturated).
+    fields:
+      - {name: v_speed,      start: 16, width: 4, kind: raw}
+      - {name: v_ia,         start: 20, width: 4, kind: raw}
+      - {name: v_ib,         start: 24, width: 4, kind: raw}
+      - {name: v_ic,         start: 28, width: 4, kind: raw}
+      - {name: v_vbus,       start: 32, width: 4, kind: raw}
+      - {name: v_ibatt,      start: 36, width: 4, kind: raw}
+      - {name: v_t_fet,      start: 40, width: 4, kind: raw}
+      - {name: v_t_motor,    start: 44, width: 4, kind: raw}
+      - {name: v_throttle,   start: 48, width: 4, kind: raw}
+      - {name: v_sup_req,    start: 52, width: 4, kind: raw}
+      - {name: v_sup_limits, start: 56, width: 4, kind: raw}
+      - {name: v_hall,       start: 60, width: 4, kind: raw}
+
+  - name: csia_advisory
+    id: 0x328
+    sender: companion
+    period_s: 0.1
+    description: >
+      CSIA vehicle-adapter advisory. v0.1 = SHADOW ONLY: the controller logs and
+      re-reports it but never changes a command because of it (ADR-0008).
+    fields:
+      - {name: trust,          start: 16, width: 8, kind: scaled, scale: 0.004, offset: 0, min: 0, max: 1.0, unit: "1", invalid: 255}
+      - {name: mode,           start: 24, width: 2, kind: raw, description: "0 shadow, 1 advisory, 2 restricting (not permitted in v0.1)"}
+      - {name: observability,  start: 26, width: 2, kind: raw, description: "0 unknown, 1 observable, 2 ambiguous, 3 unobservable"}
+      - {name: monitor_ok,     start: 28, width: 1, kind: bool}
+      - {name: evidence_fresh, start: 29, width: 1, kind: bool}
+      - {name: reserved,       start: 30, width: 2, kind: raw}
+      - {name: evidence_mask,  start: 32, width: 8, kind: raw}
+      - {name: explanation,    start: 40, width: 8, kind: raw}
+      - {name: src_time_ms,    start: 48, width: 16, kind: raw}
+
+  - name: ctrl_identity
+    id: 0x330
+    sender: controller
+    period_s: 1.0
+    description: Protocol, firmware and calibration identity.
+    fields:
+      - {name: proto_major,    start: 16, width: 4, kind: raw}
+      - {name: proto_minor,    start: 20, width: 4, kind: raw}
+      - {name: fw_major,       start: 24, width: 8, kind: raw}
+      - {name: fw_minor,       start: 32, width: 8, kind: raw}
+      - {name: cal_version,    start: 40, width: 16, kind: raw}
+      - {name: cal_provenance, start: 56, width: 2, kind: raw}
+      - {name: build_is_sim,   start: 58, width: 1, kind: bool}
+      - {name: hw_rev,         start: 59, width: 5, kind: raw}
+
+# Golden vectors: physical inputs; expected bytes are computed by the Python
+# codec at generation time, re-checked by C and Python tests, and a subset is
+# hand-verified in tests/integration/test_protocol_handcalc.py.
+vectors:
+  - {msg: sup_torque_req, seq: 0,   values: {session_tag: 0x5A, limits_ref: 3, coast_request: false, reserved: 0, torque_Nm: 1.234, src_time_ms: 1000}}
+  - {msg: sup_torque_req, seq: 255, values: {session_tag: 0x01, limits_ref: 15, coast_request: true, reserved: 0, torque_Nm: -0.5, src_time_ms: 65535}}
+  - {msg: sup_torque_req, seq: 7,   values: {session_tag: 0x01, limits_ref: 0, coast_request: false, reserved: 0, torque_Nm: 1000.0, src_time_ms: 2}, note: saturates high}
+  - {msg: sup_torque_req, seq: 8,   values: {session_tag: 0x01, limits_ref: 0, coast_request: false, reserved: 0, torque_Nm: .nan, src_time_ms: 3}, note: NaN encodes sentinel}
+  - {msg: sup_limits,     seq: 9,   values: {session_tag: 0x5A, limits_seq: 200, max_torque_Nm: 2.0, max_batt_power_W: 1200}}
+  - {msg: sup_hello,      seq: 1,   values: {proto_major: 1, proto_minor: 0, role: 1, companion_session: 0xDEADBEEF}}
+  - {msg: ctrl_status,    seq: 42,  values: {state: 5, owner: 2, sup_link: 2, session_tag: 0x5A, boot_id: 0xBEEF, build_is_sim: true, cal_provenance: 1, output_permitted: false, pwm_enabled: true, derating: false, hw_trip: false, reserved: 0, last_transition: 7}}
+  - {msg: ctrl_cmd_trace, seq: 3,   values: {requested_Nm: 1.5, accepted_Nm: 0.75, reason: 0x1020}}
+  - {msg: driver_controls, seq: 4,  values: {throttle: 0.25, brake: false, cancel: false, mode_eco: true, arm_switch: true, estop_chain_ok: true, driver_present: true, fault_reset: false, throttle_valid: true, reserved: 0}}
+  - {msg: ctrl_session,   seq: 5,   values: {session_tag: 0x5A, companion_session_echo: 0xDEADBEEF, proto_major: 1, proto_minor: 0}}
+  - {msg: ctrl_motion,    seq: 6,   values: {speed_mech_rad_s: -123.45, iq_A: 12.34, vbus_V: 48.12}}
+  - {msg: ctrl_currents,  seq: 7,   values: {id_A: -0.5, ibatt_A: 25.0, measured_mask: 7, reconstructed_mask: 0, kcl_available: true, reserved: 0, kcl_residual_A: -0.3}}
+  - {msg: ctrl_energy,    seq: 8,   values: {energy_J: 123456.7, p_batt_W: -45}}
+  - {msg: ctrl_thermal,   seq: 9,   values: {t_fet_degC: 61.3, t_motor_degC: .nan, derate: 0.5, derate_reasons: 8}}
+  - {msg: ctrl_validity,  seq: 10,  values: {v_speed: 0, v_ia: 0, v_ib: 0, v_ic: 0, v_vbus: 0, v_ibatt: 1, v_t_fet: 0, v_t_motor: 4, v_throttle: 0, v_sup_req: 2, v_sup_limits: 0, v_hall: 0}}
+  - {msg: ctrl_fault,     seq: 11,  values: {latched: 0x000024, first_fault: 2, reset_reason: 1, fault_count: 2}}
+  - {msg: csia_advisory,  seq: 12,  values: {trust: 0.8, mode: 0, observability: 2, monitor_ok: true, evidence_fresh: false, reserved: 0, evidence_mask: 0x05, explanation: 17, src_time_ms: 4321}}
+  - {msg: ctrl_identity,  seq: 13,  values: {proto_major: 1, proto_minor: 0, fw_major: 0, fw_minor: 1, cal_version: 1, cal_provenance: 1, build_is_sim: true, hw_rev: 0}}
