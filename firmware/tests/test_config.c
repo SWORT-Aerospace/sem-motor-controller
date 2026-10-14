@@ -110,6 +110,7 @@ static void test_rule_violations(void)
     mutate_expect(MC_P_INVERTER_CURRENT_KP_V_PER_A, 5.0f, MC_CFG_E_CURRENT_LOOP_BANDWIDTH);
     mutate_expect(MC_P_INVERTER_DEADTIME_S, 3.0e-6f, MC_CFG_E_DEADTIME_TOO_LONG);
     mutate_expect(MC_P_INVERTER_VBUS_DIVIDER_RATIO, 10.0f, MC_CFG_E_VBUS_SENSE_RANGE);
+    mutate_expect(MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S, 15.0f, MC_CFG_E_ENVELOPE_RAMP_DEADLINE);
 }
 
 static void test_missing_required(void)

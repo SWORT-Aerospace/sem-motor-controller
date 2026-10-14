@@ -109,7 +109,12 @@ class Supervisor:
         if self.tag == 0:
             return out
         if t_s >= self.next_limits:
-            self.limits_seq = (self.limits_seq + 1) & 0xFF
+            # ICD 1.2: a new limits_seq only when the content changes; a
+            # periodic re-send of the same set is a refresh (same seq).
+            content = (self.cfg.max_torque_Nm, self.cfg.max_batt_power_W)
+            if content != getattr(self, "_limits_content", None):
+                self.limits_seq = (self.limits_seq + 1) & 0xFF
+                self._limits_content = content
             out.append((proto.MESSAGES["sup_limits"]["id"], self._enc("sup_limits", {
                 "session_tag": self.tag, "limits_seq": self.limits_seq,
                 "max_torque_Nm": self.cfg.max_torque_Nm, "max_batt_power_W": self.cfg.max_batt_power_W})))

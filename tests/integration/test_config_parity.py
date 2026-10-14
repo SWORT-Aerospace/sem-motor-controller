@@ -43,6 +43,7 @@ MUTATIONS = [
     ("speed_order", "limits.speed_taper_start_rad_s", 460.0),
     ("temp", "limits.motor_temp_trip_degC", 130.0),
     ("slew", "limits.torque_slew_down_fast_Nm_s", 1.0),
+    ("envelope_ramp", "limits.torque_slew_down_fast_Nm_s", 15.0),
     ("throttle", "limits.throttle_release_threshold", 0.2),
     ("duty", "inverter.duty_max", 0.8),
     ("timing", "supervision.timeout_s", 0.03),

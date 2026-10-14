@@ -206,6 +206,14 @@ static void cross_rules(const vctx_t *c, mc_cfg_mode_t mode, mc_cfg_report_t *re
     if (HAVE2(MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S, MC_P_LIMITS_TORQUE_SLEW_DOWN_NM_S) &&
         g(c, MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S) < g(c, MC_P_LIMITS_TORQUE_SLEW_DOWN_NM_S))
         report(rep, MC_CFG_E_SLEW_ORDER, MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S);
+    /* R13b: a supervisory-envelope reduction ramps at the fast down-slew; the
+     * worst case (full torque to zero) must finish within the supervision
+     * timeout, i.e. no slower than the supervisor could force zero torque by
+     * going silent (docs/CONTROL_CONTRACT.md section 3). */
+    if (HAVE3(MC_P_LIMITS_MAX_MOTOR_TORQUE_NM, MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S, MC_P_SUPERVISION_TIMEOUT_S) &&
+        g(c, MC_P_LIMITS_MAX_MOTOR_TORQUE_NM) / g(c, MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S) >
+            g(c, MC_P_SUPERVISION_TIMEOUT_S))
+        report(rep, MC_CFG_E_ENVELOPE_RAMP_DEADLINE, MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S);
     if (HAVE2(MC_P_LIMITS_THROTTLE_RELEASE_THRESHOLD, MC_P_LIMITS_THROTTLE_ENGAGE_THRESHOLD) &&
         !(g(c, MC_P_LIMITS_THROTTLE_RELEASE_THRESHOLD) < g(c, MC_P_LIMITS_THROTTLE_ENGAGE_THRESHOLD)))
         report(rep, MC_CFG_E_THROTTLE_THRESH_ORDER, 0);

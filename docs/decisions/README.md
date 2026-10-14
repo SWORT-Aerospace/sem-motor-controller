@@ -12,3 +12,4 @@
 | [0008](ADR-0008-csia-shadow-mode.md) | CSIA in shadow mode behind an evidence gate | Accepted |
 | [0009](ADR-0009-no-vendor-kit-control-code.md) | Purpose-built control core; ST MCSDK used for reference only | Accepted (pending rule verification) |
 | [0010](ADR-0010-wired-driver-authority.md) | Driver controls wired to the controller, never via CAN | Accepted |
+| [0011](ADR-0011-control-contract-layers.md) | Four-layer control contract; hard ceilings clamp, envelopes ramp boundedly | Accepted |

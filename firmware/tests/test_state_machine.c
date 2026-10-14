@@ -412,6 +412,179 @@ static void test_throttle_implausible_faults(void)
     CHECK(R.arb.accepted_Nm == 0.0f);
 }
 
+/* ---- Control contract (docs/CONTROL_CONTRACT.md): L2 hard ceilings clamp on
+ * the next update; L3 envelopes ramp at no less than the fast rate. ---- */
+
+static float hard_now(void)
+{
+    const float t_static = fminf(R.p.max_motor_torque_Nm, R.p.kt_Nm_per_A * R.p.max_phase_current_A);
+    float h = t_static;
+    const float w = fabsf(R.meas.speed_mech_rad_s);
+    if (w > 1.0f) h = fminf(h, R.p.min_efficiency_for_limit * R.meas.vbus_V * R.p.battery_current_limit_A / w);
+    if (R.arb.batt_limit_scale < 1.0f) h = fminf(h, t_static * R.arb.batt_limit_scale);
+    if (R.prot.derate < 1.0f) h = fminf(h, t_static * R.prot.derate);
+    return fminf(h, t_static * mc_prot_speed_factor(&R.p, R.meas.speed_mech_rad_s));
+}
+
+static void check_hard(void)
+{
+    CHECK(R.arb.accepted_Nm <= hard_now() + 1e-5f);
+    CHECK(fabsf(R.arb.iq_ref_A) * R.p.kt_Nm_per_A <= hard_now() + 1e-4f);
+    CHECK(R.arb.accepted_Nm <= R.arb.hard_ceiling_Nm + 1e-6f);
+}
+
+static void test_contract_hard_ceiling_clamps_next_update(void)
+{
+    rig_init();
+    to_ready();
+    R.drv.throttle = 1.0f;
+    step(1000);
+    CHECK_NEAR(R.arb.accepted_Nm, 2.0f, 1e-4f);
+    /* Thermal derate to 0.5 => ceiling 1.0 N*m: clamped on this very update,
+     * not ramped from the previous 2.0 N*m. */
+    R.pin.t_fet_degC = 97.5f;
+    step(1);
+    CHECK_NEAR(R.arb.hard_ceiling_Nm, 1.0f, 1e-4f);
+    CHECK_NEAR(R.arb.accepted_Nm, 1.0f, 1e-4f);
+    CHECK_NEAR(R.arb.iq_ref_A, 1.0f / R.p.kt_Nm_per_A, 1e-3f);
+    CHECK(R.arb.reason & MC_R_CLAMP_DERATE);
+    check_hard();
+}
+
+static void test_contract_hard_ceiling_independent_of_slew_settings(void)
+{
+    rig_init();
+    R.p.slew_down_Nm_s = 0.5f;      /* very slow comfort ramps */
+    R.p.slew_down_fast_Nm_s = 0.5f;
+    mc_arb_init(&R.arb, &R.p);
+    to_ready();
+    R.drv.throttle = 1.0f;
+    step(1000);
+    R.pin.t_fet_degC = 97.5f;
+    step(1);
+    CHECK_NEAR(R.arb.accepted_Nm, 1.0f, 1e-4f);
+    for (int k = 0; k < 200; k++) { step(1); check_hard(); }
+}
+
+static void test_contract_battery_ceiling_at_rising_speed(void)
+{
+    rig_init();
+    to_ready();
+    R.meas.speed_mech_rad_s = 150.0f;
+    R.drv.throttle = 1.0f;
+    step(600);
+    for (int k = 0; k < 300; k++) {
+        R.meas.speed_mech_rad_s = 150.0f + (float)k;
+        step(1);
+        check_hard();
+    }
+    R.meas.speed_mech_rad_s = 1000.0f; /* speed estimate step */
+    step(1);
+    check_hard();
+    CHECK(R.arb.accepted_Nm == 0.0f);
+}
+
+static void test_contract_envelope_ramp_bounded(void)
+{
+    rig_init();
+    to_ready();
+    R.sup.torque_req_Nm = 2.0f;
+    R.sup.max_torque_Nm = 2.0f;
+    engage_eco();
+    step(1000);
+    CHECK_NEAR(R.arb.accepted_Nm, 2.0f, 1e-4f);
+    R.sup.max_torque_Nm = 0.5f;
+    float prev = R.arb.accepted_Nm;
+    int settle = -1;
+    for (int k = 1; k <= 100; k++) {
+        step(1);
+        CHECK(R.arb.reason & MC_R_SUPERVISOR_BOUND);
+        if (R.arb.accepted_Nm > 0.5f + 1e-5f) {
+            /* at least the fast rate: 100 N*m/s * 1 ms */
+            CHECK(R.arb.accepted_Nm <= prev - R.p.slew_down_fast_Nm_s * 0.001f + 1e-5f);
+        } else if (settle < 0) {
+            settle = k;
+        }
+        prev = R.arb.accepted_Nm;
+    }
+    /* deadline: (2.0 - 0.5) / 100 N*m/s = 15 ms, and <= the 100 ms timeout */
+    CHECK(settle > 0 && settle <= 15);
+    CHECK((float)settle * 1e-3f <= R.p.sup_timeout_s);
+}
+
+static void test_contract_power_envelope_speed_step(void)
+{
+    rig_init();
+    to_ready();
+    R.meas.speed_mech_rad_s = 60.0f;
+    R.sup.torque_req_Nm = 2.0f;
+    R.sup.max_torque_Nm = 2.0f;
+    R.sup.max_batt_power_W = 150.0f;
+    engage_eco();
+    step(1000);
+    const float e60 = 150.0f * R.p.min_efficiency_for_limit / 60.0f;
+    CHECK_NEAR(R.arb.accepted_Nm, e60, 1e-4f);
+    R.meas.speed_mech_rad_s = 120.0f;
+    const float e120 = 150.0f * R.p.min_efficiency_for_limit / 120.0f;
+    step(1);
+    CHECK_NEAR(R.arb.envelope_Nm, e120, 1e-4f);
+    CHECK(R.arb.accepted_Nm <= e60 - R.p.slew_down_fast_Nm_s * 0.001f + 1e-5f);
+    step(10);
+    CHECK(R.arb.accepted_Nm <= e120 + 1e-5f);
+    /* Power actually drawn by the accepted torque stays within the envelope
+     * at the (conservative) efficiency once settled. */
+    CHECK(R.arb.accepted_Nm * 120.0f / R.p.min_efficiency_for_limit <= 150.0f + 1e-2f);
+}
+
+static void test_contract_envelope_cannot_raise_hard_ceiling(void)
+{
+    rig_init();
+    to_ready();
+    R.sup.torque_req_Nm = 5.0f;
+    R.sup.max_torque_Nm = 100.0f;     /* absurdly loose envelope */
+    R.sup.max_batt_power_W = 1.0e5f;
+    engage_eco();
+    step(1000);
+    CHECK_NEAR(R.arb.accepted_Nm, 2.0f, 1e-4f);
+    /* Speed taper (400..450 rad/s): at 420 rad/s the ceiling is 0.6 * 2.0 =
+     * 1.2 N*m. ECO stays active (no derate state change), the envelope is far
+     * looser, and the output is clamped on this update. */
+    R.meas.speed_mech_rad_s = 420.0f;
+    step(1);
+    CHECK_EQ_INT(R.sm.state, MC_ST_ECO_ASSIST);
+    check_hard();
+    CHECK_NEAR(R.arb.accepted_Nm, 1.2f, 1e-3f);
+    CHECK(R.arb.reason & MC_R_CLAMP_SPEED);
+    /* Thermal derate moves ECO to DERATED (driver owns torque, T12); the
+     * output is still never above the ceiling on any update. */
+    R.pin.t_motor_degC = 100.0f;      /* motor derate band 90..110 => 0.5 */
+    for (int k = 0; k < 50; k++) { step(1); check_hard(); }
+    CHECK(R.arb.accepted_Nm <= 1.0f + 1e-4f);
+}
+
+static void test_contract_reengage_after_brake_starts_from_zero(void)
+{
+    rig_init();
+    to_ready();
+    R.sup.torque_req_Nm = 1.5f;
+    engage_eco();
+    step(600);
+    R.drv.brake = true;
+    step(1);
+    CHECK(R.arb.accepted_Nm == 0.0f);
+    CHECK(R.arb.iq_ref_A == 0.0f);
+    R.drv.brake = false;
+    R.drv.mode_eco = false;
+    step(2);
+    engage_eco();
+    /* comfort ramp from zero (5 N*m/s), never a jump to the old output */
+    CHECK(R.arb.accepted_Nm <= 2.0f * R.p.slew_up_Nm_s * 0.001f + 1e-5f);
+    R.drv.driver_present = false;
+    step(1);
+    CHECK(R.arb.accepted_Nm == 0.0f);
+    CHECK(R.arb.iq_ref_A == 0.0f);
+}
+
 int main(void)
 {
     RUN(test_no_torque_after_reset_with_switch_held);
@@ -430,5 +603,12 @@ int main(void)
     RUN(test_driver_takeover_from_eco);
     RUN(test_config_invalid_never_resets);
     RUN(test_throttle_implausible_faults);
+    RUN(test_contract_hard_ceiling_clamps_next_update);
+    RUN(test_contract_hard_ceiling_independent_of_slew_settings);
+    RUN(test_contract_battery_ceiling_at_rising_speed);
+    RUN(test_contract_envelope_ramp_bounded);
+    RUN(test_contract_power_envelope_speed_step);
+    RUN(test_contract_envelope_cannot_raise_hard_ceiling);
+    RUN(test_contract_reengage_after_brake_starts_from_zero);
     TEST_MAIN_END();
 }

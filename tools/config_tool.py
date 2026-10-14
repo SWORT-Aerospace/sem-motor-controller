@@ -54,7 +54,7 @@ E = {
     "SUPERVISION_TIMING": 28, "SUPERVISION_NOT_HAZARD_ANALYSED": 29,
     "ARCH_MOTOR_TYPE": 30, "ROTOR_SENSOR_UNSUPPORTED": 31, "HALL_TABLE": 32,
     "PROVENANCE": 33, "CURRENT_LOOP_BANDWIDTH": 34, "DEADTIME_TOO_LONG": 35,
-    "PHASE_CURRENT_RMS_PEAK": 36, "VBUS_SENSE_RANGE": 37,
+    "PHASE_CURRENT_RMS_PEAK": 36, "VBUS_SENSE_RANGE": 37, "ENVELOPE_RAMP_DEADLINE": 38,
     # Python-only (strings are not in the blob):
     "STRING_MISSING": 100, "SCHEMA": 101,
 }
@@ -259,6 +259,10 @@ def _cross_rules(v: dict[int, float], mode: str, reg) -> list[Issue]:
     if have("limits.torque_slew_down_fast_Nm_s", "limits.torque_slew_down_Nm_s"):
         if g("limits.torque_slew_down_fast_Nm_s") < g("limits.torque_slew_down_Nm_s"):
             add("SLEW_ORDER", "limits.torque_slew_down_fast_Nm_s", "fast down-slew below normal down-slew")
+    if have("limits.max_motor_torque_Nm", "limits.torque_slew_down_fast_Nm_s", "supervision.timeout_s"):
+        if g("limits.max_motor_torque_Nm") / g("limits.torque_slew_down_fast_Nm_s") > g("supervision.timeout_s"):
+            add("ENVELOPE_RAMP_DEADLINE", "limits.torque_slew_down_fast_Nm_s",
+                "envelope ramp-down (max torque / fast down-slew) longer than the supervision timeout")
     if have("limits.throttle_release_threshold", "limits.throttle_engage_threshold"):
         if not g("limits.throttle_release_threshold") < g("limits.throttle_engage_threshold"):
             add("THROTTLE_THRESH_ORDER", "limits", "need throttle release < engage threshold")

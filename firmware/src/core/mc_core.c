@@ -145,8 +145,10 @@ void mc_core_on_can_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t can_id, const
         const mc_rx_result_t fr = mc_fresh_on_rx(&c->fr_limits, now_us, c->sess.tag, MC_CLOCK_DOMAIN_COMPANION, m.seq, 0u);
         if (!mc_rx_renews(fr)) return;
         /* Commit atomically: a set is only usable once its frame is fully
-         * received and checked; the previous set stays available. */
-        c->lim[1] = c->lim[0];
+         * received and checked. A new limits_seq shifts the previous set to
+         * lim[1]; a periodic re-send of the newest set (same limits_seq)
+         * refreshes it in place and does not evict lim[1]. */
+        if (!(c->lim[0].valid && c->lim[0].seq == (uint8_t)m.limits_seq)) c->lim[1] = c->lim[0];
         c->lim[0].valid = true;
         c->lim[0].seq = (uint8_t)m.limits_seq;
         c->lim[0].max_torque_Nm = m.max_torque_Nm;
@@ -275,15 +277,25 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     c->sup.req_val = mc_fresh_status(&c->fr_req, now_us);
     if (c->req_invalid) c->sup.req_val |= MC_VAL_INVALID;
     c->sup.limits_val = mc_fresh_status(&c->fr_limits, now_us);
+    /* Envelope: the request must reference a set the controller holds, and
+     * the bound applied is the tighter of that set and the NEWEST committed
+     * set. An older reference may only tighten; it never restores
+     * permission the newest set has withdrawn (docs/CONTROL_CONTRACT.md). */
     c->sup.limits_match = false;
     c->sup.max_torque_Nm = 0.0f;
     c->sup.max_batt_power_W = 0.0f;
-    for (int k = 0; k < 2; k++) {
-        if (c->lim[k].valid && (c->lim[k].seq & 0x0Fu) == c->req_limits_ref) {
-            c->sup.limits_match = true;
-            c->sup.max_torque_Nm = c->lim[k].max_torque_Nm;
-            c->sup.max_batt_power_W = c->lim[k].max_batt_power_W;
-            break;
+    if (c->lim[0].valid) {
+        for (int k = 0; k < 2; k++) {
+            if (c->lim[k].valid && (c->lim[k].seq & 0x0Fu) == c->req_limits_ref) {
+                c->sup.limits_match = true;
+                c->sup.max_torque_Nm = mc_minf(c->lim[0].max_torque_Nm, c->lim[k].max_torque_Nm);
+                c->sup.max_batt_power_W = mc_minf(c->lim[0].max_batt_power_W, c->lim[k].max_batt_power_W);
+                if (k != 0 && (c->lim[0].max_torque_Nm < c->lim[k].max_torque_Nm ||
+                               c->lim[0].max_batt_power_W < c->lim[k].max_batt_power_W)) {
+                    c->env_newest_tighter_steps++;
+                }
+                break;
+            }
         }
     }
     c->sup.torque_req_Nm = c->req_torque_Nm;

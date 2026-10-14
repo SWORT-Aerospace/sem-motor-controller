@@ -86,6 +86,11 @@ target_link_libraries(semmc_host PRIVATE semmc_core)
 target_include_directories(semmc_host PRIVATE platform/host)
 target_compile_options(semmc_host PRIVATE -Wall -Wextra -Werror ${SEMMC_SAN})
 
+add_executable(semmc_contract_report platform/host/contract_report_main.c platform/host/sim_plant.c)
+target_link_libraries(semmc_contract_report PRIVATE semmc_core)
+target_include_directories(semmc_contract_report PRIVATE platform/host)
+target_compile_options(semmc_contract_report PRIVATE -Wall -Wextra -Werror ${SEMMC_SAN})
+
 add_executable(semmc_cfgcheck platform/host/cfgcheck_main.c)
 target_link_libraries(semmc_cfgcheck PRIVATE semmc_core)
 target_compile_options(semmc_cfgcheck PRIVATE -Wall -Wextra -Werror ${SEMMC_SAN})

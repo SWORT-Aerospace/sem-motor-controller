@@ -32,6 +32,7 @@ driver: eco switch OFF->ON edge (wired)   ---> ECO_ASSIST (only if supervisor OK
 * A controller reboot changes `boot_id` (in `ctrl_status`) and therefore the tag. Old-tag frames are rejected (`rx_tag_mismatch`), and the companion must re-handshake.
 * A companion reboot (new `S`) ends the session; ECO exits and needs a new driver edge.
 * Expiration: a request is valid for `supervision.timeout_s` after the last **new** sample. Limits are valid for `limits_timeout_s`.
+* **Limits sets (v0.2 controller behaviour, wire format unchanged).** A new `limits_seq` makes a new newest set and keeps the previous one. Re-sending the same `limits_seq` refreshes the newest set in place. The companion must change `limits_seq` whenever the content changes. A request must reference a held set; the bound applied is `min(newest, referenced)`, so a tighter set applies on the next controller update even before a request references it (`docs/CONTROL_CONTRACT.md` §3).
 * Provisional: 50 Hz / 100 ms, **simulation only**.
 
 ## 2. Calibration blob (controller non-volatile)

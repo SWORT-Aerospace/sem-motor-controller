@@ -232,8 +232,13 @@ static void test_controller_reboot_during_active_request(void)
 }
 
 
+static uint8_t NEWEST_LSEQ;
+static float NEWEST_T;
+
 static void send_limits(uint8_t lseq, float max_t)
 {
+    NEWEST_LSEQ = lseq;
+    NEWEST_T = max_t;
     uint8_t b[8];
     semmc_sup_limits_t l = {SUP_SEQ_LIM++, SUP_TAG, lseq, max_t, 2000.0f};
     (void)semmc_encode_sup_limits(&l, b);
@@ -261,12 +266,15 @@ static void test_limits_update_between_requests(void)
     for (int k = 0; k < 20; k++) { send_req(7u, 1.5f); run_ms(20); }
     CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
     /* New, tighter limits arrive; the next request was computed against the
-     * OLD set and is bounded by it (no spurious supervisor loss). */
+     * OLD set. It stays usable (no spurious supervisor loss), but the newest
+     * set bounds it: an older reference never restores permission the newest
+     * set withdrew (CONTROL_CONTRACT.md I9). The first version of this test
+     * expected the old bound (2.0) here; that expectation was the defect. */
     send_limits(8u, 0.5f);
     run_ms(10);
     CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
     CHECK(C.sup.limits_match);
-    CHECK_NEAR(C.sup.max_torque_Nm, 2.0f, 1e-3f);
+    CHECK_NEAR(C.sup.max_torque_Nm, 0.5f, 1e-3f);
     send_req(8u, 1.5f); /* now referencing the new set */
     run_ms(500);
     CHECK_NEAR(C.sup.max_torque_Nm, 0.5f, 1e-3f);
@@ -335,6 +343,125 @@ static void test_gate_driver_fault(void)
     CHECK(!C.fast_cmd.pwm_enable);
 }
 
+/* ---- Control contract through CAN (docs/CONTROL_CONTRACT.md) ---- */
+/* One supervisor cycle: re-send the newest limits set every 5th request (a
+ * refresh, same limits_seq) and send a request referencing `lref`. */
+static unsigned TICKS;
+static void tick_req(uint8_t lref, float torque)
+{
+    if (TICKS++ % 5u == 0u) send_limits(NEWEST_LSEQ, NEWEST_T);
+    send_req(lref, torque);
+}
+
+static void eco_with(uint8_t lseq, float max_t, float torque)
+{
+    sim_init(MC_BUILD_HOST_SIM);
+    arm();
+    SUP_ON = true;
+    run_ms(300);
+    SUP_ON = false;
+    send_limits(lseq, max_t);
+    SI.driver.mode_eco = true;
+    for (int k = 0; k < 40; k++) { tick_req(lseq, torque); run_ms(20); }
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
+}
+
+static void test_contract_lower_limits_before_matching_request(void)
+{
+    eco_with(7u, 2.0f, 1.8f);
+    CHECK_NEAR(C.arb.accepted_Nm, 1.8f, 1e-3f);
+    send_limits(8u, 0.5f);   /* no request references set 8 yet */
+    run_ms(1);
+    CHECK_NEAR(C.arb.envelope_Nm, 0.5f, 1e-3f);
+    CHECK(C.arb.accepted_Nm <= 1.8f - C.p.slew_down_fast_Nm_s * 0.001f + 1e-4f);
+    for (int k = 0; k < 3; k++) { send_req(7u, 1.8f); run_ms(20); }
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST); /* still usable */
+    CHECK(C.arb.accepted_Nm <= 0.5f + 1e-4f);    /* (1.8-0.5)/100 = 13 ms < 60 ms */
+    CHECK(C.env_newest_tighter_steps > 0u);
+    CHECK(fabsf(C.fast_cmd.iq_ref_A) <= 0.5f / C.p.kt_Nm_per_A + 1e-3f);
+}
+
+static void test_contract_delayed_request_with_older_ref(void)
+{
+    eco_with(7u, 2.0f, 1.8f);
+    send_limits(8u, 0.5f);
+    for (int k = 0; k < 10; k++) { send_req(8u, 1.8f); run_ms(20); }
+    CHECK(C.arb.accepted_Nm <= 0.5f + 1e-4f);
+    /* A request computed against set 7 is delivered late (fresh sequence
+     * number, old limits_ref): it must not ramp the output above set 8. */
+    for (int k = 0; k < 10; k++) {
+        send_req(7u, 1.8f);
+        for (int j = 0; j < 20; j++) {
+            run_ms(1);
+            CHECK(C.arb.accepted_Nm <= 0.5f + 1e-4f);
+        }
+    }
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
+}
+
+static void test_contract_limits_refresh_keeps_previous_set(void)
+{
+    eco_with(7u, 2.0f, 1.0f);
+    send_limits(8u, 0.5f);
+    send_limits(8u, 0.5f);   /* periodic re-send of the newest set */
+    send_limits(8u, 0.5f);
+    CHECK(C.lim[1].valid && C.lim[1].seq == 7u);
+    send_req(7u, 1.0f);      /* still a held set: no spurious supervisor loss */
+    run_ms(20);
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
+    CHECK(C.arb.accepted_Nm <= 0.5f + 1e-4f);
+}
+
+static void test_contract_reordered_request_ignored(void)
+{
+    eco_with(7u, 2.0f, 0.8f);
+    uint8_t b[8];
+    semmc_sup_torque_req_t r = {(uint8_t)(SUP_SEQ_REQ - 3u), SUP_TAG, 7u, false, 0u, 2.0f, (uint16_t)(T / 1000u)};
+    (void)semmc_encode_sup_torque_req(&r, b);
+    mc_core_on_can_rx(&C, T, SEMMC_ID_SUP_TORQUE_REQ, b, 8u);
+    run_ms(20);
+    CHECK_NEAR(C.arb.requested_Nm, 0.8f, 1e-4f);
+    CHECK(C.arb.accepted_Nm <= 0.8f + 1e-4f);
+}
+
+static void test_contract_reengage_bounded_by_newest_envelope(void)
+{
+    eco_with(7u, 1.2f, 1.5f);
+    mc_core_on_can_bus_off(&C, true);
+    run_ms(1);
+    CHECK_EQ_INT(C.sm.state, MC_ST_READY);
+    CHECK(C.arb.accepted_Nm == 0.0f);
+    CHECK(C.fast_cmd.iq_ref_A == 0.0f);
+    mc_core_on_can_bus_off(&C, false);
+    SUP_ON = true;            /* companion re-handshakes (new tag) */
+    run_ms(300);
+    SUP_ON = false;
+    send_limits(9u, 0.6f);
+    for (int k = 0; k < 5; k++) { tick_req(9u, 1.5f); run_ms(20); }
+    CHECK_EQ_INT(C.sm.state, MC_ST_READY);  /* no driver edge yet */
+    CHECK(C.arb.accepted_Nm == 0.0f);
+    SI.driver.mode_eco = false;
+    tick_req(9u, 1.5f);
+    run_ms(20);
+    SI.driver.mode_eco = true;
+    for (int k = 0; k < 30; k++) {
+        tick_req(9u, 1.5f);
+        for (int j = 0; j < 20; j++) {
+            run_ms(1);
+            CHECK(C.arb.accepted_Nm <= 0.6f + 1e-4f);
+        }
+    }
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
+    CHECK_NEAR(C.arb.accepted_Nm, 0.6f, 1e-3f);
+    /* stale: last new request, then silence */
+    send_req(9u, 1.5f);
+    run_ms(95);
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
+    run_ms(10);
+    CHECK_EQ_INT(C.sm.state, MC_ST_READY);
+    CHECK(C.arb.accepted_Nm == 0.0f);
+}
+
 int main(void)
 {
     g_len = load_blob(SEMMC_SYNTH_BLOB, g_blob, sizeof g_blob);
@@ -348,5 +475,10 @@ int main(void)
     RUN(test_software_overcurrent_trips_in_fast_loop);
     RUN(test_hardware_build_rejects_synthetic);
     RUN(test_gate_driver_fault);
+    RUN(test_contract_lower_limits_before_matching_request);
+    RUN(test_contract_delayed_request_with_older_ref);
+    RUN(test_contract_limits_refresh_keeps_previous_set);
+    RUN(test_contract_reordered_request_ignored);
+    RUN(test_contract_reengage_bounded_by_newest_envelope);
     TEST_MAIN_END();
 }

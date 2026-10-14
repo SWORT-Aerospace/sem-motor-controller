@@ -16,6 +16,11 @@
  *  I6 Hardware trips and latched faults remove torque and PWM immediately.
  *  I7 The supervisor can never arm, never reset faults and never select a
  *     mode: those inputs are local (wired) driver controls only.
+ *  I8 accepted torque and |iq_ref|*kt never exceed the local hard ceiling
+ *     computed in the same update (no ramp on a ceiling reduction).
+ *  I9 Above a reduced supervisory envelope the output falls at least at
+ *     slew_down_fast; an envelope is never looser than the newest committed
+ *     limits set, whatever limits_ref the request carries.
  */
 #ifndef SEMMC_MC_STATE_MACHINE_H
 #define SEMMC_MC_STATE_MACHINE_H
@@ -98,7 +103,10 @@ typedef struct {
     bool limits_match;         /* request references the committed limits set */
     float torque_req_Nm;
     bool coast_request;
-    float max_torque_Nm;       /* supervisor-declared bound (<= controller limits) */
+    /* Supervisory envelope: the tighter of the newest committed limits set
+     * and the set the request references (mc_core.c). Never raises the
+     * controller's own hard ceilings. */
+    float max_torque_Nm;
     float max_batt_power_W;
 } mc_supervisor_input_t;
 
@@ -132,6 +140,10 @@ typedef struct {
     float iq_ref_A;
     float id_ref_A;
     float batt_limit_scale;    /* closed-loop battery-current limiter state */
+    /* Diagnostics of the last update (docs/CONTROL_CONTRACT.md). */
+    float hard_ceiling_Nm;     /* L2 local hard ceiling; accepted_Nm <= this, always */
+    float envelope_Nm;         /* L3 supervisory envelope; < 0 when none is active */
+    float target_Nm;           /* request after L2/L3 bounds, before slew */
     uint16_t reason;
     bool pwm_enable;
 } mc_arbiter_t;

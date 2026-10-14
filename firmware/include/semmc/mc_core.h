@@ -105,9 +105,10 @@ typedef struct {
     mc_fresh_t fr_req, fr_limits, fr_hello;
     mc_supervisor_input_t sup;
     /* Double-buffered supervisor bounds: [0] = newest committed set, [1] = the
-     * set before it. A request is bounded by the set it references
-     * (limits_ref), so a limits update between two requests never leaves a
-     * request without its bounds. */
+     * set before it. A request must reference a held set (limits_ref), so a
+     * limits update between two requests does not cause a spurious supervisor
+     * loss; the bound applied is min(newest, referenced), so a tighter newest
+     * set takes effect on the next slow step, before any matching request. */
     struct {
         bool valid;
         uint8_t seq;
@@ -121,6 +122,7 @@ typedef struct {
     float stall_timer_s;
     float stall_prev_t_since_edge;
     uint8_t req_limits_ref;
+    uint32_t env_newest_tighter_steps; /* slow steps where the newest set bounded an older reference */
     /* measurements / estimates */
     float speed_mech_rad_s;
     mc_validity_t speed_val;
