@@ -5,7 +5,7 @@ comparison, robustness to model error, and a bounded schedule export.
     python3 tools/run_optimization.py [--quick]
 
 Writes docs/generated/optimization_synthetic.md, docs/figures/*.png and
-build/schedules/dp_schedule_synthetic.csv. Every number is from synthetic
+docs/generated/dp_schedule_synthetic.csv. Every number is from synthetic
 vehicle, motor, inverter and track models; none predicts real-vehicle energy.
 """
 from __future__ import annotations
@@ -114,7 +114,7 @@ def main() -> int:
     out["robustness"] = rob
 
     # 4. export bounded schedule
-    sched = ROOT / "build" / "schedules" / "dp_schedule_synthetic.csv"
+    sched = ROOT / "docs" / "generated" / "dp_schedule_synthetic.csv"
     dp.export_schedule(best, sched, sim.torque_max_Nm, pmap.label)
     out["schedule_csv"] = str(sched.relative_to(ROOT))
 

@@ -1,0 +1,45 @@
+# CI for sem-motor-controller. NOTE: GitHub only runs workflows from a
+# repository ROOT. While this project lives in a subdirectory of another
+# repository this file is inert; it becomes active once the directory is
+# split into its own repository (ADR-0001).
+name: ci
+on: [push, pull_request]
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain
+        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Generated files are current
+        run: |
+          python tools/gen_config.py --check
+          python tools/gen_protocol.py --check
+      - name: Fetch pinned CSIA core
+        run: python tools/fetch_csia.py
+      - name: Configs validate as expected
+        run: |
+          python tools/config_tool.py validate config/vehicle.synthetic.yaml --mode sim
+          ! python tools/config_tool.py validate config/vehicle.unconfigured.yaml --mode hw
+      - name: C build + tests (ASan/UBSan)
+        run: |
+          cmake -S firmware -B build -G Ninja
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+      - name: Python tests
+        run: python -m pytest
+      - name: Portable core cross-compile (Cortex-M4F, compile check only)
+        run: |
+          cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_PORTABLE_ONLY=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
+          cmake --build build-arm
+          arm-none-eabi-size -t build-arm/libsemmc_core.a
+      - name: Synthetic studies (quick)
+        run: |
+          python tools/run_optimization.py --quick
+          python tools/run_electrical_calcs.py
+          python tools/run_csia_study.py

@@ -525,6 +525,31 @@ def build_c_golden(spec, vectors, h) -> str:
     return "\n".join(L)
 
 
+def build_markdown(spec, h) -> str:
+    P = spec["protocol"]
+    L = [f"# CAN messages - semmc protocol v{P['major']}.{P['minor']} (GENERATED, spec hash `{h}`)", "",
+         "Generated from `protocol/protocol.yaml` by `tools/gen_protocol.py`; do not edit.", "",
+         "Every frame: 8 bytes, 11-bit id, byte 0 = CRC-8/SAE-J1850 over [DataID LE16] + bytes 1..7, "
+         "byte 1 = sequence (u8). Bits are Intel/LSB-first. physical = raw x scale + offset.", "",
+         "| id | message | sender | period | DataID |", "|---|---|---|---|---|"]
+    for m in spec["messages"]:
+        per = f"{m['period_s']*1e3:.0f} ms" + (" + on change" if m.get("on_change") else "") + \
+            (" (PROVISIONAL)" if m.get("provisional") else "")
+        L.append(f"| 0x{m['id']:03X} | `{m['name']}` | {m['sender']} | {per} | 0x{m['data_id']:04X} |")
+    for m in spec["messages"]:
+        desc = " ".join(str(m["description"]).split())
+        L += ["", f"## `{m['name']}` (0x{m['id']:03X})", "", desc, "",
+              "| field | bits | kind | scale | offset | min | max | unit | invalid raw |", "|---|---|---|---|---|---|---|---|---|"]
+        for f in m["fields"]:
+            if f["kind"] == "scaled":
+                L.append(f"| {f['name']} | {f['start']}..{f['start']+f['width']-1}{' (signed)' if f['signed'] else ''} | "
+                         f"scaled | {f['scale']} | {f['offset']} | {f['min']} | {f['max']} | {f.get('unit','')} | "
+                         f"{f['invalid'] if f['invalid'] is not None else '-'} |")
+            else:
+                L.append(f"| {f['name']} | {f['start']}..{f['start']+f['width']-1} | {f['kind']} | - | - | - | - | - | - |")
+    return "\n".join(L) + "\n"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -541,6 +566,7 @@ def main() -> int:
         GEN / "semmc_protocol.py": py,
         GEN / "semmc_golden_vectors.c": build_c_golden(spec, vectors, h),
         VEC: json.dumps({"spec_hash": h, "protocol": spec["protocol"], "vectors": vectors}, indent=1) + "\n",
+        ROOT / "docs" / "generated" / "can_messages.md": build_markdown(spec, h),
     }
     stale = []
     for path, content in outputs.items():

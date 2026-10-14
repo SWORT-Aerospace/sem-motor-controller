@@ -11,7 +11,7 @@
    "dp_time_s": 967.7010417242626,
    "feasible": true,
    "lambda": 48.99808615446091,
-   "solve_s": 5.651866436004639,
+   "solve_s": 5.907997369766235,
    "realized_energy_J": 39761.25285355716,
    "realized_time_s": 970.3999999996652
   },
@@ -22,7 +22,7 @@
    "dp_time_s": 969.6798978490121,
    "feasible": true,
    "lambda": 45.03486752510071,
-   "solve_s": 12.890273332595825,
+   "solve_s": 12.63849925994873,
    "realized_energy_J": 39588.36869133325,
    "realized_time_s": 975.4999999996605
   },
@@ -33,7 +33,7 @@
    "dp_time_s": 965.2597953458334,
    "feasible": true,
    "lambda": 43.88289600610733,
-   "solve_s": 31.60517191886902,
+   "solve_s": 32.049421548843384,
    "realized_energy_J": 39715.355482834304,
    "realized_time_s": 964.8499999996702
   }
@@ -189,5 +189,5 @@
    }
   }
  },
- "schedule_csv": "build/schedules/dp_schedule_synthetic.csv"
+ "schedule_csv": "docs/generated/dp_schedule_synthetic.csv"
 }

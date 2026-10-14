@@ -8,9 +8,9 @@ Track 6000 m, finish-time limit 1000 s, planning reserve 30 s (target 970 s).
 
 | ds m | dv m/s | DP energy J | DP time s | realized energy J | realized time s | solve s |
 |---|---|---|---|---|---|---|
-| 20 | 0.40 | 39778 | 967.7 | 39761 | 970.4 | 5.7 |
-| 10 | 0.20 | 39593 | 969.7 | 39588 | 975.5 | 12.9 |
-| 5 | 0.10 | 39708 | 965.3 | 39715 | 964.8 | 31.6 |
+| 20 | 0.40 | 39778 | 967.7 | 39761 | 970.4 | 5.9 |
+| 10 | 0.20 | 39593 | 969.7 | 39588 | 975.5 | 12.6 |
+| 5 | 0.10 | 39708 | 965.3 | 39715 | 964.8 | 32.0 |
 
 Relative change in DP energy between the two finest grids: 0.29 %. Optimality is claimed only within the discretised model.
 
