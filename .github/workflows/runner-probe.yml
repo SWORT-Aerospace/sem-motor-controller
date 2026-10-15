@@ -1,0 +1,19 @@
+# TEMPORARY DIAGNOSTIC - delete after use. Distinguishes an organisation Actions
+# allow-list policy (job with `uses:` refused) from an account-level block (no
+# job starts at all). Runs only on this probe branch.
+name: runner-probe
+on:
+  push:
+    branches: ["ci-probe/**"]
+permissions:
+  contents: read
+jobs:
+  no-actions:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "runner started; no marketplace actions used"
+  checkout-only:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "actions/checkout was allowed"
