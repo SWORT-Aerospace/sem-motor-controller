@@ -46,6 +46,11 @@ Legend for "how to obtain": **M** measure · **D** datasheet / manufacturer · *
 
 bus voltage rating · transient margin (from measured overshoot) · shunt Ω · CSA gain · ADC Vref/bits · **per-board current offsets** · Vbus divider ratio · hardware overcurrent trip · PWM frequency · dead time · FET derate/trip temperatures · duty limits (from the sampling window) · current-loop gains (from measured L, R).
 
+v0.2 additions:
+* `inverter.current_sample_settle_s`: measured at stage 4 (SIM 1.5 µs).
+* `inverter.voltage_limit_fraction` (SIM 0.95): bounded by validator rule 39 (`hardware/timing/timing_budget.md`).
+* FDCAN clock: the 40 MHz crystal is fixed by the CHUDS bit timing, not by calibration.
+
 ## 5. Limits and timing (decisions that need measured inputs)
 
 max motor/manual torque · max phase current · battery current limit (≤ BMS) · η_min for the feed-forward battery limit · overspeed trip and taper · UV derate/trip, OV trip · motor temperature derate/trip · torque slew up/down/fast · unknown-temperature derate factor · throttle release/engage thresholds · software overcurrent · coast mode · **supervisory rate and timeout (hazard and latency analysis)** · limits timeout.
@@ -57,7 +62,7 @@ max motor/manual torque · max phase current · battery current limit (≤ BMS) 
 | Competition year/event/region | **U** (`vehicle.competition_event` null) |
 | Edition of rules in force | **R** — 2027 Chapter I exists; contents unread |
 | Attempt format (laps, time limit) | **R** — only US 2025 seen ("4 laps in 35 min", ~25 km/h) |
-| Budget | **U** |
+| Budget | $500–1,000, provisional (user). Priced draft: `docs/BUDGET.md` (not shown feasible yet) |
 | Delivery deadline | **U** |
 | Existing controller and its baseline performance | **U** — none identified |
 | Cooling, enclosure, harness, connector constraints | **U** |

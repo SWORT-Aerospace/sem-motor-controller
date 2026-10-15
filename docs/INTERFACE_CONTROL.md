@@ -5,9 +5,10 @@
 | Item | Value | Status |
 |---|---|---|
 | Physical | ISO 11898-2 high-speed CAN; TCAN1042-class transceiver, FD-tolerant | candidate |
-| Identifiers | 11-bit, `0x300–0x33F` (outside Cornell CHUDS `0x000–0x2FF`, which CHUDS rejects) | frozen v1 |
-| Frame format | classic CAN, DLC 8 (coexists with CHUDS CAN-FD frames when the controller is FD-capable) | frozen v1 |
-| Nominal bit rate | 500 kbit/s (sample point to match the bus, 80 % on CHUDS) | frozen v1 |
+| Identifiers | 11-bit, `0x300–0x33F`. Outside today's CHUDS classes (0x000–0x2FF), but inside CHUDS's **reserved** 0x300–0x7FF, so a vehicle-team reservation is required (`docs/CAN_INTEGRATION.md` §3) | frozen v1; **allocation pending** |
+| Frame format | classic CAN, DLC 8. CHUDS software drops classic frames (`ForeignFrame`), so the VCU needs a separate raw-socket consumer (`host/vcu_bridge/`) | frozen v1 |
+| Controller CAN mode | **FD operation enabled**, nominal 500 kbit/s at 80 %, data 2 Mbit/s at 80 % (required to coexist with CHUDS FD frames, even though semmc transmits classic only); FDCAN kernel clock 40 MHz (`docs/generated/can_bit_timing.md`) | required |
+| Nominal bit rate | 500 kbit/s, sample point 80 % (CHUDS `frame.hpp`) | frozen v1 |
 | Byte/bit order | Intel (LSB-first), little-endian multi-byte | frozen v1 |
 | Integrity | CRC-8/SAE-J1850 over the 16-bit Data ID `(major<<11)|id` and bytes 1–7; check value `"123456789"` → 0x4B | frozen v1 |
 | Sequence | byte 1, u8 per message, wraps | frozen v1 |

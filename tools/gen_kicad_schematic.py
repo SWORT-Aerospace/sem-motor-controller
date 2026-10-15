@@ -232,8 +232,9 @@ def sheets(mcu_map: dict) -> list:
         R("10k", "BOOT0", "GND", status="design value", rating="boot from flash"),
         C("100nF", "NRST", "GND", status="design value"),
         P("SW", "Switch", "SW_Push", "RESET", {"1": "NRST", "2": "GND"}, status="bench"),
-        P("Y", "Device", "Crystal_GND24", "8MHz", {"1": "HSE_IN", "2": "GND", "3": "HSE_OUT", "4": "GND"},
-          status="CANDIDATE", rating="FDCAN kernel clock (500 kbit/s = 16 tq); tolerance per CAN oscillator budget"),
+        P("Y", "Device", "Crystal_GND24", "40MHz", {"1": "HSE_IN", "2": "GND", "3": "HSE_OUT", "4": "GND"},
+          status="CANDIDATE", rating="FDCAN kernel clock: 500k/2M CAN FD at 80 %/80 % needs 20 or 40 MHz "
+                                     "(docs/generated/can_bit_timing.md); 8 MHz cannot place the data-phase SP"),
         C(f"{U} load", "HSE_IN", "GND", status=U, rating="from the selected crystal's C_L and stray"),
         C(f"{U} load", "HSE_OUT", "GND", status=U, rating="see above"),
         P("J", "Connector", "Conn_ARM_JTAG_SWD_10", "SWD", {"1": "+3V3", "2": "SWDIO", "3": "GND", "4": "SWCLK",

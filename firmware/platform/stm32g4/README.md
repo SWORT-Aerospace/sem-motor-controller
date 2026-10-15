@@ -22,3 +22,16 @@ No embedded motor-control firmware image exists. The portable core cross-compile
 
 ## Timing budget (to be measured, not estimated)
 Fast step on M4F at 170 MHz: TBD by measurement on hardware (GPIO toggle + scope, or the DWT cycle counter). The budget is 50 µs at 20 kHz minus ADC conversion time. No figure is claimed until measured.
+
+## v0.2 platform requirements (from the hardware draft)
+* **Clock:** HSE 40 MHz crystal. SYSCLK 170 MHz (PLLM /10, N ×85, R /2 [R]); FDCAN kernel clock = HSE 40 MHz.
+* **FDCAN1:** FD operation enabled (CCCR.FDOE = 1); transmits classic frames only.
+  * Nominal timing: NBRP 1, NTSEG1 63, NTSEG2 16 (80 tq, 80 %).
+  * Data timing: DBRP 1, DTSEG1 15, DTSEG2 4 (20 tq, 80 %).
+  * Register encodings subtract 1 [R].
+  * Required to coexist with CHUDS (`docs/CAN_INTEGRATION.md`). Acceptance filters: 0x300–0x33F classic only.
+* **TIM1:** centre-aligned complementary PWM.
+  * BDTR: DTG per `hardware/timing/timing_budget.md`; BKIN (PE15, nFAULT) and BKIN2 (PC3, OV comparator) active low; BKF 4; OSSI = 1, OISx = OISxN = 0; AOE = 0.
+  * TRGO2 starts ADC1/ADC2 (dual simultaneous injected) and ADC3 (injected) at the PWM valley.
+* **Per-cycle phase validity:** phase k is valid only if its duty is ≤ the sampleable limit, `1 - 2 (deadtime + current_sample_settle_s) f_pwm`. Pass the mask to `mc_phase_meas_t`; validator rule 39 guarantees at least two valid phases.
+* **Fast step:** measure DWT->CYCCNT around `mc_core_fast_step` at bench stage 2 and record it in the timing budget.

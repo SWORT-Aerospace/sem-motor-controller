@@ -98,4 +98,4 @@ line,refs,qty,symbol,value,mpn_candidate,dnp,selection_status,rating_basis,pin_c
 97,U601,1,semmc:INA228,INA228 (candidate),INA228AIDGSR (verify),,"CANDIDATE (85 V common mode, 20-bit)",,UNVERIFIED (pinout not checked against a primary datasheet),bus_measurement
 98,U801,1,MCU_ST_STM32G4:STM32G474VETx,STM32G474VET6,STM32G474VET6,,CANDIDATE (pin map generated),,KiCad library symbol (pin map from ST open pin data @7d1f151),mcu_debug
 99,U802,1,Power_Supervisor:MAX6369,MAX6369 (candidate),MAX6369KA+T,,CANDIDATE - SET0..2 strap per timeout table (verify),,,mcu_debug
-100,Y801,1,Device:Crystal_GND24,8MHz,,,CANDIDATE,FDCAN kernel clock (500 kbit/s = 16 tq); tolerance per CAN oscillator budget,,mcu_debug
+100,Y801,1,Device:Crystal_GND24,40MHz,,,CANDIDATE,FDCAN kernel clock: 500k/2M CAN FD at 80 %/80 % needs 20 or 40 MHz (docs/generated/can_bit_timing.md); 8 MHz cannot place the data-phase SP,,mcu_debug

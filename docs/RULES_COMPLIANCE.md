@@ -27,7 +27,7 @@ Status codes: **S26** 2026 Ch I extract · **S25** earlier edition · **CHK** 20
 | Data & Telemetry Off-Track Award (Schmid bootcamp) | connect the energy sensors to your onboard computer and IoT platform | — | OFF | The companion and logger design supports this; no controller impact. |
 
 ## Open rule questions for the organizers
-1. Does a vendor motor-control SDK (e.g. ST MCSDK), or vendor HAL drivers, count as "kit software" under Art. 66a?
+1. Does a vendor motor-control SDK (e.g. ST MCSDK), or vendor HAL drivers, count as "kit software" under Art. 66a? (The text in hand does not decide this; the project does not assume a blanket ban. See `RULES_RECONCILIATION.md`.)
 2. Is driver-selectable supervisory torque assistance (no steering, driver-cancellable) permitted in the Mileage Challenge?
 3. Is regenerative braking permitted for BEV, and how is it counted?
 4. Do controller input/DC-link capacitors fall under any energy-storage restriction?

@@ -1,7 +1,7 @@
 (export (version "E")
   (design
     (source "/home/user/swort/sem-motor-controller/hardware/kicad/semmc.kicad_sch")
-    (date "Thu Oct 15 00:47:40 2026")
+    (date "Thu Oct 15 00:55:05 2026")
     (tool "Eeschema 7.0.11+dfsg-1build4")
     (sheet (number "1") (name "/") (tstamps "/")
       (title_block
@@ -1806,13 +1806,13 @@
       (sheetpath (names "/mcu_debug/") (tstamps "/a98c448d-ac41-573e-b52a-3bd30d65afa0/"))
       (tstamps "471f3290-8735-59cf-b945-430247151248"))
     (comp (ref "Y801")
-      (value "8MHz")
+      (value "40MHz")
       (fields
-        (field (name "Rating_basis") "FDCAN kernel clock (500 kbit/s = 16 tq); tolerance per CAN oscillator budget")
+        (field (name "Rating_basis") "FDCAN kernel clock: 500k/2M CAN FD at 80 %/80 % needs 20 or 40 MHz (docs/generated/can_bit_timing.md); 8 MHz cannot place the data-phase SP")
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Device") (part "Crystal_GND24") (description "Four pin crystal, GND on pins 2 and 4"))
       (property (name "Status") (value "CANDIDATE"))
-      (property (name "Rating_basis") (value "FDCAN kernel clock (500 kbit/s = 16 tq); tolerance per CAN oscillator budget"))
+      (property (name "Rating_basis") (value "FDCAN kernel clock: 500k/2M CAN FD at 80 %/80 % needs 20 or 40 MHz (docs/generated/can_bit_timing.md); 8 MHz cannot place the data-phase SP"))
       (property (name "Sheetname") (value "mcu_debug"))
       (property (name "Sheetfile") (value "08_mcu_debug.kicad_sch"))
       (property (name "ki_description") (value "Four pin crystal, GND on pins 2 and 4"))

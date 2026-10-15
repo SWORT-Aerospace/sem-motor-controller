@@ -1499,7 +1499,7 @@
       (reference "SW801") (unit 1) (value "RESET") (footprint "")
     )
     (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/da509d39-4ca9-536a-a750-b7e6208bba16"
-      (reference "Y801") (unit 1) (value "8MHz") (footprint "")
+      (reference "Y801") (unit 1) (value "40MHz") (footprint "")
     )
     (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/69d58264-8d03-5ae9-ad36-a902f52642f3"
       (reference "C811") (unit 1) (value "UNRESOLVED load") (footprint "")
