@@ -37,15 +37,34 @@ Search summaries attributed specific claims to P1 and P3: a measurement-based mo
 * **Coast-down identification** (`fit_coastdown`) fits `A + C·v_air²` with covariance. It reports `identifiable = False` with an explicit verdict when A and C are strongly correlated or poorly determined. Tested: a 14→2 m/s coast identifies both; a 7→6 m/s coast is refused.
 * **Battery power** comes from maps `P_batt = f(v, T, V, θ, mode)` that declare which losses they contain. `check_no_double_counting` refuses a map that already includes drivetrain losses if the vehicle model also applies them. `MeasuredLossMap` interpolates absolute loss (W), never efficiency ratios, which are ill-conditioned near zero torque, and refuses to extrapolate.
 
-## 4. Offline DP — SYNTHETIC result (`docs/generated/optimization_synthetic.md`)
+## 4. Offline DP - SYNTHETIC result, v0.2 actuator model (`docs/generated/optimization_synthetic.md`)
 
-Synthetic 4 × 1.5 km track (1 % climb and descent, four corners), synthetic 100 kg vehicle, finish limit 1000 s, reserve 30 s.
+> **The v0.1 figures in this section (39.7 / 46.2 / 55.1 kJ and the "savings" derived from them) are SUPERSEDED and withdrawn.**
+> * The v0.1 DP exported mechanical braking as coast.
+> * Its simulator braked every strategy automatically to an envelope.
+> * Its power map omitted the motor friction power.
+> * Its DP checked corner limits only at grid nodes.
 
-* **Grid convergence:** DP energy 39.78 / 39.59 / 39.71 kJ at (ds, dv) = (20 m, 0.4), (10 m, 0.2), (5 m, 0.1). The two finest grids differ by 0.29 %. Optimality is claimed **only within the discretized model**.
-* **Starts and near-zero speed:** `dt = 2ds/(v_i + v_{i+1})`, infeasible only when both are zero. A standing start is tested, and so are mandatory stops (Urban Concept style).
-* **Matched-time comparison on one forward simulator** (with controller slew limits and a braking envelope): DP plan 39.7 kJ · best of six pulse-and-coast settings 46.2 kJ · constant speed 55.1 kJ. **Caveat:** most of the constant-speed penalty is braking for a corner that follows the synthetic descent (13.2 kJ of braking energy). This is a property of this synthetic track, not a general result.
-* **Robustness (the key engineering finding):** the open-loop DP plan **missed the finish-time limit** with +20 % Crr (1037.6 s), +5 % mass (1005.0 s) or a 2 m/s headwind (1056.0 s). With the bounded pace correction (±0.3 N·m) all of these finished at about 965 s, at an energy cost (headwind case: 50.1 kJ with correction vs 40.1 kJ for the same plan uncorrected, which was an invalid run). The reserve and the correction bound must be sized from **measured** model uncertainty. An open-loop optimal schedule is not deployable on its own.
-* **Model–execution gap:** at ds = 10 m the executed schedule took 975.5 s against the DP's internal 969.7 s (slew and time discretization). Part of the reserve is consumed by execution, not only by model error.
+v0.2 represents **coast**, **propulsion** (controller torque) and **driver braking** (friction brake, issued as guidance with reaction and tracking assumptions) as separate actuators. All strategies run on one simulator with identical route, start, terminal condition, finish target, actuator limits, driver model and auxiliary load. Nothing brakes automatically, and battery-terminal energy is reconciled per run (`docs/ENERGY_ACCOUNTING.md`).
+
+* **Grid convergence.** 41.18 kJ at 5 m / 0.1 m/s and 41.13 kJ at 2.5 m / 0.05 m/s differ by 0.13 %. Coarser grids (20 m, 10 m) were 6–7 % higher; the comparisons use 5 m.
+* **Track A (synthetic, 1 % descent into an R = 20 m corner), executed at matched time:**
+  * DP with driver-braking guidance: 42.7 kJ (7.3 kJ dissipated in the friction brake, 8 brake applications);
+  * pulse-and-coast with driver braking: 52.5 kJ;
+  * constant speed with driver braking: 54.5 kJ.
+* **A torque-only policy is physically infeasible on track A.** Coasting from rest at the top of the descent reaches 5.99 m/s at a corner limited to 5.48 m/s. Braking (driver now, regeneration later) is structurally required there. The optimiser reports this; it does not hide it.
+* **Track B (the same lap without grades), where torque-only is feasible:**
+  * DP torque-only: 33.9 kJ, the same as the DP with braking available (no braking chosen);
+  * pulse-and-coast torque-only: 37.1 kJ;
+  * constant speed torque-only: 42.9 kJ;
+  * the braking-cued baselines did worse than their torque-only versions (45.0 and 50.4 kJ).
+* **Driver guidance robustness.**
+  * With a 0.3 m/s planning margin, the plan stays within corner limits for driver reactions of 0.5–1.5 s and ±20 % deceleration tracking, except a fast driver braking 20 % weak (+0.16 m/s overspeed).
+  * Without the margin, fast reactions overspeed.
+  * The margin costs ≈ 2.5 kJ.
+* **Model error.** The fixed plan exceeds the 1000 s **limit** with +20 % Crr (1034 s), +5 % mass (1003 s) or a 2 m/s headwind (1053 s). With bounded pace correction, every case finishes at ≈ 958 s, at an energy cost. The reserve and the correction bound must be sized from measured uncertainty.
+* **Execution gap.** The executed time exceeds the DP's internal time by up to ≈ 8 s (slew, driver model). The matched comparison re-plans with an internal allowance until the executed run meets the target.
+* **Final speed.** The DP finishes slower (≈ 3.8 m/s versus ≈ 6.3 m/s for the cruise baselines). Remaining kinetic energy gets no credit under the terminal condition, and that is part of the DP's advantage.
 
 ## 5. Efficiency hypotheses (each evaluated separately, synthetic data)
 
@@ -55,7 +74,7 @@ Synthetic 4 × 1.5 km track (1 % climb and descent, four corners), synthetic 100
 | H2 | Better gate-drive and dead-time tuning | Dead time 100→400 ns changes run-weighted loss by only ~0.04 W in the model (voltage distortion not modelled) | measured transitions; dead-time sweep | open — likely small |
 | H3 | Lower light-load and coast consumption | Gate-off coasting removes switching and gate losses (~0.2–0.7 W at zero current for the candidates) versus zero-current control. **Gate-off is only valid while line-line back-EMF < Vbus**, or the diodes conduct and brake (validator rule). With no freewheel the motor's iron and friction drag stay in both modes. | coast-down with gate-off vs zero-current, freewheel locked/unlocked | open |
 | H4 | Better motor operating-point selection | With Ld = Lq (synthetic) MTPA gives **no** gain; the value depends on saliency | measured Ld, Lq | deferred |
-| H5 | Fewer unnecessary accelerations and braking events | The DP plan had 22 acceleration events but far less braking energy (4.9 kJ vs 13.2 kJ) than constant speed | matched-time track runs (VALIDATION_PLAN §5) | open |
+| H5 | Fewer unnecessary accelerations and braking events | v0.2: on track A the DP plan dissipated 7.3 kJ in driver braking vs 12.5 kJ (constant speed) and 12.4 kJ (pulse-and-coast); on the flat track the braking-cued baselines were worse than their torque-only versions (v0.1 figures withdrawn) | matched-time track runs (VALIDATION_PLAN §5) | open |
 | H6 | Reduced telemetry/compute/modem consumption | Synthetic electronics budget: 6.5 kJ per 1000 s run (Pi-class computer 4 kJ) against ~40 kJ propulsion, i.e. **~16 %**. If the joulemeter measures everything after the battery (R? 57b/56c), this is first-order. | measured rail currents (stage 2) | open — high priority |
 | H7 | Better calibration prevents biased decisions | An uncalibrated 3 mV CSA offset on 1 mΩ = 3 A against ~2 A cruise current; any strategy using that current would be badly biased | per-board offset calibration; INA228 cross-check | open — mandatory |
 

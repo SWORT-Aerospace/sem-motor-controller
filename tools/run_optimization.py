@@ -331,7 +331,7 @@ def _write_md(out):
           "|---|---|---|---|---|---|---|---|---|"]
     for c in out["grid_convergence"]:
         r = c["realized"]
-        L.append(f"| {c['ds_m']:.0f} | {c['dv_mps']:.2f} | {c['dp_energy_J']:.0f} | {c['dp_brake_J']:.0f} | "
+        L.append(f"| {c['ds_m']:g} | {c['dv_mps']:.2f} | {c['dp_energy_J']:.0f} | {c['dp_brake_J']:.0f} | "
                  f"{c['dp_time_s']:.1f} | {r['energy_J']:.0f} | {r['time_s']:.1f} | {r['valid']} | {c['solve_s']:.1f} |")
     L += ["", f"Relative change in DP energy between the two finest grids: {100*out['grid_rel_change_last']:.2f} %. "
           "Comparisons below use the second-finest grid; read their differences against this discretisation "

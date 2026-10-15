@@ -32,16 +32,17 @@ With the synthetic `a_max` = 1.5 m/s² the limit never binds (2 N·m produces < 
 | ds m | dv m/s | DP battery J | DP brake J | DP time s | executed battery J | executed time s | valid | solve s |
 |---|---|---|---|---|---|---|---|---|
 | 20 | 0.40 | 44227 | 8084 | 964.5 | 44172 | 967.7 | True | 6.3 |
-| 10 | 0.20 | 43742 | 8084 | 968.5 | 43733 | 976.4 | True | 13.3 |
-| 5 | 0.10 | 41181 | 6063 | 969.2 | 41199 | 978.3 | True | 29.1 |
+| 10 | 0.20 | 43742 | 8084 | 968.5 | 43733 | 976.4 | True | 14.0 |
+| 5 | 0.10 | 41181 | 6063 | 969.2 | 41199 | 978.3 | True | 29.7 |
+| 2.5 | 0.05 | 41125 | 6063 | 969.9 | 41169 | 980.7 | True | 67.4 |
 
-Relative change between the two finest grids: 6.22 %.
+Relative change in DP energy between the two finest grids: 0.13 %. Comparisons below use the second-finest grid; read their differences against this discretisation error, and treat optimality as holding only within the discretised model.
 
-## 4a. Matched-time comparison, track A_synthetic (grid 10.0 m / 0.2 m/s)
+## 4a. Matched-time comparison, track A_synthetic (grid 5.0 m / 0.1 m/s)
 
 | strategy | battery J | time s | friction-brake J | aux J | final v m/s | overspeed events (max m/s) | brake applications | accel events | energy residual J | parameters |
 |---|---|---|---|---|---|---|---|---|---|---|
-| dp_propulsion_coast_brake | 43755 | 968.0 | 8188 | 2904 | 3.96 | 0 (0.00) | 6 | 34 | 0.00 | `{"ds_m": 10.0, "dv_mps": 0.2, "policy": "propulsion_coast_brake", "plan_margin_mps": 0.3, "plan_internal_target_s": 963.4}` |
+| dp_propulsion_coast_brake | 42684 | 967.7 | 7324 | 2903 | 3.90 | 0 (0.00) | 8 | 30 | 0.00 | `{"ds_m": 5.0, "dv_mps": 0.1, "policy": "propulsion_coast_brake", "plan_margin_mps": 0.3, "plan_internal_target_s": 961.5}` |
 | constant_speed_driver_brake | 54541 | 970.0 | 12484 | 2910 | 6.06 | 0 (0.00) | 12 | 13 | -0.00 | `{"v_set_mps": 6.057}` |
 | pulse_and_coast_driver_brake | 52473 | 969.5 | 12356 | 2909 | 6.15 | 0 (0.00) | 15 | 104 | 0.00 | `{"band_center_mps": 6.063, "band_width_mps": 0.5, "pulse_torque_Nm": 1.0}` |
 | dp_torque_only | — | **infeasible** | | | | | | | | no feasible path for this actuator set; coasting alone cannot meet the downstream corner limit from s = 700 m (gravity/descent accelerates the vehicle above the limit even from rest) |
@@ -50,12 +51,12 @@ Relative change between the two finest grids: 6.22 %.
 
 **Torque-only on track A is physically infeasible.** Coasting from rest at 700 m (top of the 1 % descent) reaches 5.99 m/s at the R = 20 m corner, where the limit is 5.48 m/s. No torque schedule can fix that. Meeting that corner needs braking: the driver's friction brake in the first vehicle version, or regeneration later (deferred, ADR-0007). The DP reports this; it does not brake silently.
 
-## 4b. Matched-time comparison, track B_synthetic_flat (grid 10.0 m / 0.2 m/s)
+## 4b. Matched-time comparison, track B_synthetic_flat (grid 5.0 m / 0.1 m/s)
 
 | strategy | battery J | time s | friction-brake J | aux J | final v m/s | overspeed events (max m/s) | brake applications | accel events | energy residual J | parameters |
 |---|---|---|---|---|---|---|---|---|---|---|
-| dp_propulsion_coast_brake | 34382 | 967.7 | 0 | 2903 | 4.31 | 0 (0.00) | 0 | 50 | -0.00 | `{"ds_m": 10.0, "dv_mps": 0.2, "policy": "propulsion_coast_brake", "plan_margin_mps": 0.3, "plan_internal_target_s": 970.0}` |
-| dp_torque_only | 34568 | 969.0 | 0 | 2907 | 4.47 | 0 (0.00) | 0 | 56 | -0.00 | `{"ds_m": 10.0, "dv_mps": 0.2, "policy": "propulsion_coast", "plan_margin_mps": 0.3, "plan_internal_target_s": 967.6}` |
+| dp_propulsion_coast_brake | 33876 | 968.4 | 0 | 2905 | 3.79 | 0 (0.00) | 0 | 40 | 0.00 | `{"ds_m": 5.0, "dv_mps": 0.1, "policy": "propulsion_coast_brake", "plan_margin_mps": 0.3, "plan_internal_target_s": 966.4}` |
+| dp_torque_only | 33872 | 970.5 | 0 | 2912 | 3.83 | 0 (0.00) | 0 | 45 | 0.00 | `{"ds_m": 5.0, "dv_mps": 0.1, "policy": "propulsion_coast", "plan_margin_mps": 0.3, "plan_internal_target_s": 968.4}` |
 | constant_speed_driver_brake | 50398 | 970.0 | 6724 | 2910 | 6.30 | 0 (0.00) | 8 | 9 | -0.00 | `{"v_set_mps": 6.296}` |
 | constant_speed_torque_only | 42905 | 970.0 | 0 | 2910 | 6.35 | 0 (0.00) | 0 | 1 | 0.00 | `{"v_set_mps": 6.348}` |
 | pulse_and_coast_driver_brake | 44985 | 970.0 | 6344 | 2910 | 6.44 | 0 (0.00) | 14 | 93 | -0.00 | `{"band_center_mps": 6.309, "band_width_mps": 0.5, "pulse_torque_Nm": 1.0}` |
@@ -67,35 +68,35 @@ The plan is issued with an assumed 1.0 s reaction. The rows vary the driver's ac
 
 | case | battery J | time s | friction-brake J | aux J | final v | overspeed events (max m/s) | brake applications | accel events | residual J |
 |---|---|---|---|---|---|---|---|---|---|
-| margin 0.0 m/s, reaction 0.5 s, decel x0.8 | 41026 | 950.8 **INVALID** | 5393 | 2853 | 4.00 | 3 (0.12) | 8 | 26 | -0.00 |
-| margin 0.0 m/s, reaction 0.5 s, decel x1.0 | 41081 | 955.4 **INVALID** | 5585 | 2866 | 3.90 | 1 (0.06) | 8 | 26 | -0.00 |
-| margin 0.0 m/s, reaction 0.5 s, decel x1.2 | 41116 | 960.6 | 5748 | 2882 | 3.86 | 0 (0.00) | 8 | 26 | 0.00 |
-| margin 0.0 m/s, reaction 1.0 s, decel x0.8 | 41121 | 964.4 | 5874 | 2893 | 3.78 | 0 (0.00) | 8 | 26 | -0.00 |
-| margin 0.0 m/s, reaction 1.0 s, decel x1.0 | 41170 | 975.2 | 6178 | 2926 | 3.62 | 0 (0.00) | 8 | 26 | -0.00 |
-| margin 0.0 m/s, reaction 1.0 s, decel x1.2 | 41229 | 983.4 | 6416 | 2950 | 3.51 | 0 (0.00) | 8 | 26 | 0.00 |
-| margin 0.0 m/s, reaction 1.5 s, decel x0.8 | 41194 | 974.9 | 6200 | 2925 | 3.65 | 0 (0.00) | 8 | 26 | -0.00 |
-| margin 0.0 m/s, reaction 1.5 s, decel x1.0 | 41277 | 993.4 | 6679 | 2980 | 3.37 | 0 (0.00) | 8 | 26 | -0.00 |
-| margin 0.0 m/s, reaction 1.5 s, decel x1.2 | 41358 | 1010.2 | 7052 | 3031 | 3.16 | 0 (0.00) | 8 | 26 | -0.00 |
-| margin 0.3 m/s, reaction 0.5 s, decel x0.8 | 43309 | 943.2 **INVALID** | 6984 | 2830 | 4.54 | 2 (0.16) | 5 | 29 | -0.00 |
-| margin 0.3 m/s, reaction 0.5 s, decel x1.0 | 43329 | 950.0 | 7213 | 2850 | 4.41 | 0 (0.00) | 5 | 29 | -0.00 |
-| margin 0.3 m/s, reaction 0.5 s, decel x1.2 | 43420 | 958.3 | 7507 | 2875 | 4.31 | 0 (0.00) | 5 | 29 | 0.00 |
-| margin 0.3 m/s, reaction 1.0 s, decel x0.8 | 43582 | 961.9 | 7778 | 2886 | 4.22 | 0 (0.00) | 5 | 29 | 0.00 |
-| margin 0.3 m/s, reaction 1.0 s, decel x1.0 | 43733 | 976.4 | 8254 | 2929 | 3.97 | 0 (0.00) | 5 | 29 | 0.00 |
-| margin 0.3 m/s, reaction 1.0 s, decel x1.2 | 43839 | 991.2 | 8645 | 2974 | 3.72 | 0 (0.00) | 5 | 29 | 0.00 |
-| margin 0.3 m/s, reaction 1.5 s, decel x0.8 | 43593 | 970.3 | 7943 | 2911 | 4.23 | 0 (0.00) | 5 | 29 | 0.00 |
-| margin 0.3 m/s, reaction 1.5 s, decel x1.0 | 43794 | 1002.4 | 8848 | 3007 | 3.54 | 0 (0.00) | 5 | 29 | -0.00 |
-| margin 0.3 m/s, reaction 1.5 s, decel x1.2 | 43946 | 1028.9 | 9371 | 3087 | 3.10 | 0 (0.00) | 5 | 29 | 0.00 |
+| margin 0.0 m/s, reaction 0.5 s, decel x0.8 | 39902 | 930.3 **INVALID** | 3626 | 2791 | 4.36 | 7 (0.74) | 7 | 23 | -0.00 |
+| margin 0.0 m/s, reaction 0.5 s, decel x1.0 | 39924 | 940.0 **INVALID** | 3998 | 2820 | 4.19 | 9 (0.59) | 7 | 23 | 0.00 |
+| margin 0.0 m/s, reaction 0.5 s, decel x1.2 | 39984 | 947.0 **INVALID** | 4292 | 2841 | 4.09 | 10 (0.45) | 7 | 23 | 0.00 |
+| margin 0.0 m/s, reaction 1.0 s, decel x0.8 | 40028 | 959.5 **INVALID** | 4708 | 2879 | 3.95 | 7 (0.14) | 7 | 23 | -0.00 |
+| margin 0.0 m/s, reaction 1.0 s, decel x1.0 | 40121 | 977.4 | 5280 | 2932 | 3.68 | 0 (0.00) | 7 | 23 | -0.00 |
+| margin 0.0 m/s, reaction 1.0 s, decel x1.2 | 40222 | 993.6 | 5744 | 2981 | 3.45 | 0 (0.00) | 4 | 23 | -0.00 |
+| margin 0.0 m/s, reaction 1.5 s, decel x0.8 | 40175 | 981.6 | 5417 | 2945 | 3.71 | 0 (0.00) | 5 | 23 | -0.00 |
+| margin 0.0 m/s, reaction 1.5 s, decel x1.0 | 40293 | 1011.7 **OVER LIMIT** | 6165 | 3035 | 3.23 | 0 (0.00) | 4 | 23 | 0.00 |
+| margin 0.0 m/s, reaction 1.5 s, decel x1.2 | 40528 | 1049.4 **OVER LIMIT** | 6964 | 3148 | 2.63 | 0 (0.00) | 4 | 23 | -0.00 |
+| margin 0.3 m/s, reaction 0.5 s, decel x0.8 | 40999 | 945.5 **INVALID** | 5212 | 2837 | 4.32 | 5 (0.16) | 7 | 29 | -0.00 |
+| margin 0.3 m/s, reaction 0.5 s, decel x1.0 | 41047 | 952.2 **INVALID** | 5452 | 2857 | 4.22 | 1 (0.07) | 7 | 29 | 0.00 |
+| margin 0.3 m/s, reaction 0.5 s, decel x1.2 | 41096 | 960.3 | 5714 | 2881 | 4.10 | 0 (0.00) | 7 | 29 | -0.00 |
+| margin 0.3 m/s, reaction 1.0 s, decel x0.8 | 41120 | 965.0 | 5874 | 2895 | 4.03 | 0 (0.00) | 6 | 29 | -0.00 |
+| margin 0.3 m/s, reaction 1.0 s, decel x1.0 | 41199 | 978.3 | 6270 | 2935 | 3.85 | 0 (0.00) | 6 | 29 | -0.00 |
+| margin 0.3 m/s, reaction 1.0 s, decel x1.2 | 41276 | 991.7 | 6612 | 2975 | 3.67 | 0 (0.00) | 5 | 29 | -0.00 |
+| margin 0.3 m/s, reaction 1.5 s, decel x0.8 | 41242 | 986.6 | 6509 | 2960 | 3.69 | 0 (0.00) | 4 | 29 | -0.00 |
+| margin 0.3 m/s, reaction 1.5 s, decel x1.0 | 41368 | 1004.2 **OVER LIMIT** | 6952 | 3013 | 3.45 | 0 (0.00) | 5 | 29 | 0.00 |
+| margin 0.3 m/s, reaction 1.5 s, decel x1.2 | 41460 | 1027.0 **OVER LIMIT** | 7388 | 3081 | 3.20 | 0 (0.00) | 5 | 29 | -0.00 |
 
 ## 6. Robustness of the fixed braking plan to model error
 
 | case | DP no pace E / T / valid | DP + bounded pace E / T / valid |
 |---|---|---|
-| nominal | 43755 J / 968.0 s / True | 47864 J / 960.4 s / True |
-| crr+20% | 44085 J / 1030.7 s / True | 53105 J / 960.7 s / True |
-| cda+20% | 43895 J / 987.9 s / True | 49581 J / 960.3 s / True |
-| mass+5% | 43992 J / 1001.3 s / True | 49738 J / 960.4 s / True |
-| crr-20% | 43422 J / 916.0 s / True | 42245 J / 960.5 s / True |
-| headwind 2 m/s | 44159 J / 1048.7 s / True | 54715 J / 960.6 s / True |
+| nominal | 42684 J / 967.7 s / valid | 47061 J / 958.5 s / valid |
+| crr+20% | 42978 J / 1034.3 s / **OVER LIMIT** | 52192 J / 958.6 s / valid |
+| cda+20% | 42744 J / 989.8 s / valid | 48335 J / 958.5 s / valid |
+| mass+5% | 42805 J / 1003.1 s / **OVER LIMIT** | 49391 J / 958.4 s / valid |
+| crr-20% | 42440 J / 919.4 s / valid | 41999 J / 957.5 s / valid |
+| headwind 2 m/s | 43017 J / 1052.5 s / **OVER LIMIT** | 53116 J / 958.8 s / valid |
 
 ## 7. Superseded v0.1 figures
 

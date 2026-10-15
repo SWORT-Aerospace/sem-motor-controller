@@ -3,9 +3,9 @@ DRV_NFAULT,PC13,2,GPIO,,CANDIDATE - AF/timing not verified
 PWM_A_HI,PC0,8,TIM1_CH1,gate driver INHA,CANDIDATE - AF/timing not verified
 PWM_B_HI,PC1,9,TIM1_CH2,INHB,CANDIDATE - AF/timing not verified
 PWM_C_HI,PC2,10,TIM1_CH3,INHC,CANDIDATE - AF/timing not verified
-ISENSE_A,PC3,11,ADC1_IN9,CSA A -> ADC1 (dual simultaneous with ADC2),CANDIDATE - AF/timing not verified
-ISENSE_B,PA0,12,ADC2_IN1,CSA B -> ADC2,CANDIDATE - AF/timing not verified
-ISENSE_C,PA1,13,ADC1_IN2,CSA C -> ADC1 or ADC2 (second injected rank),CANDIDATE - AF/timing not verified
+PWM_BREAK2,PC3,11,TIM1_BKIN2,hardware trip input: independent bus/phase over-current comparator,CANDIDATE - AF/timing not verified
+ISENSE_A,PA0,12,ADC1_IN1,CSA A -> ADC1 fast channel (dual simultaneous with ADC2),CANDIDATE - AF/timing not verified
+ISENSE_B,PA1,13,ADC2_IN2,CSA B -> ADC2 fast channel,CANDIDATE - AF/timing not verified
 OUTPUT_ENABLE_FEEDBACK,PA2,14,GPIO,,CANDIDATE - AF/timing not verified
 LED_FAULT,PA3,17,GPIO,,CANDIDATE - AF/timing not verified
 HALL_B,PA4,18,TIM3_CH2,,CANDIDATE - AF/timing not verified
@@ -17,18 +17,18 @@ DBG_UART_RX,PC5,23,USART1_RX,,CANDIDATE - AF/timing not verified
 HALL_C,PB0,24,TIM3_CH3,,CANDIDATE - AF/timing not verified
 PWM_C_LO,PB1,25,TIM1_CH3N,INLC,CANDIDATE - AF/timing not verified
 DEADMAN_SENSE,PB2,26,GPIO,,CANDIDATE - AF/timing not verified
-PWM_BREAK,PB10,30,TIM1_BKIN,hardware trip input (driver nFAULT / external OC comparator),CANDIDATE - AF/timing not verified
+PWM_BREAK,PB10,30,TIM1_BKIN,"hardware trip input: gate-driver nFAULT (open drain, active low)",CANDIDATE - AF/timing not verified
 BRAKE_SWITCH,PB11,33,GPIO,,CANDIDATE - AF/timing not verified
-VBUS_SENSE,PB12,34,ADC4_IN3,bus voltage divider (separate ADC from currents),CANDIDATE - AF/timing not verified
-TEMP_FET,PB13,35,ADC3_IN5,power-stage NTC,CANDIDATE - AF/timing not verified
+ISENSE_C,PB12,34,ADC4_IN3,"CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge",CANDIDATE - AF/timing not verified
+VBUS_SENSE,PB13,35,ADC3_IN5,bus voltage divider (separate ADC from currents),CANDIDATE - AF/timing not verified
 PWM_B_LO,PB14,36,TIM1_CH2N,INLB,CANDIDATE - AF/timing not verified
-TEMP_MOTOR,PB15,37,ADC4_IN5,motor winding NTC/PTC,CANDIDATE - AF/timing not verified
+TEMP_FET,PB15,37,ADC4_IN5,power-stage NTC,CANDIDATE - AF/timing not verified
 INA_ALERT,PC6,38,GPIO,,CANDIDATE - AF/timing not verified
 ARM_SWITCH,PC7,39,GPIO,,CANDIDATE - AF/timing not verified
 DRV_SPI_NSS,PC8,40,GPIO,,CANDIDATE - AF/timing not verified
 MODE_SWITCH,PC9,41,GPIO,,CANDIDATE - AF/timing not verified
-THROTTLE_A,PA8,42,ADC5_IN1,pedal track A,CANDIDATE - AF/timing not verified
-THROTTLE_B,PA9,43,ADC5_IN2,pedal track B (redundant),CANDIDATE - AF/timing not verified
+TEMP_MOTOR,PA8,42,ADC5_IN1,motor winding NTC/PTC,CANDIDATE - AF/timing not verified
+THROTTLE_A,PA9,43,ADC5_IN2,pedal track A,CANDIDATE - AF/timing not verified
 LED_STATUS,PA10,44,GPIO,,CANDIDATE - AF/timing not verified
 CAN_RX,PA11,45,FDCAN1_RX,to TCAN1042-class transceiver,CANDIDATE - AF/timing not verified
 CAN_TX,PA12,46,FDCAN1_TX,,CANDIDATE - AF/timing not verified

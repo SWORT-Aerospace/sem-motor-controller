@@ -46,7 +46,7 @@ Before CSIA may **tighten** supervisory bounds (never command):
 1. ≥ 10 h of in-vehicle shadow data, including every normal event class above.
 2. A nuisance-alarm rate (suspect or ambiguous on normal events) below a pre-registered bound, e.g. < 1 per 10 h.
 3. For each injected fault class: detection and isolation within a pre-registered latency, with zero misattributions; regime-bound latency documented.
-4. Incremental benefit over B1 (freshness/range) and B2 (fixed-threshold residuals) on the same data. The synthetic study (`docs/generated/csia_comparison_synthetic.md`) shows the method: B2 raised 935 nuisance-alarm ticks out of 1199 on a fault-free synthetic run, while the adapter raised 0.
+4. Incremental benefit over B1 (freshness/range) and over calibrated residuals using the **same gates** (V3/V3v), measured on the same data. The synthetic held-out evaluation (`docs/csia/EVALUATION_RESULTS.md`) shows the method and the current state: the frozen adapter's false-alarm rate is 19.7/h on unseen synthetic scenarios, it has 9 misattributions, and it brings no false-alarm benefit over gated, debounced residuals. The 0-nuisance figure from the development run (`csia_comparison_synthetic.md`) was measured on tuning data and is not evidence of generalisation.
 5. Timing on the **target** (or a float port validated against declared numerical tolerances). Host figures (mean 0.23 ms per tick, CPython, x86-64) are not target evidence.
 6. A written owner license decision for vehicle use of the CSIA core.
 7. A new ADR.

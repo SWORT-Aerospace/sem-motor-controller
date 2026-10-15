@@ -46,10 +46,18 @@ REQUIRED = [
     ("PWM_B_LO", r"^TIM1_CH2N$", None, "INLB"),
     ("PWM_C_HI", r"^TIM1_CH3$", None, "INHC"),
     ("PWM_C_LO", r"^TIM1_CH3N$", None, "INLC"),
-    ("PWM_BREAK", r"^TIM1_BKIN$", None, "hardware trip input (driver nFAULT / external OC comparator)"),
-    ("ISENSE_A", r"^ADC1_IN\d+$", None, "CSA A -> ADC1 (dual simultaneous with ADC2)"),
-    ("ISENSE_B", r"^ADC2_IN\d+$", None, "CSA B -> ADC2"),
-    ("ISENSE_C", r"^ADC[12]_IN\d+$", None, "CSA C -> ADC1 or ADC2 (second injected rank)"),
+    ("PWM_BREAK", r"^TIM1_BKIN$", None, "hardware trip input: gate-driver nFAULT (open drain, active low)"),
+    ("PWM_BREAK2", r"^TIM1_BKIN2$", None, "hardware trip input: independent bus/phase over-current comparator"),
+    # Phase currents: three DIFFERENT ADCs started by the same TIM1 trigger, so
+    # the three samples are taken at the same instant (ADC1+ADC2 dual-
+    # simultaneous injected, ADC3/4/5 injected on the same TIM1 TRGO2 edge).
+    # v0.1 put phase C on ADC1 as a second injected rank, one conversion
+    # (~15 ADC clocks) after phase A. IN1..IN5 are required because they are
+    # recalled to be the direct "fast" channels on STM32G4 (RM0440, NOT
+    # verified here: st.com unreachable).
+    ("ISENSE_A", r"^ADC1_IN[1-5]$", None, "CSA A -> ADC1 fast channel (dual simultaneous with ADC2)"),
+    ("ISENSE_B", r"^ADC2_IN[1-5]$", None, "CSA B -> ADC2 fast channel"),
+    ("ISENSE_C", r"^ADC[345]_IN[1-5]$", None, "CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge"),
     ("VBUS_SENSE", r"^ADC[345]_IN\d+$", None, "bus voltage divider (separate ADC from currents)"),
     ("TEMP_FET", r"^ADC[345]_IN\d+$", None, "power-stage NTC"),
     ("TEMP_MOTOR", r"^ADC[345]_IN\d+$", None, "motor winding NTC/PTC"),
