@@ -38,7 +38,11 @@ jobs:
           cmake --build build
           ctest --test-dir build --output-on-failure
       - name: Schematic connectivity gate (KiCad netlist vs intended nets; not an ERC)
-        run: python tools/gen_kicad_schematic.py --check
+        run: |
+          python tools/gen_kicad_schematic.py --check
+          # the committed schematic, symbols and draft BOM must equal the generator's output
+          # (semmc.net is excluded: it embeds an export date and an absolute path)
+          git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'
       - name: Python tests
         run: python -m pytest -rs
       - name: Portable core cross-compile (Cortex-M4F, compile check only)
