@@ -217,6 +217,16 @@ static void cross_rules(const vctx_t *c, mc_cfg_mode_t mode, mc_cfg_report_t *re
     if (HAVE2(MC_P_LIMITS_THROTTLE_RELEASE_THRESHOLD, MC_P_LIMITS_THROTTLE_ENGAGE_THRESHOLD) &&
         !(g(c, MC_P_LIMITS_THROTTLE_RELEASE_THRESHOLD) < g(c, MC_P_LIMITS_THROTTLE_ENGAGE_THRESHOLD)))
         report(rep, MC_CFG_E_THROTTLE_THRESH_ORDER, 0);
+    /* R15b: low-side current sampling needs a window of (dead time + settle) on each side of the PWM valley.
+     * With min-max SVPWM the second-highest duty peaks at 0.5 + (sqrt(3)/4) m (at 60 deg); keeping it inside
+     * the window guarantees two sampleable phases at every angle (hardware/timing/timing_budget.md). */
+    if (HAVE4(MC_P_INVERTER_VOLTAGE_LIMIT_FRACTION, MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S, MC_P_INVERTER_DEADTIME_S,
+              MC_P_INVERTER_PWM_FREQUENCY_HZ)) {
+        const double d2 = 0.5 + 0.4330127018922193 * g(c, MC_P_INVERTER_VOLTAGE_LIMIT_FRACTION);
+        const double dwin = 1.0 - 2.0 * (g(c, MC_P_INVERTER_DEADTIME_S) + g(c, MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S)) *
+                                      g(c, MC_P_INVERTER_PWM_FREQUENCY_HZ);
+        if (d2 > dwin) report(rep, MC_CFG_E_SAMPLING_WINDOW, MC_P_INVERTER_VOLTAGE_LIMIT_FRACTION);
+    }
     if (HAVE2(MC_P_INVERTER_DUTY_MIN, MC_P_INVERTER_DUTY_MAX) &&
         !(g(c, MC_P_INVERTER_DUTY_MIN) < g(c, MC_P_INVERTER_DUTY_MAX)))
         report(rep, MC_CFG_E_DUTY_ORDER, 0);
@@ -328,6 +338,8 @@ bool mc_config_derive(const mc_config_t *cfg, mc_params_t *p)
     p->deadtime_s = V(MC_P_INVERTER_DEADTIME_S);
     p->duty_min = V(MC_P_INVERTER_DUTY_MIN);
     p->duty_max = V(MC_P_INVERTER_DUTY_MAX);
+    p->voltage_limit_fraction = V(MC_P_INVERTER_VOLTAGE_LIMIT_FRACTION);
+    p->current_sample_settle_s = V(MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S);
     p->shunt_ohm = V(MC_P_INVERTER_SHUNT_OHM);
     p->amp_gain = V(MC_P_INVERTER_AMP_GAIN_V_PER_V);
     p->adc_vref_V = V(MC_P_INVERTER_ADC_VREF_V);

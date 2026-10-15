@@ -6,39 +6,39 @@ PWM_C_HI,PC2,10,TIM1_CH3,INHC,CANDIDATE - AF/timing not verified
 PWM_BREAK2,PC3,11,TIM1_BKIN2,hardware trip input: independent bus/phase over-current comparator,CANDIDATE - AF/timing not verified
 ISENSE_A,PA0,12,ADC1_IN1,CSA A -> ADC1 fast channel (dual simultaneous with ADC2),CANDIDATE - AF/timing not verified
 ISENSE_B,PA1,13,ADC2_IN2,CSA B -> ADC2 fast channel,CANDIDATE - AF/timing not verified
-OUTPUT_ENABLE_FEEDBACK,PA2,14,GPIO,,CANDIDATE - AF/timing not verified
-LED_FAULT,PA3,17,GPIO,,CANDIDATE - AF/timing not verified
+LED_STATUS,PA2,14,GPIO,,CANDIDATE - AF/timing not verified
+PRECHG_EN,PA3,17,GPIO,,CANDIDATE - AF/timing not verified
 HALL_B,PA4,18,TIM3_CH2,,CANDIDATE - AF/timing not verified
-ECO_CANCEL,PA5,19,GPIO,,CANDIDATE - AF/timing not verified
-HALL_A,PA6,20,TIM3_CH1,hall interface timer (XOR input),CANDIDATE - AF/timing not verified
-PWM_A_LO,PA7,21,TIM1_CH1N,gate driver INLA (6-PWM mode),CANDIDATE - AF/timing not verified
+DRV_SPI_SCK,PA5,19,SPI1_SCK,DRV8353S/RS configuration + status,CANDIDATE - AF/timing not verified
+DRV_SPI_MISO,PA6,20,SPI1_MISO,,CANDIDATE - AF/timing not verified
+DRV_SPI_MOSI,PA7,21,SPI1_MOSI,,CANDIDATE - AF/timing not verified
 DBG_UART_TX,PC4,22,USART1_TX,bench console (no field use),CANDIDATE - AF/timing not verified
 DBG_UART_RX,PC5,23,USART1_RX,,CANDIDATE - AF/timing not verified
 HALL_C,PB0,24,TIM3_CH3,,CANDIDATE - AF/timing not verified
 PWM_C_LO,PB1,25,TIM1_CH3N,INLC,CANDIDATE - AF/timing not verified
-DEADMAN_SENSE,PB2,26,GPIO,,CANDIDATE - AF/timing not verified
+EXT_WDG_WDI,PB2,26,GPIO,,CANDIDATE - AF/timing not verified
 PWM_BREAK,PB10,30,TIM1_BKIN,"hardware trip input: gate-driver nFAULT (open drain, active low)",CANDIDATE - AF/timing not verified
-BRAKE_SWITCH,PB11,33,GPIO,,CANDIDATE - AF/timing not verified
+FAULT_RESET,PB11,33,GPIO,,CANDIDATE - AF/timing not verified
 ISENSE_C,PB12,34,ADC4_IN3,"CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge",CANDIDATE - AF/timing not verified
-VBUS_SENSE,PB13,35,ADC3_IN5,bus voltage divider (separate ADC from currents),CANDIDATE - AF/timing not verified
+PWM_A_LO,PB13,35,TIM1_CH1N,gate driver INLA (6-PWM mode),CANDIDATE - AF/timing not verified
 PWM_B_LO,PB14,36,TIM1_CH2N,INLB,CANDIDATE - AF/timing not verified
-TEMP_FET,PB15,37,ADC4_IN5,power-stage NTC,CANDIDATE - AF/timing not verified
-INA_ALERT,PC6,38,GPIO,,CANDIDATE - AF/timing not verified
-ARM_SWITCH,PC7,39,GPIO,,CANDIDATE - AF/timing not verified
+VBUS_SENSE,PB15,37,ADC4_IN5,bus voltage divider (separate ADC from currents),CANDIDATE - AF/timing not verified
+HALL_A,PC6,38,TIM3_CH1,hall interface timer (XOR input),CANDIDATE - AF/timing not verified
+INA_ALERT,PC7,39,GPIO,,CANDIDATE - AF/timing not verified
 DRV_SPI_NSS,PC8,40,GPIO,,CANDIDATE - AF/timing not verified
-MODE_SWITCH,PC9,41,GPIO,,CANDIDATE - AF/timing not verified
-TEMP_MOTOR,PA8,42,ADC5_IN1,motor winding NTC/PTC,CANDIDATE - AF/timing not verified
-THROTTLE_A,PA9,43,ADC5_IN2,pedal track A,CANDIDATE - AF/timing not verified
-LED_STATUS,PA10,44,GPIO,,CANDIDATE - AF/timing not verified
+ECO_CANCEL,PC9,41,GPIO,,CANDIDATE - AF/timing not verified
+TEMP_FET,PA8,42,ADC5_IN1,power-stage NTC,CANDIDATE - AF/timing not verified
+TEMP_MOTOR,PA9,43,ADC5_IN2,motor winding NTC/PTC,CANDIDATE - AF/timing not verified
+LED_FAULT,PA10,44,GPIO,,CANDIDATE - AF/timing not verified
 CAN_RX,PA11,45,FDCAN1_RX,to TCAN1042-class transceiver,CANDIDATE - AF/timing not verified
 CAN_TX,PA12,46,FDCAN1_TX,,CANDIDATE - AF/timing not verified
 I2C_SCL,PA15,51,I2C1_SCL,INA228-class DC-bus energy monitor,CANDIDATE - AF/timing not verified
-DRV_SPI_SCK,PC10,52,SPI3_SCK,DRV8353S/RS configuration + status,CANDIDATE - AF/timing not verified
-DRV_SPI_MISO,PC11,53,SPI3_MISO,,CANDIDATE - AF/timing not verified
-DRV_SPI_MOSI,PC12,54,SPI3_MOSI,,CANDIDATE - AF/timing not verified
+BRAKE_SWITCH,PC10,52,GPIO,,CANDIDATE - AF/timing not verified
+ARM_SWITCH,PC11,53,GPIO,,CANDIDATE - AF/timing not verified
+MODE_SWITCH,PC12,54,GPIO,,CANDIDATE - AF/timing not verified
 DRV_ENABLE,PD2,55,GPIO,,CANDIDATE - AF/timing not verified
-ESTOP_CHAIN_SENSE,PB4,57,GPIO,,CANDIDATE - AF/timing not verified
-EXT_WDG_WDI,PB5,58,GPIO,,CANDIDATE - AF/timing not verified
-FAULT_RESET,PB6,59,GPIO,,CANDIDATE - AF/timing not verified
+DEADMAN_SENSE,PB4,57,GPIO,,CANDIDATE - AF/timing not verified
+EXT_WDG_RST_SENSE,PB5,58,GPIO,,CANDIDATE - AF/timing not verified
+ESTOP_CHAIN_SENSE,PB6,59,GPIO,,CANDIDATE - AF/timing not verified
 I2C_SDA,PB7,60,I2C1_SDA,,CANDIDATE - AF/timing not verified
-EXT_WDG_RST_SENSE,PB9,62,GPIO,,CANDIDATE - AF/timing not verified
+OUTPUT_ENABLE_FEEDBACK,PB9,62,GPIO,,CANDIDATE - AF/timing not verified

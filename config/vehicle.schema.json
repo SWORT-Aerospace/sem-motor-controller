@@ -461,6 +461,7 @@
         "current_ki_V_per_A_s",
         "current_kp_V_per_A",
         "current_offset_counts",
+        "current_sample_settle_s",
         "deadtime_s",
         "duty_max",
         "duty_min",
@@ -470,7 +471,8 @@
         "pwm_frequency_Hz",
         "shunt_ohm",
         "transient_margin_fraction",
-        "vbus_divider_ratio"
+        "vbus_divider_ratio",
+        "voltage_limit_fraction"
       ],
       "properties": {
         "bus_voltage_rating_V": {
@@ -616,6 +618,22 @@
           ],
           "minimum": 0.01,
           "maximum": 1000000.0
+        },
+        "voltage_limit_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.5,
+          "maximum": 1.0
+        },
+        "current_sample_settle_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1e-08,
+          "maximum": 2e-05
         },
         "notes": {
           "type": [

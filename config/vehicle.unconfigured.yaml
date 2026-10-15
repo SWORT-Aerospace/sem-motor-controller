@@ -94,6 +94,8 @@ inverter:
   duty_max: null
   current_kp_V_per_A: null         # requires measured L, R
   current_ki_V_per_A_s: null
+  voltage_limit_fraction: null
+  current_sample_settle_s: null         # measure at bench stage 4 (hardware/timing/timing_budget.md)
   notes: null
 
 limits:

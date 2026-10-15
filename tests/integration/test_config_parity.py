@@ -44,6 +44,8 @@ MUTATIONS = [
     ("temp", "limits.motor_temp_trip_degC", 130.0),
     ("slew", "limits.torque_slew_down_fast_Nm_s", 1.0),
     ("envelope_ramp", "limits.torque_slew_down_fast_Nm_s", 15.0),
+    ("sampling_window", "inverter.current_sample_settle_s", 3.0e-6),
+    ("vlimit_high", "inverter.voltage_limit_fraction", 1.0),
     ("throttle", "limits.throttle_release_threshold", 0.2),
     ("duty", "inverter.duty_max", 0.8),
     ("timing", "supervision.timeout_s", 0.03),

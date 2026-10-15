@@ -68,6 +68,8 @@ typedef enum {
     MC_P_INVERTER_DUTY_MAX = 107,
     MC_P_INVERTER_CURRENT_KP_V_PER_A = 108,
     MC_P_INVERTER_CURRENT_KI_V_PER_A_S = 109,
+    MC_P_INVERTER_VOLTAGE_LIMIT_FRACTION = 110,
+    MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S = 111,
     MC_P_LIMITS_MAX_MOTOR_TORQUE_NM = 120,
     MC_P_LIMITS_MANUAL_MAX_TORQUE_NM = 121,
     MC_P_LIMITS_MAX_PHASE_CURRENT_A = 122,
@@ -208,6 +210,8 @@ typedef struct {
     {107u, 0u, 1u, 1u, 0.8f, 1.0f, "inverter.duty_max"}, \
     {108u, 0u, 1u, 1u, 0.0001f, 100.0f, "inverter.current_kp_V_per_A"}, \
     {109u, 0u, 1u, 1u, 0.01f, 1000000.0f, "inverter.current_ki_V_per_A_s"}, \
+    {110u, 0u, 1u, 1u, 0.5f, 1.0f, "inverter.voltage_limit_fraction"}, \
+    {111u, 0u, 1u, 1u, 1.0e-08f, 2.0e-05f, "inverter.current_sample_settle_s"}, \
     {120u, 0u, 1u, 1u, 0.01f, 1000.0f, "limits.max_motor_torque_Nm"}, \
     {121u, 0u, 1u, 1u, 0.0f, 1000.0f, "limits.manual_max_torque_Nm"}, \
     {122u, 0u, 1u, 1u, 0.1f, 1000.0f, "limits.max_phase_current_A"}, \
@@ -236,6 +240,6 @@ typedef struct {
     {163u, 0u, 1u, 1u, 0.01f, 10.0f, "supervision.limits_timeout_s"}, \
 }
 
-#define MC_PARAM_COUNT 88
+#define MC_PARAM_COUNT 90
 
 #endif /* SEMMC_MC_PARAMS_GENERATED_H */

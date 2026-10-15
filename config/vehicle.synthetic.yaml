@@ -96,6 +96,8 @@ inverter:
   duty_max: 0.98
   current_kp_V_per_A: 0.94          # ~1 kHz current-loop bandwidth for L = 150 uH
   current_ki_V_per_A_s: 628.0       # zero at R/L
+  voltage_limit_fraction: 0.95
+  current_sample_settle_s: 1.5e-6          # SYNTHETIC: 0.5 us ringing + 1.0 us CSA settle (assumed)
   notes: null
 
 limits:

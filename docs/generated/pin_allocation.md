@@ -4,19 +4,19 @@ Source: STMicroelectronics/STM32_open_pin_data (BSD-3-Clause) commit `7d1f1514ed
 
 Checks signal availability and pin uniqueness only. **Not checked:** alternate-function numbers, ADC channel speed classes and sampling-time feasibility, internal OPAMP/COMP routing, errata (ES0430), clock tree, PCB escape/layout. These require CubeMX and datasheet review.
 
-Required functions: 28 peripheral-bound + 16 GPIO; reserved pins: PA13 (SWDIO), PA14 (SWCLK), PB3 (SWO (debug trace)), PF0-OSC_IN (HSE_IN), PF1-OSC_OUT (HSE_OUT), PG10-NRST (NRST), PB8-BOOT0 (BOOT0 strap), PC14-OSC32_IN (LSE (unused, kept free)), PC15-OSC32_OUT (LSE (unused, kept free))
+Required functions: 28 peripheral-bound + 17 GPIO; reserved pins: PA13 (SWDIO), PA14 (SWCLK), PB3 (SWO (debug trace)), PF0-OSC_IN (HSE_IN), PF1-OSC_OUT (HSE_OUT), PG10-NRST (NRST), PB8-BOOT0 (BOOT0 strap), PC14-OSC32_IN (LSE (unused, kept free)), PC15-OSC32_OUT (LSE (unused, kept free))
 
 | part (package) | I/O pins | all required allocated | missing | spare I/O after allocation | instance choice |
 |---|---|---|---|---|---|
-| STM32G474C(B-C-E)Tx (LQFP48) | 38 | NO | CAN_RX, DBG_UART_RX, TEMP_FET, TEMP_MOTOR, THROTTLE_A, THROTTLE_B, BRAKE_SWITCH, FAULT_RESET, ESTOP_CHAIN_SENSE, DEADMAN_SENSE, EXT_WDG_WDI, EXT_WDG_RST_SENSE, OUTPUT_ENABLE_FEEDBACK, LED_STATUS, LED_FAULT | 0 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474C(B-C-E)Ux (UFQFPN48) | 42 | NO | CAN_RX, DBG_UART_RX, TEMP_FET, TEMP_MOTOR, THROTTLE_A, THROTTLE_B, EXT_WDG_WDI, EXT_WDG_RST_SENSE, OUTPUT_ENABLE_FEEDBACK, LED_STATUS, LED_FAULT | 0 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474M(B-C-E)Tx (LQFP80) | 66 | yes | - | 13 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474MEYx (WLCSP81) | 67 | yes | - | 14 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474P(B-C-E)Ix (UFBGA121) | 102 | yes | - | 49 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474Q(B-C-E)Tx (LQFP128) | 107 | yes | - | 54 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474R(B-C-E)Tx (LQFP64) | 52 | NO | THROTTLE_B | 0 | hall=TIM3, spi=SPI3, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474V(B-C-E)Hx (TFBGA100) | 86 | yes | - | 33 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
-| STM32G474V(B-C-E)Tx (LQFP100) | 86 | yes | - | 33 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474C(B-C-E)Tx (LQFP48) | 38 | NO | CAN_RX, DBG_UART_RX, TEMP_FET, TEMP_MOTOR, THROTTLE_A, THROTTLE_B, BRAKE_SWITCH, FAULT_RESET, ESTOP_CHAIN_SENSE, DEADMAN_SENSE, EXT_WDG_WDI, EXT_WDG_RST_SENSE, OUTPUT_ENABLE_FEEDBACK, LED_STATUS, LED_FAULT, PRECHG_EN | 0 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474C(B-C-E)Ux (UFQFPN48) | 42 | NO | CAN_RX, DBG_UART_RX, TEMP_FET, TEMP_MOTOR, THROTTLE_A, THROTTLE_B, EXT_WDG_WDI, EXT_WDG_RST_SENSE, OUTPUT_ENABLE_FEEDBACK, LED_STATUS, LED_FAULT, PRECHG_EN | 0 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474M(B-C-E)Tx (LQFP80) | 66 | yes | - | 12 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474MEYx (WLCSP81) | 67 | yes | - | 13 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474P(B-C-E)Ix (UFBGA121) | 102 | yes | - | 48 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474Q(B-C-E)Tx (LQFP128) | 107 | yes | - | 53 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474R(B-C-E)Tx (LQFP64) | 52 | NO | THROTTLE_A, THROTTLE_B | 0 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474V(B-C-E)Hx (TFBGA100) | 86 | yes | - | 32 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
+| STM32G474V(B-C-E)Tx (LQFP100) | 86 | yes | - | 32 | hall=TIM3, spi=SPI1, can=FDCAN1, i2c=I2C1, uart=USART1 |
 
 Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions allocate with spare I/O for revisions; LQFP64 is listed for comparison. Exact order code remains UNFROZEN.
 
@@ -55,6 +55,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | LED_STATUS | PB6 | 75 | GPIO |  |
 | MODE_SWITCH | PC13 | 2 | GPIO |  |
 | OUTPUT_ENABLE_FEEDBACK | PB11 | 42 | GPIO |  |
+| PRECHG_EN | PA8 | 56 | GPIO |  |
 | PWM_A_HI | PC0 | 8 | TIM1_CH1 | gate driver INHA |
 | PWM_A_LO | PE8 | 31 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
 | PWM_BREAK | PE15 | 38 | TIM1_BKIN | hardware trip input: gate-driver nFAULT (open drain, active low) |
@@ -73,51 +74,51 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 
 | function | pin | position | signal | note |
 |---|---|---|---|---|
-| ARM_SWITCH | PC7 | 39 | GPIO |  |
-| BRAKE_SWITCH | PB11 | 33 | GPIO |  |
+| ARM_SWITCH | PC11 | 53 | GPIO |  |
+| BRAKE_SWITCH | PC10 | 52 | GPIO |  |
 | CAN_RX | PA11 | 45 | FDCAN1_RX | to TCAN1042-class transceiver |
 | CAN_TX | PA12 | 46 | FDCAN1_TX |  |
 | DBG_UART_RX | PC5 | 23 | USART1_RX |  |
 | DBG_UART_TX | PC4 | 22 | USART1_TX | bench console (no field use) |
-| DEADMAN_SENSE | PB2 | 26 | GPIO |  |
+| DEADMAN_SENSE | PB4 | 57 | GPIO |  |
 | DRV_ENABLE | PD2 | 55 | GPIO |  |
 | DRV_NFAULT | PC13 | 2 | GPIO |  |
-| DRV_SPI_MISO | PC11 | 53 | SPI3_MISO |  |
-| DRV_SPI_MOSI | PC12 | 54 | SPI3_MOSI |  |
+| DRV_SPI_MISO | PA6 | 20 | SPI1_MISO |  |
+| DRV_SPI_MOSI | PA7 | 21 | SPI1_MOSI |  |
 | DRV_SPI_NSS | PC8 | 40 | GPIO |  |
-| DRV_SPI_SCK | PC10 | 52 | SPI3_SCK | DRV8353S/RS configuration + status |
-| ECO_CANCEL | PA5 | 19 | GPIO |  |
-| ESTOP_CHAIN_SENSE | PB4 | 57 | GPIO |  |
-| EXT_WDG_RST_SENSE | PB9 | 62 | GPIO |  |
-| EXT_WDG_WDI | PB5 | 58 | GPIO |  |
-| FAULT_RESET | PB6 | 59 | GPIO |  |
-| HALL_A | PA6 | 20 | TIM3_CH1 | hall interface timer (XOR input) |
+| DRV_SPI_SCK | PA5 | 19 | SPI1_SCK | DRV8353S/RS configuration + status |
+| ECO_CANCEL | PC9 | 41 | GPIO |  |
+| ESTOP_CHAIN_SENSE | PB6 | 59 | GPIO |  |
+| EXT_WDG_RST_SENSE | PB5 | 58 | GPIO |  |
+| EXT_WDG_WDI | PB2 | 26 | GPIO |  |
+| FAULT_RESET | PB11 | 33 | GPIO |  |
+| HALL_A | PC6 | 38 | TIM3_CH1 | hall interface timer (XOR input) |
 | HALL_B | PA4 | 18 | TIM3_CH2 |  |
 | HALL_C | PB0 | 24 | TIM3_CH3 |  |
 | I2C_SCL | PA15 | 51 | I2C1_SCL | INA228-class DC-bus energy monitor |
 | I2C_SDA | PB7 | 60 | I2C1_SDA |  |
-| INA_ALERT | PC6 | 38 | GPIO |  |
+| INA_ALERT | PC7 | 39 | GPIO |  |
 | ISENSE_A | PA0 | 12 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2) |
 | ISENSE_B | PA1 | 13 | ADC2_IN2 | CSA B -> ADC2 fast channel |
 | ISENSE_C | PB12 | 34 | ADC4_IN3 | CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge |
-| LED_FAULT | PA3 | 17 | GPIO |  |
-| LED_STATUS | PA10 | 44 | GPIO |  |
-| MODE_SWITCH | PC9 | 41 | GPIO |  |
-| OUTPUT_ENABLE_FEEDBACK | PA2 | 14 | GPIO |  |
+| LED_FAULT | PA10 | 44 | GPIO |  |
+| LED_STATUS | PA2 | 14 | GPIO |  |
+| MODE_SWITCH | PC12 | 54 | GPIO |  |
+| OUTPUT_ENABLE_FEEDBACK | PB9 | 62 | GPIO |  |
+| PRECHG_EN | PA3 | 17 | GPIO |  |
 | PWM_A_HI | PC0 | 8 | TIM1_CH1 | gate driver INHA |
-| PWM_A_LO | PA7 | 21 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
+| PWM_A_LO | PB13 | 35 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
 | PWM_BREAK | PB10 | 30 | TIM1_BKIN | hardware trip input: gate-driver nFAULT (open drain, active low) |
 | PWM_BREAK2 | PC3 | 11 | TIM1_BKIN2 | hardware trip input: independent bus/phase over-current comparator |
 | PWM_B_HI | PC1 | 9 | TIM1_CH2 | INHB |
 | PWM_B_LO | PB14 | 36 | TIM1_CH2N | INLB |
 | PWM_C_HI | PC2 | 10 | TIM1_CH3 | INHC |
 | PWM_C_LO | PB1 | 25 | TIM1_CH3N | INLC |
-| TEMP_FET | PB15 | 37 | ADC4_IN5 | power-stage NTC |
-| TEMP_MOTOR | PA8 | 42 | ADC5_IN1 | motor winding NTC/PTC |
-| THROTTLE_A | PA9 | 43 | ADC5_IN2 | pedal track A |
-| VBUS_SENSE | PB13 | 35 | ADC3_IN5 | bus voltage divider (separate ADC from currents) |
+| TEMP_FET | PA8 | 42 | ADC5_IN1 | power-stage NTC |
+| TEMP_MOTOR | PA9 | 43 | ADC5_IN2 | motor winding NTC/PTC |
+| VBUS_SENSE | PB15 | 37 | ADC4_IN5 | bus voltage divider (separate ADC from currents) |
 
-**Missing:** THROTTLE_B
+**Missing:** THROTTLE_A, THROTTLE_B
 
 
 ## STM32G474V(B-C-E)Tx (LQFP100)
@@ -155,6 +156,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | LED_STATUS | PE14 | 45 | GPIO |  |
 | MODE_SWITCH | PD7 | 89 | GPIO |  |
 | OUTPUT_ENABLE_FEEDBACK | PC13 | 7 | GPIO |  |
+| PRECHG_EN | PC6 | 65 | GPIO |  |
 | PWM_A_HI | PC0 | 15 | TIM1_CH1 | gate driver INHA |
 | PWM_A_LO | PE8 | 39 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
 | PWM_BREAK | PE15 | 46 | TIM1_BKIN | hardware trip input: gate-driver nFAULT (open drain, active low) |

@@ -1,0 +1,143 @@
+{
+ "constants": {
+  "f_sysclk_Hz": {
+   "value": 170000000.0,
+   "tag": "R",
+   "note": "STM32G474 max SYSCLK (boost mode)"
+  },
+  "f_pwm_Hz": {
+   "value": 20000.0,
+   "tag": "C",
+   "note": "inverter.pwm_frequency_Hz"
+  },
+  "t_dead_s": {
+   "value": 2e-07,
+   "tag": "C",
+   "note": "inverter.deadtime_s"
+  },
+  "duty_max": {
+   "value": 0.98,
+   "tag": "C",
+   "note": "inverter.duty_max"
+  },
+  "f_adc_Hz": {
+   "value": 42500000.0,
+   "tag": "R",
+   "note": "ADC clock = HCLK/4 synchronous (one legal choice; max ADC clock to verify)"
+  },
+  "adc_sample_cycles": {
+   "value": 6.5,
+   "tag": "D",
+   "note": "sampling time setting for the CSA channels (2.5..640.5 selectable [R])"
+  },
+  "adc_conv_cycles": {
+   "value": 12.5,
+   "tag": "R",
+   "note": "12-bit successive-approximation conversion"
+  },
+  "c_sh_F": {
+   "value": 5e-12,
+   "tag": "R",
+   "note": "ADC sample-and-hold capacitance (order of magnitude)"
+  },
+  "r_filter_ohm": {
+   "value": 100.0,
+   "tag": "D",
+   "note": "CSA output series R (current_sense sheet)"
+  },
+  "c_filter_F": {
+   "value": 4.7e-10,
+   "tag": "D",
+   "note": "CSA output shunt C (current_sense sheet)"
+  },
+  "t_ring_s": {
+   "value": 5e-07,
+   "tag": "A",
+   "note": "switch-node ringing settle after the low-side turns on"
+  },
+  "t_csa_settle_s": {
+   "value": 1e-06,
+   "tag": "A",
+   "note": "CSA output settling to 0.1 % after the step (SLVSDY6x value NOT read)"
+  },
+  "voltage_limit_fraction": {
+   "value": 0.95,
+   "tag": "C",
+   "note": "inverter.voltage_limit_fraction (FOC uses this x Vbus/sqrt(3))"
+  },
+  "t_dts_div": {
+   "value": 1,
+   "tag": "D",
+   "note": "TIM1 CKD = 1 -> t_DTS = 1/f_tim"
+  },
+  "brk_filter_samples": {
+   "value": 4,
+   "tag": "D",
+   "note": "TIM1 BKF digital filter length (N samples at f_DTS)"
+  },
+  "fast_isr_cycles_est": {
+   "value": null,
+   "tag": "A",
+   "note": "FOC fast-step cycles: MEASURE with DWT->CYCCNT at stage 2"
+  }
+ },
+ "pwm": {
+  "T_s": 5e-05,
+  "center_aligned_ARR": 4250.0,
+  "timer_resolution_s": 5.88235294117647e-09,
+  "duty_resolution": 0.00023529411764705883,
+  "deadtime_code": 34,
+  "deadtime_achieved_s": 2e-07
+ },
+ "adc": {
+  "t_sample_s": 1.5294117647058823e-07,
+  "t_sample_plus_conv_s": 4.4705882352941174e-07,
+  "rc_tau_s": 4.7000000000000004e-08,
+  "rc_settle_12bit_s": 3.9093500983580916e-07,
+  "kickback_fraction": 0.010526315789473684
+ },
+ "window": {
+  "t_needed_before_sample_s": 1.6999999999999998e-06,
+  "d_max_sampleable": 0.932,
+  "duty_max_config": 0.98,
+  "min_valid_phases_over_svpwm_angles": 2,
+  "worst_angle_deg": 5.500000000000001
+ },
+ "break": {
+  "filter_latency_s": 2.352941176470588e-08
+ },
+ "m_max_sensitivity": [
+  {
+   "f_pwm_kHz": 10.0,
+   "0.5us": 1.0,
+   "1.0us": 1.0,
+   "1.5us": 1.0,
+   "2.0us": 1.0,
+   "3.0us": 1.0
+  },
+  {
+   "f_pwm_kHz": 16.0,
+   "0.5us": 1.0,
+   "1.0us": 1.0,
+   "1.5us": 1.0,
+   "2.0us": 0.992118702575453,
+   "3.0us": 0.9182178681191807
+  },
+  {
+   "f_pwm_kHz": 20.0,
+   "0.5us": 1.0,
+   "1.0us": 1.0,
+   "1.5us": 0.9976612651596732,
+   "2.0us": 0.9514732436245034,
+   "3.0us": 0.8590972005541632
+  },
+  {
+   "f_pwm_kHz": 25.0,
+   "0.5us": 1.0,
+   "1.0us": 1.0,
+   "1.5us": 0.9584014468547789,
+   "2.0us": 0.9006664199358163,
+   "3.0us": 0.785196366097891
+  }
+ ]
+}

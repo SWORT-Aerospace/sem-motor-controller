@@ -1,0 +1,437 @@
+{
+ "by_evidence": {
+  "allowance": [
+   24.07000000000003,
+   123.79999999999998,
+   84
+  ],
+  "representative": [
+   40.91000000000001,
+   77.56,
+   11
+  ],
+  "snippet": [
+   24.200000000000003,
+   29.660000000000004,
+   5
+  ]
+ },
+ "scenarios": {
+  "S1 one functional prototype": {
+   "boards": 1,
+   "revision": false,
+   "parts": [
+    89.17999999999999,
+    231.02
+   ],
+   "spares": [
+    57.54999999999999,
+    92.51999999999998
+   ],
+   "controller_items": [
+    [
+     "PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm",
+     40,
+     120,
+     "allowance"
+    ],
+    [
+     "PCB shipping (express)",
+     20,
+     45,
+     "allowance"
+    ],
+    [
+     "Stencil (frameless) for hand assembly",
+     8,
+     25,
+     "allowance"
+    ],
+    [
+     "Assembly consumables (paste, flux, wick)",
+     10,
+     25,
+     "allowance"
+    ],
+    [
+     "Thermal interface + heatsink plate + fasteners",
+     10,
+     35,
+     "allowance"
+    ]
+   ],
+   "revision_allowance": [
+    0.0,
+    0.0
+   ],
+   "controller_only": [
+    246.46839999999997,
+    650.3063999999999
+   ],
+   "shipping_tax": [
+    11.738399999999999,
+    76.7664
+   ],
+   "incremental_items": [
+    [
+     "Battery and motor mating connectors (XT90 pair, MR60/bullets)",
+     5,
+     15,
+     "snippet"
+    ],
+    [
+     "Signal connectors + crimp terminals (driver controls, hall, CAN, temp)",
+     10,
+     30,
+     "allowance"
+    ],
+    [
+     "Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving",
+     25,
+     60,
+     "allowance"
+    ],
+    [
+     "Enclosure / mounting (printed or folded aluminium)",
+     10,
+     30,
+     "allowance"
+    ],
+    [
+     "Bench dummy load / power resistors + bench harness",
+     15,
+     40,
+     "allowance"
+    ]
+   ],
+   "incremental": [
+    65,
+    175
+   ],
+   "equipment_if_not_owned": [
+    104,
+    364
+   ],
+   "complete_owned_equipment": [
+    311.4684,
+    825.3063999999999
+   ],
+   "complete_buying_equipment": [
+    415.4684,
+    1189.3064
+   ]
+  },
+  "S1R one prototype + one revision": {
+   "boards": 1,
+   "revision": true,
+   "parts": [
+    89.17999999999999,
+    231.02
+   ],
+   "spares": [
+    57.54999999999999,
+    92.51999999999998
+   ],
+   "controller_items": [
+    [
+     "PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm",
+     40,
+     120,
+     "allowance"
+    ],
+    [
+     "PCB shipping (express)",
+     20,
+     45,
+     "allowance"
+    ],
+    [
+     "Stencil (frameless) for hand assembly",
+     8,
+     25,
+     "allowance"
+    ],
+    [
+     "Assembly consumables (paste, flux, wick)",
+     10,
+     25,
+     "allowance"
+    ],
+    [
+     "Thermal interface + heatsink plate + fasteners",
+     10,
+     35,
+     "allowance"
+    ]
+   ],
+   "revision_allowance": [
+    90.295,
+    247.755
+   ],
+   "controller_only": [
+    336.7634,
+    898.0613999999999
+   ],
+   "shipping_tax": [
+    11.738399999999999,
+    76.7664
+   ],
+   "incremental_items": [
+    [
+     "Battery and motor mating connectors (XT90 pair, MR60/bullets)",
+     5,
+     15,
+     "snippet"
+    ],
+    [
+     "Signal connectors + crimp terminals (driver controls, hall, CAN, temp)",
+     10,
+     30,
+     "allowance"
+    ],
+    [
+     "Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving",
+     25,
+     60,
+     "allowance"
+    ],
+    [
+     "Enclosure / mounting (printed or folded aluminium)",
+     10,
+     30,
+     "allowance"
+    ],
+    [
+     "Bench dummy load / power resistors + bench harness",
+     15,
+     40,
+     "allowance"
+    ]
+   ],
+   "incremental": [
+    65,
+    175
+   ],
+   "equipment_if_not_owned": [
+    104,
+    364
+   ],
+   "complete_owned_equipment": [
+    401.7634,
+    1073.0614
+   ],
+   "complete_buying_equipment": [
+    505.7634,
+    1437.0614
+   ]
+  },
+  "S2 two assembled boards": {
+   "boards": 2,
+   "revision": false,
+   "parts": [
+    178.35999999999999,
+    462.04
+   ],
+   "spares": [
+    57.54999999999999,
+    92.51999999999998
+   ],
+   "controller_items": [
+    [
+     "PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm",
+     40,
+     120,
+     "allowance"
+    ],
+    [
+     "PCB shipping (express)",
+     20,
+     45,
+     "allowance"
+    ],
+    [
+     "Stencil (frameless) for hand assembly",
+     8,
+     25,
+     "allowance"
+    ],
+    [
+     "Assembly consumables (paste, flux, wick)",
+     10,
+     25,
+     "allowance"
+    ],
+    [
+     "Thermal interface + heatsink plate + fasteners",
+     20,
+     70,
+     "allowance"
+    ]
+   ],
+   "revision_allowance": [
+    0.0,
+    0.0
+   ],
+   "controller_only": [
+    352.78279999999995,
+    953.2896
+   ],
+   "shipping_tax": [
+    18.872799999999998,
+    113.72959999999999
+   ],
+   "incremental_items": [
+    [
+     "Battery and motor mating connectors (XT90 pair, MR60/bullets)",
+     5,
+     15,
+     "snippet"
+    ],
+    [
+     "Signal connectors + crimp terminals (driver controls, hall, CAN, temp)",
+     10,
+     30,
+     "allowance"
+    ],
+    [
+     "Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving",
+     25,
+     60,
+     "allowance"
+    ],
+    [
+     "Enclosure / mounting (printed or folded aluminium)",
+     20,
+     60,
+     "allowance"
+    ],
+    [
+     "Bench dummy load / power resistors + bench harness",
+     15,
+     40,
+     "allowance"
+    ]
+   ],
+   "incremental": [
+    75,
+    205
+   ],
+   "equipment_if_not_owned": [
+    104,
+    364
+   ],
+   "complete_owned_equipment": [
+    427.78279999999995,
+    1158.2896
+   ],
+   "complete_buying_equipment": [
+    531.7828,
+    1522.2896
+   ]
+  },
+  "S2R two boards + one revision": {
+   "boards": 2,
+   "revision": true,
+   "parts": [
+    178.35999999999999,
+    462.04
+   ],
+   "spares": [
+    57.54999999999999,
+    92.51999999999998
+   ],
+   "controller_items": [
+    [
+     "PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm",
+     40,
+     120,
+     "allowance"
+    ],
+    [
+     "PCB shipping (express)",
+     20,
+     45,
+     "allowance"
+    ],
+    [
+     "Stencil (frameless) for hand assembly",
+     8,
+     25,
+     "allowance"
+    ],
+    [
+     "Assembly consumables (paste, flux, wick)",
+     10,
+     25,
+     "allowance"
+    ],
+    [
+     "Thermal interface + heatsink plate + fasteners",
+     20,
+     70,
+     "allowance"
+    ]
+   ],
+   "revision_allowance": [
+    90.295,
+    247.755
+   ],
+   "controller_only": [
+    443.07779999999997,
+    1201.0446
+   ],
+   "shipping_tax": [
+    18.872799999999998,
+    113.72959999999999
+   ],
+   "incremental_items": [
+    [
+     "Battery and motor mating connectors (XT90 pair, MR60/bullets)",
+     5,
+     15,
+     "snippet"
+    ],
+    [
+     "Signal connectors + crimp terminals (driver controls, hall, CAN, temp)",
+     10,
+     30,
+     "allowance"
+    ],
+    [
+     "Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving",
+     25,
+     60,
+     "allowance"
+    ],
+    [
+     "Enclosure / mounting (printed or folded aluminium)",
+     20,
+     60,
+     "allowance"
+    ],
+    [
+     "Bench dummy load / power resistors + bench harness",
+     15,
+     40,
+     "allowance"
+    ]
+   ],
+   "incremental": [
+    75,
+    205
+   ],
+   "equipment_if_not_owned": [
+    104,
+    364
+   ],
+   "complete_owned_equipment": [
+    518.0778,
+    1406.0446
+   ],
+   "complete_buying_equipment": [
+    622.0778,
+    1770.0446
+   ]
+  }
+ }
+}

@@ -29,6 +29,7 @@ LED_STATUS,PE14,45,GPIO,,CANDIDATE - AF/timing not verified
 PWM_BREAK,PE15,46,TIM1_BKIN,"hardware trip input: gate-driver nFAULT (open drain, active low)",CANDIDATE - AF/timing not verified
 BRAKE_SWITCH,PD13,60,GPIO,,CANDIDATE - AF/timing not verified
 LED_FAULT,PD15,62,GPIO,,CANDIDATE - AF/timing not verified
+PRECHG_EN,PC6,65,GPIO,,CANDIDATE - AF/timing not verified
 FAULT_RESET,PC8,67,GPIO,,CANDIDATE - AF/timing not verified
 CAN_RX,PA11,72,FDCAN1_RX,to TCAN1042-class transceiver,CANDIDATE - AF/timing not verified
 CAN_TX,PA12,73,FDCAN1_TX,,CANDIDATE - AF/timing not verified

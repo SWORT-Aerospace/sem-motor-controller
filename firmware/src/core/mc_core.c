@@ -84,6 +84,7 @@ bool mc_core_init(mc_core_t *c, const uint8_t *cal_blob, size_t cal_len, mc_buil
     const float fpwm = ok ? c->p.pwm_frequency_Hz : 20000.0f;
     mc_foc_init(&c->foc, c->p.current_kp, c->p.current_ki, c->p.ld_H, c->p.lq_H, c->p.lambda_Wb, c->p.duty_min,
                 c->p.duty_max, 5.0f / fpwm);
+    if (ok) c->foc.vlimit_fraction = c->p.voltage_limit_fraction; /* calibrated, rule 39 */
     const int8_t no_hall[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
     mc_hall_init(&c->hall, ok ? c->p.hall_code_to_sector : no_hall, c->p.hall_angle_offset_rad, MC_HALL_TIMEOUT_S);
     mc_csia_init(&c->csia, MC_CSIA_MAX_AGE_US);

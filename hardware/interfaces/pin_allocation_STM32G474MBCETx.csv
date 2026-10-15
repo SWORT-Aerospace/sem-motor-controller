@@ -32,6 +32,7 @@ HALL_A,PC6,52,TIM3_CH1,hall interface timer (XOR input),CANDIDATE - AF/timing no
 ECO_CANCEL,PC7,53,GPIO,,CANDIDATE - AF/timing not verified
 INA_ALERT,PC8,54,GPIO,,CANDIDATE - AF/timing not verified
 EXT_WDG_WDI,PC9,55,GPIO,,CANDIDATE - AF/timing not verified
+PRECHG_EN,PA8,56,GPIO,,CANDIDATE - AF/timing not verified
 CAN_RX,PA11,59,FDCAN1_RX,to TCAN1042-class transceiver,CANDIDATE - AF/timing not verified
 CAN_TX,PA12,60,FDCAN1_TX,,CANDIDATE - AF/timing not verified
 I2C_SCL,PA15,65,I2C1_SCL,INA228-class DC-bus energy monitor,CANDIDATE - AF/timing not verified

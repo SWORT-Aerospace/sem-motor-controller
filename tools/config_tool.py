@@ -54,7 +54,7 @@ E = {
     "SUPERVISION_TIMING": 28, "SUPERVISION_NOT_HAZARD_ANALYSED": 29,
     "ARCH_MOTOR_TYPE": 30, "ROTOR_SENSOR_UNSUPPORTED": 31, "HALL_TABLE": 32,
     "PROVENANCE": 33, "CURRENT_LOOP_BANDWIDTH": 34, "DEADTIME_TOO_LONG": 35,
-    "PHASE_CURRENT_RMS_PEAK": 36, "VBUS_SENSE_RANGE": 37, "ENVELOPE_RAMP_DEADLINE": 38,
+    "PHASE_CURRENT_RMS_PEAK": 36, "VBUS_SENSE_RANGE": 37, "ENVELOPE_RAMP_DEADLINE": 38, "SAMPLING_WINDOW": 39,
     # Python-only (strings are not in the blob):
     "STRING_MISSING": 100, "SCHEMA": 101,
 }
@@ -266,6 +266,13 @@ def _cross_rules(v: dict[int, float], mode: str, reg) -> list[Issue]:
     if have("limits.throttle_release_threshold", "limits.throttle_engage_threshold"):
         if not g("limits.throttle_release_threshold") < g("limits.throttle_engage_threshold"):
             add("THROTTLE_THRESH_ORDER", "limits", "need throttle release < engage threshold")
+    if have("inverter.voltage_limit_fraction", "inverter.current_sample_settle_s", "inverter.deadtime_s",
+            "inverter.pwm_frequency_Hz"):
+        d2 = 0.5 + 0.4330127018922193 * g("inverter.voltage_limit_fraction")
+        dwin = 1.0 - 2.0 * (g("inverter.deadtime_s") + g("inverter.current_sample_settle_s")) * g("inverter.pwm_frequency_Hz")
+        if d2 > dwin:
+            add("SAMPLING_WINDOW", "inverter.voltage_limit_fraction",
+                "two phases are not sampleable at every SVPWM angle; lower the voltage limit or the PWM frequency")
     if have("inverter.duty_min", "inverter.duty_max"):
         if not g("inverter.duty_min") < g("inverter.duty_max"):
             add("DUTY_ORDER", "inverter", "need duty_min < duty_max")

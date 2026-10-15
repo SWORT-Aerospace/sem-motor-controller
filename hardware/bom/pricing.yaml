@@ -1,0 +1,181 @@
+# Pricing evidence for the draft BOM (consumed by tools/price_bom.py).
+#
+# NOTHING HERE IS A QUOTE AND NOTHING HAS BEEN PURCHASED.
+# Distributor and manufacturer sites were unreachable from the build
+# environment (proxy 403), so prices come from web-search result snapshots of
+# distributor pages, retrieved 2026-10-15. Those snapshots are UNDATED caches:
+# re-check every line on the live page before any order.
+#
+# evidence classes:
+#   snippet         price seen in a search-result snapshot of a distributor page for this exact MPN
+#   representative  the line is rating-dependent (UNRESOLVED); priced with a representative candidate's snippet
+#                   price, which is NOT a selection
+#   allowance       no quote obtained; engineering allowance range (stated, not sourced)
+# Prices are USD per unit at quantity 1-10 unless noted; low/high bracket the evidence.
+
+retrieved: "2026-10-15"
+rules:
+  # ---------------------------------------------------------------- ICs with an exact candidate MPN
+  - match: {symbol: "MCU_ST_STM32G4:STM32G474VETx"}
+    mpn: STM32G474VET6
+    package: LQFP-100 14x14
+    low: 11.62
+    high: 12.13
+    supplier: Mouser / Digi-Key
+    evidence: snippet
+    source: "Mouser 511-STM32G474VET6 cached $11.62@1; Digi-Key cached $12.13@1 (search 2026-10-15)"
+    availability: "listed; DK TR variant showed backorder in one snapshot"
+    alternate: STM32G474VCT6 (256 kB flash, same pinout)
+  - match: {symbol: "semmc:DRV8353S"}
+    mpn: DRV8353SRTAR
+    package: WQFN-40 (RTA)
+    low: 4.98
+    high: 5.66
+    supplier: Mouser
+    evidence: snippet
+    source: "Mouser 595-DRV8353SRTAR cut tape $4.98@1, 595 in stock (snapshot); Octopart/Mouser $5.66@1"
+    availability: "Digi-Key out of stock, 6-week standard lead time (snapshot); Mouser stocked"
+    alternate: DRV8353SRTAT (250-pc reel, DK stocked $5.00@1) or DRV8353RS (integrated buck, 48-pin)
+  - match: {symbol: "semmc:INA228"}
+    mpn: INA228AIDGSR
+    package: VSSOP-10 (DGS)
+    low: 4.21
+    high: 6.05
+    supplier: Digi-Key
+    evidence: snippet
+    source: "Digi-Key US $5.31@1 (0 stock, 1,703 expected 04-Jan-2027); DK UK GBP 3.32@1 in stock; LCSC ~$6.05@100"
+    availability: "US stock risk (snapshot); UK/AU stocked"
+    alternate: INA229 (SPI) or INA238 (16-bit) - verify footprint
+  - match: {symbol: "Interface_CAN_LIN:TJA1051T-3"}
+    mpn: TJA1051T/3/1J
+    package: SO-8
+    low: 1.43
+    high: 1.63
+    supplier: Digi-Key / Mouser
+    evidence: snippet
+    source: "Digi-Key $1.43@1; Mouser 771-TJA1051T/3/1J $1.44-1.63@1 (snapshots)"
+    availability: listed
+    alternate: TCAN1042VDRQ1 (pin-compatible class - verify)
+  - match: {symbol: "Regulator_Switching:LM5164DDA"}
+    mpn: LM5164DDAR
+    package: SO-8 PowerPAD (DDA)
+    low: 1.96
+    high: 4.19
+    supplier: Digi-Key / Mouser
+    evidence: snippet
+    source: "Digi-Key LM5164DDAR $4.19 (in-stock substitute); Mouser LM5164DDAR $1.955@1 via aggregator"
+    availability: "LM5164QDDARQ1 out of stock, 16-week lead time (DK snapshot)"
+    alternate: LM5164QDDARQ1 (automotive)
+  - match: {symbol: "Power_Supervisor:MAX6369"}
+    mpn: MAX6369KA+T
+    package: SOT-23-8
+    low: 2.0
+    high: 5.0
+    supplier: "-"
+    evidence: allowance
+    source: "not quoted"
+    availability: unknown
+    alternate: TPS3431 / STWD100 (pin-incompatible)
+  - {match: {symbol: "Comparator:TLV7041DBV"}, mpn: "TLV7041DBVR", package: "SOT-23-5", low: 0.4, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV3691}
+  - {match: {symbol: "Reference_Voltage:TL431DBZ"}, mpn: TL431BIDBZR, package: SOT-23-3, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: LM4041}
+  - {match: {symbol: "74xGxx:74LVC1G08"}, mpn: SN74LVC1G08DBVR, package: SOT-23-5, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: 74AHC1G08}
+  - {match: {symbol: "Regulator_Linear:TLV75533PDBV"}, mpn: TLV75533PDBVR, package: SOT-23-5, low: 0.15, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV75733P}
+  - {match: {symbol: "Isolator:PC817"}, mpn: "PC817X2NSZ9F (or equivalent)", package: DIP-4/SMD-4, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: EL817}
+  - {match: {symbol: "Power_Protection:NUP2105L"}, mpn: NUP2105LT1G, package: SOT-23, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: PESD2CAN}
+  - {match: {symbol: "Diode:ESD9B"}, mpn: "ESD9B5.0ST5G / ESD9B3.3ST5G", package: SOD-923, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TPD1E10B06}
+  - {match: {symbol: "Device:D_Schottky"}, mpn: BAT54, package: SOT-23, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:Crystal_GND24"}, mpn: "8 MHz SMD 3225 (CL/tolerance to select)", package: 3225, low: 0.3, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  # ---------------------------------------------------------------- rating-dependent lines (representative pricing)
+  - match: {symbol: "Device:Q_NMOS_GDS"}
+    mpn: "UNRESOLVED (representative: CSD19536KTT 100 V D2PAK)"
+    package: "D2PAK class (UNRESOLVED)"
+    low: 5.27
+    high: 7.85
+    supplier: Mouser / Digi-Key
+    evidence: representative
+    source: "CSD19536KTT: Mouser $5.27-5.74@1, Digi-Key $5.59-7.85@1 (snapshots)"
+    availability: "stocked in snapshots"
+    alternate: "CSD19535KTT / BSC040N10NS5 (pending motor current)"
+  - {match: {symbol: "Device:Q_PMOS_GSD"}, mpn: "UNRESOLVED P-FET (V_DS >= 1.25 V_bat,max, I_batt,max)", package: "UNRESOLVED", low: 2.0, high: 6.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:Q_NMOS_GSD"}, mpn: "UNRESOLVED 100 V small-signal N-FET (e.g. BSS123 class)", package: SOT-23, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - match: {symbol: "Device:R_Shunt"}
+    mpn: "UNRESOLVED (representative: WSK2512 1 mOhm 4-terminal)"
+    package: "2512 4-terminal (UNRESOLVED value)"
+    low: 1.7
+    high: 4.0
+    supplier: Digi-Key
+    evidence: representative
+    source: "WSK2512R0250FEA 4-terminal $1.70@1 (DK snapshot); 1 mOhm WSK25121L000FEA listed without price, 38-week lead time"
+    availability: "LEAD-TIME RISK: 38 weeks for the 1 mOhm Kelvin part (snapshot)"
+    alternate: "2-terminal CSS2H-2512R-1L00F ($1.27@1, stocked) with Kelvin pads - accuracy trade-off"
+  - match: {symbol: "Device:C_Polarized"}
+    mpn: "UNRESOLVED (representative: 220 uF 100 V low-ESR radial)"
+    package: "radial (UNRESOLVED)"
+    low: 0.83
+    high: 4.82
+    supplier: various
+    evidence: representative
+    source: "Panasonic EEU-FS2A221B ~$0.83 (third party); Mouser 220 uF/100 V low-ESR ~$4.82@1 (snapshot)"
+    availability: listed
+  - {match: {symbol: "Device:Fuse"}, mpn: "UNRESOLVED (rating from BMS/harness)", package: "UNRESOLVED", low: 2.0, high: 8.0, supplier: "-", evidence: allowance, source: "not quoted (fuse + holder)", availability: unknown}
+  - {match: {symbol: "Device:D_TVS"}, mpn: "UNRESOLVED (V_standoff >= V_bat,max)", package: "SMC class", low: 0.5, high: 2.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "semmc:RPP_BLOCK"}, mpn: "UNRESOLVED (ideal-diode controller + N-FETs, or none)", package: "UNRESOLVED", low: 0.0, high: 10.0, supplier: "-", evidence: allowance, source: "not quoted; 0 if harness keying is chosen", availability: unknown}
+  - {match: {symbol: "Device:L"}, mpn: "UNRESOLVED buck inductor", package: "SMD power inductor", low: 0.3, high: 1.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:C", value: "100V|UNRESOLVED"}, mpn: "UNRESOLVED >=100 V X7R MLCC (1206/1210)", package: "1206/1210", low: 0.2, high: 0.8, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  # ---------------------------------------------------------------- connectors (board side)
+  - {match: {symbol: "Connector_Generic:Conn_01x02", value: BATTERY_IN}, mpn: "UNRESOLVED (e.g. Amass XT90 PCB or screw terminal; rating pending)", package: "UNRESOLVED", low: 2.5, high: 6.0, supplier: hobby/distributor, evidence: allowance, source: "XT90 2 pairs $4.95 (BuddyRC, valid to 2026-09-10, snapshot)", availability: unknown}
+  - {match: {symbol: "Connector_Generic:Conn_01x03", value: MOTOR_PHASES}, mpn: "UNRESOLVED (e.g. Amass MR60 or 3x 4 mm bullet; rating pending)", package: "UNRESOLVED", low: 3.0, high: 8.0, supplier: hobby/distributor, evidence: allowance, source: "MR60 set $2.99 (RaceDayQuads snapshot)", availability: unknown}
+  - {match: {symbol: "Connector:Conn_ARM_JTAG_SWD_10"}, mpn: "2x5 1.27 mm SMD header (e.g. FTSH-105-01)", package: 2x05 1.27mm, low: 1.0, high: 4.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Connector_Generic:"}, mpn: "UNRESOLVED (harness family: JST-XH / Molex Micro-Fit, to agree with vehicle team)", package: "UNRESOLVED", low: 0.5, high: 3.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Connector:TestPoint"}, mpn: "test pad or loop", package: pad, low: 0.0, high: 0.3, supplier: "-", evidence: allowance, source: "pad = free", availability: n/a}
+  - {match: {symbol: "Jumper:"}, mpn: "solder jumper (copper)", package: pad, low: 0.0, high: 0.0, supplier: n/a, evidence: allowance, source: "PCB copper", availability: n/a}
+  - {match: {symbol: "Device:NetTie_2"}, mpn: "net tie (copper)", package: pad, low: 0.0, high: 0.0, supplier: n/a, evidence: allowance, source: "PCB copper", availability: n/a}
+  # ---------------------------------------------------------------- small passives / misc
+  - {match: {symbol: "Device:Thermistor_NTC"}, mpn: "10k NTC 0603 (B to select)", package: "0603", low: 0.05, high: 0.4, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:Polyfuse"}, mpn: "PTC resettable fuse (hold current to select)", package: "1206/1812", low: 0.1, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:LED|Device:FerriteBead|Device:D_Zener|Switch:SW_Push"}, mpn: "generic (0603 LED / 0603 bead / SOD-123 zener / SMD tact)", package: "0603/SOD-123/SMD", low: 0.05, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:R|Device:C"}, mpn: "generic 0603 (1 % R / X7R C)", package: "0603", low: 0.01, high: 0.10, min_line_low: 0.10, min_line_high: 1.00, supplier: "-", evidence: allowance, source: "not quoted (cut-tape strips of 10-25)", availability: n/a}
+
+# --------------------------------------------------------------------- non-component items
+# per: "order" = once per scenario; "board" = per assembled board; "vehicle" = once per vehicle integration
+project_items:
+  controller:
+    - {item: "PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm", per: order, low: 40, high: 120, evidence: allowance, source: "JLCPCB headline 'from $2/5 pcs' (2-layer); 2024 promo 4-layer 100x100 100 pcs $106.30; FR4 pricing adjusted Aug 2026 -> instant quote required"}
+    - {item: "PCB shipping (express)", per: order, low: 20, high: 45, evidence: allowance, source: "not quoted"}
+    - {item: "Stencil (frameless) for hand assembly", per: order, low: 8, high: 25, evidence: allowance, source: "JLCPCB stencil fee $8.21 (standard PCBA, help article, snapshot); standalone stencil not quoted"}
+    - {item: "Assembly consumables (paste, flux, wick)", per: order, low: 10, high: 25, evidence: allowance, source: "not quoted; hand assembly by the vehicle team assumed"}
+    - {item: "Thermal interface + heatsink plate + fasteners", per: board, low: 10, high: 35, evidence: allowance, source: "not quoted; size depends on the unknown motor current"}
+  incremental:
+    - {item: "Battery and motor mating connectors (XT90 pair, MR60/bullets)", per: vehicle, low: 5, high: 15, evidence: snippet, source: "XT90 2 pairs $4.95 BuddyRC; MR60 set $2.99 RaceDayQuads (snapshots)"}
+    - {item: "Signal connectors + crimp terminals (driver controls, hall, CAN, temp)", per: vehicle, low: 10, high: 30, evidence: allowance, source: "not quoted"}
+    - {item: "Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving", per: vehicle, low: 25, high: 60, evidence: allowance, source: "not quoted"}
+    - {item: "Enclosure / mounting (printed or folded aluminium)", per: board, low: 10, high: 30, evidence: allowance, source: "not quoted; SEM rules on enclosures to confirm"}
+    - {item: "Bench dummy load / power resistors + bench harness", per: order, low: 15, high: 40, evidence: allowance, source: "not quoted"}
+  shipping_tax:
+    parts_tax_fraction_low: 0.08
+    parts_tax_fraction_high: 0.16
+    distributor_shipping_low: 0
+    distributor_shipping_high: 25
+    note: "sales tax and possible import tariff (a Mouser page notes 'a tariff of 8% may be applied if shipping to the United States'); free-shipping thresholds vary"
+
+# Equipment: needed for bring-up; purchase ONLY if the team does not already own it (ask the vehicle team).
+equipment:
+  - {item: "SWD programmer (STLINK-V3MINIE)", low: 14, high: 44, evidence: snippet, source: "Cytech ref $14.04; Farnell IE EUR 12.51 incl. VAT; Waveshare GBP 37.58 (snapshots)"}
+  - {item: "USB-CAN adapter (CANable-class, candleLight firmware)", low: 30, high: 60, evidence: allowance, source: "not quoted"}
+  - {item: "Current-limited bench supply (>= 60 V or series-able, CC mode)", low: 60, high: 200, evidence: allowance, source: "not quoted"}
+  - {item: "Oscilloscope >= 100 MHz, 4 ch (+ differential probe for the switch node)", low: 0, high: 0, evidence: allowance, source: "assumed borrowed from the lab: NOT in the budget; a differential probe can cost more than this whole budget"}
+  - {item: "Bench DMM x2, clamp/current probe", low: 0, high: 60, evidence: allowance, source: "assumed owned; clamp meter if not"}
+
+spares:
+  # extra units per scenario (most likely to be damaged during bring-up)
+  "Device:Q_NMOS_GDS": 6
+  "semmc:DRV8353S": 1
+  "Device:R_Shunt": 2
+  "Device:D_TVS": 1
+  "Device:Fuse": 2
+  "Interface_CAN_LIN:TJA1051T-3": 1
+  "MCU_ST_STM32G4:STM32G474VETx": 1
+
+revision_allowance:
+  pcb_respin: true            # one more PCB order + shipping + stencil
+  parts_fraction: 0.25        # changed / additional parts as a fraction of one board's parts
