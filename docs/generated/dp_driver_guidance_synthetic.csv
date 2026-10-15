@@ -1,0 +1,8 @@
+# SYNTHETIC driver braking guidance (controller never brakes); reaction 1.0 s, release reaction 0.7 s, decel tracking +/-20 %, speed margin 0.3 m/s; 6 blocks, 8084 J dissipated
+cue_on_m,brake_from_m,brake_to_m,v_entry_mps,target_exit_mps,release_at_mps,mean_decel_mps2,brake_force_max_N,brake_energy_J
+1002.2,1010.0,1020.0,7.840,7.120,7.497,0.539,50.5,505.3
+1022.6,1030.0,1040.0,7.392,4.892,5.967,1.535,151.6,1515.8
+2521.9,2530.0,2540.0,8.083,4.962,6.387,2.036,202.1,2021.1
+4021.9,4030.0,4040.0,8.098,4.986,6.412,2.036,202.1,2021.1
+5502.2,5510.0,5520.0,7.837,7.116,7.494,0.539,50.5,505.3
+5522.6,5530.0,5540.0,7.389,4.888,5.962,1.535,151.6,1515.8

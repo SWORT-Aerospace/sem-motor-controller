@@ -64,3 +64,13 @@ def synthetic_track() -> Track:
         curvature_segments=[(150.0, 190.0, 1 / 25.0), (560.0, 620.0, 1 / 40.0), (1050.0, 1090.0, 1 / 20.0),
                             (1380.0, 1440.0, 1 / 35.0)],
     )
+
+
+def synthetic_track_flat() -> Track:
+    """The synthetic lap WITHOUT its climb and descent (same corners and length).
+    Used to compare a torque-only policy where one is physically possible: on
+    synthetic_track() gravity on the descent carries even a vehicle starting
+    from rest above the next corner's limit, so only braking can meet it."""
+    t = synthetic_track()
+    return Track(lap_length_m=t.lap_length_m, laps=t.laps, grade_segments=[], curvature_segments=t.curvature_segments,
+                 label="SYNTHETIC flat variant")

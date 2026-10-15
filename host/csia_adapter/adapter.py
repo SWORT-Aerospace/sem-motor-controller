@@ -194,6 +194,10 @@ class VehicleCsiaAdapter:
         self.last_pass_t = {n: -math.inf for n in NODES}
         self.last_fail_t = {n: -math.inf for n in NODES}
         self.mode = self.MODE_SHADOW
+        # Ablation switches (host/csia_adapter/evaluation.py). Defaults are the
+        # frozen adapter; nothing in the vehicle path changes them.
+        self.ablate_gates = False        # True: every relationship eligible whenever its inputs are fresh
+        self.residual_design = "calibrated"  # "naive": no yaw/centreline/time-alignment/loss/grade terms
         self.monitor_notes: list[str] = []
         if ver != "0.8.0":
             self.monitor_notes.append(f"CSIA version {ver} != pinned 0.8.0")
@@ -319,7 +323,52 @@ class VehicleCsiaAdapter:
         if fr["iq"] and fr["iq_ref"] and not S["iq_ref"].last.flags.get("saturated_or_slewing", True):
             lams.append(lam(val["iq"] - val["iq_ref"], sg["iq"] ** 2 + 0.3 ** 2))
         phys["phase_current"] = ((sum(lams) / len(lams)) if lams else 0.0, 1.0 if lams else 0.0)
+        if self.residual_design == "naive":
+            edges, phys = self._naive(edges, phys, fr, val, sg, iq)
+        if self.ablate_gates:
+            edges = {k: (a, b, l, 1.0 if math.isfinite(l) else 0.0, aux) for k, (a, b, l, g, aux) in edges.items()}
+            lams = []
+            if fr["kcl"] and S["kcl"].last.flags.get("kcl_available", False):
+                lams.append(lam(val["kcl"], sg["kcl"] ** 2))
+            if fr["iq"] and fr["iq_ref"]:
+                lams.append(lam(val["iq"] - val["iq_ref"], sg["iq"] ** 2 + 0.3 ** 2))
+            phys["phase_current"] = ((sum(lams) / len(lams)) if lams else 0.0, 1.0 if lams else 0.0)
         return edges, phys, fr
+
+    def _naive(self, edges, phys, fr, val, sg, iq):
+        """Ablation: the same relationships with the textbook residuals of
+        baseline B2: instantaneous rotor speed, no yaw or centreline
+        correction, no grade term, no loss model. Gates are kept as computed
+        (switch them off separately with ablate_gates)."""
+        p = self.p
+        k_rot = p.wheel_radius_m / p.gear_ratio
+
+        def lam(r, var):
+            return (r * r) / var if var > 0 else math.inf
+        out = dict(edges)
+        a, b, _l, g, _x = edges["E1_rotor_wheeldrive"]
+        out["E1_rotor_wheeldrive"] = (a, b, lam(val["rotor"] * k_rot - val["wheel_drive"],
+                                                (sg["rotor"] * k_rot) ** 2 + sg["wheel_drive"] ** 2), g, ())
+        a, b, _l, g, _x = edges["E2_wheel_lr_yaw"]
+        out["E2_wheel_lr_yaw"] = (a, b, lam(val["wheel_r"] - val["wheel_l"], sg["wheel_l"] ** 2 + sg["wheel_r"] ** 2),
+                                  g, ())
+        for key, w in (("E3a_gnss_wheel_l", "wheel_l"), ("E3b_gnss_wheel_r", "wheel_r")):
+            a, b, _l, g, _x = edges[key]
+            out[key] = (a, b, lam(val[w] - val["gnss"], sg[w] ** 2 + sg["gnss"] ** 2), g, ())
+        a, b, l4, g, _x = edges["E4_imu_wheel_l"]
+        if math.isfinite(l4) and fr["grade"]:
+            # remove the grade term the calibrated design adds: recompute without it
+            w0 = self.last_tick if self.last_tick is not None else 0.0
+            h = [(t, v) for t, v in self.wheel_l_hist if t >= w0 - p.accel_window_s + p.tick_s]
+            hi = [x for t, x in self.imu_ax_hist if t >= w0 - p.accel_window_s + p.tick_s]
+            if len(h) >= 2 and hi:
+                slope = (h[-1][1] - h[0][1]) / max(h[-1][0] - h[0][0], 1e-6)
+                out["E4_imu_wheel_l"] = (a, b, lam(sum(hi) / len(hi) - slope, sg["imu_ax"] ** 2 + 0.03 ** 2), g, ())
+        a, b, _l, g, _x = edges["E6_power_balance"]
+        if g > 0:
+            out["E6_power_balance"] = (a, b, lam(val["p_dc"] - (p.kt_Nm_per_A * iq * val["rotor"] + p.p_aux_W),
+                                                 sg["p_dc"] ** 2 + p.loss_abs_W ** 2), g, ())
+        return out, phys
 
     # ---------------------------------------------------------------- tick
     def tick(self, now: float) -> AdvisoryState:

@@ -96,10 +96,28 @@ class SyntheticPhysicsMap:
         op = InverterOperatingPoint(v_bus_V=v_bus, i_ph_pk_A=abs(iq), m_index=m_index, cos_phi=cos_phi,
                                     f_sw_Hz=self.f_sw_Hz, deadtime_s=self.deadtime_s, tj_C=self.tj_C)
         p_inv = inverter_losses(self.fet, self.gate, op)["total_W"]
-        p_mech = motor_torque_Nm * w if mode == "drive" else 0.0
+        # Electromagnetic power t_em*w: the shaft output T*w PLUS the motor's own
+        # friction T_f*w (t_em = T + T_f produces shaft torque T). v0.1 charged
+        # only T*w and so omitted the friction power while driving.
+        p_em = t_em * w if mode == "drive" else 0.0
         # In coast_zero_current the iron/friction losses are supplied by vehicle KE (mechanical), not the battery.
         p_motor_elec = p_cu + (p_fe if mode == "drive" else 0.0)
-        return p_mech + p_motor_elec + p_inv + self.p_aux_W
+        return p_em + p_motor_elec + p_inv + self.p_aux_W
+
+    def breakdown(self, v_mps: float, motor_torque_Nm: float, v_bus: float, mode: str = "drive") -> dict:
+        """Battery-terminal power split [W] (for the accounting document and tests)."""
+        w = max(v_mps, 0.0) * self.vehicle.gear_ratio / self.vehicle.wheel_radius_m
+        total = self.p_batt(v_mps, motor_torque_Nm, v_bus, 25.0, mode)
+        if mode != "drive":
+            return {"shaft_W": 0.0, "motor_friction_W": 0.0, "motor_cu_fe_W": 0.0, "inverter_W": 0.0,
+                    "aux_W": self.p_aux_W, "total_W": total}
+        shaft = motor_torque_Nm * w
+        fric = (self.motor.friction_Nm if w > 0 else 0.0) * w
+        iq = (max(motor_torque_Nm, 0.0) + (self.motor.friction_Nm if w > 0 else 0.0)) / self.motor.kt
+        cu_fe = 1.5 * self.motor.rs_ohm * iq * iq + self.motor.k_iron_W_per_rad_s15 * w ** 1.5
+        inv = total - shaft - fric - cu_fe - self.p_aux_W
+        return {"shaft_W": shaft, "motor_friction_W": fric, "motor_cu_fe_W": cu_fe, "inverter_W": inv,
+                "aux_W": self.p_aux_W, "total_W": total}
 
 
 @dataclasses.dataclass

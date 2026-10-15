@@ -3,191 +3,889 @@
  "t_max_s": 1000.0,
  "reserve_s": 30.0,
  "track_m": 6000.0,
+ "guidance_assumptions": {
+  "reaction_s": 1.0,
+  "release_reaction_s": 0.7,
+  "decel_tracking": 0.2,
+  "speed_margin_mps": 0.3
+ },
+ "superseded_v01_J": {
+  "dp_schedule": 39715,
+  "pulse_and_coast_best_of_6": 46229,
+  "constant_speed": 55101,
+  "dp_schedule_with_pace": 41673
+ },
+ "accounting": [
+  {
+   "shaft_W": 83.776,
+   "motor_friction_W": 0.838,
+   "motor_cu_fe_W": 14.964,
+   "inverter_W": 1.189,
+   "aux_W": 3.0,
+   "total_W": 103.767,
+   "v_mps": 4.0,
+   "torque_Nm": 0.5,
+   "wheel_W": 79.587,
+   "drivetrain_loss_W": 4.189,
+   "v01_omitted_friction_W": 0.838
+  },
+  {
+   "shaft_W": 251.327,
+   "motor_friction_W": 1.257,
+   "motor_cu_fe_W": 50.053,
+   "inverter_W": 3.129,
+   "aux_W": 3.0,
+   "total_W": 308.766,
+   "v_mps": 6.0,
+   "torque_Nm": 1.0,
+   "wheel_W": 238.761,
+   "drivetrain_loss_W": 12.566,
+   "v01_omitted_friction_W": 1.257
+  },
+  {
+   "shaft_W": 670.206,
+   "motor_friction_W": 1.676,
+   "motor_cu_fe_W": 179.77,
+   "inverter_W": 10.033,
+   "aux_W": 3.0,
+   "total_W": 864.685,
+   "v_mps": 8.0,
+   "torque_Nm": 2.0,
+   "wheel_W": 636.696,
+   "drivetrain_loss_W": 33.51,
+   "v01_omitted_friction_W": 1.676
+  }
+ ],
+ "accel_clip_audit": {
+  "synthetic_a_max_1.5": {
+   "v0.1_clip": {
+    "battery_J": 16461.6,
+    "tractive_work_J": 11939.5,
+    "delta_ke_J": 11177.0,
+    "resistive_work_J": 762.5,
+    "residual_J": -0.0,
+    "steps_limited": 0,
+    "final_speed_mps": 14.847
+   },
+   "v0.2_torque_limit": {
+    "battery_J": 16461.6,
+    "tractive_work_J": 11939.5,
+    "delta_ke_J": 11177.0,
+    "resistive_work_J": 762.5,
+    "residual_J": -0.0,
+    "steps_limited": 0,
+    "final_speed_mps": 14.847
+   }
+  },
+  "tight_a_max_0.3": {
+   "v0.1_clip": {
+    "battery_J": 8713.5,
+    "tractive_work_J": 4775.2,
+    "delta_ke_J": 1825.3,
+    "resistive_work_J": 187.7,
+    "residual_J": 2762.3,
+    "steps_limited": 400,
+    "final_speed_mps": 6.0
+   },
+   "v0.2_torque_limit": {
+    "battery_J": 2897.9,
+    "tractive_work_J": 2013.0,
+    "delta_ke_J": 1825.3,
+    "resistive_work_J": 187.7,
+    "residual_J": 0.0,
+    "steps_limited": 400,
+    "final_speed_mps": 6.0
+   }
+  }
+ },
+ "torque_only_physics": {
+  "coast_from_rest_700m_speed_at_1050m_mps": 5.99,
+  "corner_limit_at_1050m_mps": 5.477
+ },
  "grid_convergence": [
   {
    "ds_m": 20.0,
    "dv_mps": 0.4,
-   "dp_energy_J": 39778.00758036555,
-   "dp_time_s": 967.7010417242626,
+   "dp_energy_J": 44227.45523285911,
+   "dp_brake_J": 8084.220624222629,
+   "dp_time_s": 964.5272024770462,
    "feasible": true,
-   "lambda": 48.99808615446091,
-   "solve_s": 5.907997369766235,
-   "realized_energy_J": 39761.25285355716,
-   "realized_time_s": 970.3999999996652
+   "solve_s": 6.302603006362915,
+   "realized": {
+    "energy_J": 44172.2,
+    "time_s": 967.7,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8164.5,
+    "aux_energy_J": 2903.3,
+    "final_speed_mps": 4.54,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 32,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
+   }
   },
   {
    "ds_m": 10.0,
    "dv_mps": 0.2,
-   "dp_energy_J": 39593.03028028444,
-   "dp_time_s": 969.6798978490121,
+   "dp_energy_J": 43742.338797674776,
+   "dp_brake_J": 8084.220624222629,
+   "dp_time_s": 968.4847882781373,
    "feasible": true,
-   "lambda": 45.03486752510071,
-   "solve_s": 12.63849925994873,
-   "realized_energy_J": 39588.36869133325,
-   "realized_time_s": 975.4999999996605
+   "solve_s": 13.341822385787964,
+   "realized": {
+    "energy_J": 43732.8,
+    "time_s": 976.4,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8254.1,
+    "aux_energy_J": 2929.4,
+    "final_speed_mps": 3.97,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 5,
+    "accel_events": 29,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
+   }
   },
   {
    "ds_m": 5.0,
    "dv_mps": 0.1,
-   "dp_energy_J": 39707.59271805366,
-   "dp_time_s": 965.2597953458334,
+   "dp_energy_J": 41180.68962487641,
+   "dp_brake_J": 6063.165468166972,
+   "dp_time_s": 969.2462575807317,
    "feasible": true,
-   "lambda": 43.88289600610733,
-   "solve_s": 32.049421548843384,
-   "realized_energy_J": 39715.355482834304,
-   "realized_time_s": 964.8499999996702
+   "solve_s": 29.096649408340454,
+   "realized": {
+    "energy_J": 41199.1,
+    "time_s": 978.3,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 6269.7,
+    "aux_energy_J": 2934.9,
+    "final_speed_mps": 3.85,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 29,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": -0.0
+   }
   }
  ],
- "grid_rel_change_last": 0.002885151930077455,
+ "grid_rel_change_last": 0.062205106231415,
  "comparison": {
-  "constant_speed": {
-   "energy_J": 55100.56160734085,
-   "time_s": 969.9999999996655,
-   "finished": true,
-   "accel_events": 5,
-   "brake_energy_J": 13176.295655964628,
-   "params": {
-    "v_set_mps": 5.994155623018742
+  "A_synthetic": {
+   "results": {
+    "dp_propulsion_coast_brake": {
+     "energy_J": 43754.8,
+     "time_s": 968.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 8187.7,
+     "aux_energy_J": 2904.0,
+     "final_speed_mps": 3.96,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 6,
+     "accel_events": 34,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": 0.0,
+     "params": {
+      "ds_m": 10.0,
+      "dv_mps": 0.2,
+      "policy": "propulsion_coast_brake",
+      "plan_margin_mps": 0.3,
+      "plan_internal_target_s": 963.4
+     }
+    },
+    "constant_speed_driver_brake": {
+     "energy_J": 54541.2,
+     "time_s": 970.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 12483.5,
+     "aux_energy_J": 2910.0,
+     "final_speed_mps": 6.06,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 12,
+     "accel_events": 13,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": -0.0,
+     "params": {
+      "v_set_mps": 6.057
+     }
+    },
+    "pulse_and_coast_driver_brake": {
+     "energy_J": 52473.2,
+     "time_s": 969.5,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 12355.8,
+     "aux_energy_J": 2908.7,
+     "final_speed_mps": 6.15,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 15,
+     "accel_events": 104,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": 0.0,
+     "params": {
+      "band_center_mps": 6.063,
+      "band_width_mps": 0.5,
+      "pulse_torque_Nm": 1.0
+     }
+    }
+   },
+   "notes": {
+    "dp_propulsion_coast_brake": {
+     "dp_feasible": true,
+     "dp_reason": "",
+     "dp_energy_J": 43813.8,
+     "dp_brake_energy_J": 8084.2,
+     "dp_time_s": 960.6,
+     "execution_allowance_s": 6.65,
+     "solve_s": 25.5
+    },
+    "dp_torque_only": {
+     "dp_feasible": false,
+     "dp_reason": "no feasible path for this actuator set; coasting alone cannot meet the downstream corner limit from s = 700 m (gravity/descent accelerates the vehicle above the limit even from rest)",
+     "dp_energy_J": 0.0,
+     "dp_brake_energy_J": 0.0,
+     "dp_time_s": 0.0,
+     "execution_allowance_s": 0.0,
+     "solve_s": 0.6
+    },
+    "constant_speed_torque_only": {
+     "reason": "no coast envelope exists (see DP torque-only)"
+    },
+    "pulse_and_coast_torque_only": {
+     "reason": "no coast envelope exists (see DP torque-only)"
+    }
+   },
+   "grid": {
+    "ds_m": 10.0,
+    "dv_mps": 0.2
    }
   },
-  "pulse_and_coast_best_of_6": {
-   "energy_J": 46228.86456708533,
-   "time_s": 969.9999999996655,
-   "finished": true,
-   "accel_events": 21,
-   "brake_energy_J": 7168.786785811881,
-   "params": {
-    "band_center_mps": 5.927267074584961,
-    "band_width_mps": 2.0,
-    "pulse_torque_Nm": 1.0
-   }
-  },
-  "dp_schedule": {
-   "energy_J": 39715.355482834304,
-   "time_s": 964.8499999996702,
-   "finished": true,
-   "accel_events": 22,
-   "brake_energy_J": 4855.408310792238,
-   "params": {
-    "ds_m": 5.0,
-    "dv_mps": 0.1
-   }
-  },
-  "dp_schedule_with_pace": {
-   "energy_J": 41673.492768897384,
-   "time_s": 965.3499999996698,
-   "finished": true,
-   "accel_events": 17,
-   "brake_energy_J": 4963.862732802865,
-   "params": {
-    "pace_k": 0.05,
-    "pace_bound_Nm": 0.3
+  "B_synthetic_flat": {
+   "results": {
+    "dp_propulsion_coast_brake": {
+     "energy_J": 34381.7,
+     "time_s": 967.7,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 0.0,
+     "aux_energy_J": 2903.1,
+     "final_speed_mps": 4.31,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 0,
+     "accel_events": 50,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": -0.0,
+     "params": {
+      "ds_m": 10.0,
+      "dv_mps": 0.2,
+      "policy": "propulsion_coast_brake",
+      "plan_margin_mps": 0.3,
+      "plan_internal_target_s": 970.0
+     }
+    },
+    "dp_torque_only": {
+     "energy_J": 34567.7,
+     "time_s": 969.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 0.0,
+     "aux_energy_J": 2907.0,
+     "final_speed_mps": 4.47,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 0,
+     "accel_events": 56,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": -0.0,
+     "params": {
+      "ds_m": 10.0,
+      "dv_mps": 0.2,
+      "policy": "propulsion_coast",
+      "plan_margin_mps": 0.3,
+      "plan_internal_target_s": 967.6
+     }
+    },
+    "constant_speed_driver_brake": {
+     "energy_J": 50397.5,
+     "time_s": 970.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 6724.2,
+     "aux_energy_J": 2910.0,
+     "final_speed_mps": 6.3,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 8,
+     "accel_events": 9,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": -0.0,
+     "params": {
+      "v_set_mps": 6.296
+     }
+    },
+    "constant_speed_torque_only": {
+     "energy_J": 42905.3,
+     "time_s": 970.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 0.0,
+     "aux_energy_J": 2910.0,
+     "final_speed_mps": 6.35,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 0,
+     "accel_events": 1,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": 0.0,
+     "params": {
+      "v_set_mps": 6.348
+     }
+    },
+    "pulse_and_coast_driver_brake": {
+     "energy_J": 44984.6,
+     "time_s": 970.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 6343.7,
+     "aux_energy_J": 2910.0,
+     "final_speed_mps": 6.44,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 14,
+     "accel_events": 93,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": -0.0,
+     "params": {
+      "band_center_mps": 6.309,
+      "band_width_mps": 0.5,
+      "pulse_torque_Nm": 1.0
+     }
+    },
+    "pulse_and_coast_torque_only": {
+     "energy_J": 37132.5,
+     "time_s": 970.0,
+     "finished": true,
+     "valid": true,
+     "brake_energy_J": 0.0,
+     "aux_energy_J": 2910.0,
+     "final_speed_mps": 6.5,
+     "overspeed_events": 0,
+     "max_overspeed_mps": 0.0,
+     "brake_applications": 0,
+     "accel_events": 100,
+     "accel_limited_steps": 0,
+     "reconciliation_residual_J": -0.0,
+     "params": {
+      "band_center_mps": 6.382,
+      "band_width_mps": 0.5,
+      "pulse_torque_Nm": 1.0
+     }
+    }
+   },
+   "notes": {
+    "dp_propulsion_coast_brake": {
+     "dp_feasible": true,
+     "dp_reason": "",
+     "dp_energy_J": 34394.4,
+     "dp_brake_energy_J": 0.0,
+     "dp_time_s": 966.8,
+     "execution_allowance_s": 0.0,
+     "solve_s": 13.7
+    },
+    "dp_torque_only": {
+     "dp_feasible": true,
+     "dp_reason": "",
+     "dp_energy_J": 34625.3,
+     "dp_brake_energy_J": 0.0,
+     "dp_time_s": 966.1,
+     "execution_allowance_s": 2.4,
+     "solve_s": 34.4
+    }
+   },
+   "grid": {
+    "ds_m": 10.0,
+    "dv_mps": 0.2
    }
   }
  },
- "robustness": {
+ "guidance_robustness": {
+  "margin 0.0 m/s, reaction 0.5 s, decel x0.8": {
+   "energy_J": 41026.3,
+   "time_s": 950.8,
+   "finished": true,
+   "valid": false,
+   "brake_energy_J": 5393.1,
+   "aux_energy_J": 2852.6,
+   "final_speed_mps": 4.0,
+   "overspeed_events": 3,
+   "max_overspeed_mps": 0.12,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.0 m/s, reaction 0.5 s, decel x1.0": {
+   "energy_J": 41081.4,
+   "time_s": 955.4,
+   "finished": true,
+   "valid": false,
+   "brake_energy_J": 5584.9,
+   "aux_energy_J": 2866.4,
+   "final_speed_mps": 3.9,
+   "overspeed_events": 1,
+   "max_overspeed_mps": 0.062,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.0 m/s, reaction 0.5 s, decel x1.2": {
+   "energy_J": 41115.9,
+   "time_s": 960.6,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 5748.1,
+   "aux_energy_J": 2881.8,
+   "final_speed_mps": 3.86,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.0 m/s, reaction 1.0 s, decel x0.8": {
+   "energy_J": 41121.1,
+   "time_s": 964.4,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 5874.3,
+   "aux_energy_J": 2893.4,
+   "final_speed_mps": 3.78,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.0 m/s, reaction 1.0 s, decel x1.0": {
+   "energy_J": 41169.8,
+   "time_s": 975.2,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 6178.2,
+   "aux_energy_J": 2925.8,
+   "final_speed_mps": 3.62,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.0 m/s, reaction 1.0 s, decel x1.2": {
+   "energy_J": 41229.0,
+   "time_s": 983.4,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 6415.8,
+   "aux_energy_J": 2950.4,
+   "final_speed_mps": 3.51,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.0 m/s, reaction 1.5 s, decel x0.8": {
+   "energy_J": 41193.7,
+   "time_s": 974.9,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 6199.7,
+   "aux_energy_J": 2924.7,
+   "final_speed_mps": 3.65,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.0 m/s, reaction 1.5 s, decel x1.0": {
+   "energy_J": 41277.0,
+   "time_s": 993.4,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 6678.7,
+   "aux_energy_J": 2980.2,
+   "final_speed_mps": 3.37,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.0 m/s, reaction 1.5 s, decel x1.2": {
+   "energy_J": 41358.4,
+   "time_s": 1010.2,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 7052.3,
+   "aux_energy_J": 3030.6,
+   "final_speed_mps": 3.16,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 8,
+   "accel_events": 26,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.3 m/s, reaction 0.5 s, decel x0.8": {
+   "energy_J": 43308.7,
+   "time_s": 943.2,
+   "finished": true,
+   "valid": false,
+   "brake_energy_J": 6984.1,
+   "aux_energy_J": 2829.8,
+   "final_speed_mps": 4.54,
+   "overspeed_events": 2,
+   "max_overspeed_mps": 0.163,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.3 m/s, reaction 0.5 s, decel x1.0": {
+   "energy_J": 43329.2,
+   "time_s": 950.0,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 7212.8,
+   "aux_energy_J": 2850.2,
+   "final_speed_mps": 4.41,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.3 m/s, reaction 0.5 s, decel x1.2": {
+   "energy_J": 43419.9,
+   "time_s": 958.3,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 7507.2,
+   "aux_energy_J": 2874.9,
+   "final_speed_mps": 4.31,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.3 m/s, reaction 1.0 s, decel x0.8": {
+   "energy_J": 43581.9,
+   "time_s": 961.9,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 7778.0,
+   "aux_energy_J": 2885.9,
+   "final_speed_mps": 4.22,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.3 m/s, reaction 1.0 s, decel x1.0": {
+   "energy_J": 43732.8,
+   "time_s": 976.4,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 8254.1,
+   "aux_energy_J": 2929.4,
+   "final_speed_mps": 3.97,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.3 m/s, reaction 1.0 s, decel x1.2": {
+   "energy_J": 43838.7,
+   "time_s": 991.2,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 8645.3,
+   "aux_energy_J": 2973.6,
+   "final_speed_mps": 3.72,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.3 m/s, reaction 1.5 s, decel x0.8": {
+   "energy_J": 43593.2,
+   "time_s": 970.3,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 7942.8,
+   "aux_energy_J": 2910.9,
+   "final_speed_mps": 4.23,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  },
+  "margin 0.3 m/s, reaction 1.5 s, decel x1.0": {
+   "energy_J": 43793.8,
+   "time_s": 1002.4,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 8848.2,
+   "aux_energy_J": 3007.4,
+   "final_speed_mps": 3.54,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": -0.0
+  },
+  "margin 0.3 m/s, reaction 1.5 s, decel x1.2": {
+   "energy_J": 43945.7,
+   "time_s": 1028.9,
+   "finished": true,
+   "valid": true,
+   "brake_energy_J": 9371.0,
+   "aux_energy_J": 3086.7,
+   "final_speed_mps": 3.1,
+   "overspeed_events": 0,
+   "max_overspeed_mps": 0.0,
+   "brake_applications": 5,
+   "accel_events": 29,
+   "accel_limited_steps": 0,
+   "reconciliation_residual_J": 0.0
+  }
+ },
+ "model_robustness": {
   "nominal": {
    "dp_no_pace": {
-    "energy_J": 39715.4,
-    "time_s": 964.8,
-    "finished": true
+    "energy_J": 43754.8,
+    "time_s": 968.0,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8187.7,
+    "aux_energy_J": 2904.0,
+    "final_speed_mps": 3.96,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 34,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    },
    "dp_with_pace": {
-    "energy_J": 41673.5,
-    "time_s": 965.3,
-    "finished": true
-   },
-   "constant_speed": {
-    "energy_J": 55100.6,
-    "time_s": 970.0,
-    "finished": true
+    "energy_J": 47864.0,
+    "time_s": 960.4,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8371.7,
+    "aux_energy_J": 2881.2,
+    "final_speed_mps": 4.12,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 30,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    }
   },
   "crr+20%": {
    "dp_no_pace": {
-    "energy_J": 39980.4,
-    "time_s": 1037.6,
-    "finished": true
+    "energy_J": 44085.3,
+    "time_s": 1030.7,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 6393.3,
+    "aux_energy_J": 3092.1,
+    "final_speed_mps": 3.47,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 4,
+    "accel_events": 34,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    },
    "dp_with_pace": {
-    "energy_J": 49591.9,
-    "time_s": 965.4,
-    "finished": true
-   },
-   "constant_speed": {
-    "energy_J": 57714.9,
-    "time_s": 972.3,
-    "finished": true
+    "energy_J": 53105.4,
+    "time_s": 960.7,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8116.0,
+    "aux_energy_J": 2882.1,
+    "final_speed_mps": 3.98,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 22,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": -0.0
    }
   },
   "cda+20%": {
    "dp_no_pace": {
-    "energy_J": 39782.1,
-    "time_s": 988.5,
-    "finished": true
+    "energy_J": 43895.0,
+    "time_s": 987.9,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 7589.3,
+    "aux_energy_J": 2963.9,
+    "final_speed_mps": 3.84,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 34,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": -0.0
    },
    "dp_with_pace": {
-    "energy_J": 44942.7,
-    "time_s": 965.2,
-    "finished": true
-   },
-   "constant_speed": {
-    "energy_J": 55879.0,
-    "time_s": 970.9,
-    "finished": true
+    "energy_J": 49580.9,
+    "time_s": 960.3,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8192.1,
+    "aux_energy_J": 2881.1,
+    "final_speed_mps": 4.12,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 23,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    }
   },
   "mass+5%": {
    "dp_no_pace": {
-    "energy_J": 39883.0,
-    "time_s": 1005.0,
-    "finished": true
+    "energy_J": 43991.7,
+    "time_s": 1001.3,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 7837.7,
+    "aux_energy_J": 3003.9,
+    "final_speed_mps": 3.89,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 34,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": -0.0
    },
    "dp_with_pace": {
-    "energy_J": 45834.2,
-    "time_s": 965.2,
-    "finished": true
-   },
-   "constant_speed": {
-    "energy_J": 56904.7,
-    "time_s": 970.2,
-    "finished": true
+    "energy_J": 49738.1,
+    "time_s": 960.4,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 9070.2,
+    "aux_energy_J": 2881.4,
+    "final_speed_mps": 4.47,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 25,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    }
   },
   "crr-20%": {
    "dp_no_pace": {
-    "energy_J": 39562.8,
-    "time_s": 927.2,
-    "finished": true
+    "energy_J": 43421.8,
+    "time_s": 916.0,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 9822.1,
+    "aux_energy_J": 2748.0,
+    "final_speed_mps": 4.4,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 34,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    },
    "dp_with_pace": {
-    "energy_J": 41222.6,
-    "time_s": 965.5,
-    "finished": true
-   },
-   "constant_speed": {
-    "energy_J": 52521.7,
-    "time_s": 967.8,
-    "finished": true
+    "energy_J": 42245.4,
+    "time_s": 960.5,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 8855.5,
+    "aux_energy_J": 2881.5,
+    "final_speed_mps": 4.16,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 27,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": 0.0
    }
   },
   "headwind 2 m/s": {
    "dp_no_pace": {
-    "energy_J": 40080.9,
-    "time_s": 1056.0,
-    "finished": true
+    "energy_J": 44159.3,
+    "time_s": 1048.7,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 6087.4,
+    "aux_energy_J": 3146.1,
+    "final_speed_mps": 3.39,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 4,
+    "accel_events": 34,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": -0.0
    },
    "dp_with_pace": {
-    "energy_J": 50055.2,
-    "time_s": 965.4,
-    "finished": true
-   },
-   "constant_speed": {
-    "energy_J": 58009.5,
-    "time_s": 974.2,
-    "finished": true
+    "energy_J": 54714.8,
+    "time_s": 960.6,
+    "finished": true,
+    "valid": true,
+    "brake_energy_J": 7891.6,
+    "aux_energy_J": 2881.8,
+    "final_speed_mps": 3.99,
+    "overspeed_events": 0,
+    "max_overspeed_mps": 0.0,
+    "brake_applications": 6,
+    "accel_events": 10,
+    "accel_limited_steps": 0,
+    "reconciliation_residual_J": -0.0
    }
   }
  },
- "schedule_csv": "docs/generated/dp_schedule_synthetic.csv"
+ "guidance_blocks": 6
 }

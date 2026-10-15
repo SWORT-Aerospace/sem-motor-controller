@@ -1,0 +1,21 @@
+{
+ "frozen_files_sha256": {
+  "host/csia_adapter/adapter.py": "e5a246919a49559090e952a84998e8984139b855cb0e15346f5879f8022c458e",
+  "host/csia_adapter/synthetic.py": "ef9372d80d4fa7b80e01cea5d7085c78fc01f6441246930811400adbc4822d16",
+  "host/csia_adapter/baselines.py": "2d41d4f10a16e7b77aa74b042f08013993e2339f11b1f375f2124597d25ac484",
+  "host/csia_adapter/eval_set.py": "e6d74e0e7690d56357d7384d9cb5901550d263c15af5f887226b784d3a6c53d3",
+  "host/csia_adapter/evaluation.py": "cc6f36c7ccd9d88e9fd2137eeb264939256f86724bf18fc2fc6935d685135b14",
+  "third_party/csia-trust-layer.lock": "ec970430a53a54d83a03f434bc8d22bf1a65fe97d355f6a6a56e98b8885c096a"
+ },
+ "dev_set": {
+  "generator": "host/csia_adapter/synthetic.py",
+  "seed": 7,
+  "duration_s": 120.0,
+  "faults": "tools/run_csia_study.py FAULTS (6, fixed)"
+ },
+ "eval_set": {
+  "generator": "host/csia_adapter/eval_set.py",
+  "builder": "build_eval_set(24, 5, 300, 240)",
+  "seeds": "nominal 1000-1023, faults 2000-2069"
+ }
+}

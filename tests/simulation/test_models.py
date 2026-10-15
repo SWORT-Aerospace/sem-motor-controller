@@ -7,8 +7,9 @@ import pytest
 
 from models.inverter import losses as L
 from models.optimization import dp
-from models.optimization.strategies import PaceCorrector, SimConfig, schedule_follower, simulate
-from models.optimization.track import Track, synthetic_track
+from models.optimization.strategies import (Command, DriverModel, EnvelopeBrakeCue, PaceCorrector, SimConfig,
+                                            constant_speed, schedule_follower, simulate)
+from models.optimization.track import Track, synthetic_track, synthetic_track_flat
 from models.vehicle.longitudinal import (SYNTHETIC_VEHICLE as V, fit_coastdown, resistive_force,
                                          simulate_coastdown)
 from models.vehicle.powertrain import (MeasuredLossMap, SyntheticPhysicsMap, check_no_double_counting)
@@ -164,8 +165,121 @@ def test_schedule_export_is_bounded(tmp_path, short_track, pmap):
     dp.export_schedule(r, out, torque_bound_Nm=1.0, model_label="test")
     lines = out.read_text().splitlines()
     assert lines[0].startswith("# SYNTHETIC")
-    torques = [float(x.split(",")[-1]) for x in lines[2:]]
+    hdr = lines[1].split(",")
+    rows = [dict(zip(hdr, x.split(","))) for x in lines[2:]]
+    torques = [float(x["controller_torque_Nm"]) for x in rows]
     assert max(torques) <= 1.0 and min(torques) >= 0.0
+
+
+def _follow(r, pace=None, lead=1.0):
+    return schedule_follower(r.s, r.u_torque, r.kind, r.t, 2.0, pace, r.u_brake_N, cue_lead_s=lead,
+                             release_lead_s=0.7 * lead, v_nodes=r.v, m_brake_kg=V.m_eff(coupled=not V.freewheel))
+
+
+# ------------------------------------------------- v0.2 actuator model regressions
+@pytest.fixture(scope="module")
+def plan_a(pmap):
+    trk = dataclasses.replace(synthetic_track(), laps=1)
+    return trk, dp.solve(trk, V, pmap, dp.DPConfig(ds_m=20.0, dv_mps=0.4, t_max_s=260.0, reserve_s=10.0,
+                                                    v_margin_mps=0.3))
+
+
+def test_dp_braking_is_exported_as_driver_brake_never_coast(tmp_path, plan_a):
+    trk, r = plan_a
+    assert r.feasible
+    brake = r.kind == dp.BRAKE
+    assert brake.any(), "descent into the R=20 m corner needs braking on this track"
+    assert np.all(r.u_brake_N[brake] > 0) and np.all(r.u_torque[brake] == 0)
+    assert not np.any(r.u_coast & brake)                       # braking is never reported as coast
+    assert np.all(r.u_brake_N[~brake] == 0)                    # and never hidden in coast/propel rows
+    out = tmp_path / "s.csv"
+    dp.export_schedule(r, out, 2.0, "t")
+    lines = out.read_text().splitlines()
+    hdr = lines[1].split(",")
+    rows = [dict(zip(hdr, x.split(","))) for x in lines[2:]]
+    for row in rows:
+        if row["action"] == "coast":
+            assert float(row["driver_brake_force_N"]) == 0.0
+        if row["action"] == "driver_brake":
+            assert float(row["controller_torque_Nm"]) == 0.0 and float(row["brake_energy_J"]) > 0
+    g = dp.export_guidance(r, tmp_path / "g.csv", dp.GuidanceAssumptions())
+    assert g and abs(sum(b["energy_J"] for b in g) - r.brake_energy_J) < 1e-6
+    assert "reaction" in (tmp_path / "g.csv").read_text().splitlines()[0]
+
+
+def test_dp_brake_energy_is_force_times_distance(plan_a):
+    trk, r = plan_a
+    k = np.where(r.kind == dp.BRAKE)[0]
+    dist = r.s[k + 1] - r.s[k]
+    assert np.allclose(r.e_brake_J[k], r.u_brake_N[k] * dist)
+    # segment energy balance (energy form of the dynamics), braking segments
+    m = V.m_eff(coupled=not V.freewheel)
+    for j in k:
+        vm = 0.5 * (r.v[j] + r.v[j + 1])
+        f_res = resistive_force(V, vm, trk.grade(r.s[j]), 0.0, trk.curvature(r.s[j]))
+        lhs = 0.5 * m * (r.v[j + 1] ** 2 - r.v[j] ** 2)
+        rhs = -(f_res + r.u_brake_N[j]) * (r.s[j + 1] - r.s[j])
+        assert lhs == pytest.approx(rhs, rel=0.05, abs=5.0)
+
+
+def test_torque_only_is_reported_infeasible_on_descent_into_corner(pmap):
+    trk = dataclasses.replace(synthetic_track(), laps=1)
+    r = dp.solve(trk, V, pmap, dp.DPConfig(ds_m=20.0, dv_mps=0.4, policy="propulsion_coast", t_max_s=260.0,
+                                           reserve_s=10.0))
+    assert not r.feasible
+    assert "coasting alone" in r.infeasible_reason
+    _, env, bad = dp.coast_envelope(trk, V)
+    assert bad is not None and 600.0 <= bad <= 1000.0
+
+
+def test_torque_only_feasible_on_flat_track_without_any_braking(pmap):
+    trk = dataclasses.replace(synthetic_track_flat(), laps=1)
+    r = dp.solve(trk, V, pmap, dp.DPConfig(ds_m=20.0, dv_mps=0.4, policy="propulsion_coast", t_max_s=260.0,
+                                           reserve_s=10.0))
+    assert r.feasible and not np.any(r.kind == dp.BRAKE) and r.brake_energy_J == 0.0
+    x = simulate(trk, V, pmap, _follow(r), SimConfig())
+    assert x.valid and x.brake_energy_J == 0.0 and x.brake_applications == 0
+
+
+def test_simulator_has_no_hidden_braking(pmap):
+    trk = dataclasses.replace(synthetic_track(), laps=1)
+    x = simulate(trk, V, pmap, constant_speed(7.5, V), SimConfig())   # no brake cue at all
+    assert x.brake_energy_J == 0.0 and x.brake_applications == 0
+    assert x.overspeed_events > 0 and not x.valid                    # violations recorded, not corrected
+
+
+def test_braking_plan_executes_with_driver_model_and_brake_override(pmap, plan_a):
+    trk, r = plan_a
+    x = simulate(trk, V, pmap, _follow(r), SimConfig(driver=DriverModel(1.0, 0.7, 1.0)), record=True)
+    assert x.finished and x.overspeed_events == 0 and x.brake_applications > 0 and x.brake_energy_J > 0
+    braking = x.trace["brake_N"] > 0
+    assert braking.any() and np.all(x.trace["torque"][braking] == 0.0)   # brake override (L1)
+    assert abs(x.reconciliation["residual_J"]) < 1e-6 * max(1.0, x.reconciliation["tractive_work_J"]) + 1e-3
+
+
+def test_late_driver_is_detected_as_overspeed_not_hidden(pmap, plan_a):
+    trk, r = plan_a
+    late = simulate(trk, V, pmap, _follow(r), SimConfig(driver=DriverModel(2.5, 0.7, 0.6)))
+    assert late.overspeed_events > 0 and late.max_overspeed_mps > 0.0
+
+
+def test_acceleration_limit_reduces_torque_and_keeps_energy_consistent(pmap):
+    trk = dataclasses.replace(synthetic_track_flat(), laps=1)
+    tight = SimConfig(a_max=0.3)
+    x = simulate(trk, V, pmap, constant_speed(6.0, V, brake=EnvelopeBrakeCue(trk, V)), tight)
+    assert x.accel_limited_steps > 0
+    rec = x.reconciliation
+    assert abs(rec["residual_J"]) < 1e-3
+    assert rec["battery_minus_tractive_J"] > 0                         # losses + aux are positive
+
+
+def test_power_map_charges_motor_friction_power(pmap):
+    b = pmap.breakdown(6.0, 1.0, 46.0)
+    w = 6.0 * V.gear_ratio / V.wheel_radius_m
+    assert b["motor_friction_W"] == pytest.approx(pmap.motor.friction_Nm * w)
+    parts = b["shaft_W"] + b["motor_friction_W"] + b["motor_cu_fe_W"] + b["inverter_W"] + b["aux_W"]
+    assert parts == pytest.approx(b["total_W"])
+    assert b["inverter_W"] > 0
 
 
 def test_pace_correction_bounded_and_effective(short_track, pmap):
@@ -174,9 +288,9 @@ def test_pace_correction_bounded_and_effective(short_track, pmap):
     assert pc.delta(1000.0, 0.0) == 0.3 and pc.delta(0.0, 1000.0) == -0.3
     heavy = dataclasses.replace(V, crr=V.crr * 1.3)
     sim = SimConfig()
-    ctrl = schedule_follower(r.s[:-1], r.u_torque, r.u_coast, r.t[:-1], sim.torque_max_Nm)
+    ctrl = _follow(r)
     no = simulate(short_track, heavy, SyntheticPhysicsMap(heavy), ctrl, sim)
-    ctrl_p = schedule_follower(r.s[:-1], r.u_torque, r.u_coast, r.t[:-1], sim.torque_max_Nm, pc)
+    ctrl_p = _follow(r, pc)
     yes = simulate(short_track, heavy, SyntheticPhysicsMap(heavy), ctrl_p, sim)
     assert yes.time_s < no.time_s
     assert yes.time_s <= 270.0
