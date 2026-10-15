@@ -20,3 +20,12 @@ When filling the table, every value must be marked **AMR** (absolute maximum rat
 | Shunts (WSK2512, CSS2H-2512) | Vishay / Bourns | Bourns CSS2H-2512 PDF found by search | power rating vs PCB temperature; TCR; pulse rating; Kelvin pad layout | bridge sheet; error budget | **open** |
 
 **Rule for using this table.** A schematic value tagged "TYPICAL – verify" or "[R]", or a project-library pin number marked UNVERIFIED, may not be carried into a layout until its row is filled with document, revision, page and value class.
+
+## v0.3 access attempt (2026-10-15)
+* **Refused** (network policy, proxy `403` on CONNECT): st.com, ti.com, ti.com.cn, mouser.com, digikey.com, alldatasheet, the ST China CDN and other mirrors.
+* **Reachable and used**, as secondary evidence only, never in place of a datasheet row above:
+  * `STMicroelectronics/stm32g4xx_hal_driver@a6001282` and `STMicroelectronics/cmsis_device_g4@626ee412` (raw GitHub). Register field widths, HAL range macros and HAL comments, used in `hardware/timing/clock_tree_alternatives.md`.
+  * `STMicroelectronics/STM32_open_pin_data@7d1f151` (pin database).
+  * `kicad-symbols@cf07d539` on GitLab (INA228 pin numbers).
+* **Conflicts found** between ST HAL comments and recalled DS12288 values: the PLL VCO input range (2.66–8 vs 2.66–16 MHz), the VCO output range (64–344 vs 96–344 MHz), and an unexplained "FDCAN (≤ 48 MHz)" note. The narrower values are used until DS12288 resolves them.
+* Fastest path: attach the PDFs to the session (DS12288, RM0440, DRV8353 SLVSDY6, INA228, TJA1051, LM5164, TLV755P, MAX6369). Each row above then gets its revision and page numbers.

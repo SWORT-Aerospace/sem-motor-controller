@@ -112,6 +112,8 @@ static void test_rule_violations(void)
     mutate_expect(MC_P_INVERTER_VBUS_DIVIDER_RATIO, 10.0f, MC_CFG_E_VBUS_SENSE_RANGE);
     mutate_expect(MC_P_LIMITS_TORQUE_SLEW_DOWN_FAST_NM_S, 15.0f, MC_CFG_E_ENVELOPE_RAMP_DEADLINE);
     mutate_expect(MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S, 3.0e-6f, MC_CFG_E_SAMPLING_WINDOW);
+    mutate_expect(MC_P_SUPERVISION_CAN_ID_BASE, 784.0f, MC_CFG_E_CAN_ID_BASE); /* 0x310: not one filter block */
+    mutate_expect(MC_P_SUPERVISION_CAN_ID_BASE, 2048.0f, MC_CFG_E_OUT_OF_RANGE); /* beyond 11 bits */
 }
 
 static void test_missing_required(void)

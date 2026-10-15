@@ -1,0 +1,46 @@
+{
+ "frames_per_s": {
+  "controller": 384.0,
+  "supervisor": 72.0,
+  "others_low": 30,
+  "others_high": 200
+ },
+ "logging": {
+  "semmc frames only (controller + supervisor), full rate": {
+   "bytes_per_s": 7296.0,
+   "flash_s": 1034.778947368421
+  },
+  "all CAN at full rate + direct sensors, LOW node rates": {
+   "bytes_per_s": 8608.0,
+   "flash_s": 877.0617100371747
+  },
+  "all CAN at full rate + direct sensors, HIGH node rates": {
+   "bytes_per_s": 14016.0,
+   "flash_s": 538.6520547945206
+  },
+  "semmc decimated to <= 10 Hz + others LOW + direct LOW": {
+   "bytes_per_s": 3168.0,
+   "flash_s": 2383.1272727272726
+  }
+ },
+ "lte_bytes_per_s": {
+  "JSON, ~25 signals @ 1 Hz": 640.0,
+  "JSON, ~25 signals @ 5 Hz": 3200.0,
+  "packed binary, ~25 signals @ 1 Hz": 210.0,
+  "packed binary, ~25 signals @ 5 Hz": 1050.0
+ },
+ "aux_power_W": {
+  "telematics unit": [
+   0.4500555555555556,
+   2.0892352941176466
+  ],
+  "motor-controller logic": [
+   0.15455555555555553,
+   0.9110588235294117
+  ],
+  "both": [
+   0.6046111111111111,
+   3.0002941176470586
+  ]
+ }
+}

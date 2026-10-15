@@ -53,7 +53,7 @@ Minimize battery energy over a valid completed run, subject to finish time, driv
 | CO-3 | Controller reboot during an active request: no torque until locally re-armed; old-session frames rejected | P | T `test_controller_reboot_during_active_request` (C and co-sim) | host-verified |
 | CO-4 | Bus-off ends ECO immediately; manual driving unaffected | P | T `test_bus_off_exits_eco_immediately`, `test_bus_off_and_reordered_frames` | host-verified |
 | CO-5 | Supervisory rate and timeout set by a hazard and latency analysis (50 Hz / 100 ms provisional, sim only) | P | An (pending) + `tools/bus_load.py`; hardware validation refuses provisional timing | open |
-| CO-6 | Bus load ≤ 30 % at nominal rate with co-existing CHUDS traffic | P | T `test_bus_load_budget` (estimate 13.7 %) | analysed |
+| CO-6 | Bus load ≤ 30 % at nominal rate with the vehicle bus's other traffic (UNKNOWN; CHUDS used only as a reference-project load case) | P | T `test_bus_load_budget` (estimate 13.7 %) | analysed |
 
 ## 6. Configuration
 

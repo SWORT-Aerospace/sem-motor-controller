@@ -55,7 +55,7 @@ REQUIRED = [
     # (~15 ADC clocks) after phase A. IN1..IN5 are required because they are
     # recalled to be the direct "fast" channels on STM32G4 (RM0440, NOT
     # verified here: st.com unreachable).
-    ("ISENSE_A", r"^ADC1_IN[1-5]$", None, "CSA A -> ADC1 fast channel (dual simultaneous with ADC2)"),
+    ("ISENSE_A", r"^ADC1_IN[1-5]$", None, "CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed)"),
     ("ISENSE_B", r"^ADC2_IN[1-5]$", None, "CSA B -> ADC2 fast channel"),
     ("ISENSE_C", r"^ADC[345]_IN[1-5]$", None, "CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge"),
     ("VBUS_SENSE", r"^ADC[345]_IN\d+$", None, "bus voltage divider (separate ADC from currents)"),

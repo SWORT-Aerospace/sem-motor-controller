@@ -133,9 +133,11 @@ def main() -> int:
           f"* Dead time {v('t_dead_s')*1e9:.0f} ns -> BDTR.DTG = 0x{code:02X} -> {t_dead_ach*1e9:.1f} ns achieved "
           f"(t_DTS = {1e9/f_tim:.2f} ns). The gate driver may add its own dead time; the effective dead time is "
           "the larger of the two and must be measured at the gate (stage 3).",
-          "", "## Simultaneous phase-current sampling", "",
+          "", "## Phase-current sampling on three ADCs (PROPOSED, not substantiated)", "",
+          "* **Proposed, not yet substantiated:** it holds only once the trigger configuration, the ADC "
+          "synchronisation, the acquisition windows and a bench measurement (stage 4) confirm it.",
           "* Phase A on ADC1, phase B on ADC2 (dual simultaneous injected mode), phase C on ADC3, injected, with "
-          "the same external trigger TIM1_TRGO2 [R]. The three sample-and-hold instants coincide to within ADC "
+          "the same external trigger TIM1_TRGO2 [R]. The three sample-and-hold instants would coincide to within ADC "
           "clock synchronisation (< 1 ADC clock); in v0.1 phase C sat behind phase A in ADC1 by "
           f"{(v('adc_sample_cycles') + v('adc_conv_cycles')) / v('f_adc_Hz') * 1e9:.0f} ns.",
           "* Pins (generated, `hardware/interfaces/pin_allocation_STM32G474VBCETx.csv`): PA0 ADC1_IN1, PA1 ADC2_IN2, "

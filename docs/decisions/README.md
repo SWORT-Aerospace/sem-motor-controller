@@ -13,3 +13,4 @@
 | [0009](ADR-0009-no-vendor-kit-control-code.md) | Purpose-built control core; ST MCSDK used for reference only | Accepted (pending rule verification) |
 | [0010](ADR-0010-wired-driver-authority.md) | Driver controls wired to the controller, never via CAN | Accepted |
 | [0011](ADR-0011-control-contract-layers.md) | Four-layer control contract; hard ceilings clamp, envelopes ramp boundedly | Accepted |
+| [0012](ADR-0012-transport-neutral-interface.md) | Transport-neutral core; CAN block base per vehicle; CHUDS only as an optional adapter | Accepted (bus to be confirmed) |

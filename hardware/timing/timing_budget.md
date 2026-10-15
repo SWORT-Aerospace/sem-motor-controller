@@ -28,9 +28,10 @@
 * Period 50.0 us; ARR = f_tim / (2 f_pwm) = 4250 (duty resolution 0.024 %).
 * Dead time 200 ns -> BDTR.DTG = 0x22 -> 200.0 ns achieved (t_DTS = 5.88 ns). The gate driver may add its own dead time; the effective dead time is the larger of the two and must be measured at the gate (stage 3).
 
-## Simultaneous phase-current sampling
+## Phase-current sampling on three ADCs (PROPOSED, not substantiated)
 
-* Phase A on ADC1, phase B on ADC2 (dual simultaneous injected mode), phase C on ADC3, injected, with the same external trigger TIM1_TRGO2 [R]. The three sample-and-hold instants coincide to within ADC clock synchronisation (< 1 ADC clock); in v0.1 phase C sat behind phase A in ADC1 by 447 ns.
+* **Proposed, not yet substantiated:** it holds only once the trigger configuration, the ADC synchronisation, the acquisition windows and a bench measurement (stage 4) confirm it.
+* Phase A on ADC1, phase B on ADC2 (dual simultaneous injected mode), phase C on ADC3, injected, with the same external trigger TIM1_TRGO2 [R]. The three sample-and-hold instants would coincide to within ADC clock synchronisation (< 1 ADC clock); in v0.1 phase C sat behind phase A in ADC1 by 447 ns.
 * Pins (generated, `hardware/interfaces/pin_allocation_STM32G474VBCETx.csv`): PA0 ADC1_IN1, PA1 ADC2_IN2, PE7 ADC3_IN4, all IN1..IN5 "fast" channels [R].
 * Sampling time 6.5 cycles = 153 ns; with conversion 447 ns. External RC tau = 47 ns; settling to 1 LSB (12 bit) = 391 ns. Charge kick-back from C_SH: 1.05 % of the step between successive samples on the same input, absorbed by the 470 pF reservoir (re-check with the real C_SH).
 

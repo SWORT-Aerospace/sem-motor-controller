@@ -67,7 +67,7 @@ battery:
   notes: null
 
 vehicle:
-  category: null             # UNKNOWN: telemetry proposal (unavailable here) reportedly says Prototype; Cornell repos target Urban Concept
+  category: null             # UNKNOWN: not stated in the telematics proposal v0.1; Cornell repos (reference project) target Urban Concept
   competition_event: null
   mass_with_driver_kg: null
   gear_ratio: null
@@ -128,5 +128,6 @@ supervision:
   timeout_s: null                  # 100 ms is PROVISIONAL and simulation-only
   timing_status: provisional_simulation_only
   limits_timeout_s: null
+  can_id_base: null                # UNKNOWN: needs the vehicle team's CAN id allocation (docs/VEHICLE_INTERFACE_MATRIX.md)
   hazard_analysis_ref: null        # required before any hardware build
   notes: "Pending vehicle hazard and latency analysis."

@@ -2,10 +2,18 @@
  * steps for one motor. Platform code calls:
  *
  *   mc_core_init()            once, with the calibration blob
- *   mc_core_on_can_rx()       from the CAN RX task (NOT the current ISR)
+ *   mc_core_on_msg_rx()       from the link RX task (NOT the current ISR)
  *   mc_core_slow_step()       at the supervisory rate
  *   mc_core_fast_step()       in the current-control interrupt
- *   mc_core_can_tx_poll()     from the CAN TX task
+ *   mc_core_msg_tx_poll()     from the link TX task
+ *
+ * The core is transport-neutral: it exchanges 8-byte protocol messages
+ * identified by the protocol's canonical message numbers (SEMMC_ID_*). Each
+ * message carries its own data id, sequence and CRC, so integrity does not
+ * depend on the transport's addressing. A transport binding maps the numbers
+ * onto its own addressing; the CAN binding (src/transport/mc_can_binding.c)
+ * is one such binding and the only one implemented. Manual driving never
+ * depends on any link.
  *
  * Data handoff slow -> fast is a single struct written by the slow step and
  * read by the fast step; on the target this must be done with a sequence
@@ -144,7 +152,7 @@ typedef struct {
     volatile bool fast_overcurrent;
     volatile bool fast_dt_invalid;
     uint32_t current_invalid_run;  /* consecutive fast steps without a valid current sample */
-    bool can_bus_off;
+    bool link_down;            /* transport reports the link unusable (CAN: bus-off) */
     /* time */
     mc_time_us_t now_us;
     mc_time_us_t last_slow_us;
@@ -160,11 +168,26 @@ typedef struct {
 /* Returns false if the blob was rejected; the core then stays in BOOT ->
  * FAULT_LATCHED(CONFIG_INVALID) and never produces torque. */
 bool mc_core_init(mc_core_t *c, const uint8_t *cal_blob, size_t cal_len, mc_build_kind_t build, uint16_t boot_id);
-void mc_core_on_can_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t can_id, const uint8_t *data, uint8_t len);
-void mc_core_on_can_bus_off(mc_core_t *c, bool bus_off);
 void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t *in);
 void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs_t *out);
-/* Emit at most one due frame. Returns true and fills id/data if a frame is due. */
+
+/* ---- transport-neutral message interface ------------------------------- */
+/* Protocol message numbers occupy MC_PROTO_MSG_FIRST .. MC_PROTO_MSG_FIRST + MC_PROTO_MSG_SPAN - 1. */
+#define MC_PROTO_MSG_FIRST 0x300u
+#define MC_PROTO_MSG_SPAN 0x40u
+void mc_core_on_msg_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t msg_id, const uint8_t *data, uint8_t len);
+/* A lost link ends any supervisor session at once (ECO -> READY on the next slow step). */
+void mc_core_on_link_state(mc_core_t *c, bool link_down);
+/* Emit at most one due message. Returns true and fills msg_id/data if one is due. */
+bool mc_core_msg_tx_poll(mc_core_t *c, mc_time_us_t now_us, uint32_t *msg_id, uint8_t data[8]);
+
+/* ---- CAN binding (src/transport/mc_can_binding.c) ----------------------- */
+/* 11-bit identifier = base + (message number - MC_PROTO_MSG_FIRST), base = supervision.can_id_base
+ * (validated: multiple of 0x40). With an invalid calibration the protocol default 0x300 is used
+ * (bench diagnostics only: a hardware build refuses to run without a valid calibration). */
+uint32_t mc_can_id_base(const mc_core_t *c);
+void mc_core_on_can_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t can_id, const uint8_t *data, uint8_t len);
+void mc_core_on_can_bus_off(mc_core_t *c, bool bus_off);
 bool mc_core_can_tx_poll(mc_core_t *c, mc_time_us_t now_us, uint32_t *can_id, uint8_t data[8]);
 
 #endif /* SEMMC_MC_CORE_H */

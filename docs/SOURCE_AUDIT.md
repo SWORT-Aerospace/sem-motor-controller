@@ -35,6 +35,8 @@ Audit date 2026-10-14. Every material claim in this project is tagged:
 | Core usable for non-aircraft signals | **[V]** | `TrustCore(names, cfg).step(edges, phys, hist, var_ratio, fresh)` takes arbitrary node names and edge dicts; the import path needs numpy only (verified by import in this session) |
 
 ### 2.2 Cornell repositories — recheck of reported findings
+
+> **v0.3 provenance label.** The Cornell repositories are **reference projects**. Nothing in them is a fact about our vehicle: not CHUDS, the VCU, the CAN bit timing, the emergency messages or the harness. `docs/PROVENANCE_AUDIT.md` lists where earlier versions of this project assumed otherwise and what was corrected.
 (Detailed file:line evidence in the session research notes; summary here.)
 
 | Reported finding | Verdict | Evidence |

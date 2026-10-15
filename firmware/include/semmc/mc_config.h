@@ -60,7 +60,8 @@ enum {
     MC_CFG_E_PHASE_CURRENT_RMS_PEAK = 36,
     MC_CFG_E_VBUS_SENSE_RANGE = 37,
     MC_CFG_E_ENVELOPE_RAMP_DEADLINE = 38,
-    MC_CFG_E_SAMPLING_WINDOW = 39
+    MC_CFG_E_SAMPLING_WINDOW = 39,
+    MC_CFG_E_CAN_ID_BASE = 40
 };
 
 typedef enum { MC_CFG_MODE_SIM = 0, MC_CFG_MODE_HW = 1 } mc_cfg_mode_t;
@@ -103,6 +104,7 @@ typedef struct {
     float pwm_frequency_Hz, deadtime_s, duty_min, duty_max;
     float voltage_limit_fraction;   /* of Vbus/sqrt(3); bounded by the sampling window (rule 39) */
     float current_sample_settle_s;
+    uint16_t can_id_base;           /* CAN binding only: 11-bit id of protocol message 0x300 */
     float shunt_ohm, amp_gain, adc_vref_V, adc_full_scale_counts;
     float current_offset_counts[3];
     float vbus_divider_ratio;

@@ -46,6 +46,8 @@ MUTATIONS = [
     ("envelope_ramp", "limits.torque_slew_down_fast_Nm_s", 15.0),
     ("sampling_window", "inverter.current_sample_settle_s", 3.0e-6),
     ("vlimit_high", "inverter.voltage_limit_fraction", 1.0),
+    ("can_id_base_unaligned", "supervision.can_id_base", 784),
+    ("can_id_base_range", "supervision.can_id_base", 2048),
     ("throttle", "limits.throttle_release_threshold", 0.2),
     ("duty", "inverter.duty_max", 0.8),
     ("timing", "supervision.timeout_s", 0.03),

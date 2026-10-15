@@ -38,3 +38,26 @@
   * auxiliary-input handling in E6, so that current drift is not blamed on the rotor;
   * a rotor-scale observability study.
   * Each needs a new freeze and a new held-out set.
+
+## 5. Which component produced which output (v0.3 note; nothing re-run, nothing re-tuned)
+The held-out numbers in §2 are the frozen, pre-registered results. They are unchanged. Finding 3 (the debounce) is **post-hoc and exploratory**; it was found after the pre-registered run and is not a pre-registered result.
+
+| Output that was scored | Produced by | What the evidence shows about that component |
+|---|---|---|
+| residual value per relationship | **residual design** (naive vs calibrated: yaw, centreline, time alignment, losses, grade) | without gates, calibration changed nothing (V0 380.4/h vs V2 379.7/h) |
+| which relationships are evaluated in a tick | **validity gates** (slip, freewheel, yaw, GNSS quality, slew) | the largest effect: 380 → 7.2/h (naive) and 380 → 0/h (calibrated) |
+| alarm persistence | **debounce** in the monitor wrapper (3 ticks in V0–V3v; none in the frozen CSIA adapter path) | post-hoc: accounts for the whole false-alarm difference between V3v and the adapter |
+| attribution (suspect / ambiguous) | **corroboration logic** of the adapter (`corroborated`, `recently_failed`, the auxiliary-input rule), compared with a plain majority vote (V3v) | adapter 48 correct / 9 misattributed; majority vote 35 / 0; post-hoc with the same debounce 47 / 6 |
+| trust (Beta belief per node) | **TrustCore** (pinned `csia-trust-layer`) | used only by the "TrustCore threshold" monitor: 73.5 false alarms/h, 17 misattributions. The adapter's detection and attribution outputs do **not** use the belief. |
+
+**No improvement in this table is attributed to TrustCore.** No ablation has shown that TrustCore contributes to the adapter's detection or attribution, and the only TrustCore-based detector tested was the worst monitor. Any future claim of a TrustCore contribution needs an ablation that switches the belief in and out of an output that actually uses it.
+
+## 6. Plan for the next evaluation (NOT run, NOT tuned in v0.3)
+1. Develop the next detector version on the **development** set only (candidate changes in §4).
+2. Freeze, with hashes recorded in a commit before any new held-out data exists:
+   * the detector code;
+   * the scoring procedure: debounce and persistence handling, the outage scoring rule, episode definitions, eligibility windows;
+   * the monitor list, including an ablation that switches each component (residual design, gates, debounce, corroboration, TrustCore belief where used) in and out.
+3. Commit a hash of the new held-out seed list and the generator parameters before generating the data. The set must use new seeds and new magnitudes, onsets and conditions, not the v0.2 held-out set (now partly seen through §3's post-hoc analysis).
+4. Run once and report every pre-registered metric, including failures. Anything examined after the run is labelled post-hoc.
+5. No vehicle claim from synthetic data. Vehicle data collection starts only after a sensor set and logging exist (`docs/COMBINED_ARCHITECTURE.md`); CSIA stays in shadow mode.

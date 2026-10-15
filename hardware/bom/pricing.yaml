@@ -84,7 +84,7 @@ rules:
   - {match: {symbol: "Power_Protection:NUP2105L"}, mpn: NUP2105LT1G, package: SOT-23, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: PESD2CAN}
   - {match: {symbol: "Diode:ESD9B"}, mpn: "ESD9B5.0ST5G / ESD9B3.3ST5G", package: SOD-923, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TPD1E10B06}
   - {match: {symbol: "Device:D_Schottky"}, mpn: BAT54, package: SOT-23, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
-  - {match: {symbol: "Device:Crystal_GND24"}, mpn: "40 MHz SMD 3225 (CL/tolerance to select)", package: 3225, low: 0.3, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:Crystal_GND24"}, mpn: "HSE crystal, frequency UNSELECTED (8-40 MHz class, 3225; CL/tolerance to select)", package: 3225, low: 0.3, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   # ---------------------------------------------------------------- rating-dependent lines (representative pricing)
   - match: {symbol: "Device:Q_NMOS_GDS"}
     mpn: "UNRESOLVED (representative: CSD19536KTT 100 V D2PAK)"

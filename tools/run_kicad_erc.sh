@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Run a real KiCad ERC on the draft schematic (KiCad 8 or newer; KiCad 7 has no `sch erc`).
+#
+#   tools/run_kicad_erc.sh            -> hardware/kicad/ERC_REPORT.rpt (+ ERC_REPORT.json when supported)
+#
+# Without KiCad 8+: open hardware/kicad/semmc.kicad_sch in Eeschema (KiCad 7 or newer),
+# Inspect > Electrical Rules Checker > Run ERC, and save the report to the same path.
+# Commit the report together with the KiCad version line it prints. The ERC result is a
+# schematic check only: it does not show that the circuit is electrically correct.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+SCH=hardware/kicad/semmc.kicad_sch
+ver=$(kicad-cli version 2>/dev/null || true)
+major=${ver%%.*}
+if [[ -z "$ver" || "$major" -lt 8 ]]; then
+  echo "kicad-cli ${ver:-not found}: 'sch erc' needs KiCad 8 or newer (or run ERC from the Eeschema GUI)." >&2
+  exit 2
+fi
+echo "KiCad $ver"
+kicad-cli sch erc --severity-all --units mm --format report --output hardware/kicad/ERC_REPORT.rpt "$SCH" || true
+kicad-cli sch erc --severity-all --units mm --format json --output hardware/kicad/ERC_REPORT.json "$SCH" 2>/dev/null || true
+grep -E "^\*\* ERC messages|^ \*\* ERC messages|errors|warnings" hardware/kicad/ERC_REPORT.rpt | tail -3 || true
+echo "Report: hardware/kicad/ERC_REPORT.rpt (KiCad $ver). Review every error and warning; do not suppress them to pass."

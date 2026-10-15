@@ -17,7 +17,7 @@ Status meanings:
 | Bus shunt | UNRESOLVED | UNRESOLVED | INA228 full-scale range vs I_batt,max | I_batt,max | — | generic |
 | DC-link bulk | UNRESOLVED (representative 220 µF / 100 V low-ESR) | UNRESOLVED | ripple current from the envelope table | I_ph,rms, V_bat,max, temperature | polymer / OS-CON | generic |
 | Fuse, TVS, reverse polarity, precharge R, bypass P-FET | UNRESOLVED | UNRESOLVED | — | BMS short-circuit current, V_bat,max, C_link, harness decision | — | generic |
-| CAN transceiver | TJA1051T/3/1J (SO-8) | CANDIDATE | 3.3 V VIO variant; CAN FD-capable (coexists with CHUDS); pinout verified by the KiCad library | bus wiring and termination location | TCAN1042V-class (verify pin compatibility) | KiCad library |
+| CAN transceiver | TJA1051T/3/1J (SO-8) | CANDIDATE | 3.3 V VIO variant; CAN FD-capable; also valid on a classic CAN 2.0B bus (vehicle bus UNKNOWN); pinout verified by the KiCad library | bus wiring and termination location | TCAN1042V-class (verify pin compatibility) | KiCad library |
 | CAN ESD | NUP2105LT1G | CANDIDATE | standard dual-line CAN TVS | — | PESD2CAN | KiCad library |
 | Aux buck | LM5164DDAR (SO-8 PowerPAD) | CANDIDATE | 100 V input class: margin over an unknown ≤ 60 V battery | V_bat,min (UVLO), V_bat,max; LM5164-Q1 was out of stock (16 weeks) in a snapshot | LM5164QDDARQ1 | KiCad library |
 | 3.3 V LDO | TLV75533PDBVR | CANDIDATE | low noise for the analog rail | — | TLV757P | KiCad library |

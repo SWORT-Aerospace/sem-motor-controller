@@ -1,5 +1,7 @@
 # Vehicle-team input sheet (one page)
 
+> v0.3: the short, prioritised version is [`PHYSICAL_TEAM_QUESTIONNAIRE.md`](PHYSICAL_TEAM_QUESTIONNAIRE.md). Rows H1–H4 below were corrected: they no longer assume Cornell's CHUDS bus.
+
 Please fill in and return. Every item **blocks** something specific (right column). Give units and the source of each answer: datasheet with page, measurement with the instrument, or a team decision. "Unknown" is a valid answer.
 
 | # | Group | Needed (units) | Unblocks |
@@ -19,9 +21,9 @@ Please fill in and return. Every item **blocks** something specific (right colum
 | C2 | Driver controls | Brake switch contact (NO/NC); dead-man switch: number of contacts; safety-loop voltage (V) | input polarity; opto LED resistor; HW_PERMIT |
 | C3 | Driver controls | Arm, eco/manual mode, cancel and fault-reset switches: available or to be added? | wired driver authority (ADR-0010) |
 | H1 | **Harness / CAN** | Bus topology: where the two 120 Ω terminations are; connector type; where the controller taps in, and its stub length; cable | termination jumpers; connector selection |
-| H2 | Harness / CAN | Reserve 0x300–0x33F (CHUDS class 3) for the motor controller, or move to CHUDS framing? Should the controller obey CHUDS Emergency STOP? | `docs/CAN_INTEGRATION.md` §5 |
-| H3 | Harness / CAN | Who runs the supervisor (companion) software: the VCU or a separate computer? | supervisor deployment |
-| H4 | Harness / CAN | Please send `bk4000tg_kicad.zip` and `telemetry.pdf`. They were not available here: not in the uploads, the attachments or Drive. | prior-board review; telemetry transport |
+| H2 | Harness / CAN | Which bus does the vehicle actually use: CAN 2.0B (telematics proposal) or CAN FD; bit rate and sample point; 11- or 29-bit identifiers; the identifier map; a 64-identifier block for the motor controller (`supervision.can_id_base`); is there any CAN stop message? | `docs/VEHICLE_INTERFACE_MATRIX.md`; crystal choice |
+| H3 | Harness / CAN | Which computer runs the supervisor: the STM32U575 telematics unit (proposed), another onboard computer, or none (manual only)? | supervisor deployment; `docs/COMBINED_ARCHITECTURE.md` |
+| H4 | Harness / CAN | `bk4000tg_kicad.zip` and `telemetry.pdf` must be attached **directly to the Claude session** (they were supplied in another tool and never reached this workspace). The telematics overview and data-flow PDFs (v0.1) did arrive and are used as design inputs. | prior-board review; telemetry proposal details |
 | R1 | **Event rules** | Event and year; 2027 Chapter I and the event's Chapter II (PDFs); attempt format (laps, time limit, stops) | rules map; optimiser constraints |
 | R2 | Event rules | Organiser answers to `docs/RULES_RECONCILIATION.md` §3 (kit components, HAL/LL, SDK, bench boards, precharge bypass) | platform-layer approach; compliance |
 | T1 | **Test equipment** | Available: current-limited bench supply (V/A max), oscilloscope (BW, channels), **differential probe**, current probe, DMM, electronic load or power resistors, ST-LINK, USB-CAN adapter, reflow or hot plate, microscope | bring-up plan; the "equipment" line in the budget |

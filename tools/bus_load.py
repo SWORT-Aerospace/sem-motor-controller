@@ -10,8 +10,9 @@ published method; not re-derived here):
     w    = B_m + sum_{k in hp(m)} ceil((w + J_k + tau_bit) / T_k) * C_k
     R_m  = J_m + w + C_m                  (single-instance busy period; valid while U < 1)
 
-Co-existing Cornell CHUDS frames (ids < 0x300, CAN-FD with BRS 2 Mbit/s,
-from cornellev/urban-concept c422c0f, provisional table) are modelled
+A REFERENCE-PROJECT load case (v0.3 label): Cornell CHUDS frames (ids < 0x300,
+CAN-FD with BRS 2 Mbit/s, from cornellev/urban-concept c422c0f, provisional
+table). Our vehicle's bus and its other traffic are UNKNOWN. They are modelled
 CONSERVATIVELY as if every bit were sent at the 500 kbit/s nominal rate with
 their padded FD length. Their periods are from the audit where stated; the
 BodyState period is ASSUMED 100 ms (not stated in the source).
@@ -80,7 +81,8 @@ def analyse(bitrate: float | None = None, include_chuds: bool = True) -> dict:
 def main() -> int:
     r = analyse()
     print(f"Nominal bit rate {r['bitrate']/1e3:.0f} kbit/s; total utilisation {100*r['utilisation']:.1f} % "
-          f"(semmc frames {100*r['semmc_utilisation']:.1f} %), CHUDS frames modelled conservatively.\n")
+          f"(semmc frames {100*r['semmc_utilisation']:.1f} %), plus a REFERENCE-PROJECT load case (Cornell CHUDS, "
+          "modelled conservatively); our vehicle bus's other traffic is UNKNOWN.\n")
     print("| id | message | ours | period ms | C us | WCRT ms | note |")
     print("|---|---|---|---|---|---|---|")
     for m in r["messages"]:

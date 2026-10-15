@@ -96,7 +96,8 @@ typedef enum {
     MC_P_SUPERVISION_TIMEOUT_S = 161,
     MC_P_SUPERVISION_TIMING_STATUS = 162,
     MC_P_SUPERVISION_LIMITS_TIMEOUT_S = 163,
-    MC_P_MAX_ID = 163
+    MC_P_SUPERVISION_CAN_ID_BASE = 164,
+    MC_P_MAX_ID = 164
 } mc_param_id_t;
 
 /* Enumerations (values stored as exact small floats in the blob). */
@@ -238,8 +239,9 @@ typedef struct {
     {161u, 0u, 1u, 1u, 0.005f, 2.0f, "supervision.timeout_s"}, \
     {162u, 3u, 1u, 1u, 0.0f, 1.0f, "supervision.timing_status"}, \
     {163u, 0u, 1u, 1u, 0.01f, 10.0f, "supervision.limits_timeout_s"}, \
+    {164u, 1u, 1u, 1u, 0.0f, 1984.0f, "supervision.can_id_base"}, \
 }
 
-#define MC_PARAM_COUNT 90
+#define MC_PARAM_COUNT 91
 
 #endif /* SEMMC_MC_PARAMS_GENERATED_H */

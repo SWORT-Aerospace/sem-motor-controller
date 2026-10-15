@@ -34,3 +34,20 @@ def test_corrupted_frame_reports_bad_crc_not_values():
     bad[3] ^= 0x10
     msg = B.decode_frame(B.pack_classic(proto.MESSAGES["ctrl_cmd_trace"]["id"], bytes(bad)))
     assert msg["status"] == "bad_crc" and msg["values"] == {}
+
+
+def test_relocated_block_is_translated_to_protocol_numbers():
+    """The bus block is a calibration choice (supervision.can_id_base); the bridge must match it."""
+    base = 0x500
+    assert all(B.in_semmc_range(i, base) for i in range(0x500, 0x540))
+    assert not B.in_semmc_range(0x310, base)
+    data, _s, _i = proto.encode("ctrl_cmd_trace", {"requested_Nm": 1.5, "accepted_Nm": 0.5, "reason": 0x2000}, 7)
+    msg_id = proto.MESSAGES["ctrl_cmd_trace"]["id"]
+    raw = B.pack_classic(B.to_bus_id(msg_id, base), data)
+    msg = B.decode_frame(raw, base)
+    assert msg["msg_id"] == msg_id and msg["id"] == msg_id - 0x300 + base
+    assert msg["status"] == "ok" and msg["name"] == "ctrl_cmd_trace" and abs(msg["values"]["accepted_Nm"] - 0.5) < 1e-3
+    assert B.decode_frame(raw) is None                     # the default block does not accept it
+    import pytest
+    with pytest.raises(ValueError):
+        B.in_semmc_range(0x310, 0x310)                     # unaligned base rejected (rule 40)

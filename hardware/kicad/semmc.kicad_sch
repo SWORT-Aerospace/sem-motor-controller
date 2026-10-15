@@ -1222,6 +1222,24 @@
     (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/1eda820b-a9ac-5f05-a39f-738fe5ce0702"
       (reference "R105") (unit 1) (value "100k") (footprint "")
     )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/084def5c-5958-5e8f-a3d0-37a89591a287"
+      (reference "#FLG101") (unit 1) (value "PWR_FLAG") (footprint "")
+    )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/3b9566ef-b3e5-5cf2-88b1-aea76d9e2f91"
+      (reference "#FLG102") (unit 1) (value "PWR_FLAG") (footprint "")
+    )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/5d651d35-ff63-51d9-b2ed-a393a1de1520"
+      (reference "#FLG103") (unit 1) (value "PWR_FLAG") (footprint "")
+    )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/cca3ec06-e5e0-569b-84a3-320de36268d9"
+      (reference "#FLG104") (unit 1) (value "PWR_FLAG") (footprint "")
+    )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/cb2f0585-e1f2-5208-a3c7-6a46c0e558ad"
+      (reference "#FLG105") (unit 1) (value "PWR_FLAG") (footprint "")
+    )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/6a82f141-3d95-5b6a-9a30-972259269f32"
+      (reference "#FLG106") (unit 1) (value "PWR_FLAG") (footprint "")
+    )
     (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/4d5128b2-77a0-5724-9fe9-4bffa698ce71"
       (reference "C201") (unit 1) (value "UNRESOLVED bulk") (footprint "")
     )
@@ -1499,7 +1517,7 @@
       (reference "SW801") (unit 1) (value "RESET") (footprint "")
     )
     (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/da509d39-4ca9-536a-a750-b7e6208bba16"
-      (reference "Y801") (unit 1) (value "40MHz") (footprint "")
+      (reference "Y801") (unit 1) (value "HSE UNSELECTED") (footprint "")
     )
     (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/69d58264-8d03-5ae9-ad36-a902f52642f3"
       (reference "C811") (unit 1) (value "UNRESOLVED load") (footprint "")

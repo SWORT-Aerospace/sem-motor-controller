@@ -54,7 +54,7 @@ E = {
     "SUPERVISION_TIMING": 28, "SUPERVISION_NOT_HAZARD_ANALYSED": 29,
     "ARCH_MOTOR_TYPE": 30, "ROTOR_SENSOR_UNSUPPORTED": 31, "HALL_TABLE": 32,
     "PROVENANCE": 33, "CURRENT_LOOP_BANDWIDTH": 34, "DEADTIME_TOO_LONG": 35,
-    "PHASE_CURRENT_RMS_PEAK": 36, "VBUS_SENSE_RANGE": 37, "ENVELOPE_RAMP_DEADLINE": 38, "SAMPLING_WINDOW": 39,
+    "PHASE_CURRENT_RMS_PEAK": 36, "VBUS_SENSE_RANGE": 37, "ENVELOPE_RAMP_DEADLINE": 38, "SAMPLING_WINDOW": 39, "CAN_ID_BASE": 40,
     # Python-only (strings are not in the blob):
     "STRING_MISSING": 100, "SCHEMA": 101,
 }
@@ -273,6 +273,8 @@ def _cross_rules(v: dict[int, float], mode: str, reg) -> list[Issue]:
         if d2 > dwin:
             add("SAMPLING_WINDOW", "inverter.voltage_limit_fraction",
                 "two phases are not sampleable at every SVPWM angle; lower the voltage limit or the PWM frequency")
+    if have("supervision.can_id_base") and g("supervision.can_id_base") % 64 != 0:
+        add("CAN_ID_BASE", "supervision.can_id_base", "CAN id base must be a multiple of 0x40 (one filter mask)")
     if have("inverter.duty_min", "inverter.duty_max"):
         if not g("inverter.duty_min") < g("inverter.duty_max"):
             add("DUTY_ORDER", "inverter", "need duty_min < duty_max")

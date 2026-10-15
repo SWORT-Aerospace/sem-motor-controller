@@ -30,4 +30,4 @@ MCU GPIO DRV_ENABLE_REQ ── can only *disable* (series AND input), never over
 The MCU can request disable but cannot assert enable against the chain. Latch reset is a local action (fault-reset button through hardware) and is also reported to the MCU.
 
 ## Draft block: phase-current sampling (sheet 03/04)
-Low-side shunt → driver CSA (gain per calibration) → RC anti-alias → ADC1/ADC2 injected, simultaneous, triggered from TIM1 at the PWM valley (all low-sides on). The minimum low-side on-time ≥ dead time + CSA settling + ADC sampling (`models/inverter/losses.amplifier_settling_ok`). This sets `inverter.duty_max`.
+Low-side shunt → driver CSA (gain per calibration) → RC anti-alias → ADC1/ADC2 injected, simultaneous (PROPOSED; to be substantiated by configuration and measurement), triggered from TIM1 at the PWM valley (all low-sides on). The minimum low-side on-time ≥ dead time + CSA settling + ADC sampling (`models/inverter/losses.amplifier_settling_ok`). This sets `inverter.duty_max`.

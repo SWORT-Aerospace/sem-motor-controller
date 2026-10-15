@@ -55,7 +55,7 @@ Provisional numbers: `slew_up` 5 N·m/s, `slew_down` 10 N·m/s, `slew_down_fast`
 
 | # | v0.1 behaviour | Consequence (synthetic harness) | v0.2 |
 |---|---|---|---|
-| D1 | A lower L2 ceiling was approached at `slew_down_fast` from the previous output. | Thermal derate to 1.0 N·m: output above the ceiling for 9 updates (max +0.9 N·m). With slow slew settings: still 0.5 N·m over after 500 ms. | Clamp on the same update. 0 violations. |
+| D1 | A lower L2 ceiling was approached at `slew_down_fast` from the previous output. | Thermal derate to 1.0 N·m: output above the ceiling for 9 updates (max +0.9 N·m). With slow slew settings: still 0.5 N·m over after 500 ms. | Clamp on the same update. 0 command-ceiling violations (host, synthetic; a command bound, not a phase-current measurement). |
 | D2 | The supervisor envelope only clamped the target, so a reduction was followed at the comfort rate `slew_down`. | Envelope 2.0 → 0.5 N·m took 150 ms. Power envelope with a speed step: 88 ms. | Ramp at ≥ `slew_down_fast`: 15 ms and 9 ms, within the 20 ms rule-38 bound. |
 | D3 | The envelope was taken from the set the request referenced, even when a newer, tighter set was committed. | A tighter set was ignored for 190 ms until a matching request arrived. A delayed request referencing the older set ramped the output to 1.6 N·m against a newest bound of 0.5 N·m. | `min(newest, referenced)`: 0.5 N·m within 13 ms. A delayed older reference changes nothing. |
 | D3b | A same-`limits_seq` refresh shifted the buffer and evicted the previous set. | A request still referencing the previous set failed after any refresh (spurious ECO exit). | In-place refresh. |

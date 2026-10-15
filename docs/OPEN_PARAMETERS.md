@@ -34,7 +34,7 @@ Legend for "how to obtain": **M** measure · **D** datasheet / manufacturer · *
 
 | Parameter | SIM | How |
 |---|---|---|
-| category (Prototype vs Urban Concept) | prototype | U — the telemetry proposal reportedly says Prototype; Cornell targets UC |
+| category (Prototype vs Urban Concept) | prototype | U — not stated in the telematics proposal (v0.1); Cornell (reference project) targets UC |
 | mass with driver | 100 kg | M (scales) |
 | gear ratio, wheel circumference (loaded) | 10, 1.50 m | M |
 | freewheel/clutch present | yes | I |
@@ -49,7 +49,8 @@ bus voltage rating · transient margin (from measured overshoot) · shunt Ω · 
 v0.2 additions:
 * `inverter.current_sample_settle_s`: measured at stage 4 (SIM 1.5 µs).
 * `inverter.voltage_limit_fraction` (SIM 0.95): bounded by validator rule 39 (`hardware/timing/timing_budget.md`).
-* FDCAN clock: the 40 MHz crystal is fixed by the CHUDS bit timing, not by calibration.
+* FDCAN clock and HSE crystal: **not selected** (v0.3). The v0.2 statement that CHUDS bit timing fixes a 40 MHz crystal is withdrawn; options in `hardware/timing/clock_tree_alternatives.md`, chosen once the vehicle bus is known.
+* CAN identifier block: `supervision.can_id_base` (id 164), null until the vehicle team allocates a 64-identifier block.
 
 ## 5. Limits and timing (decisions that need measured inputs)
 

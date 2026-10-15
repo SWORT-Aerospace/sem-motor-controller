@@ -16,7 +16,7 @@ flowchart LR
     LOOP[Safety loop:<br/>e-stop + dead-man]:::ext
     DRV_CTRL[Throttle A/B, brake, cancel,<br/>mode, arm, reset, dead-man]:::ext
     MOT[Motor + halls + temp sensor]:::ext
-    CANB[CAN bus: companion, CHUDS]:::ext
+    CANB[vehicle CAN bus: telematics unit, BMS, nodes - type UNKNOWN, CAN 2.0B proposed]:::ext
   end
   ES -->|VBAT_IN| FUSE[F1 fuse + TVS<br/>reverse-polarity block]
   FUSE -->|VBAT_PROT| SH[DC-bus shunt]
@@ -57,7 +57,7 @@ Power path: battery → (vehicle e-stop and fuse) → board fuse, TVS and revers
 | DC link | ripple current, low-inductance commutation loop | per-leg MLCC at the bridge plus bulk; bleeder | I_ph,rms, V_bat,max |
 | Bridge | three-phase inverter | synchronous N-MOSFETs; low-side shunts with Kelvin taps; V_DS rating ≥ 1.5·V_bat,max (ringing margin, verified by measurement) | motor peak and continuous current, V_bat,max |
 | Gate drive | gate drive, protection, current amplification | VDS over-current monitoring with hardware shutdown through nFAULT; ENABLE gated by HW_PERMIT; SPI-readable status; amplifiers ratiometric to the ADC reference | gate charge of the selected MOSFETs |
-| Current sensing | three phase currents | **simultaneous** sampling on three ADCs from one PWM trigger; window rule 39; two-phase reconstruction with flagging | I_ph,peak (shunt value, CSA gain) |
+| Current sensing | three phase currents | **proposed** simultaneous sampling on three ADCs from one PWM trigger (not substantiated until configured and measured); window rule 39; two-phase reconstruction with flagging | I_ph,peak (shunt value, CSA gain) |
 | Hardware shutdown | stop switching without firmware | TIM1 BKIN (nFAULT) and BKIN2 (OV comparator): MOE cleared, outputs idle low; ENABLE AND-gated by HW_PERMIT (safety loop and watchdog) | safety-loop voltage |
 | Temperature | power stage and motor | NTC at the low-side MOSFETs; configurable motor-sensor bias; an unknown temperature derates | motor sensor type |
 | Hall inputs | rotor position | RC filter, ESD, selectable supply | hall supply and output stage |

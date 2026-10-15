@@ -66,7 +66,7 @@ static void test_out_of_range_raw_flagged(void)
     CHECK(r.out_of_range & SEMMC_F_DRIVER_CONTROLS_THROTTLE);
 }
 
-static void test_ids_outside_chuds_range(void)
+static void test_ids_form_one_64_number_block(void)
 {
     const uint32_t ids[] = {SEMMC_ID_CTRL_FAULT, SEMMC_ID_SUP_TORQUE_REQ, SEMMC_ID_SUP_LIMITS, SEMMC_ID_SUP_HELLO,
                             SEMMC_ID_CTRL_STATUS, SEMMC_ID_CTRL_CMD_TRACE, SEMMC_ID_DRIVER_CONTROLS,
@@ -74,10 +74,10 @@ static void test_ids_outside_chuds_range(void)
                             SEMMC_ID_CTRL_ENERGY, SEMMC_ID_CTRL_THERMAL, SEMMC_ID_CTRL_VALIDITY,
                             SEMMC_ID_CSIA_ADVISORY, SEMMC_ID_CTRL_IDENTITY};
     for (size_t k = 0; k < sizeof ids / sizeof ids[0]; k++) {
-        CHECK(ids[k] >= 0x300u && ids[k] <= 0x33Fu); /* CHUDS uses 0x000-0x2FF */
+        CHECK(ids[k] >= 0x300u && ids[k] <= 0x33Fu); /* one 64-number block; bus base = supervision.can_id_base */
         CHECK(semmc_msg_index(ids[k]) >= 0);
     }
-    CHECK(semmc_msg_index(0x210u) < 0); /* CHUDS front_aux telemetry */
+    CHECK(semmc_msg_index(0x210u) < 0); /* a foreign id (e.g. reference-project CHUDS front_aux) */
 }
 
 int main(void)
@@ -86,6 +86,6 @@ int main(void)
     RUN(test_malformed_payloads);
     RUN(test_nonfinite_encoding);
     RUN(test_out_of_range_raw_flagged);
-    RUN(test_ids_outside_chuds_range);
+    RUN(test_ids_form_one_64_number_block);
     TEST_MAIN_END();
 }

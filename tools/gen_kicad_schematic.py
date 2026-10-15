@@ -111,6 +111,10 @@ def sheets(mcu_map: dict) -> list:
         P("Q", "Device", "Q_NMOS_GSD", f"{U} small-signal N-FET", {"1": "PRECHG_EN", "2": "GND", "3": "PRE_D"},
           status=U, rating="V_DS >= 1.25 x V_bat,max (drain sees the battery when off)"),
         R("100k", "PRECHG_EN", "GND", status="design value", rating="bypass OFF while the MCU is in reset"),
+        # ERC markers: these rails are driven through a connector, inductor, ferrite bead or switch, which
+        # KiCad cannot see as a power source. Not components (no BOM line, no footprint).
+        *[P("#FLG", "power", "PWR_FLAG", "PWR_FLAG", {"1": n}, status="ERC marker")
+          for n in ("VBAT_PROT", "VDC", "PGND", "GND", "+5V", "+3V3A")],
     ], ["Precharge: the bypass FET is OFF at power-up (R pull-down on PRECHG_EN, MCU pins high-Z in reset).",
         "Firmware closes it only after V_DC >= 0.95 x V_BAT (VBUS_SENSE vs INA228 VBUS).",
         "The vehicle e-stop isolates the battery upstream of J (vehicle hardware, not this board)."]))
@@ -186,13 +190,17 @@ def sheets(mcu_map: dict) -> list:
                C("470pF", f"ISENSE_{x}", "GND", status="design value", rating=">> ADC S/H capacitance (charge kick-back)"),
                TP(f"ISENSE_{x}")]
     S.append(("current_sense", "Phase-current sensing (CSA outputs to three ADCs)", cs,
-              ["Phase currents go to ADC1, ADC2 and ADC3, which are started by the same TIM1 trigger: the samples are simultaneous (hardware/timing/MCU_TIMING_ALLOCATION.md)."]))
+              ["PROPOSED, not substantiated: phase currents to ADC1, ADC2 and ADC3 started by the same TIM1 trigger. "
+               "Simultaneity still needs the trigger configuration, ADC synchronization, acquisition windows and a "
+               "bench measurement (hardware/timing/timing_budget.md, bring-up stage 4)."]))
     # 6 -------------------------------------------------------------- bus measurement
     S.append(("bus_measurement", "DC-bus energy meter (INA228-class)", [
         P("U", PROJECT, "INA228", "INA228 (candidate)", {"IN+": "IBUS_SP_F", "IN-": "IBUS_SN_F", "VBUS": "VBAT_SH",
                                                          "GND": "GND", "VS": "+3V3", "SCL": "I2C_SCL", "SDA": "I2C_SDA",
                                                          "ALERT": "INA_ALERT", "A0": "GND", "A1": "GND"},
-          status="CANDIDATE (85 V common mode, 20-bit)", mpn="INA228AIDGSR (verify)", **UNVERIFIED),
+          status="CANDIDATE (85 V common mode, 20-bit)", mpn="INA228AIDGSR (verify)",
+          Pin_check="SECONDARY: numbers match the KiCad official library (INA226-derived VSSOP-10) @cf07d539; "
+                    "primary TI datasheet NOT read"),
         R("10R (verify)", "IBUS_SP", "IBUS_SP_F", status="TYPICAL - verify input-filter guidance"),
         R("10R (verify)", "IBUS_SN", "IBUS_SN_F", status="TYPICAL - verify input-filter guidance"),
         C("100nF", "IBUS_SP_F", "IBUS_SN_F", status="TYPICAL - verify"),
@@ -232,9 +240,10 @@ def sheets(mcu_map: dict) -> list:
         R("10k", "BOOT0", "GND", status="design value", rating="boot from flash"),
         C("100nF", "NRST", "GND", status="design value"),
         P("SW", "Switch", "SW_Push", "RESET", {"1": "NRST", "2": "GND"}, status="bench"),
-        P("Y", "Device", "Crystal_GND24", "40MHz", {"1": "HSE_IN", "2": "GND", "3": "HSE_OUT", "4": "GND"},
-          status="CANDIDATE", rating="FDCAN kernel clock: 500k/2M CAN FD at 80 %/80 % needs 20 or 40 MHz "
-                                     "(docs/generated/can_bit_timing.md); 8 MHz cannot place the data-phase SP"),
+        P("Y", "Device", "Crystal_GND24", "HSE UNSELECTED", {"1": "HSE_IN", "2": "GND", "3": "HSE_OUT", "4": "GND"},
+          status=U, rating="frequency NOT selected: depends on the vehicle bus (classic or FD, bit rates) and the CPU "
+                           "frequency; candidates 8-40 MHz in hardware/timing/clock_tree_alternatives.md. "
+                           "The v0.2 '40 MHz required' claim is withdrawn."),
         C(f"{U} load", "HSE_IN", "GND", status=U, rating="from the selected crystal's C_L and stray"),
         C(f"{U} load", "HSE_OUT", "GND", status=U, rating="see above"),
         P("J", "Connector", "Conn_ARM_JTAG_SWD_10", "SWD", {"1": "+3V3", "2": "SWDIO", "3": "GND", "4": "SWCLK",
@@ -308,7 +317,7 @@ def sheets(mcu_map: dict) -> list:
         P("JP", "Jumper", "SolderJumper_2_Open", "TERM", {"1": "TERM_L", "2": "CAN_L"}, status=U),
         C("4.7nF", "TERM_MID", "GND", status="design value", rating="split termination"),
         P("J", "Connector_Generic", "Conn_01x04", "CAN", {"1": "CAN_H", "2": "CAN_L", "3": "GND", "4": "CAN_SHLD"},
-          status=U, rating="Cornell CHUDS harness connector and pinout to be confirmed"),
+          status=U, rating="vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)"),
         C("1nF", "CAN_SHLD", "GND", status=U, rating="shield termination per harness"),
     ], ["500 kbit/s classic CAN, IDs 0x300-0x33F (docs/INTERFACE_CONTROL.md). Bit timing and termination must match the vehicle bus."]))
     # 12 ------------------------------------------------------------- aux rails
@@ -342,7 +351,8 @@ def sheets(mcu_map: dict) -> list:
 CUSTOM = {
     # name: (description, left pins, right pins); pins are (name, electrical type). Numbers are
     # PLACEHOLDERS assigned in order and MUST be replaced from the datasheet pin table.
-    "DRV8353S": ("100 V three-phase smart gate driver, SPI, 3 CSAs (TI DRV8353S, candidate). PIN NAMES/NUMBERS UNVERIFIED.",
+    "DRV8353S": ("100 V three-phase smart gate driver, SPI, 3 CSAs (TI DRV8353S, candidate). PLACEHOLDER: pin names "
+                 "and numbers NOT verified (no primary datasheet and no library symbol available). Not footprint-ready.",
                  [("VM", "power_in"), ("VDRAIN", "input"), ("CPH", "passive"), ("CPL", "passive"), ("VCP", "passive"),
                   ("VGLS", "passive"), ("DVDD", "power_out"), ("VREF", "power_in"), ("INHA", "input"), ("INLA", "input"),
                   ("INHB", "input"), ("INLB", "input"), ("INHC", "input"), ("INLC", "input"), ("ENABLE", "input"),
@@ -352,10 +362,14 @@ CUSTOM = {
                   ("GLB", "output"), ("GHC", "output"), ("SHC", "passive"), ("GLC", "output"), ("SPA", "input"),
                   ("SNA", "input"), ("SPB", "input"), ("SNB", "input"), ("SPC", "input"), ("SNC", "input"),
                   ("SOA", "output"), ("SOB", "output"), ("SOC", "output")]),
-    "INA228": ("85 V 20-bit power/energy monitor, I2C (TI INA228, candidate). PIN NUMBERS UNVERIFIED.",
-               [("IN+", "input"), ("IN-", "input"), ("VBUS", "input"), ("VS", "power_in"), ("GND", "power_in")],
-               [("SCL", "input"), ("SDA", "bidirectional"), ("ALERT", "open_collector"), ("A0", "input"),
-                ("A1", "input")]),
+    # INA228 VSSOP-10 (DGS) numbers: CROSS-CHECKED against the KiCad official library (Sensor_Energy INA228 extends
+    # INA226, footprint TSSOP-10 3x3 mm P0.5, kicad-symbols @cf07d539), a SECONDARY source. TI datasheet not read here.
+    "INA228": ("85 V 20-bit power/energy monitor, I2C (TI INA228AIDGSR, VSSOP-10). Pin numbers cross-checked against "
+               "the KiCad library (secondary); primary TI datasheet verification pending.",
+               [("IN+", "input", "10"), ("IN-", "input", "9"), ("VBUS", "input", "8"), ("VS", "power_in", "6"),
+                ("GND", "power_in", "7")],
+               [("SCL", "input", "5"), ("SDA", "bidirectional", "4"), ("ALERT", "open_collector", "3"),
+                ("A0", "input", "2"), ("A1", "input", "1")]),
     "RPP_BLOCK": ("UNRESOLVED reverse-polarity protection block (implementation pending harness/current decision)",
                   [("IN", "passive"), ("GND", "passive")], [("OUT", "passive")]),
 }
@@ -379,12 +393,14 @@ def write_custom_lib(path: pathlib.Path):
         out.append(f'    (symbol "{name}_1_1"')
         num = 1
         for side, pins in ((-1, left), (1, right)):
-            for i, (pn, et) in enumerate(pins):
+            for i, pin in enumerate(pins):
+                pn, et = pin[0], pin[1]
                 y = top - 2.54 * (i + 1)
                 x = side * (w / 2 + 2.54)
                 ang = 0 if side < 0 else 180
                 out.append(f'      (pin {et} line (at {x:.2f} {y:.2f} {ang}) (length 2.54) '
-                           f'(name "{pn}" (effects (font (size 1.27 1.27)))) (number "{num}" (effects (font (size 1.27 1.27)))))')
+                           f'(name "{pn}" (effects (font (size 1.27 1.27)))) '
+                           f'(number "{pin[2] if len(pin) > 2 else num}" (effects (font (size 1.27 1.27)))))')
                 num += 1
         out.append("    )\n  )")
     out.append(")")
@@ -517,8 +533,8 @@ def build(check: bool) -> int:
             h = (max(ys) - min(ys)) + 25.0
             if col_x + w > max_w:
                 col_x, row_y, row_h = x0, row_y + row_h, 0.0
-            X = round((col_x - min(xs) + 30.0) / 2.54) * 2.54
-            Y = round((row_y + max(ys) + 12.0) / 2.54) * 2.54
+            X = round(round((col_x - min(xs) + 30.0) / 2.54) * 2.54, 4)
+            Y = round(round((row_y + max(ys) + 12.0) / 2.54) * 2.54, 4)
             col_x += w
             row_h = max(row_h, h)
             k = (si, prt.prefix)
@@ -544,7 +560,8 @@ def build(check: bool) -> int:
                 if net is None:
                     sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
                     continue
-                expected.setdefault(net, set()).add((prt.ref, num))
+                if not prt.ref.startswith("#"):          # power flags are not netlist components
+                    expected.setdefault(net, set()).add((prt.ref, num))
                 la = label_angle(pa)
                 just = "right" if la in (180, 270) else "left"
                 lu = uid("lbl", s_uuid, num)
@@ -604,6 +621,8 @@ def write_bom(design):
     groups = {}
     for sname, _t, parts, _n in design:
         for prt in parts:
+            if prt.ref.startswith("#"):
+                continue
             key = (prt.lib, prt.name, prt.value, prt.props.get("MPN", ""), prt.dnp)
             g = groups.setdefault(key, {"refs": [], "sheets": set(), "status": prt.props.get("Status", ""),
                                         "rating": prt.props.get("Rating_basis", ""),

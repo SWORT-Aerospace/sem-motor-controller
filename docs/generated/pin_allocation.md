@@ -48,7 +48,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | I2C_SCL | PA15 | 65 | I2C1_SCL | INA228-class DC-bus energy monitor |
 | I2C_SDA | PB7 | 76 | I2C1_SDA |  |
 | INA_ALERT | PC8 | 54 | GPIO |  |
-| ISENSE_A | PA0 | 12 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2) |
+| ISENSE_A | PA0 | 12 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed) |
 | ISENSE_B | PA1 | 13 | ADC2_IN2 | CSA B -> ADC2 fast channel |
 | ISENSE_C | PE7 | 30 | ADC3_IN4 | CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge |
 | LED_FAULT | PB14 | 45 | GPIO |  |
@@ -98,7 +98,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | I2C_SCL | PA15 | 51 | I2C1_SCL | INA228-class DC-bus energy monitor |
 | I2C_SDA | PB7 | 60 | I2C1_SDA |  |
 | INA_ALERT | PC7 | 39 | GPIO |  |
-| ISENSE_A | PA0 | 12 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2) |
+| ISENSE_A | PA0 | 12 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed) |
 | ISENSE_B | PA1 | 13 | ADC2_IN2 | CSA B -> ADC2 fast channel |
 | ISENSE_C | PB12 | 34 | ADC4_IN3 | CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge |
 | LED_FAULT | PA10 | 44 | GPIO |  |
@@ -149,7 +149,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | I2C_SCL | PA15 | 78 | I2C1_SCL | INA228-class DC-bus energy monitor |
 | I2C_SDA | PB7 | 94 | I2C1_SDA |  |
 | INA_ALERT | PD1 | 83 | GPIO |  |
-| ISENSE_A | PA0 | 20 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2) |
+| ISENSE_A | PA0 | 20 | ADC1_IN1 | CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed) |
 | ISENSE_B | PA1 | 21 | ADC2_IN2 | CSA B -> ADC2 fast channel |
 | ISENSE_C | PE7 | 38 | ADC3_IN4 | CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge |
 | LED_FAULT | PD15 | 62 | GPIO |  |

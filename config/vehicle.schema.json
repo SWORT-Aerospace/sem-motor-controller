@@ -856,6 +856,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "can_id_base",
         "hazard_analysis_ref",
         "limits_timeout_s",
         "timeout_s",
@@ -893,6 +894,14 @@
           ],
           "minimum": 0.01,
           "maximum": 10.0
+        },
+        "can_id_base": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1984
         },
         "hazard_analysis_ref": {
           "type": [

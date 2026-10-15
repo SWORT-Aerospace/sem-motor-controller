@@ -31,7 +31,7 @@ line,refs,qty,symbol,value,mpn_candidate,dnp,selection_status,rating_basis,pin_c
 30,FB801,1,Device:FerriteBead_Small,600R@100MHz,,,design value,,,mcu_debug
 31,J1001,1,Connector_Generic:Conn_01x12,DRIVER_CONTROLS,,,UNRESOLVED,vehicle harness connector unknown,,driver_controls
 32,J101,1,Connector_Generic:Conn_01x02,BATTERY_IN,,,UNRESOLVED,"connector/cable from I_batt,max and V_bat,max (battery/BMS unknown)",,power_input
-33,J1101,1,Connector_Generic:Conn_01x04,CAN,,,UNRESOLVED,Cornell CHUDS harness connector and pinout to be confirmed,,can_phy
+33,J1101,1,Connector_Generic:Conn_01x04,CAN,,,UNRESOLVED,"vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)",,can_phy
 34,J301,1,Connector_Generic:Conn_01x03,MOTOR_PHASES,,,UNRESOLVED,"I_ph,max; motor connector unknown",,bridge
 35,J701,1,Connector_Generic:Conn_01x02,MOTOR_TEMP,,,UNRESOLVED,sensor type unknown (NTC/PTC/KTY/PT1000),,temperature
 36,J801,1,Connector:Conn_ARM_JTAG_SWD_10,SWD,,,bench only,,,mcu_debug
@@ -95,7 +95,7 @@ line,refs,qty,symbol,value,mpn_candidate,dnp,selection_status,rating_basis,pin_c
 94,U202,1,Reference_Voltage:TL431DBZ,TL431 (2.495 V),TL431BIDBZR,,CANDIDATE,,,dc_link
 95,U401,1,semmc:DRV8353S,DRV8353S (candidate),DRV8353SRTAR (verify),,"CANDIDATE (SPI, integrated CSAs, VDS monitors)",,UNVERIFIED (pinout not checked against a primary datasheet),gate_drive
 96,U402,1,74xGxx:74LVC1G08,74LVC1G08,SN74LVC1G08DBVR,,CANDIDATE,,,gate_drive
-97,U601,1,semmc:INA228,INA228 (candidate),INA228AIDGSR (verify),,"CANDIDATE (85 V common mode, 20-bit)",,UNVERIFIED (pinout not checked against a primary datasheet),bus_measurement
+97,U601,1,semmc:INA228,INA228 (candidate),INA228AIDGSR (verify),,"CANDIDATE (85 V common mode, 20-bit)",,SECONDARY: numbers match the KiCad official library (INA226-derived VSSOP-10) @cf07d539; primary TI datasheet NOT read,bus_measurement
 98,U801,1,MCU_ST_STM32G4:STM32G474VETx,STM32G474VET6,STM32G474VET6,,CANDIDATE (pin map generated),,KiCad library symbol (pin map from ST open pin data @7d1f151),mcu_debug
 99,U802,1,Power_Supervisor:MAX6369,MAX6369 (candidate),MAX6369KA+T,,CANDIDATE - SET0..2 strap per timeout table (verify),,,mcu_debug
-100,Y801,1,Device:Crystal_GND24,40MHz,,,CANDIDATE,FDCAN kernel clock: 500k/2M CAN FD at 80 %/80 % needs 20 or 40 MHz (docs/generated/can_bit_timing.md); 8 MHz cannot place the data-phase SP,,mcu_debug
+100,Y801,1,Device:Crystal_GND24,HSE UNSELECTED,,,UNRESOLVED,"frequency NOT selected: depends on the vehicle bus (classic or FD, bit rates) and the CPU frequency; candidates 8-40 MHz in hardware/timing/clock_tree_alternatives.md. The v0.2 '40 MHz required' claim is withdrawn.",,mcu_debug

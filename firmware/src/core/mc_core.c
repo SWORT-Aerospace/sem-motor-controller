@@ -101,23 +101,23 @@ bool mc_core_init(mc_core_t *c, const uint8_t *cal_blob, size_t cal_len, mc_buil
     return ok;
 }
 
-/* ---------------------------------------------------------------- CAN RX */
-void mc_core_on_can_bus_off(mc_core_t *c, bool bus_off)
+/* ---------------------------------------------------------------- message RX */
+void mc_core_on_link_state(mc_core_t *c, bool link_down)
 {
-    if (bus_off && !c->can_bus_off) {
+    if (link_down && !c->link_down) {
         c->can.bus_off_events++;
-        /* Bus-off ends any supervisor session immediately (ECO -> READY on the
-         * next slow step); manual driving does not depend on CAN. */
+        /* A lost link ends any supervisor session immediately (ECO -> READY on
+         * the next slow step); manual driving does not depend on any link. */
         sup_session_reset(c);
     }
-    c->can_bus_off = bus_off;
+    c->link_down = link_down;
 }
 
-void mc_core_on_can_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t can_id, const uint8_t *data, uint8_t len)
+void mc_core_on_msg_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t msg_id, const uint8_t *data, uint8_t len)
 {
     c->can.rx_frames++;
     semmc_result_t r;
-    switch (can_id) {
+    switch (msg_id) {
     case SEMMC_ID_SUP_HELLO: {
         semmc_sup_hello_t m;
         r = semmc_decode_sup_hello(data, len, &m);
@@ -274,7 +274,7 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     c->fast_dt_invalid = false;
 
     /* ---- supervisor input ---- */
-    c->sup.session_established = c->sess.established && !c->can_bus_off;
+    c->sup.session_established = c->sess.established && !c->link_down;
     c->sup.req_val = mc_fresh_status(&c->fr_req, now_us);
     if (c->req_invalid) c->sup.req_val |= MC_VAL_INVALID;
     c->sup.limits_val = mc_fresh_status(&c->fr_limits, now_us);
@@ -538,9 +538,9 @@ static const uint32_t k_tx_period_us[] = {
     SEMMC_PERIOD_US_CTRL_CURRENTS, SEMMC_PERIOD_US_CTRL_ENERGY,  SEMMC_PERIOD_US_CTRL_THERMAL,
     SEMMC_PERIOD_US_CTRL_VALIDITY, SEMMC_PERIOD_US_CTRL_IDENTITY};
 
-bool mc_core_can_tx_poll(mc_core_t *c, mc_time_us_t now_us, uint32_t *can_id, uint8_t data[8])
+bool mc_core_msg_tx_poll(mc_core_t *c, mc_time_us_t now_us, uint32_t *msg_id, uint8_t data[8])
 {
-    if (c->can_bus_off) return false;
+    if (c->link_down) return false;
     for (size_t k = 0; k < sizeof k_tx_ids / sizeof k_tx_ids[0]; k++) { /* ascending id == priority */
         const uint32_t id = k_tx_ids[k];
         const unsigned idx = (unsigned)tx_index(id);
@@ -550,7 +550,7 @@ bool mc_core_can_tx_poll(mc_core_t *c, mc_time_us_t now_us, uint32_t *can_id, ui
         c->tx_next_us[idx] = now_us + k_tx_period_us[k];
         if (!build_frame(c, id, c->tx_seq[idx], data)) continue;
         c->tx_seq[idx]++;
-        *can_id = id;
+        *msg_id = id;
         c->can.tx_frames++;
         return true;
     }

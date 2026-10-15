@@ -1,4 +1,4 @@
-Nominal bit rate 500 kbit/s; total utilisation 13.7 % (semmc frames 12.3 %), CHUDS frames modelled conservatively.
+Nominal bit rate 500 kbit/s; total utilisation 13.7 % (semmc frames 12.3 %), plus a REFERENCE-PROJECT load case (Cornell CHUDS, modelled conservatively); our vehicle bus's other traffic is UNKNOWN.
 
 | id | message | ours | period ms | C us | WCRT ms | note |
 |---|---|---|---|---|---|---|

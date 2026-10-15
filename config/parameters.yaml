@@ -133,6 +133,9 @@ params:
   - {id: 161, path: supervision.timeout_s,                   kind: real, min: 0.005, max: 2.0, req_sim: true, req_hw: true}
   - {id: 162, path: supervision.timing_status,               kind: enum, enum: timing_status, req_sim: true, req_hw: true}
   - {id: 163, path: supervision.limits_timeout_s,            kind: real, min: 0.01, max: 10.0, req_sim: true, req_hw: true}
+  # CAN binding only (the core is transport-neutral): 11-bit id = base + (protocol message number - 0x300).
+  # Multiple of 0x40 (rule 40). An ALLOCATION on the vehicle bus, so it comes from the vehicle team's id map.
+  - {id: 164, path: supervision.can_id_base,                 kind: int,  min: 0, max: 1984, req_sim: true, req_hw: true}
 
 # String-valued fields (not in the binary blob; carried as metadata and hashed
 # into the calibration identity). null = unknown.

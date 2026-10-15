@@ -2,15 +2,16 @@
 
 Purpose-built, telemetry-informed motor controller for a Shell Eco-marathon battery-electric vehicle: power-stage planning, controller firmware core, CAN contract, supervisory energy strategy, and a CSIA vehicle consistency monitor in shadow mode.
 
-## Status (truthful labels, v0.2: [CHECKPOINT_v0.2](docs/CHECKPOINT_v0.2.md))
+## Status (truthful labels, v0.3: [REVIEW_v0.3](docs/REVIEW_v0.3.md); v0.2: [CHECKPOINT_v0.2](docs/CHECKPOINT_v0.2.md))
 
 | | |
 |---|---|
 | **CONTROL CONTRACT CORRECTED** | four layers (hardware shutdown, inhibits, hard ceilings, supervisory envelopes, comfort slew), host-verified ([CONTROL_CONTRACT](docs/CONTROL_CONTRACT.md), ADR-0011) |
-| **HOST IMPLEMENTATION VERIFIED** | C11 core + codecs + host co-simulation, tested on a host with a **synthetic** plant |
+| **HOST IMPLEMENTATION VERIFIED** | C11 core (transport-neutral; CAN is one binding) + codecs + host co-simulation, tested on a host with a **synthetic** plant |
+| **VEHICLE INTERFACE UNKNOWN** | no interface fact about our vehicle is confirmed; Cornell repos are reference projects only; the telematics proposal (CAN 2.0B, STM32U575, LTE/MQTT) is a design input ([PROVENANCE_AUDIT](docs/PROVENANCE_AUDIT.md), [COMBINED_ARCHITECTURE](docs/COMBINED_ARCHITECTURE.md)) |
 | **FUNCTIONAL HARDWARE ARCHITECTURE v0.2 DRAFT** | block diagram, 12-sheet KiCad schematic (connectivity-checked, no ERC), timing, protection truth table, priced BOM ([HARDWARE_ARCHITECTURE](docs/HARDWARE_ARCHITECTURE.md)) |
 | **NOT HARDWARE-FROZEN** | component selection blocked by: unknown motor (type, currents, pole pairs, R, L, λ, halls), battery and BMS (voltage range, limits), drivetrain, driver controls, rules edition; no primary datasheet read ([input sheet](docs/VEHICLE_TEAM_INPUT_SHEET.md)) |
-| **NOT FABRICATION-READY** | no footprints, no layout, no fabrication outputs, by design; nothing has been energized |
+| **NOT FABRICATION-READY** | no footprints, no layout, no fabrication outputs, by design; DRV8353S pinout a placeholder; crystal unselected; KiCad ERC not run; nothing has been energized |
 | **NOT VEHICLE-VALIDATED** | every result comes from synthetic models or host tests |
 | **BUDGET NOT SHOWN FEASIBLE** | every scenario straddles its limit ([BUDGET](docs/BUDGET.md)) |
 
@@ -44,8 +45,13 @@ python3 tools/control_contract_report.py        # four-layer contract: before/af
 python3 tools/run_csia_evaluation.py             # CSIA on the HELD-OUT synthetic set (frozen harness)
 python3 tools/gen_kicad_schematic.py --check     # KiCad draft + connectivity check (kicad-cli 7; not an ERC)
 python3 tools/timing_budget.py && python3 tools/hardware_calcs.py && python3 tools/price_bom.py
+python3 tools/clock_tree.py                      # clock-tree alternatives and CAN bit timing per bus case (no crystal chosen)
+python3 tools/telematics_budget.py               # logging capacity, LTE volume, auxiliary power (assumption-tagged)
+python3 tools/gen_dbc.py --base 0x300            # DBC for other teams' CAN tools (block base = calibration)
+python3 tools/pin_type_check.py                  # pin-type rules on the KiCad netlist (NOT an ERC)
+tools/run_kicad_erc.sh                           # real KiCad ERC; needs KiCad 8 or newer
 ```
 A hardware-enabled build (`-DSEMMC_HARDWARE_BUILD=ON`) refuses to configure until the hardware config validates, and there is no STM32 platform layer yet.
 
 ## Start here
-[docs/CHECKPOINT_v0.2.md](docs/CHECKPOINT_v0.2.md) · [docs/VEHICLE_TEAM_INPUT_SHEET.md](docs/VEHICLE_TEAM_INPUT_SHEET.md) · [HANDOFF.md](HANDOFF.md) (v0.1) · [docs/ARCHITECTURE_FREEZE.md](docs/ARCHITECTURE_FREEZE.md) · [docs/OPEN_PARAMETERS.md](docs/OPEN_PARAMETERS.md)
+[docs/REVIEW_v0.3.md](docs/REVIEW_v0.3.md) · [docs/PHYSICAL_TEAM_QUESTIONNAIRE.md](docs/PHYSICAL_TEAM_QUESTIONNAIRE.md) · [docs/MIGRATION.md](docs/MIGRATION.md) · [docs/CHECKPOINT_v0.2.md](docs/CHECKPOINT_v0.2.md) · [docs/VEHICLE_TEAM_INPUT_SHEET.md](docs/VEHICLE_TEAM_INPUT_SHEET.md) · [HANDOFF.md](HANDOFF.md) (v0.1) · [docs/ARCHITECTURE_FREEZE.md](docs/ARCHITECTURE_FREEZE.md) · [docs/OPEN_PARAMETERS.md](docs/OPEN_PARAMETERS.md)

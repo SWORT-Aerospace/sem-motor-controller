@@ -1,0 +1,210 @@
+VERSION "semmc 1.0"
+
+NS_ :
+
+BS_:
+
+BU_: SUPERVISOR SEMMC
+
+BO_ 768 ctrl_fault: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ latched : 16|24@1+ (1,0) [0|16777215] "" SUPERVISOR
+ SG_ first_fault : 40|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ reset_reason : 48|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ fault_count : 56|8@1+ (1,0) [0|255] "" SUPERVISOR
+
+BO_ 776 sup_torque_req: 8 SUPERVISOR
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ session_tag : 16|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ limits_ref : 24|4@1+ (1,0) [0|15] "" SEMMC
+ SG_ coast_request : 28|1@1+ (1,0) [0|1] "" SEMMC
+ SG_ reserved : 29|3@1+ (1,0) [0|7] "" SEMMC
+ SG_ torque_Nm : 32|16@1- (0.002,0) [-65.534|65.534] "N*m" SEMMC
+ SG_ src_time_ms : 48|16@1+ (1,0) [0|65535] "" SEMMC
+
+BO_ 777 sup_limits: 8 SUPERVISOR
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ session_tag : 16|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ limits_seq : 24|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ max_torque_Nm : 32|16@1+ (0.002,0) [0|131.07] "N*m" SEMMC
+ SG_ max_batt_power_W : 48|16@1+ (1,0) [0|65535] "W" SEMMC
+
+BO_ 778 sup_hello: 8 SUPERVISOR
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ proto_major : 16|4@1+ (1,0) [0|15] "" SEMMC
+ SG_ proto_minor : 20|4@1+ (1,0) [0|15] "" SEMMC
+ SG_ role : 24|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ companion_session : 32|32@1+ (1,0) [0|4294967295] "" SEMMC
+
+BO_ 784 ctrl_status: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ state : 16|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ owner : 20|2@1+ (1,0) [0|3] "" SUPERVISOR
+ SG_ sup_link : 22|2@1+ (1,0) [0|3] "" SUPERVISOR
+ SG_ session_tag : 24|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ boot_id : 32|16@1+ (1,0) [0|65535] "" SUPERVISOR
+ SG_ build_is_sim : 48|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ cal_provenance : 49|2@1+ (1,0) [0|3] "" SUPERVISOR
+ SG_ output_permitted : 51|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ pwm_enabled : 52|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ derating : 53|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ hw_trip : 54|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ reserved : 55|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ last_transition : 56|8@1+ (1,0) [0|255] "" SUPERVISOR
+
+BO_ 785 ctrl_cmd_trace: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ requested_Nm : 16|16@1- (0.002,0) [-65.534|65.534] "N*m" SUPERVISOR
+ SG_ accepted_Nm : 32|16@1- (0.002,0) [-65.534|65.534] "N*m" SUPERVISOR
+ SG_ reason : 48|16@1+ (1,0) [0|65535] "" SUPERVISOR
+
+BO_ 786 driver_controls: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ throttle : 16|16@1+ (0.0001,0) [0|1] "1" SUPERVISOR
+ SG_ brake : 32|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ cancel : 33|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ mode_eco : 34|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ arm_switch : 35|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ estop_chain_ok : 36|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ driver_present : 37|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ fault_reset : 38|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ throttle_valid : 39|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ reserved : 40|24@1+ (1,0) [0|16777215] "" SUPERVISOR
+
+BO_ 787 ctrl_session: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ session_tag : 16|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ companion_session_echo : 24|32@1+ (1,0) [0|4294967295] "" SUPERVISOR
+ SG_ proto_major : 56|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ proto_minor : 60|4@1+ (1,0) [0|15] "" SUPERVISOR
+
+BO_ 792 ctrl_motion: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ speed_mech_rad_s : 16|16@1- (0.05,0) [-1638.35|1638.35] "rad/s" SUPERVISOR
+ SG_ iq_A : 32|16@1- (0.01,0) [-327.67|327.67] "A" SUPERVISOR
+ SG_ vbus_V : 48|16@1+ (0.01,0) [0|655.34] "V" SUPERVISOR
+
+BO_ 793 ctrl_currents: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ id_A : 16|16@1- (0.01,0) [-327.67|327.67] "A" SUPERVISOR
+ SG_ ibatt_A : 32|16@1- (0.01,0) [-327.67|327.67] "A" SUPERVISOR
+ SG_ measured_mask : 48|3@1+ (1,0) [0|7] "" SUPERVISOR
+ SG_ reconstructed_mask : 51|3@1+ (1,0) [0|7] "" SUPERVISOR
+ SG_ kcl_available : 54|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ reserved : 55|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ kcl_residual_A : 56|8@1- (0.1,0) [-12.7|12.7] "A" SUPERVISOR
+
+BO_ 800 ctrl_energy: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ energy_J : 16|32@1+ (0.1,0) [0|429496729.4] "J" SUPERVISOR
+ SG_ p_batt_W : 48|16@1- (1,0) [-32767|32767] "W" SUPERVISOR
+
+BO_ 801 ctrl_thermal: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ t_fet_degC : 16|16@1- (0.1,0) [-3276.7|3276.7] "degC" SUPERVISOR
+ SG_ t_motor_degC : 32|16@1- (0.1,0) [-3276.7|3276.7] "degC" SUPERVISOR
+ SG_ derate : 48|8@1+ (0.004,0) [0|1] "1" SUPERVISOR
+ SG_ derate_reasons : 56|8@1+ (1,0) [0|255] "" SUPERVISOR
+
+BO_ 802 ctrl_validity: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ v_speed : 16|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_ia : 20|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_ib : 24|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_ic : 28|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_vbus : 32|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_ibatt : 36|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_t_fet : 40|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_t_motor : 44|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_throttle : 48|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_sup_req : 52|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_sup_limits : 56|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ v_hall : 60|4@1+ (1,0) [0|15] "" SUPERVISOR
+
+BO_ 808 csia_advisory: 8 SUPERVISOR
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ trust : 16|8@1+ (0.004,0) [0|1] "1" SEMMC
+ SG_ mode : 24|2@1+ (1,0) [0|3] "" SEMMC
+ SG_ observability : 26|2@1+ (1,0) [0|3] "" SEMMC
+ SG_ monitor_ok : 28|1@1+ (1,0) [0|1] "" SEMMC
+ SG_ evidence_fresh : 29|1@1+ (1,0) [0|1] "" SEMMC
+ SG_ reserved : 30|2@1+ (1,0) [0|3] "" SEMMC
+ SG_ evidence_mask : 32|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ explanation : 40|8@1+ (1,0) [0|255] "" SEMMC
+ SG_ src_time_ms : 48|16@1+ (1,0) [0|65535] "" SEMMC
+
+BO_ 816 ctrl_identity: 8 SEMMC
+ SG_ crc8 : 0|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ seq : 8|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ proto_major : 16|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ proto_minor : 20|4@1+ (1,0) [0|15] "" SUPERVISOR
+ SG_ fw_major : 24|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ fw_minor : 32|8@1+ (1,0) [0|255] "" SUPERVISOR
+ SG_ cal_version : 40|16@1+ (1,0) [0|65535] "" SUPERVISOR
+ SG_ cal_provenance : 56|2@1+ (1,0) [0|3] "" SUPERVISOR
+ SG_ build_is_sim : 58|1@1+ (1,0) [0|1] "" SUPERVISOR
+ SG_ hw_rev : 59|5@1+ (1,0) [0|31] "" SUPERVISOR
+
+CM_ "Generated by tools/gen_dbc.py from protocol/protocol.yaml (spec hash 193e498f6cb45df6). Block base 0x300 = controller calibration supervision.can_id_base. Do not edit.";
+CM_ SG_ 768 first_fault "mc_fault_t, 0xFF = none";
+CM_ SG_ 768 reset_reason "platform reset cause code";
+CM_ BO_ 768 "Latched faults, first fault since reset and last MCU reset reason. Period 1.0 s + on change. CRC data id = (major << 11) | 0x300 (canonical number, not the bus id)";
+CM_ SG_ 776 session_tag "tag assigned by controller in ctrl_session";
+CM_ SG_ 776 limits_ref "low 4 bits of the sup_limits seq this request was computed against";
+CM_ SG_ 776 src_time_ms "companion monotonic ms when the request was computed (wraps)";
+CM_ BO_ 776 "Supervisory torque request (motor shaft). PROVISIONAL 50 Hz / 100 ms timeout, simulation only, pending hazard and latency analysis.
+ Period 0.02 s. CRC data id = (major << 11) | 0x308 (canonical number, not the bus id)";
+CM_ BO_ 777 "Supervisor-declared bounds; can only tighten controller limits. Period 0.1 s. CRC data id = (major << 11) | 0x309 (canonical number, not the bus id)";
+CM_ SG_ 778 role "1 = energy supervisor";
+CM_ BO_ 778 "Companion session announcement / handshake. Cannot arm or select a mode. Period 0.5 s. CRC data id = (major << 11) | 0x30A (canonical number, not the bus id)";
+CM_ SG_ 784 state "mc_state_t";
+CM_ SG_ 784 owner "0 none, 1 driver, 2 supervisor";
+CM_ SG_ 784 sup_link "0 none, 1 hello, 2 established, 3 lost";
+CM_ SG_ 784 boot_id "changes every controller boot";
+CM_ SG_ 784 last_transition "mc_transition_t";
+CM_ BO_ 784 "Operating state, owner, supervisor link and boot identity. Period 0.02 s. CRC data id = (major << 11) | 0x310 (canonical number, not the bus id)";
+CM_ BO_ 785 "Requested (owner) vs accepted torque and reason bits (MC_R_*). Period 0.02 s. CRC data id = (major << 11) | 0x311 (canonical number, not the bus id)";
+CM_ BO_ 786 "Wired driver controls AS SEEN BY THE CONTROLLER (report only; never an input). Period 0.02 s. CRC data id = (major << 11) | 0x312 (canonical number, not the bus id)";
+CM_ SG_ 787 session_tag "0 = no session";
+CM_ BO_ 787 "Handshake reply - session tag assigned to the echoed companion session. Period 0.5 s + on change. CRC data id = (major << 11) | 0x313 (canonical number, not the bus id)";
+CM_ BO_ 792 "Rotor mechanical speed, measured q current, bus voltage. Period 0.01 s. CRC data id = (major << 11) | 0x318 (canonical number, not the bus id)";
+CM_ BO_ 793 "d current, battery current (+ discharge), phase-measurement provenance, KCL residual. Period 0.01 s. CRC data id = (major << 11) | 0x319 (canonical number, not the bus id)";
+CM_ BO_ 800 "Battery-side energy since controller boot and instantaneous battery power. Period 0.1 s. CRC data id = (major << 11) | 0x320 (canonical number, not the bus id)";
+CM_ BO_ 801 "Temperatures and derating. Period 0.1 s. CRC data id = (major << 11) | 0x321 (canonical number, not the bus id)";
+CM_ BO_ 802 "Per-signal validity nibbles (bit0 missing, bit1 stale, bit2 invalid/nonfinite/ out-of-range/integrity, bit3 saturated).
+ Period 0.1 s. CRC data id = (major << 11) | 0x322 (canonical number, not the bus id)";
+CM_ SG_ 808 mode "0 shadow, 1 advisory, 2 restricting (not permitted in v0.1)";
+CM_ SG_ 808 observability "0 unknown, 1 observable, 2 ambiguous, 3 unobservable";
+CM_ BO_ 808 "CSIA vehicle-adapter advisory. v0.1 = SHADOW ONLY: the controller logs and re-reports it but never changes a command because of it (ADR-0008).
+ Period 0.1 s. CRC data id = (major << 11) | 0x328 (canonical number, not the bus id)";
+CM_ BO_ 816 "Protocol, firmware and calibration identity. Period 1.0 s. CRC data id = (major << 11) | 0x330 (canonical number, not the bus id)";
+VAL_ 776 torque_Nm -32768 "INVALID" ;
+VAL_ 785 requested_Nm -32768 "INVALID" ;
+VAL_ 785 accepted_Nm -32768 "INVALID" ;
+VAL_ 786 throttle 65535 "INVALID" ;
+VAL_ 792 speed_mech_rad_s -32768 "INVALID" ;
+VAL_ 792 iq_A -32768 "INVALID" ;
+VAL_ 792 vbus_V 65535 "INVALID" ;
+VAL_ 793 id_A -32768 "INVALID" ;
+VAL_ 793 ibatt_A -32768 "INVALID" ;
+VAL_ 793 kcl_residual_A -128 "INVALID" ;
+VAL_ 800 energy_J 4294967295 "INVALID" ;
+VAL_ 800 p_batt_W -32768 "INVALID" ;
+VAL_ 801 t_fet_degC -32768 "INVALID" ;
+VAL_ 801 t_motor_degC -32768 "INVALID" ;
+VAL_ 801 derate 255 "INVALID" ;
+VAL_ 808 trust 255 "INVALID" ;

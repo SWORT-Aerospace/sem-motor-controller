@@ -63,6 +63,7 @@ add_library(semmc_core STATIC
   src/state_machine/mc_arbiter.c
   src/csia_adapter/mc_csia_shadow.c
   src/core/mc_core.c
+  src/transport/mc_can_binding.c
   ${SEMMC_PROTO_GEN}/semmc_protocol.c)
 target_include_directories(semmc_core PUBLIC include ${SEMMC_PROTO_GEN})
 target_compile_options(semmc_core PRIVATE ${SEMMC_WARN})

@@ -1,4 +1,9 @@
-# CAN integration with the Cornell vehicle bus (CHUDS)
+# CAN integration: reference-project analysis (Cornell CHUDS) — OPTIONAL ADAPTER
+
+> **v0.3 status: REFERENCE PROJECT, NOT OUR VEHICLE.** Everything below describes Cornell's CHUDS bus, observed in a reference repository. It was written in v0.2 as if it were our vehicle's bus; that was an unsupported assumption (`docs/PROVENANCE_AUDIT.md`). Our vehicle's telematics proposal (v0.1, 14/10/2026) shows a **CAN 2.0B** bus. The actual bus is **UNKNOWN** until the team confirms it (`docs/VEHICLE_INTERFACE_MATRIX.md`).
+> * CHUDS support stays an **optional adapter**: the core is transport-neutral and the identifier block is a calibration value (ADR-0012).
+> * "The controller must run in FD mode" applies **only if** our bus is CAN FD.
+> * "Schematic changed to a 40 MHz crystal" is **withdrawn** in any case: the crystal is unselected (`hardware/timing/clock_tree_alternatives.md`).
 
 Evidence: Cornell `urban-concept@c422c0f` (shallow clone; read, not modified) and this repository. **Non-overlapping identifiers do not prove integration.** This document lists what has to match beyond the IDs: physical layer, bit timing, frame format, filters, arbitration, the receiving software, and the wiring. None of it has been tested on the bus.
 
@@ -23,7 +28,7 @@ Evidence: Cornell `urban-concept@c422c0f` (shallow clone; read, not modified) an
 | Requirement | Why | Status |
 |---|---|---|
 | FDCAN in **FD mode** (FD operation enabled) with data-phase timing **2 Mbit/s at 80 %**, even though semmc v1 transmits only classic frames | Every node checks the CRC of every frame. A node sampling the data phase at the wrong rate sees errors in every CHUDS frame and sends error frames, which would disrupt the whole bus. | Firmware platform layer not written; values in `docs/generated/can_bit_timing.md` |
-| FDCAN kernel clock 20 or 40 MHz | 8 MHz gives a 75 % data sample point; 42.5/85 MHz cannot produce 2 Mbit/s | **Schematic changed to a 40 MHz crystal** (v0.2 draft) |
+| FDCAN kernel clock 20 or 40 MHz | 8 MHz gives a 75 % data sample point; 42.5/85 MHz cannot produce 2 Mbit/s | v0.2 chose a 40 MHz crystal; **withdrawn in v0.3** (crystal unselected; PLL-derived kernel clocks also work) |
 | Transceiver CAN FD-capable | the same physical bus carries 2 Mbit/s data phases | TJA1051T/3 is CAN FD-rated (snippet) |
 | Transmit classic 8-byte frames on 0x300–0x33F | CHUDS nodes ignore classic frames, so no misinterpretation as CHUDS | protocol v1.0 (frozen) |
 | Do not transmit FD frames | an FD frame in any class would be decoded as CHUDS (no magic byte) | design rule; enforced by the platform layer (to be written) |

@@ -11,8 +11,4 @@
 | HSE 40 MHz | 1 / 80 / 63 / 16 / 80.00 % | 1 / 20 / 15 / 4 / 80.00 % | **yes** |
 | HSE 24 MHz | 1 / 48 / 37 / 10 / 79.17 % | 1 / 12 / 9 / 2 / 83.33 % | no |
 
-Consequences:
-* The v0.2 draft's 8 MHz crystal cannot place the 2 Mbit/s data-phase sample point at 80 %: it allows only 4 tq per bit, so 75 %. The 42.5/85 MHz PLL outputs available with a 170 MHz system clock give non-integer tq counts at 2 Mbit/s.
-* **Change: HSE crystal 40 MHz** (also 20 MHz would work), used directly as the FDCAN kernel clock. The system clock is still 170 MHz (40 MHz / 10 × 85 / 2) [R].
-* The controller transmits classic frames only (semmc v1). Transmitter delay compensation is therefore not needed, but data-phase reception timing is.
-* Every number must be cross-checked with the bus at stage 2 (CAN error counters zero with CHUDS traffic present).
+**v0.3: the v0.2 conclusion drawn from this table ("change the HSE crystal to 40 MHz") is WITHDRAWN.** This table only considers kernel clocks taken directly from HSE or from a 170 MHz VCO. A complete analysis (PLL-derived kernel clocks, the FDCAN clock divider, other CPU frequencies, classic CAN 2.0B buses) is in `hardware/timing/clock_tree_alternatives.md`. The bus analysed here (CHUDS, 500k/2M FD) belongs to a REFERENCE project; our vehicle's bus is not confirmed, and the telematics proposal shows CAN 2.0B.

@@ -130,5 +130,6 @@ supervision:
   timeout_s: 0.10                  # PROVISIONAL 100 ms, simulation only
   timing_status: provisional_simulation_only
   limits_timeout_s: 0.5
+  can_id_base: 768                 # 0x300: protocol default for host tests. PROPOSED, NOT allocated on any real bus.
   hazard_analysis_ref: null
   notes: "Provisional supervision timing pending vehicle hazard/latency analysis."

@@ -9,7 +9,7 @@ PWM_B_HI,PC1,16,TIM1_CH2,INHB,CANDIDATE - AF/timing not verified
 PWM_C_HI,PC2,17,TIM1_CH3,INHC,CANDIDATE - AF/timing not verified
 PWM_BREAK2,PC3,18,TIM1_BKIN2,hardware trip input: independent bus/phase over-current comparator,CANDIDATE - AF/timing not verified
 ECO_CANCEL,PF2,19,GPIO,,CANDIDATE - AF/timing not verified
-ISENSE_A,PA0,20,ADC1_IN1,CSA A -> ADC1 fast channel (dual simultaneous with ADC2),CANDIDATE - AF/timing not verified
+ISENSE_A,PA0,20,ADC1_IN1,CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed),CANDIDATE - AF/timing not verified
 ISENSE_B,PA1,21,ADC2_IN2,CSA B -> ADC2 fast channel,CANDIDATE - AF/timing not verified
 DRV_SPI_SCK,PA5,27,SPI1_SCK,DRV8353S/RS configuration + status,CANDIDATE - AF/timing not verified
 DRV_SPI_MISO,PA6,28,SPI1_MISO,,CANDIDATE - AF/timing not verified

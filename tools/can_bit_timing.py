@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FDCAN bit timing for joining the Cornell CHUDS CAN-FD bus.
+"""FDCAN bit timing for the Cornell CHUDS CAN-FD bus (REFERENCE project; superseded, see clock_tree.py).
 
     python3 tools/can_bit_timing.py   -> docs/generated/can_bit_timing.md
 
@@ -63,16 +63,11 @@ def main() -> int:
             f"{r['brp']} / {r['tq_per_bit']} / {r['tseg1']} / {r['tseg2']} / {100*r['sample_point']:.2f} %")
         ok = n is not None and d is not None and abs(n["sample_point"] - SP) < 1e-9 and abs(d["sample_point"] - SP) < 1e-9
         L.append(f"| {name} | {fmt(n)} | {fmt(d)} | {'**yes**' if ok else 'no'} |")
-    L += ["", "Consequences:",
-          "* The v0.2 draft's 8 MHz crystal cannot place the 2 Mbit/s data-phase sample point at 80 %: it allows only "
-          "4 tq per bit, so 75 %. The 42.5/85 MHz PLL outputs available with a 170 MHz system clock give non-integer "
-          "tq counts at 2 Mbit/s.",
-          "* **Change: HSE crystal 40 MHz** (also 20 MHz would work), used directly as the FDCAN kernel clock. The "
-          "system clock is still 170 MHz (40 MHz / 10 × 85 / 2) [R].",
-          "* The controller transmits classic frames only (semmc v1). Transmitter delay compensation is therefore not "
-          "needed, but data-phase reception timing is.",
-          "* Every number must be cross-checked with the bus at stage 2 (CAN error counters zero with CHUDS traffic "
-          "present).", ""]
+    L += ["", "**v0.3: the v0.2 conclusion drawn from this table (\"change the HSE crystal to 40 MHz\") is WITHDRAWN.** "
+          "This table only considers kernel clocks taken directly from HSE or from a 170 MHz VCO. A complete analysis "
+          "(PLL-derived kernel clocks, the FDCAN clock divider, other CPU frequencies, classic CAN 2.0B buses) is in "
+          "`hardware/timing/clock_tree_alternatives.md`. The bus analysed here (CHUDS, 500k/2M FD) belongs to a "
+          "REFERENCE project; our vehicle's bus is not confirmed, and the telematics proposal shows CAN 2.0B.", ""]
     (ROOT / "docs" / "generated" / "can_bit_timing.md").write_text("\n".join(L))
     print("\n".join(L[5:12]))
     return 0

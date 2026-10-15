@@ -1,21 +1,24 @@
-# Interface control document v0.1
+# Interface control document v0.1 (amended v0.3)
+
+> **v0.3 amendment (ADR-0012).** The vehicle bus is **UNKNOWN**. The CHUDS/CAN FD values that v0.2 wrote into this table were observed in a **reference project** (Cornell), not on our vehicle. The telematics proposal for our vehicle (v0.1, 14/10/2026) shows **CAN 2.0B**. The message set, framing, integrity and sequence rules below are unchanged (frozen v1). The bus parameters are now selected per vehicle: see `docs/VEHICLE_INTERFACE_MATRIX.md`.
 
 ## 1. CAN bus
 
 | Item | Value | Status |
 |---|---|---|
-| Physical | ISO 11898-2 high-speed CAN; TCAN1042-class transceiver, FD-tolerant | candidate |
-| Identifiers | 11-bit, `0x300–0x33F`. Outside today's CHUDS classes (0x000–0x2FF), but inside CHUDS's **reserved** 0x300–0x7FF, so a vehicle-team reservation is required (`docs/CAN_INTEGRATION.md` §3) | frozen v1; **allocation pending** |
-| Frame format | classic CAN, DLC 8. CHUDS software drops classic frames (`ForeignFrame`), so the VCU needs a separate raw-socket consumer (`host/vcu_bridge/`) | frozen v1 |
-| Controller CAN mode | **FD operation enabled**, nominal 500 kbit/s at 80 %, data 2 Mbit/s at 80 % (required to coexist with CHUDS FD frames, even though semmc transmits classic only); FDCAN kernel clock 40 MHz (`docs/generated/can_bit_timing.md`) | required |
-| Nominal bit rate | 500 kbit/s, sample point 80 % (CHUDS `frame.hpp`) | frozen v1 |
+| Physical | ISO 11898-2 high-speed CAN; TJA1051T/3-class transceiver (FD-capable, also valid on a classic CAN 2.0B bus) | candidate; bus UNKNOWN |
+| Identifiers | 11-bit, one block of 64: `can_id_base … can_id_base + 0x3F`, where `supervision.can_id_base` is a calibration value (multiple of 0x40, rule 40). The protocol's own numbering is 0x300–0x33F (protocol default, used by the synthetic config). The CRC data id uses the protocol number, not the bus identifier. | message numbers frozen v1; **bus allocation pending (vehicle team)** |
+| Frame format | classic CAN, 11-bit, DLC 8 (valid on CAN 2.0B and on CAN FD buses) | frozen v1 |
+| Controller CAN mode | **depends on the vehicle bus.** Classic CAN 2.0B bus (telematics proposal): classic mode. A CAN FD bus (reference project only): FD operation enabled for reception with a matching data-phase timing; semmc still transmits classic frames only. Clock and timing options: `hardware/timing/clock_tree_alternatives.md` | **UNKNOWN until the bus is confirmed** |
+| Nominal bit rate | not stated by the telematics proposal; 500 kbit/s used in host analyses (`SEMMC_NOMINAL_BITRATE`, protocol header) | **UNKNOWN** |
 | Byte/bit order | Intel (LSB-first), little-endian multi-byte | frozen v1 |
 | Integrity | CRC-8/SAE-J1850 over the 16-bit Data ID `(major<<11)|id` and bytes 1–7; check value `"123456789"` → 0x4B | frozen v1 |
 | Sequence | byte 1, u8 per message, wraps | frozen v1 |
 | Messages | `docs/generated/can_messages.md` (generated) | frozen v1 |
 | Codecs | `protocol/generated/semmc_protocol.{h,c,py}`; golden vectors `protocol/golden_vectors/vectors.json` | generated, tested in C and Python |
-| Bus load | 13.7 % total incl. CHUDS (conservative), semmc 12.3 %; `docs/generated/bus_load.md` | estimate |
-| Termination / stub lengths / connector | — | **UNFROZEN** (harness unknown) |
+| Bus load | semmc frames 12.3 % at 500 kbit/s; the 13.7 % total adds a reference-project (CHUDS) load case, not our bus; `docs/generated/bus_load.md` | estimate; our bus's other traffic unknown |
+| Termination / stub lengths / connector | telematics proposal: 120 Ω at both ends, CANH/CANL/GND | **UNFROZEN** (harness unknown) |
+| Exchange format for other teams | `protocol/generated/semmc_base0x300.dbc` (generated; `tools/gen_dbc.py --base …` for another block), cross-checked against the golden vectors | generated, tested |
 
 ### 1.1 Saturation and invalid values
 Encoders clamp physical values to `[min, max]` and report saturation. NaN encodes as the field's `invalid` sentinel; if the field has no sentinel, the encoder refuses to emit a frame. Decoders map the sentinel to NaN and flag raw values outside the declared range. The controller treats an invalid or out-of-range torque request as **supervisor INVALID** (ECO exits), never as "zero torque".

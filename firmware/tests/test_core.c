@@ -30,14 +30,16 @@ static float SUP_TORQUE = 1.0f;
 static uint16_t SUP_SRC_MS;
 static bool SUP_FREEZE_SRC; /* re-send cached sample (src time frozen) */
 static mc_time_us_t SUP_LAST_REQ_T;
+static uint32_t SUP_BASE = MC_PROTO_MSG_FIRST; /* CAN id of protocol message 0x300 on the emulated bus */
 
-static void sim_init(mc_build_kind_t build)
+static void sim_init_blob(mc_build_kind_t build, const uint8_t *blob, size_t len)
 {
     mc_cfg_report_t rep;
     mc_cfg_report_clear(&rep);
-    (void)mc_config_parse_blob(g_blob, g_len, &PCFG, &rep);
+    (void)mc_config_parse_blob(blob, len, &PCFG, &rep);
     (void)mc_config_derive(&PCFG, &PP);
-    (void)mc_core_init(&C, g_blob, g_len, build, 0x0101u);
+    (void)mc_core_init(&C, blob, len, build, 0x0101u);
+    SUP_BASE = MC_PROTO_MSG_FIRST;
     sim_plant_init(&P, &PP);
     memset(&SI, 0, sizeof SI);
     SI.gate_driver_ready = true;
@@ -52,24 +54,32 @@ static void sim_init(mc_build_kind_t build)
     SUP_SEQ_REQ = SUP_SEQ_LIM = SUP_SEQ_HELLO = 0u; /* no state leaks between tests */
 }
 
+static void sim_init(mc_build_kind_t build)
+{
+    sim_init_blob(build, g_blob, g_len);
+}
+
+/* CAN id of a protocol message on the emulated bus (relocatable block). */
+static uint32_t bus_id(uint32_t msg) { return msg - MC_PROTO_MSG_FIRST + SUP_BASE; }
+
 static void sup_tx(void)
 {
     uint8_t b[8];
     if (SUP_SEQ_HELLO++ % 25u == 0u) {
         semmc_sup_hello_t h = {SUP_SEQ_HELLO, 1u, 0u, 1u, SUP_SESSION};
         (void)semmc_encode_sup_hello(&h, b);
-        mc_core_on_can_rx(&C, T, SEMMC_ID_SUP_HELLO, b, 8u);
+        mc_core_on_can_rx(&C, T, bus_id(SEMMC_ID_SUP_HELLO), b, 8u);
     }
     if (SUP_TAG == 0u) return;
     if (SUP_SEQ_REQ % 5u == 0u) {
         semmc_sup_limits_t l = {SUP_SEQ_LIM++, SUP_TAG, 7u, 2.0f, 2000.0f};
         (void)semmc_encode_sup_limits(&l, b);
-        mc_core_on_can_rx(&C, T, SEMMC_ID_SUP_LIMITS, b, 8u);
+        mc_core_on_can_rx(&C, T, bus_id(SEMMC_ID_SUP_LIMITS), b, 8u);
     }
     if (!SUP_FREEZE_SRC) SUP_SRC_MS = (uint16_t)(T / 1000u);
     semmc_sup_torque_req_t r = {SUP_SEQ_REQ++, SUP_TAG, 7u, false, 0u, SUP_TORQUE, SUP_SRC_MS};
     (void)semmc_encode_sup_torque_req(&r, b);
-    mc_core_on_can_rx(&C, T, SEMMC_ID_SUP_TORQUE_REQ, b, 8u);
+    mc_core_on_can_rx(&C, T, bus_id(SEMMC_ID_SUP_TORQUE_REQ), b, 8u);
     SUP_LAST_REQ_T = T;
 }
 
@@ -104,7 +114,7 @@ static void run_ms(int ms)
         uint32_t id;
         uint8_t d[8];
         while (mc_core_can_tx_poll(&C, T, &id, d)) {
-            if (id == SEMMC_ID_CTRL_SESSION) {
+            if (id == bus_id(SEMMC_ID_CTRL_SESSION)) {
                 semmc_ctrl_session_t s;
                 if (semmc_decode_ctrl_session(d, 8u, &s).status == SEMMC_OK && s.companion_session_echo == SUP_SESSION)
                     SUP_TAG = (uint8_t)s.session_tag;
@@ -462,6 +472,83 @@ static void test_contract_reengage_bounded_by_newest_envelope(void)
     CHECK(C.arb.accepted_Nm == 0.0f);
 }
 
+/* ---- transport independence ------------------------------------------- */
+#include "semmc/mc_crc.h"
+
+/* Copy of the synthetic blob with one parameter changed (CRC recomputed). */
+static size_t patched_blob(uint8_t *dst, uint16_t id, float v)
+{
+    memcpy(dst, g_blob, g_len);
+    for (size_t off = 32u; off + 8u <= g_len - 4u; off += 8u) {
+        const uint16_t eid = (uint16_t)(dst[off] | (dst[off + 1u] << 8));
+        if (eid == id) memcpy(&dst[off + 4u], &v, sizeof v); /* little-endian host */
+    }
+    const uint32_t crc = mc_crc32(dst, g_len - 4u);
+    for (unsigned k = 0; k < 4u; k++) dst[g_len - 4u + k] = (uint8_t)(crc >> (8u * k));
+    return g_len;
+}
+
+static void test_can_binding_relocates_block(void)
+{
+    static uint8_t blob[8192];
+    const size_t n = patched_blob(blob, MC_P_SUPERVISION_CAN_ID_BASE, 1280.0f); /* 0x500 */
+    sim_init_blob(MC_BUILD_HOST_SIM, blob, n);
+    CHECK(C.config_ok);
+    CHECK_EQ_INT((int)mc_can_id_base(&C), 0x500);
+    /* the protocol default identifiers are foreign on this bus */
+    uint8_t b[8];
+    semmc_sup_hello_t h = {1u, 1u, 0u, 1u, SUP_SESSION};
+    (void)semmc_encode_sup_hello(&h, b);
+    const uint32_t unknown = C.can.rx_unknown;
+    mc_core_on_can_rx(&C, T, SEMMC_ID_SUP_HELLO, b, 8u);
+    CHECK(C.can.rx_unknown == unknown + 1u);
+    CHECK(!C.sess.hello_seen);
+    /* every transmitted identifier lies in the relocated block */
+    uint32_t id;
+    uint8_t d[8];
+    int n_tx = 0;
+    while (mc_core_can_tx_poll(&C, T, &id, d)) {
+        CHECK(id >= 0x500u && id <= 0x53Fu);
+        n_tx++;
+    }
+    CHECK(n_tx > 0);
+    /* a complete ECO engagement over the relocated block */
+    SUP_BASE = 0x500u;
+    arm();
+    SUP_ON = true;
+    run_ms(300);
+    CHECK(C.sess.established);
+    SI.driver.mode_eco = true;
+    run_ms(20);
+    CHECK_EQ_INT(C.sm.state, MC_ST_ECO_ASSIST);
+    run_ms(300);
+    CHECK_NEAR(C.arb.accepted_Nm, 1.0f, 1e-3f);
+}
+
+static void test_core_message_interface_is_transport_neutral(void)
+{
+    /* Canonical message numbers in and out, whatever CAN block the calibration selects. */
+    static uint8_t blob[8192];
+    const size_t n = patched_blob(blob, MC_P_SUPERVISION_CAN_ID_BASE, 1280.0f);
+    sim_init_blob(MC_BUILD_HOST_SIM, blob, n);
+    uint8_t b[8];
+    semmc_sup_hello_t h = {1u, 1u, 0u, 1u, SUP_SESSION};
+    (void)semmc_encode_sup_hello(&h, b);
+    mc_core_on_msg_rx(&C, T, SEMMC_ID_SUP_HELLO, b, 8u);
+    CHECK(C.sess.hello_seen);
+    uint32_t id;
+    uint8_t d[8];
+    int n_tx = 0;
+    while (mc_core_msg_tx_poll(&C, T, &id, d)) {
+        CHECK(id >= MC_PROTO_MSG_FIRST && id < MC_PROTO_MSG_FIRST + MC_PROTO_MSG_SPAN);
+        n_tx++;
+    }
+    CHECK(n_tx > 0);
+    mc_core_on_link_state(&C, true); /* link loss: nothing is sent, the session ends */
+    CHECK(!mc_core_msg_tx_poll(&C, T, &id, d));
+    CHECK(!C.sess.hello_seen);
+}
+
 int main(void)
 {
     g_len = load_blob(SEMMC_SYNTH_BLOB, g_blob, sizeof g_blob);
@@ -480,5 +567,7 @@ int main(void)
     RUN(test_contract_limits_refresh_keeps_previous_set);
     RUN(test_contract_reordered_request_ignored);
     RUN(test_contract_reengage_bounded_by_newest_envelope);
+    RUN(test_can_binding_relocates_block);
+    RUN(test_core_message_interface_is_transport_neutral);
     TEST_MAIN_END();
 }

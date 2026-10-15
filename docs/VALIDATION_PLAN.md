@@ -12,14 +12,25 @@
 
 ## 2. Hardware validation stages (each gate needs the previous one passed and recorded)
 
+**Four different quantities, never substituted for one another (v0.3):**
+
+| Quantity | What it is | Evidence that can establish it |
+|---|---|---|
+| Command-ceiling compliance | the accepted torque **command** never exceeds the controller's hard ceiling (L2) | host tests and the contract report (`docs/generated/control_contract_before_after.md`); on hardware, `ctrl_cmd_trace` |
+| Supervisory envelope ramp compliance | above a supervisory envelope (L3), the command falls at no less than `slew_down_fast`, so it is at or below the envelope within `max_motor_torque / slew_down_fast` (≤ `supervision.timeout_s`, rule 38) | same as above; every statement of "zero envelope violations" must quote the ramp rate and the deadline it was checked against |
+| Physical phase-current response | the measured phase current follows the reference and stays within `max_phase_current_A` and the hardware trip, including transients | **bench only**: current probe on phase leads, current-loop step tests (stages 4–5) |
+| Battery-input current | the DC current drawn from the supply or battery | supply readout, INA228, series DMM (stages 2–6) |
+
+A bench-supply current limit bounds only the battery-input current; it does not establish a phase-current limit (`hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`, which also covers DC-link stored energy and body-diode regeneration).
+
 | Stage | Purpose | Entry criteria | Key checks | Exit evidence |
 |---|---|---|---|---|
 | 0. Design review | schematic/layout review against `hardware/review/REVIEW_CHECKLIST.md` | all UNFROZEN items decided from measurements | creepage, current paths, thermal, protection independence, "SEM" etch | signed review |
 | 1. Unpowered inspection | assembly quality | bare board + assembled | visual, continuity, shorts between rails and to the power plane, gate–source resistances, shunt values | photos + measured table |
 | 2. Logic-only | MCU, rails, comms | current-limited **logic supply only**, no power-stage bus | rail voltages and quiescent currents (feeds H6), SWD, CAN loopback with the companion, blob load + hw validation, self-test path, watchdog trip disables driver ENABLE | logs |
 | 3. Gates, power stage disabled | PWM and driver | bus not connected | gate waveforms per phase, dead time measured at the gate, break input (BKIN) latency, driver SPI config readback, nFAULT behaviour | scope captures |
-| 4. Low-energy switching | first energized switching | **current-limited bench supply**, low voltage, resistive/inductive dummy load, double-pulse fixture | overshoot at the switch node and bus (sets `transient_margin_fraction`), hardware overcurrent trip threshold and latency, current-sense offset/gain calibration, precharge timing | measured margins replace synthetic ones |
-| 5. Motor at limited current | commissioning | motor on a stand, wheel free, current limit low | hall table and offset, Rs/L/λ measurement, current-loop step response, fault injection on the bench (hall disconnect, phase-sense loss) | `vehicle.<name>.yaml` with `provenance: bench_measured` |
+| 4. Low-energy switching | first energized switching | **current-limited bench supply (battery-input limit) and a separately set and probed phase-current limit**, low voltage, resistive/inductive dummy load, double-pulse fixture | overshoot at the switch node and bus (sets `transient_margin_fraction`), hardware overcurrent trip threshold and latency, current-sense offset/gain calibration, precharge timing | measured margins replace synthetic ones |
+| 5. Motor at limited current | commissioning | motor on a stand, wheel free; battery-input and phase-current limits both low and both verified; speed below the body-diode rectification speed | hall table and offset, Rs/L/λ measurement, current-loop step response, fault injection on the bench (hall disconnect, phase-sense loss) | `vehicle.<name>.yaml` with `provenance: bench_measured` |
 | 6. Loaded thermal and efficiency | maps and limits | dynamometer or loaded stand | battery-side power map P_batt(ω, T, V, θ), thermal derating curves, INA228 vs reference meter, ripple vs PWM frequency (H1), dead time (H2), coast consumption (H3) | measured loss map (`MeasuredLossMap` CSV) |
 | 7. Shutdown and fault behaviour | protection independence | stage 6 passed | e-stop isolation with the controller powered, dead-man, brake override, bus-off, companion disconnect, controller reset mid-request (repeat the host fault list on hardware) | test record |
 | 8. Vehicle integration and supervised track tests | in-vehicle | stage 7 passed; organizer and team safety process | manual first; ECO only after the hazard/latency analysis replaces provisional timing; CSIA in shadow | run logs |
