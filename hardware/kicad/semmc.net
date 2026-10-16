@@ -1,7 +1,7 @@
 (export (version "E")
   (design
-    (source "/home/user/swort/sem-motor-controller/hardware/kicad/semmc.kicad_sch")
-    (date "Thu Oct 15 02:45:40 2026")
+    (source "hardware/kicad/semmc.kicad_sch")
+    (date "2026-10-15")
     (tool "Eeschema 7.0.11+dfsg-1build4")
     (sheet (number "1") (name "/") (tstamps "/")
       (title_block
@@ -3639,7 +3639,7 @@
         (pin (num "3") (name "OUT") (type "passive")))))
   (libraries
     (library (logical "semmc")
-      (uri "/home/user/swort/sem-motor-controller/hardware/kicad/semmc.kicad_sym")))
+      (uri "hardware/kicad/semmc.kicad_sym")))
   (nets
     (net (code "1") (name "+3V3")
       (node (ref "C1102") (pin "1") (pintype "passive"))

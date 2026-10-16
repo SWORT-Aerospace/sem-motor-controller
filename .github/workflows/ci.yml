@@ -1,9 +1,9 @@
-# CI for sem-motor-controller. NOTE: GitHub only runs workflows from a
-# repository ROOT. While this project lives in a subdirectory of another
-# repository this file is inert; it becomes active once the directory is
-# split into its own repository (ADR-0001).
+# CI for sem-motor-controller (repository root of SWORT-Aerospace/sem-motor-controller).
+# Host tests only: nothing here touches hardware.
 name: ci
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   host:
     runs-on: ubuntu-24.04
@@ -13,13 +13,19 @@ jobs:
         with:
           python-version: "3.13"
       - name: Toolchain
-        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi
+        # kicad + kicad-symbols: the schematic connectivity gate needs kicad-cli and the symbol library;
+        # without them tests/hardware skips that gate instead of running it.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi kicad kicad-symbols
+          kicad-cli version
       - name: Python deps (pinned)
         run: pip install -r requirements.txt
       - name: Generated files are current
         run: |
           python tools/gen_config.py --check
           python tools/gen_protocol.py --check
+          python tools/gen_dbc.py --check
       - name: Fetch pinned CSIA core
         run: python tools/fetch_csia.py
       - name: Configs validate as expected
@@ -31,8 +37,14 @@ jobs:
           cmake -S firmware -B build -G Ninja
           cmake --build build
           ctest --test-dir build --output-on-failure
+      - name: Schematic connectivity gate (KiCad netlist vs intended nets; not an ERC)
+        run: |
+          python tools/gen_kicad_schematic.py --check
+          # the committed schematic, symbols and draft BOM must equal the generator's output
+          # (semmc.net is excluded: it embeds an export date and an absolute path)
+          git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'
       - name: Python tests
-        run: python -m pytest
+        run: python -m pytest -rs
       - name: Portable core cross-compile (Cortex-M4F, compile check only)
         run: |
           cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_PORTABLE_ONLY=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
