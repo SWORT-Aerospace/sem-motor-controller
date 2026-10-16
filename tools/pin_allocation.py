@@ -47,7 +47,7 @@ REQUIRED = [
     ("PWM_C_HI", r"^TIM1_CH3$", None, "INHC"),
     ("PWM_C_LO", r"^TIM1_CH3N$", None, "INLC"),
     ("PWM_BREAK", r"^TIM1_BKIN$", None, "hardware trip input: gate-driver nFAULT (open drain, active low)"),
-    ("PWM_BREAK2", r"^TIM1_BKIN2$", None, "hardware trip input: independent bus/phase over-current comparator"),
+    ("PWM_BREAK2", r"^TIM1_BKIN2$", None, "hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option)"),
     # Phase currents: three DIFFERENT ADCs started by the same TIM1 trigger, so
     # the three samples are taken at the same instant (ADC1+ADC2 dual-
     # simultaneous injected, ADC3/4/5 injected on the same TIM1 TRGO2 edge).
