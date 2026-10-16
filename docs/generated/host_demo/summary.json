@@ -1,0 +1,111 @@
+{
+ "checks": [
+  {
+   "detail": "supervisor requests/s during flash stall [50], during LTE outage [50]; controller ECO_ASSIST in 2200/2200 steps of those windows",
+   "id": "control_unaffected_by_logging_and_lte",
+   "pass": true
+  },
+  {
+   "detail": "queue drops 396 (all during the flash stall), high water 512/512; records written 70506 = imported 70506; storage drops 0",
+   "id": "log_drops_counted_not_hidden",
+   "pass": true
+  },
+  {
+   "detail": "supervisor stopped at 45.00 s, ECO left at 45.10 s; supervisor back at 45.30 s, ECO re-entered at 46.00 s after the driver's re-selection at 46.00 s",
+   "id": "supervisor_loss_exits_eco_by_timeout_no_silent_resume",
+   "pass": true
+  },
+  {
+   "detail": "brake at 95.00 s, ECO left at 95.00 s; max accepted torque while braking 0.000 N*m over 200 steps; ECO again at 98.00 s after re-selection at 98.00 s",
+   "id": "brake_keeps_authority",
+   "pass": true
+  },
+  {
+   "detail": "blocks 282 ok / 0 corrupt, records 70506, bad-CRC frames 0; second import added 0 rows",
+   "id": "offline_import_complete_and_idempotent",
+   "pass": true
+  },
+  {
+   "detail": "published 240, stored 228 (30 replayed after the outage), rejected 2 {'not JSON (JSONDecodeError)': 1, 'ctrl.vbus_V=9999.0 outside [0.0, 100.0]': 1}, dropped on the car 10 (expected 10); every sequence number accounted for: True",
+   "id": "live_path_validated_and_accounted",
+   "pass": true
+  },
+  {
+   "detail": "largest UTC error 0.72 us with PPS (60535 records); 7.4 us in holdover (9971 records, GNSS outage 15 s, bound 50 ppm x age)",
+   "id": "utc_alignment_with_quality",
+   "pass": true
+  },
+  {
+   "detail": "controller input energy (bus shunt) 5.805 kJ vs simulated battery-terminal energy 5.797 kJ: 0.139 % apart; integrated 120.00 s, gap 0.00 s (last ctrl_energy_quality before the end of the run)",
+   "id": "energy_boundary_and_gaps_reported",
+   "pass": true
+  },
+  {
+   "detail": "1200 ticks; wheel_l fault detected after 0.1 s",
+   "id": "pit_csia_replay_runs",
+   "pass": true
+  }
+ ],
+ "controller_summary": "config_ok=1 events=18594 final_state=READY energy_ctrl_J=5805.352 energy_plant_J=5797.363 tx_frames=47292 rx_frames=6583 rx_crc_fail=0 rx_tag_mismatch=0",
+ "counters": {
+  "log_dropped_queue": 396,
+  "log_dropped_storage": 0,
+  "log_records": 70506,
+  "queue_high_water": 512,
+  "rx_frames": 47292,
+  "supervisor_overruns": 30,
+  "uplink_dropped": 10,
+  "uplink_sent": 230
+ },
+ "csia": {
+  "csia_version": "0.8.0",
+  "detect_latency_s": 0.09662725160191599,
+  "peak_traced_kib": 1785.0,
+  "relationship_failures_outside_fault_window": {
+   "E6_power_balance": 507
+  },
+  "tick_ms_max": 5.203611000069941,
+  "tick_ms_mean": 2.095196176672592,
+  "tick_ms_p99": 3.6799219997192267,
+  "ticks": 1200,
+  "ticks_ambiguous": 530,
+  "ticks_unobservable": 5,
+  "ticks_with_other_suspects": 65
+ },
+ "duration_s": 120.0,
+ "import": {
+  "block_seq_gaps": 0,
+  "blocks_corrupt": 0,
+  "blocks_ok": 282,
+  "frames_bad_crc": 0,
+  "new_records": 70506,
+  "records": 70506,
+  "run_id": "HOSTSIM-0001",
+  "truncated_tail_bytes": 0,
+  "utc_quality": {
+   "holdover": 9971,
+   "pps": 60535
+  }
+ },
+ "kind": "HOST SIMULATION",
+ "live": {
+  "duplicates": 0,
+  "messages": 230,
+  "reasons": {
+   "ctrl.vbus_V=9999.0 outside [0.0, 100.0]": 1,
+   "not JSON (JSONDecodeError)": 1
+  },
+  "rejected": 2,
+  "replayed_stored": 30,
+  "stored": 228
+ },
+ "reimport_new_records": 0,
+ "repo_commit": "0b40193e2d5a8ec68a0d8dc551ad8962d1a7accf",
+ "run_id": "HOSTSIM-0001",
+ "storage": {
+  "bytes_per_s": 9571.016666666666,
+  "log_bytes": 1148522,
+  "minutes_to_fill_8MB": 14.607657493718014
+ },
+ "working_tree_dirty": true
+}
