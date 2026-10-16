@@ -64,7 +64,9 @@ battery:
   bms_peak_discharge_current_A: null
   bms_peak_duration_s: null
   bms_max_charge_current_A: null
-  notes: null
+  # team message 2026-10-16: 48 V nominal, 10 Ah rated (not datasheet-verified; docs/BATTERY.md).
+  # Kept out of the fields above, which take verified or measured values only.
+  notes: "team-reported 48 V nominal, 10 Ah rated (~480 Wh nominal, not measured usable); pending datasheet"
 
 vehicle:
   category: null             # UNKNOWN: not stated in the telematics proposal v0.1; Cornell repos (reference project) target Urban Concept

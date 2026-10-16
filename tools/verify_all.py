@@ -73,6 +73,7 @@ CHECKS = [
     ("policy_comparison", "studies", [PY, "tools/run_policy_comparison.py", "--duration", "300"], "zero",
      r"^(speed hold|pulse).*", 1800, True),
     ("csia_eval_v1_rerun", "studies", [PY, "tools/run_csia_evaluation.py"], "zero", r".+", 7200, True),
+    ("wheel_sensor_check", "hardware", [PY, "tools/wheel_sensor_check.py", "--check"], "zero", r".+", 120, False),
     ("kicad_connectivity", "hardware", [PY, "tools/gen_kicad_schematic.py", "--check"], "zero",
      r"\* problems: \d+|\* intended nets.*", 1200, False),
     ("kicad_drift", "hardware", ["git", "diff", "--exit-code", "--stat", "--", "hardware/kicad",

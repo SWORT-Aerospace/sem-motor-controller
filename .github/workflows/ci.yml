@@ -28,6 +28,7 @@ jobs:
           python tools/gen_config.py --check
           python tools/gen_protocol.py --check
           python tools/gen_dbc.py --check
+          python tools/wheel_sensor_check.py --check
       - name: Fetch pinned CSIA core
         run: python tools/fetch_csia.py
       - name: Configs validate as expected
