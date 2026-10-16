@@ -41,6 +41,22 @@ K = {
 }
 
 
+def _load_config_values() -> None:
+    """[C] entries come from the configuration, so the budget cannot drift from it."""
+    import yaml
+    cfg = yaml.safe_load((ROOT / "config" / "vehicle.synthetic.yaml").read_text())
+    for key, (_val, tag, path) in list(K.items()):
+        if tag != "C":
+            continue
+        node = cfg
+        for part in path.split(" ")[0].split("."):
+            node = node[part]
+        K[key] = (float(node), tag, path)
+
+
+_load_config_values()
+
+
 def v(k):
     return K[k][0]
 

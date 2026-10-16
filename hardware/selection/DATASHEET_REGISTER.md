@@ -28,4 +28,4 @@ When filling the table, every value must be marked **AMR** (absolute maximum rat
   * `STMicroelectronics/STM32_open_pin_data@7d1f151` (pin database).
   * `kicad-symbols@cf07d539` on GitLab (INA228 pin numbers).
 * **Conflicts found** between ST HAL comments and recalled DS12288 values: the PLL VCO input range (2.66–8 vs 2.66–16 MHz), the VCO output range (64–344 vs 96–344 MHz), and an unexplained "FDCAN (≤ 48 MHz)" note. The narrower values are used until DS12288 resolves them.
-* Fastest path: attach the PDFs to the session (DS12288, RM0440, DRV8353 SLVSDY6, INA228, TJA1051, LM5164, TLV755P, MAX6369). Each row above then gets its revision and page numbers.
+* Fastest path: add the PDFs under `docs/reference/datasheets/` (DS12288, RM0440, DRV8353 SLVSDY6, INA228, TJA1051, LM5164, TLV755P, MAX6369). Each row above then gets its revision and page numbers.

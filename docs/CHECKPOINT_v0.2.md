@@ -20,7 +20,7 @@ Nothing was purchased, fabricated, published or energized. Every result below co
 | Changed files | 119 under `sem-motor-controller/` (71 added, 48 modified), including this checkpoint: [`generated/changed_files_v0.2.txt`](generated/changed_files_v0.2.txt). Nothing outside `sem-motor-controller/` changed. |
 | Dedicated repository `SWORT-Aerospace/sem-motor-controller` | **NOT created.** The GitHub integration answered `403 Resource not accessible by integration` to repository creation in the organisation, and `add_repo` reports no such repository. A history-preserving export has been prepared (§9). |
 
-## 2. Tests executed (this session, x86-64 host) and results
+## 2. Tests executed (v0.2, x86-64 host) and results
 | Command | Result |
 |---|---|
 | `cmake -S firmware -B build -G Ninja && cmake --build build && ctest --test-dir build` | **6/6 suites, 3,962 checks, 0 failures**, 0 warnings (`-Werror` set, ASan+UBSan) |
@@ -103,7 +103,7 @@ Goal: the vehicle motor (or a spare BLDC) turning on a stand in MANUAL, current 
 
 | Step | Owner | Depends on | Estimate (calendar, unverified) |
 |---|---|---|---|
-| 1. Inputs M1, M2, B1, B2, T1, T3 | vehicle team | — | days |
+| 1. Inputs M1, M2, B1, B2, T1, T3 | vehicle team | n/a | days |
 | 2. Fix the power stage: pick parts in the representative class (ratings from step 1); fill the datasheet-register rows; finish the UNRESOLVED values; replace placeholder pinouts | this project | 1, and readable datasheets (the user can supply the PDFs) | 2–4 days |
 | 3. STM32G4 platform layer (clock 40 MHz, TIM1 + break, ADC1/2/3, SPI DRV8353, FDCAN FD mode, inputs, watchdog, DWT), register-level with CMSIS | this project | CMSIS device headers (BSD-3) and the rules answer R2 | 1–2 weeks, **in parallel with 2–5** |
 | 4. PCB layout (4-layer, "SEM" etch), review against `REVIEW_CHECKLIST.md`, live quotes, `price_bom.py` re-run, team approves the purchase | this project + team | 2 | 1–2 weeks |
@@ -123,7 +123,7 @@ Critical path after the inputs arrive: about 5–8 weeks (estimate). A faster op
 
 ## 9. Repository extraction (prepared, not pushed)
 * `git subtree split --prefix sem-motor-controller` produces the project's history as a standalone branch: `semmc-export` in the local clone.
-* The split is deterministic: anyone with this branch can regenerate the same history with `git subtree split --prefix sem-motor-controller -b semmc-export`. A git bundle made in this session lived only in the session's temporary storage, so the branch on GitHub is the durable source.
+* The split is deterministic: anyone with this branch can regenerate the same history with `git subtree split --prefix sem-motor-controller -b semmc-export`. A git bundle made during v0.2 lived only in temporary storage, so the branch on GitHub is the durable source.
 * Once `SWORT-Aerospace/sem-motor-controller` exists (created by an organisation owner, or once the integration is granted repository-creation rights), push the branch with:
 ```
 git push https://github.com/SWORT-Aerospace/sem-motor-controller.git semmc-export:main

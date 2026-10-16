@@ -17,6 +17,15 @@ if [[ -z "$ver" || "$major" -lt 8 ]]; then
   exit 2
 fi
 echo "KiCad $ver"
+# A fresh KiCad install has no global symbol library table, and ERC then reports every
+# standard symbol as "library not in the configuration". Install KiCad's own default table,
+# only when none exists (never overwrite a user's configuration).
+cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/kicad/${major}.0"
+if [[ ! -f "$cfg_dir/sym-lib-table" && -f /usr/share/kicad/template/sym-lib-table ]]; then
+  mkdir -p "$cfg_dir"
+  cp /usr/share/kicad/template/sym-lib-table "$cfg_dir/sym-lib-table"
+  echo "installed KiCad's default global sym-lib-table into $cfg_dir"
+fi
 kicad-cli sch erc --severity-all --units mm --format report --output hardware/kicad/ERC_REPORT.rpt "$SCH" || true
 kicad-cli sch erc --severity-all --units mm --format json --output hardware/kicad/ERC_REPORT.json "$SCH" 2>/dev/null || true
 grep -E "^\*\* ERC messages|^ \*\* ERC messages|errors|warnings" hardware/kicad/ERC_REPORT.rpt | tail -3 || true

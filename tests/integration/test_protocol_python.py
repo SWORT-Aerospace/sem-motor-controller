@@ -67,6 +67,21 @@ def test_hand_calculated_sup_torque_req():
     assert proto.MESSAGES["sup_torque_req"]["data_id"] == 0x0B08
 
 
+def test_hand_calculated_ctrl_energy_quality():
+    """Protocol 1.1 additive message, byte by byte from protocol.yaml.
+
+    ctrl_energy_quality id 0x323, major 1 => DataID = (1 << 11) | 0x323 = 0x0B23.
+    seq=14, integrated_s=1234.56 s => raw 123456 = 0x01E240 -> 40 E2 01 (bits 16..39)
+                gap_s=0.3 s         => raw 30     = 0x00001E -> 1E 00 00 (bits 40..63)
+    """
+    payload = bytes([0x0E, 0x40, 0xE2, 0x01, 0x1E, 0x00, 0x00])
+    crc = _crc8_bitwise_reference(bytes([0x23, 0x0B]) + payload)
+    data, _, _ = proto.encode("ctrl_energy_quality", {"integrated_s": 1234.56, "gap_s": 0.3}, 14)
+    assert data == bytes([crc]) + payload
+    assert proto.MESSAGES["ctrl_energy_quality"]["data_id"] == 0x0B23
+    assert proto.PROTOCOL_MINOR == 1
+
+
 def test_hand_calculated_negative_and_wrap():
     """torque -0.5 N*m => raw -250 => 0xFF06 two's complement => 06 FF; seq 255."""
     data, _, _ = proto.encode("sup_torque_req", {"session_tag": 1, "limits_ref": 15, "coast_request": True,

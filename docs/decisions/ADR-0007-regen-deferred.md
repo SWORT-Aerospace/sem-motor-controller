@@ -1,4 +1,4 @@
-# ADR-0007 — Deferred features
+# ADR-0007: Deferred features
 
 Active regeneration (`limits.regen_enabled` must be false; validator rule `REGEN_DEFERRED`), field weakening, variable switching frequency, discontinuous PWM, MTPA, and online parameter adaptation are deferred until their baseline benefit **and** hazards are measured. Reasons:
 * Regenerative braking legality is not established (no rule found; a 2025 clause gives no credit for negative net energy).

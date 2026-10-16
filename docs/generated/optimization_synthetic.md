@@ -45,9 +45,9 @@ Relative change in DP energy between the two finest grids: 0.13 %. Comparisons b
 | dp_propulsion_coast_brake | 42684 | 967.7 | 7324 | 2903 | 3.90 | 0 (0.00) | 8 | 30 | 0.00 | `{"ds_m": 5.0, "dv_mps": 0.1, "policy": "propulsion_coast_brake", "plan_margin_mps": 0.3, "plan_internal_target_s": 961.5}` |
 | constant_speed_driver_brake | 54541 | 970.0 | 12484 | 2910 | 6.06 | 0 (0.00) | 12 | 13 | -0.00 | `{"v_set_mps": 6.057}` |
 | pulse_and_coast_driver_brake | 52473 | 969.5 | 12356 | 2909 | 6.15 | 0 (0.00) | 15 | 104 | 0.00 | `{"band_center_mps": 6.063, "band_width_mps": 0.5, "pulse_torque_Nm": 1.0}` |
-| dp_torque_only | — | **infeasible** | | | | | | | | no feasible path for this actuator set; coasting alone cannot meet the downstream corner limit from s = 700 m (gravity/descent accelerates the vehicle above the limit even from rest) |
-| constant_speed_torque_only | — | **infeasible** | | | | | | | | no coast envelope exists (see DP torque-only) |
-| pulse_and_coast_torque_only | — | **infeasible** | | | | | | | | no coast envelope exists (see DP torque-only) |
+| dp_torque_only | n/a | **infeasible** | | | | | | | | no feasible path for this actuator set; coasting alone cannot meet the downstream corner limit from s = 700 m (gravity/descent accelerates the vehicle above the limit even from rest) |
+| constant_speed_torque_only | n/a | **infeasible** | | | | | | | | no coast envelope exists (see DP torque-only) |
+| pulse_and_coast_torque_only | n/a | **infeasible** | | | | | | | | no coast envelope exists (see DP torque-only) |
 
 **Torque-only on track A is physically infeasible.** Coasting from rest at 700 m (top of the 1 % descent) reaches 5.99 m/s at the R = 20 m corner, where the limit is 5.48 m/s. No torque schedule can fix that. Meeting that corner needs braking: the driver's friction brake in the first vehicle version, or regeneration later (deferred, ADR-0007). The DP reports this; it does not brake silently.
 

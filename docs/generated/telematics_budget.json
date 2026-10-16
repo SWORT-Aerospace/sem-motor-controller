@@ -1,26 +1,26 @@
 {
  "frames_per_s": {
-  "controller": 384.0,
+  "controller": 394.0,
   "supervisor": 72.0,
   "others_low": 30,
   "others_high": 200
  },
  "logging": {
   "semmc frames only (controller + supervisor), full rate": {
-   "bytes_per_s": 7296.0,
-   "flash_s": 1034.778947368421
+   "bytes_per_s": 7456.0,
+   "flash_s": 1012.5733905579399
   },
   "all CAN at full rate + direct sensors, LOW node rates": {
-   "bytes_per_s": 8608.0,
-   "flash_s": 877.0617100371747
+   "bytes_per_s": 8768.0,
+   "flash_s": 861.0569343065694
   },
   "all CAN at full rate + direct sensors, HIGH node rates": {
-   "bytes_per_s": 14016.0,
-   "flash_s": 538.6520547945206
+   "bytes_per_s": 14176.0,
+   "flash_s": 532.572460496614
   },
   "semmc decimated to <= 10 Hz + others LOW + direct LOW": {
-   "bytes_per_s": 3168.0,
-   "flash_s": 2383.1272727272726
+   "bytes_per_s": 3328.0,
+   "flash_s": 2268.5538461538463
   }
  },
  "lte_bytes_per_s": {

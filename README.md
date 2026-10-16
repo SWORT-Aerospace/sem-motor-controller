@@ -1,57 +1,82 @@
 # sem-motor-controller
 
-Purpose-built, telemetry-informed motor controller for a Shell Eco-marathon battery-electric vehicle: power-stage planning, controller firmware core, CAN contract, supervisory energy strategy, and a CSIA vehicle consistency monitor in shadow mode.
+Motor controller, supervisory energy strategy and vehicle data chain for a Shell Eco-marathon battery-electric vehicle. Goal: lower energy per attempt within the event's constraints, on a budget of roughly $500 to $1,000, with the vehicle team doing assembly and testing.
 
-## Status (truthful labels, v0.3: [REVIEW_v0.3](docs/REVIEW_v0.3.md); v0.2: [CHECKPOINT_v0.2](docs/CHECKPOINT_v0.2.md))
+**State at v0.4: a host-verified software stack and a draft schematic. Nothing has been built, energised or tested on the vehicle.** "Works" below always names the environment in which it was shown.
 
-| | |
+## What works, and where it was shown
+
+| Item | Shown in | Evidence |
+|---|---|---|
+| Controller core (C11): four-layer torque contract, state machine, freshness and session rules, FOC, protection, energy at the controller input | x86-64 host build with ASan/UBSan; GitHub-hosted CI | `ctest` (8 entries: 7 test programs, the randomised property test also at 24 × 12 s); soaks of 100 × 30 s and 300 × 30 s simulated driving with 0 failures (`docs/generated/property_soak.md`) |
+| Same core, portable build | arm-none-eabi-gcc for Cortex-M4F (compile only) | 0 soft-float double calls in the fast step; not run on a target |
+| CAN protocol 1.1 (16 messages), C and Python codecs, DBC | host | golden vectors, hand-computed frames, bus load 12.6 % at 500 kbit/s |
+| Telematics node, local log (STLG), LTE/MQTT uplink, pit ingestion into SQLite, offline import, pit-side CSIA replay | host simulation | `python3 tools/run_host_demo.py`: 9 checks, all pass (`docs/generated/host_demo/summary.md`) |
+| Energy optimisation (spatial DP), strategies, policy comparison | synthetic models and host plant | `docs/generated/optimization_synthetic.md`, `docs/generated/policy_comparison_host.md` |
+| CSIA monitor evaluation (protocol v2, frozen before data) | synthetic, untouched set, run once | `docs/csia/EVALUATION_RESULTS_v2.md`: the simpler majority-vote monitor (R3v) is retained |
+| Draft schematic (12 sheets) | KiCad 7 netlist + KiCad 8.0.9 ERC in CI | connectivity 0 problems; ERC 0 errors, 9 library-version warnings; protection topology and cross-artefact checks 14 PASS, 0 FAIL, 4 OPEN (`hardware/review/CONSISTENCY_CHECK.md`) |
+
+A passing host simulation is not a working vehicle controller. The STM32G4 platform layer (timers, ADC, CAN driver, precharge logic) and the telematics firmware are not implemented.
+
+## Reproduce
+
+Linux with gcc, cmake, ninja, Python 3.11+ (3.13 used), arm-none-eabi-gcc for the portable build, KiCad 7+ for the schematic check (8+ for ERC):
+
+```sh
+python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+python3 tools/verify_all.py --out build/verify          # every check below; record in build/verify/verification.md
+python3 tools/verify_all.py --out build/verify --full   # + full studies, frozen CSIA v1 re-run, 100 x 30 s soak, policy comparison
+```
+
+Single steps:
+```sh
+python3 tools/fetch_csia.py                                   # pinned CSIA core into .deps/
+cmake -S firmware -B build -G Ninja && cmake --build build && ctest --test-dir build
+python3 -m pytest
+python3 tools/run_host_demo.py --out build/host_demo          # end-to-end host demonstration
+python3 tools/hw_consistency.py                               # protection topology, pins, BOM, rails
+bash tools/run_kicad_erc.sh                                   # real ERC; needs KiCad 8+
+```
+
+The last full verification record, with the exact commit and every command, is `docs/generated/verification/verification.md`.
+
+## What passes, fails, is simulated or needs measurement
+
+`docs/VERIFICATION_REPORT.md` is the authoritative list: the baseline reproduction of the starting commit, the discrepancy list (reproduced; failing; simulated only; proposed but not implemented; blocked by physical inputs), every defect fixed in v0.4 with the test that first reproduced it, and CI results.
+
+## Documents
+
+| Topic | Document |
 |---|---|
-| **CONTROL CONTRACT CORRECTED** | four layers (hardware shutdown, inhibits, hard ceilings, supervisory envelopes, comfort slew), host-verified ([CONTROL_CONTRACT](docs/CONTROL_CONTRACT.md), ADR-0011) |
-| **HOST IMPLEMENTATION VERIFIED** | C11 core (transport-neutral; CAN is one binding) + codecs + host co-simulation, tested on a host with a **synthetic** plant |
-| **VEHICLE INTERFACE UNKNOWN** | no interface fact about our vehicle is confirmed; Cornell repos are reference projects only; the telematics proposal (CAN 2.0B, STM32U575, LTE/MQTT) is a design input ([PROVENANCE_AUDIT](docs/PROVENANCE_AUDIT.md), [COMBINED_ARCHITECTURE](docs/COMBINED_ARCHITECTURE.md)) |
-| **FUNCTIONAL HARDWARE ARCHITECTURE v0.2 DRAFT** | block diagram, 12-sheet KiCad schematic (connectivity-checked, no ERC), timing, protection truth table, priced BOM ([HARDWARE_ARCHITECTURE](docs/HARDWARE_ARCHITECTURE.md)) |
-| **NOT HARDWARE-FROZEN** | component selection blocked by: unknown motor (type, currents, pole pairs, R, L, λ, halls), battery and BMS (voltage range, limits), drivetrain, driver controls, rules edition; no primary datasheet read ([input sheet](docs/VEHICLE_TEAM_INPUT_SHEET.md)) |
-| **NOT FABRICATION-READY** | no footprints, no layout, no fabrication outputs, by design; DRV8353S pinout a placeholder; crystal unselected; KiCad ERC not run; nothing has been energized |
-| **NOT VEHICLE-VALIDATED** | every result comes from synthetic models or host tests |
-| **BUDGET NOT SHOWN FEASIBLE** | every scenario straddles its limit ([BUDGET](docs/BUDGET.md)) |
+| Interfaces (authoritative) | [`docs/ICD.md`](docs/ICD.md) v1.0 |
+| Mathematics, tied to code and tests | [`docs/MATH_SPEC.md`](docs/MATH_SPEC.md) |
+| Method selection and sources read | [`docs/METHOD_SELECTION.md`](docs/METHOD_SELECTION.md) |
+| Verification report | [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md) |
+| Control contract | [`docs/CONTROL_CONTRACT.md`](docs/CONTROL_CONTRACT.md) |
+| CSIA v2 protocol and results | [`docs/csia/EVALUATION_PROTOCOL_v2.md`](docs/csia/EVALUATION_PROTOCOL_v2.md), [`docs/csia/EVALUATION_RESULTS_v2.md`](docs/csia/EVALUATION_RESULTS_v2.md) |
+| Hardware status, BOM and budget | [`docs/HARDWARE_ARCHITECTURE.md`](docs/HARDWARE_ARCHITECTURE.md), [`hardware/bom/README.md`](hardware/bom/README.md), [`docs/BUDGET.md`](docs/BUDGET.md) |
+| Inputs needed from the team (prioritised) | [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md) |
+| Validation plan and bench bring-up | [`docs/VALIDATION_PLAN.md`](docs/VALIDATION_PLAN.md), [`hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`](hardware/bringup/BENCH_BRINGUP_CHECKLIST.md) |
+| Decisions | [`docs/decisions/`](docs/decisions/) (ADR-0001 to ADR-0012) |
+| Earlier releases (records) | [`docs/REVIEW_v0.3.md`](docs/REVIEW_v0.3.md), [`docs/CHECKPOINT_v0.2.md`](docs/CHECKPOINT_v0.2.md), [`HANDOFF.md`](HANDOFF.md) (v0.1) |
 
-Passing host tests does **not** mean the controller is complete or safe to install.
+## Hardware status
+
+Draft only: no footprints, no layout, no fabrication outputs, no orders. Power-stage parts, connectors and ratings depend on the motor, battery, harness and rules and stay UNRESOLVED (42 BOM lines). The budget is not shown to be feasible until live quotes and those ratings close the price spread (`tools/price_bom.py`). No hardware freeze is claimed.
+
+## Inputs needed from the team
+
+The fifteen items of [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md). The first three decide the most: the motor's type and parameters, the battery and BMS limits, and a measured battery-power map near cruise with a coast-down (they decide between constant speed and pulse-and-coast). `telemetry.pdf` and `bk4000tg_kicad.zip` were referenced but not received.
 
 ## Layout
 ```
-config/      parameter registry, schema, real (unconfigured) and SYNTHETIC vehicle configs
-firmware/    portable C11 core (src/), public headers (include/semmc/), host platform + sim plant, STM32G4 notes, C tests
-protocol/    CAN schema (protocol.yaml), generated C/Python codecs, golden vectors
-host/        logger, companion supervisor + co-simulation, replay, CSIA vehicle adapter
-models/      vehicle longitudinal model, power maps, inverter calculations, DP optimiser, strategies
-hardware/    KiCad draft, BOM + pricing, calculations, timing, protection, selection register, bring-up, pin maps, review checklist
-tests/       integration, fault injection, simulation (pytest)
-tools/       generators, validators, studies, pin allocation, CSIA fetch
-docs/        source audit, requirements, open parameters, rules map, freeze, ADRs, ICD, validation, efficiency research, generated reports
+config/      parameter registry, schema, unconfigured hardware config, SYNTHETIC vehicle config
+firmware/    portable C11 core, public headers, host platform + simulated plant, STM32G4 notes, C tests
+protocol/    CAN schema (protocol.yaml), generated codecs, golden vectors, DBC
+host/        supervisor + co-simulation, telematics node model, pit ingestion, replay, CSIA adapters
+models/      vehicle and powertrain models, inverter losses, DP optimiser, strategies
+hardware/    KiCad draft, BOM and pricing, calculations, timing, protection, selection, bring-up, review
+tests/       integration, fault injection, simulation, hardware (pytest)
+tools/       generators, validators, studies, verification
+docs/        ICD, specifications, decisions, evaluations, generated reports
 ```
-
-## Reproduce (Linux; gcc, cmake, ninja, Python 3.11+)
-```sh
-python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-python3 tools/fetch_csia.py                       # pinned CSIA core into .deps/ (not vendored)
-cmake -S firmware -B build -G Ninja && cmake --build build && ctest --test-dir build
-python3 -m pytest                                 # builds ./build automatically if missing
-python3 host/replay/replay.py tests/simulation/replay_sample.semmc.log   # requested vs accepted + reasons
-python3 tools/run_optimization.py                 # SYNTHETIC DP study (~1.5 min)
-python3 tools/run_electrical_calcs.py             # SYNTHETIC electrical sensitivity
-python3 tools/run_csia_study.py                   # SYNTHETIC CSIA vs baselines
-python3 tools/config_tool.py validate config/vehicle.unconfigured.yaml --mode hw   # fails by design
-python3 tools/control_contract_report.py        # four-layer contract: before/after on 10 scenarios
-python3 tools/run_csia_evaluation.py             # CSIA on the HELD-OUT synthetic set (frozen harness)
-python3 tools/gen_kicad_schematic.py --check     # KiCad draft + connectivity check (kicad-cli 7; not an ERC)
-python3 tools/timing_budget.py && python3 tools/hardware_calcs.py && python3 tools/price_bom.py
-python3 tools/clock_tree.py                      # clock-tree alternatives and CAN bit timing per bus case (no crystal chosen)
-python3 tools/telematics_budget.py               # logging capacity, LTE volume, auxiliary power (assumption-tagged)
-python3 tools/gen_dbc.py --base 0x300            # DBC for other teams' CAN tools (block base = calibration)
-python3 tools/pin_type_check.py                  # pin-type rules on the KiCad netlist (NOT an ERC)
-tools/run_kicad_erc.sh                           # real KiCad ERC; needs KiCad 8 or newer
-```
-A hardware-enabled build (`-DSEMMC_HARDWARE_BUILD=ON`) refuses to configure until the hardware config validates, and there is no STM32 platform layer yet.
-
-## Start here
-[docs/REVIEW_v0.3.md](docs/REVIEW_v0.3.md) · [docs/PHYSICAL_TEAM_QUESTIONNAIRE.md](docs/PHYSICAL_TEAM_QUESTIONNAIRE.md) · [docs/MIGRATION.md](docs/MIGRATION.md) · [docs/CHECKPOINT_v0.2.md](docs/CHECKPOINT_v0.2.md) · [docs/VEHICLE_TEAM_INPUT_SHEET.md](docs/VEHICLE_TEAM_INPUT_SHEET.md) · [HANDOFF.md](HANDOFF.md) (v0.1) · [docs/ARCHITECTURE_FREEZE.md](docs/ARCHITECTURE_FREEZE.md) · [docs/OPEN_PARAMETERS.md](docs/OPEN_PARAMETERS.md)

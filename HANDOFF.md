@@ -1,4 +1,4 @@
-# Handoff — first milestone (2026-10-14)
+# Handoff: first milestone (2026-10-14)
 
 > **Current status is in [`docs/REVIEW_v0.3.md`](docs/REVIEW_v0.3.md) (v0.3) and [`docs/CHECKPOINT_v0.2.md`](docs/CHECKPOINT_v0.2.md) (v0.2, with errata) (2026-10-15).** This file is the v0.1 handoff and is kept as a historical record. Superseded by v0.2:
 > * the optimiser energies in §2 (39.7 / 46.2 / 55.1 kJ) and every v0.1 savings figure, which are **withdrawn**. The v0.1 model let gate-off coast brake implicitly, left an acceleration-clip residual, and checked corner limits at nodes only (`docs/EFFICIENCY_RESEARCH.md` §4);
@@ -12,7 +12,7 @@ The controller is not complete and not safe to install. Every test below ran on 
 
 ## 1. Implemented and verified on a host (actual commands, actual results)
 
-| Deliverable | Where | Verification run in this session |
+| Deliverable | Where | Verification run at v0.1 |
 |---|---|---|
 | Architecture freeze v0.1 + 10 ADRs | `docs/ARCHITECTURE_FREEZE.md`, `docs/decisions/` | review |
 | Source audit, requirements, open parameters, rules map | `docs/SOURCE_AUDIT.md`, `REQUIREMENTS.md`, `OPEN_PARAMETERS.md`, `RULES_COMPLIANCE.md` | review |
@@ -20,7 +20,7 @@ The controller is not complete and not safe to install. Every test below ran on 
 | Cortex-M4F portability (core only, not a firmware image) | `firmware/cmake/arm-none-eabi-cortex-m4f.cmake` | arm-none-eabi-gcc 13.2.1, 0 warnings, 29,806 B text; `mc_core_fast_step` makes no soft-double calls (objdump) |
 | Versioned CAN contract v1.0 + generated C/Python codecs + 18 golden vectors | `protocol/` | C golden check 0 failures (incl. every single-bit flip caught); Python roundtrip + independent hand-calculated bytes + bitwise reference CRC |
 | Config validation parity C ↔ Python | `tools/config_tool.py`, `mc_config.c` | 33 mutations × 2 modes, identical rule codes |
-| Hardware build fails closed | `firmware/CMakeLists.txt` | `-DSEMMC_HARDWARE_BUILD=ON` refuses to configure on the unconfigured config (`MISSING_REQUIRED`) and on the synthetic config (`PROVENANCE`) — tested |
+| Hardware build fails closed | `firmware/CMakeLists.txt` | `-DSEMMC_HARDWARE_BUILD=ON` refuses to configure on the unconfigured config (`MISSING_REQUIRED`) and on the synthetic config (`PROVENANCE`); tested |
 | Host replay (requested vs accepted + reason codes) | `host/replay/replay.py`, `tests/simulation/replay_sample.semmc.log` | duplicates and a late reordered frame ignored; stale gap → READY; new driver edge required; NaN request → READY; voltage sag → `CLAMP_DERATE`; brake → 0 |
 | End-to-end lockstep co-simulation: supervisor → Python encode → C decode → freshness → state machine → arbiter → FOC → plant → C encode → Python decode | `host/telemetry_adapter/{e2e,cosim,supervisor}.py` | 25 s run: ECO engages only after the driver edge, speed held at 6 m/s ± 0.5, ECO → READY 100 ms after the last new request, controller-vs-plant energy within 2 % |
 | Fault injection (21 scenarios) | `tests/fault_injection/` | all pass: gate-driver fault, HW OC, hall disconnect, stuck hall (stall check), two-phase sense loss, biased current visible in KCL, thermal derate → trip, temperature-sensor loss → bounded derate, Vbus NaN, hill/acceleration not a fault, brake override, invalid startup, synthetic config on a hardware build, fault recovery without resume, cached-sample replay, supervisor reboot, controller reboot, bus-off, reordered frames, malformed frames, NaN request |

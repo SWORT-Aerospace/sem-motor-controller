@@ -112,7 +112,7 @@ add_custom_target(semmc_cal_blobs ALL DEPENDS ${SEMMC_CAL_DIR}/synthetic.bin)
 
 # ---- unit tests ---------------------------------------------------------------
 enable_testing()
-set(SEMMC_TESTS test_control test_freshness test_config test_state_machine test_protocol test_core)
+set(SEMMC_TESTS test_control test_freshness test_config test_state_machine test_protocol test_core test_core_properties)
 foreach(t ${SEMMC_TESTS})
   add_executable(${t} tests/${t}.c)
   add_dependencies(${t} semmc_cal_blobs)
@@ -125,3 +125,7 @@ foreach(t ${SEMMC_TESTS})
 endforeach()
 target_sources(test_protocol PRIVATE ${SEMMC_PROTO_GEN}/semmc_golden_vectors.c)
 target_sources(test_core PRIVATE platform/host/sim_plant.c)
+target_sources(test_core_properties PRIVATE platform/host/sim_plant.c)
+# 24 seeds x 12 s of simulated driving; at 6 seeds the defects it was written to catch can slip through.
+set_tests_properties(test_core_properties PROPERTIES TIMEOUT 600)
+add_test(NAME test_core_properties_24x12 COMMAND test_core_properties 24 12 WORKING_DIRECTORY ${SEMMC_ROOT})

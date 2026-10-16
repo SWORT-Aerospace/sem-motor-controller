@@ -2088,9 +2088,7 @@
   (no_connect (at 114.3 124.46) (uuid d3e7cc0b-8a67-578a-add5-f6820dd5ec79))
   (no_connect (at 114.3 127.0) (uuid 4d6ce0e0-50c1-55ce-a050-33bcfb7d1696))
   (no_connect (at 114.3 134.62) (uuid ff553605-8da9-526e-94ce-71829bb0b957))
-  (no_connect (at 447.04 243.84) (uuid f3a08f90-5b6c-5a22-9aed-8d27da118782))
   (no_connect (at 469.9 248.92) (uuid 72403a37-40b3-549e-aa3e-74944808127f))
-  (no_connect (at 154.94 302.26) (uuid d084a485-9eea-5f0f-abcd-c6bcf03d3834))
 
   (text "Unused MCU pins are no-connect in this draft; pin functions come from hardware/interfaces/pin_allocation_STM32G474VBCETx.csv."
     (at 20.0 20.0 0)

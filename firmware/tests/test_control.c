@@ -31,6 +31,18 @@ static void test_clarke_park_roundtrip(void)
     }
 }
 
+/* docs/MATH_SPEC.md (2.1): ia = 1, ib = -0.5 -> alpha 1, beta 0; theta_e = 30 deg -> d 0.866, q -0.5 */
+static void test_math_spec_clarke_park_example(void)
+{
+    const mc_ab_t ab = mc_clarke2(1.0f, -0.5f);
+    CHECK_NEAR(ab.alpha, 1.0f, 1e-6f);
+    CHECK_NEAR(ab.beta, 0.0f, 1e-6f);
+    const float th = 30.0f * 3.14159265f / 180.0f;
+    const mc_dq_t dq = mc_park(ab, sinf(th), cosf(th));
+    CHECK_NEAR(dq.d, 0.8660254f, 1e-5f);
+    CHECK_NEAR(dq.q, -0.5f, 1e-5f);
+}
+
 static void test_clarke3_rejects_common_mode(void)
 {
     /* A common-mode offset on all three sensors does not change alpha/beta. */
@@ -215,6 +227,7 @@ static void test_slew(void)
 int main(void)
 {
     RUN(test_clarke_park_roundtrip);
+    RUN(test_math_spec_clarke_park_example);
     RUN(test_clarke3_rejects_common_mode);
     RUN(test_currents_measured_vs_reconstructed);
     RUN(test_pi_antiwindup_and_recovery);

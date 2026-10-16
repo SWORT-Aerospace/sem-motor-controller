@@ -1,4 +1,4 @@
-# Parameter registry — SINGLE SOURCE OF TRUTH for vehicle/controller configuration.
+# Parameter registry: SINGLE SOURCE OF TRUTH for vehicle/controller configuration.
 #
 # tools/gen_config.py generates from this file:
 #   config/vehicle.schema.json                       (structure of vehicle.*.yaml)

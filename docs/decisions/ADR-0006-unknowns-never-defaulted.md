@@ -1,4 +1,4 @@
-# ADR-0006 — Unknowns are never defaulted
+# ADR-0006: Unknowns are never defaulted
 
 Unknown parameters are **null** in `config/vehicle.unconfigured.yaml`. Validation has two modes:
 * `sim` accepts `provenance: synthetic` but forbids `physical_output_permitted: true`.

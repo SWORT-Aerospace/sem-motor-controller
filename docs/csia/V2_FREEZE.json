@@ -1,0 +1,90 @@
+{
+ "dev_seeds": {
+  "faults_from": 3100,
+  "nominal": [
+   3000,
+   3001,
+   3002,
+   3003,
+   3004,
+   3005,
+   3006,
+   3007
+  ]
+ },
+ "e6_fit_on_dev": {
+  "R_ohm": 0.09968870756066192,
+  "c_sw_W_per_A": 0.12536599575795193,
+  "p0_W": 3.1618515849106323,
+  "residual_sd_W": 2.1988208734164827,
+  "samples": 24000
+ },
+ "e6_model": {
+  "R_ohm": 0.09968870756066192,
+  "align_max_gap_s": 0.03,
+  "c_sw_W_per_A": 0.12536599575795193,
+  "p0_W": 3.1618515849106323,
+  "s0_W": 2.1988208734164827,
+  "u_R": 0.15,
+  "u_rel": 0.03
+ },
+ "eval_seeds": {
+  "faults_from": 7000,
+  "nominal": [
+   6000,
+   6001,
+   6002,
+   6003,
+   6004,
+   6005,
+   6006,
+   6007,
+   6008,
+   6009,
+   6010,
+   6011,
+   6012,
+   6013,
+   6014,
+   6015,
+   6016,
+   6017,
+   6018,
+   6019,
+   6020,
+   6021,
+   6022,
+   6023
+  ],
+  "per_kind": 5
+ },
+ "frozen_files_sha256": {
+  "docs/csia/EVALUATION_PROTOCOL_v2.md": "2f6497e9d80fb00c7f3439dee34ac39ada3ca770f081d445d3449eef8c23d476",
+  "host/csia_adapter/adapter.py": "e5a246919a49559090e952a84998e8984139b855cb0e15346f5879f8022c458e",
+  "host/csia_adapter/adapter_v2.py": "d00215fdb0331d0b237ec66f91b999f643f87e402e7dd409ccef88623122f45a",
+  "host/csia_adapter/baselines.py": "2d41d4f10a16e7b77aa74b042f08013993e2339f11b1f375f2124597d25ac484",
+  "host/csia_adapter/eval_set.py": "e6d74e0e7690d56357d7384d9cb5901550d263c15af5f887226b784d3a6c53d3",
+  "host/csia_adapter/eval_set_v2.py": "bc1641d89f1c0ff59b9fc3a4b83a15fe97fb2879c5969fc3883823719d98a5c2",
+  "host/csia_adapter/evaluation.py": "cc6f36c7ccd9d88e9fd2137eeb264939256f86724bf18fc2fc6935d685135b14",
+  "host/csia_adapter/evaluation_v2.py": "ad90979ac1bd433274a3b0701f982c34fc6c9c780e6ad35cc278ca2aa9c2c71b",
+  "host/csia_adapter/synthetic.py": "ef9372d80d4fa7b80e01cea5d7085c78fc01f6441246930811400adbc4822d16",
+  "third_party/csia-trust-layer.lock": "ec970430a53a54d83a03f434bc8d22bf1a65fe97d355f6a6a56e98b8885c096a",
+  "tools/run_csia_evaluation.py": "e18ab22d28b305be40675773f78a4a36f50945d9f0f6293a47beddee20451c33",
+  "tools/run_csia_evaluation_v2.py": "5d172d465a2031140699272ff6c67b5315bd597e31072babad2bc2b47d2e2857"
+ },
+ "lam": 9.0,
+ "lam_info": {
+  "dev_alarms_at_threshold": 0
+ },
+ "note": "Written before any evaluation seed was generated. Commit this file before --eval.",
+ "trust_thresholds": {
+  "dc_meter": 0.8817126279747889,
+  "gnss": 0.7726646962554126,
+  "imu": 0.9267240039461941,
+  "phase_current": 0.9036395756521229,
+  "rotor": 0.7922405716459221,
+  "wheel_drive": 0.7922405716459221,
+  "wheel_l": 0.8058288627376837,
+  "wheel_r": 0.6837008227287098
+ }
+}

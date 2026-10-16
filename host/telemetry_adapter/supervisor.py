@@ -26,7 +26,9 @@ Policy = Callable[[float, "Telemetry"], tuple[float, bool]]
 class Telemetry:
     """Latest decoded controller telemetry, with LOCAL receive times."""
     speed_mech_rad_s: float = math.nan
-    speed_rx_s: float = -math.inf
+    speed_rx_s: float = -math.inf     # local receive time of the last NEW ctrl_motion sample
+    speed_valid: bool = False         # False when the controller reported the speed invalid (NaN)
+    speed_seq: Optional[int] = None   # ctrl_motion sequence of that sample
     state: Optional[int] = None
     boot_id: Optional[int] = None
     accepted_Nm: float = math.nan
@@ -43,6 +45,8 @@ class SupervisorConfig:
     limits_period_s: float = 0.1
     max_torque_Nm: float = 2.0
     max_batt_power_W: float = 1500.0
+    # Oldest speed sample the policy may use (ctrl_motion is sent at 100 Hz, so 5 periods).
+    telemetry_max_age_s: float = 0.05
 
 
 class Supervisor:
@@ -80,9 +84,16 @@ class Supervisor:
             self.tel.boot_id = values["boot_id"]
             self.tel.state = values["state"]
         elif name == "ctrl_motion":
-            if not math.isnan(values["speed_mech_rad_s"]):
-                self.tel.speed_mech_rad_s = values["speed_mech_rad_s"]
-                self.tel.speed_rx_s = t_s
+            # Only a NEW sample (sequence advanced) renews the speed; a re-sent or
+            # older frame is ignored. A NaN speed is a sample saying "invalid".
+            seq = info["seq"]
+            prev = self.tel.speed_seq
+            if prev is not None and not (1 <= ((seq - prev) & 0xFF) <= 127):
+                return
+            self.tel.speed_seq = seq
+            self.tel.speed_rx_s = t_s
+            self.tel.speed_valid = not math.isnan(values["speed_mech_rad_s"])
+            self.tel.speed_mech_rad_s = values["speed_mech_rad_s"]
             self.tel.vbus_V = values["vbus_V"]
         elif name == "ctrl_cmd_trace":
             self.tel.accepted_Nm = values["accepted_Nm"]
@@ -120,15 +131,22 @@ class Supervisor:
                 "max_torque_Nm": self.cfg.max_torque_Nm, "max_batt_power_W": self.cfg.max_batt_power_W})))
             self.next_limits = round(t_s + self.cfg.limits_period_s, 6)
         if t_s >= self.next_req:
+            reason = "policy"
             if self.frozen is not None:
                 torque, coast, src_ms = self.frozen
+                reason = "frozen (fault injection)"
             else:
-                torque, coast = self.policy(t_s, self.tel)
+                if not self.tel.speed_valid and self.tel.speed_seq is not None:
+                    torque, coast, reason = 0.0, True, "telemetry_invalid"
+                elif t_s - self.tel.speed_rx_s > self.cfg.telemetry_max_age_s:
+                    torque, coast, reason = 0.0, True, "telemetry_stale"
+                else:
+                    torque, coast = self.policy(t_s, self.tel)
                 src_ms = int(round(t_s * 1000.0)) & 0xFFFF
             out.append((proto.MESSAGES["sup_torque_req"]["id"], self._enc("sup_torque_req", {
                 "session_tag": self.tag, "limits_ref": self.limits_seq & 0xF, "coast_request": coast,
                 "reserved": 0, "torque_Nm": torque, "src_time_ms": src_ms})))
-            self.log.append({"t_s": t_s, "torque_Nm": torque, "coast": coast})
+            self.log.append({"t_s": t_s, "torque_Nm": torque, "coast": coast, "reason": reason})
             self.next_req = round(t_s + self.cfg.period_s, 6)
         return out
 
@@ -144,4 +162,25 @@ def speed_hold_policy(target_mps: float, kp_Nm_per_mps: float, wheel_circumferen
         v = tel.speed_mech_rad_s * k
         torque = max(0.0, min(max_torque, kp_Nm_per_mps * (target_mps - v) + 0.15))
         return torque, False
+    return policy
+
+
+def pulse_and_coast_policy(v_lo_mps: float, v_hi_mps: float, pulse_torque_Nm: float,
+                           wheel_circumference_m: float, gear_ratio: float) -> Policy:
+    """Hysteresis pulse-and-coast: pulse_torque_Nm until v_hi, then coast with a
+    coast request (the controller turns its gates off in gate-off coast mode)
+    until v_lo. Two set points and one torque; the band is chosen offline
+    (docs/METHOD_SELECTION.md). An invalid speed gives zero torque, no coast."""
+    k = wheel_circumference_m / (2.0 * math.pi) / gear_ratio
+    state = {"pulse": True}
+
+    def policy(t_s: float, tel: Telemetry):
+        if math.isnan(tel.speed_mech_rad_s):
+            return 0.0, False
+        v = tel.speed_mech_rad_s * k
+        if state["pulse"] and v >= v_hi_mps:
+            state["pulse"] = False
+        elif not state["pulse"] and v <= v_lo_mps:
+            state["pulse"] = True
+        return (pulse_torque_Nm, False) if state["pulse"] else (0.0, True)
     return policy

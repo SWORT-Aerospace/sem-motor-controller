@@ -59,7 +59,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | PWM_A_HI | PC0 | 8 | TIM1_CH1 | gate driver INHA |
 | PWM_A_LO | PE8 | 31 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
 | PWM_BREAK | PE15 | 38 | TIM1_BKIN | hardware trip input: gate-driver nFAULT (open drain, active low) |
-| PWM_BREAK2 | PC3 | 11 | TIM1_BKIN2 | hardware trip input: independent bus/phase over-current comparator |
+| PWM_BREAK2 | PC3 | 11 | TIM1_BKIN2 | hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option) |
 | PWM_B_HI | PC1 | 9 | TIM1_CH2 | INHB |
 | PWM_B_LO | PE10 | 33 | TIM1_CH2N | INLB |
 | PWM_C_HI | PC2 | 10 | TIM1_CH3 | INHC |
@@ -109,7 +109,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | PWM_A_HI | PC0 | 8 | TIM1_CH1 | gate driver INHA |
 | PWM_A_LO | PB13 | 35 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
 | PWM_BREAK | PB10 | 30 | TIM1_BKIN | hardware trip input: gate-driver nFAULT (open drain, active low) |
-| PWM_BREAK2 | PC3 | 11 | TIM1_BKIN2 | hardware trip input: independent bus/phase over-current comparator |
+| PWM_BREAK2 | PC3 | 11 | TIM1_BKIN2 | hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option) |
 | PWM_B_HI | PC1 | 9 | TIM1_CH2 | INHB |
 | PWM_B_LO | PB14 | 36 | TIM1_CH2N | INLB |
 | PWM_C_HI | PC2 | 10 | TIM1_CH3 | INHC |
@@ -160,7 +160,7 @@ Proposed baseline package: **LQFP100 (STM32G474VET6-class)** - all functions all
 | PWM_A_HI | PC0 | 15 | TIM1_CH1 | gate driver INHA |
 | PWM_A_LO | PE8 | 39 | TIM1_CH1N | gate driver INLA (6-PWM mode) |
 | PWM_BREAK | PE15 | 46 | TIM1_BKIN | hardware trip input: gate-driver nFAULT (open drain, active low) |
-| PWM_BREAK2 | PC3 | 18 | TIM1_BKIN2 | hardware trip input: independent bus/phase over-current comparator |
+| PWM_BREAK2 | PC3 | 18 | TIM1_BKIN2 | hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option) |
 | PWM_B_HI | PC1 | 16 | TIM1_CH2 | INHB |
 | PWM_B_LO | PB0 | 32 | TIM1_CH2N | INLB |
 | PWM_C_HI | PC2 | 17 | TIM1_CH3 | INHC |

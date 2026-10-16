@@ -22,7 +22,6 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
-import datetime
 import pathlib
 import re
 import subprocess
@@ -41,6 +40,9 @@ OUT = ROOT / "hardware" / "kicad"
 LIBDIR = pathlib.Path("/usr/share/kicad/symbols")
 PROJECT = "semmc"
 REV = "D0.2-draft"
+# Date of revision REV, changed together with it. Not the generation date: regenerating the
+# same revision must reproduce the committed files byte for byte (the CI drift gate).
+REV_DATE = "2026-10-15"
 NS = uuidlib.UUID("6f1d2c1e-5e3a-4c55-9a77-5e3b0c0f0a11")
 
 POWER = {"VBAT_PROT", "VDC", "PGND", "GND", "+5V", "+3V3", "+3V3A"}
@@ -487,7 +489,7 @@ def build(check: bool) -> int:
     write_custom_lib(OUT / f"{PROJECT}.kicad_sym")
     design = sheets(mcu_map_from_csv())
     root_uuid = uid("root")
-    date = datetime.date.today().isoformat()
+    date = REV_DATE
     # net -> sheets using it
     use = {}
     for sname, _t, parts, _n in design:
@@ -558,7 +560,11 @@ def build(check: bool) -> int:
             for num, name, px, py, pa, et, net in pins:
                 ax, ay = round(X + px, 4), round(Y - py, 4)
                 if net is None:
-                    sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
+                    # A pin the library already types as no_connect needs no flag: KiCad 8 ERC reports
+                    # the extra flag as both "connected" and "dangling" (seen on J801 KEY, MAX6369 NC,
+                    # TLV755 NC).
+                    if et != "no_connect":
+                        sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
                     continue
                 if not prt.ref.startswith("#"):          # power flags are not netlist components
                     expected.setdefault(net, set()).add((prt.ref, num))
@@ -664,7 +670,12 @@ def check_netlist(expected: dict, design) -> int:
     if r.returncode != 0:
         print(r.stdout, r.stderr)
         return 2
-    tree = _sexp(net_path.read_text())
+    # kicad-cli records the absolute checkout path and the export time; make the
+    # committed netlist independent of both (repository-relative paths, revision date).
+    text = net_path.read_text().replace(str(OUT) + "/", "hardware/kicad/")
+    text = re.sub(r'^(    \(date ")[^"]*("\))$', lambda m: m.group(1) + REV_DATE + m.group(2), text, count=1, flags=re.M)
+    net_path.write_text(text)
+    tree = _sexp(text)
     nets_node = next(x for x in tree if isinstance(x, list) and x and x[0] == "nets")
     got = {}
     for n in nets_node[1:]:

@@ -64,7 +64,7 @@ Power path: battery → (vehicle e-stop and fuse) → board fuse, TVS and revers
 | Driver controls | wired driver authority (ADR-0010) | dual throttle tracks with open-wire detection; switches fail safe; dead-man and e-stop sensed separately from the hardware chain | pedal electrical range, harness |
 | CAN | supervisory link | classic CAN 500 kbit/s, ID range 0x300–0x33F, ESD, termination selectable per bus position | harness, termination location |
 | Aux rails | 5 V, 3.3 V, 3.3 V analog | ≥ 100 V-class input converter (margin over V_bat,max is the criterion); analog rail filtered | V_bat,max, V_bat,min |
-| MCU and debug | control and logging | STM32G4-class Cortex-M4F; SWD and UART for the bench only; crystal clock (CAN) | — |
+| MCU and debug | control and logging | STM32G4-class Cortex-M4F; SWD and UART for the bench only; crystal clock (CAN) | n/a |
 
 ## 3. Interfaces fixed by this architecture
 * **MCU pin functions:** `hardware/interfaces/pin_allocation_STM32G474VBCETx.csv`, generated from ST's pin database. The schematic reads the same file.
