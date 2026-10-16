@@ -55,3 +55,29 @@ jobs:
           python tools/run_optimization.py --quick
           python tools/run_electrical_calcs.py
           python tools/run_csia_study.py
+  erc:
+    # Real KiCad ERC on the committed draft schematic. Ubuntu 24.04 ships KiCad 7,
+    # whose kicad-cli has no `sch erc`; KiCad 8 comes from the KiCad project's PPA.
+    # The report is uploaded whatever the result; the job fails on any ERC error.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: KiCad 8 (ppa:kicad/kicad-8.0-releases)
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-8.0-releases
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kicad kicad-symbols
+          kicad-cli version
+      - name: ERC
+        run: bash tools/run_kicad_erc.sh
+      - name: Upload ERC report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erc-report
+          path: hardware/kicad/ERC_REPORT.*
+      - name: Summary (fails on any ERC error)
+        run: python tools/erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors
