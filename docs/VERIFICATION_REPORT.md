@@ -98,7 +98,7 @@ Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-A
 | Defect | Found by | Fix |
 |---|---|---|
 | Pit validation accepted JSON `true`/`false` as integers for `seq` and `t_local_ms` (Python `bool` is an `int`) | `test_validation_rejects_boolean_and_inconsistent_fields`; injected in the MQTT demo | integers checked as non-boolean; also `utc` vs `utc_q`, `utc_err_s`, counters, empty `run_id` |
-| The host demo's summary pointed at a missing `docs/CSIA_EVALUATION_v2.md` | `tools/check_links.py` (paths in current documents) | points at `docs/csia/EVALUATION_PROTOCOL_v2.md` and `EVALUATION_RESULTS_v2.md` |
+| The host demo's summary pointed at a CSIA document that does not exist (`CSIA_EVALUATION_v2.md` in `docs/`) | `tools/check_links.py` (paths in current documents) | points at `docs/csia/EVALUATION_PROTOCOL_v2.md` and `EVALUATION_RESULTS_v2.md` |
 | A refused hand-over to the uplink would have lost the message (the simulated link never refused, so this path had never run) | the real MQTT link (a client can refuse when its buffer is full) | the message returns to the bounded backlog; a test covers it |
 | Mosquitto started as root dropped privileges, could not write its persistence, and after a crash acknowledged messages that no subscriber received | MQTT smoke test (session lost: `session_present=False`) | `tools/mqtt_broker.py` keeps the starting user when root; the general behaviour stays as a test (`test_broker_acknowledgement_is_not_end_to_end_delivery`) |
 
