@@ -1,4 +1,6 @@
-# Interface control document v0.1 (amended v0.3)
+# Interface control document v0.1 (amended v0.3): SUPERSEDED
+
+> **Superseded by [`ICD.md`](ICD.md) v1.0 (v0.4).** Kept as the record of v0.1 to v0.3. Changed since: protocol 1.1 (`ctrl_energy_quality`), session tags distinct across session resets, the freshness lag rule, the telematics log and uplink sections.
 
 > **v0.3 amendment (ADR-0012).** The vehicle bus is **UNKNOWN**. The CHUDS/CAN FD values that v0.2 wrote into this table were observed in a **reference project** (Cornell), not on our vehicle. The telematics proposal for our vehicle (v0.1, 14/10/2026) shows **CAN 2.0B**. The message set, framing, integrity and sequence rules below are unchanged (frozen v1). The bus parameters are now selected per vehicle: see `docs/VEHICLE_INTERFACE_MATRIX.md`.
 

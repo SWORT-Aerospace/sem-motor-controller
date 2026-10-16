@@ -1,5 +1,7 @@
 # Vehicle-team input sheet (one page)
 
+> **Superseded by [`INPUT_SHEET.md`](INPUT_SHEET.md) (v0.4, prioritised).** Kept as the v0.3 record.
+
 > v0.3: the short, prioritised version is [`PHYSICAL_TEAM_QUESTIONNAIRE.md`](PHYSICAL_TEAM_QUESTIONNAIRE.md). Rows H1–H4 below were corrected: they no longer assume Cornell's CHUDS bus.
 
 Please fill in and return. Every item **blocks** something specific (right column). Give units and the source of each answer: datasheet with page, measurement with the instrument, or a team decision. "Unknown" is a valid answer.
