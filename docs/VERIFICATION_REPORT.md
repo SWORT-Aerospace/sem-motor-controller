@@ -88,3 +88,31 @@ Result: **31 PASS, 0 FAIL, 1 NOT AVAILABLE.** The NOT AVAILABLE check is `kicad_
 * the optimisation `solve_s` and the table's seconds column;
 * the CSIA v1 re-run's `runtime_s`;
 * the host tick-time line of the CSIA development study.
+
+## 7. v0.5: telemetry integration, README and procurement
+
+Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-Aerospace/sem-motor-controller#2, open). Host software and documents only; nothing was built, energised or tested on the vehicle.
+
+### 7.1 Found and fixed
+
+| Defect | Found by | Fix |
+|---|---|---|
+| Pit validation accepted JSON `true`/`false` as integers for `seq` and `t_local_ms` (Python `bool` is an `int`) | `test_validation_rejects_boolean_and_inconsistent_fields`; injected in the MQTT demo | integers checked as non-boolean; also `utc` vs `utc_q`, `utc_err_s`, counters, empty `run_id` |
+| The host demo's summary pointed at a missing `docs/CSIA_EVALUATION_v2.md` | `tools/check_links.py` (paths in current documents) | points at `docs/csia/EVALUATION_PROTOCOL_v2.md` and `EVALUATION_RESULTS_v2.md` |
+| A refused hand-over to the uplink would have lost the message (the simulated link never refused, so this path had never run) | the real MQTT link (a client can refuse when its buffer is full) | the message returns to the bounded backlog; a test covers it |
+| Mosquitto started as root dropped privileges, could not write its persistence, and after a crash acknowledged messages that no subscriber received | MQTT smoke test (session lost: `session_present=False`) | `tools/mqtt_broker.py` keeps the starting user when root; the general behaviour stays as a test (`test_broker_acknowledgement_is_not_end_to_end_delivery`) |
+
+### 7.2 Design findings (not defects)
+
+* DRV5032 (any variant in SLVSDC7F) cannot count wheel magnets at vehicle speed: sampled every 27 to 75 ms with the output latched between samples (`generated/wheel_sensor_check.md`).
+* The telematics proposal's BQ25622E charger implies an on-board battery; 2026 Article 57b allows no accessory battery on a Battery Electric vehicle.
+* Telemetry energy counts in the official result (Article 56d).
+* An unmodelled 0.1 % grade biases a one-direction coast-down by 40 % in rolling resistance (`generated/coastdown_sensitivity.md`).
+
+### 7.3 Commands run and results
+
+| Where | Command | Result |
+|---|---|---|
+| fresh clone of `042044a`, new virtual environment, Mosquitto 2.0.18 (Ubuntu package extracted locally) | the README "Getting started" commands, in order | ctest 8/8 passed; pytest 249 passed; host demo 9/9; MQTT demo 10/10 |
+| working tree | `tools/run_host_demo.py` before and after the refactor | the 70506 log records are identical (NaN-aware comparison); only the dirty-tree flag in the metadata differs |
+| working tree | `python3 -m pytest tests/integration/test_mqtt_pipeline.py` with `SEMMC_REQUIRE_MQTT=1` | 7 passed |
