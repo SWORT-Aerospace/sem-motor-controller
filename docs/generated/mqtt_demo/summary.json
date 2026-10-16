@@ -1,0 +1,182 @@
+{
+ "broker": "mosquitto version 2.0.18",
+ "checks": [
+  {
+   "detail": "broker killed at 40.0 s, client saw the disconnect 1 ms later (wall); broker restarted at 60.0 s, client reconnected 0.95 s later (wall), i.e. 1.9 s of controller time",
+   "id": "broker_outage_detected_and_recovered",
+   "pass": true
+  },
+  {
+   "detail": "supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.28/1.27 ms, broker_down 0.06/0.83 ms, after_broker 0.30/1.33 ms, pit_down 0.29/0.36 ms, after_pit 0.30/0.46 ms (supervisor period 20 ms)",
+   "id": "control_and_uplink_unaffected_by_broker_outage",
+   "pass": true
+  },
+  {
+   "detail": "records written 71525 = imported 71525 (286 blocks ok, 0 corrupt, 0 sequence gaps); log queue and storage drops 0/0; CAN records per second while the broker was down 454-464, before it 444-464",
+   "id": "local_log_complete_during_broker_outage",
+   "pass": true
+  },
+  {
+   "detail": "backlog high water 30/30; dropped on the car 14 (counter) = 14 (sequence numbers 79..92); none of them reached the pit",
+   "id": "uplink_backlog_bounded_and_drops_counted",
+   "pass": true
+  },
+  {
+   "detail": "published 240: stored at pit 226, dropped on car (queue full) 14, never acknowledged by broker 0, acknowledged by broker, not at pit 0, never handed to the link 0",
+   "id": "every_sequence_number_accounted",
+   "pass": true
+  },
+  {
+   "detail": "33 messages stored with replayed=true, equal to the backlog messages sent after reconnection",
+   "id": "replayed_messages_flagged",
+   "pass": true
+  },
+  {
+   "detail": "4 malformed messages published, 4 rejected with reasons ['ctrl.vbus_V=9999.0 outside [0.0, 100.0]', 'field seq missing or not an integer', 'not JSON (JSONDecodeError)', 'wrong or missing schema']; none stored",
+   "id": "invalid_messages_rejected_before_storage",
+   "pass": true
+  },
+  {
+   "detail": "1 duplicate receipts (the injected copy of seq 0; MQTT DUP flag set on 0); re-ingesting all 226 stored payloads added 0 rows",
+   "id": "duplicates_ignored_and_ingest_idempotent",
+   "pass": true
+  },
+  {
+   "detail": "20 car messages published while the pit service was down (75-85 s): all stored after it reconnected (session resumed 2 time(s))",
+   "id": "pit_restart_without_loss",
+   "pass": true
+  },
+  {
+   "detail": "car time t_local_ms increases with seq: True; UTC quality {'none': 3, 'pps': 206, 'holdover': 17}; 15 messages in the GNSS outage carry utc_q=holdover, gnss speed null, fix false; pit receive time recorded for all; generation-to-storage delay (wall clock) live median 2 ms, max 5.09 s; replayed max 7.5 s",
+   "id": "timestamps_and_missing_data_explicit",
+   "pass": true
+  }
+ ],
+ "classes": {
+  "acknowledged by broker, not at pit": 0,
+  "dropped on car (queue full)": 14,
+  "never acknowledged by broker": 0,
+  "never handed to the link": 0,
+  "stored at pit": 226
+ },
+ "counters": {
+  "log_dropped_queue": 0,
+  "log_dropped_storage": 0,
+  "log_records": 71525,
+  "queue_high_water": 15,
+  "rx_frames": 47292,
+  "supervisor_overruns": 0,
+  "uplink_dropped": 14,
+  "uplink_sent": 226
+ },
+ "duration_s": 120.0,
+ "import": {
+  "block_seq_gaps": 0,
+  "blocks_corrupt": 0,
+  "blocks_ok": 286,
+  "frames_bad_crc": 0,
+  "new_records": 71525,
+  "records": 71525,
+  "run_id": "HOSTMQTT-0001",
+  "truncated_tail_bytes": 0,
+  "utc_quality": {
+   "holdover": 6996,
+   "pps": 64529
+  }
+ },
+ "kind": "HOST SOFTWARE with a real local MQTT broker (not vehicle firmware)",
+ "link_events": [
+  [
+   -0.521,
+   "connect",
+   "Success"
+  ],
+  [
+   19.997,
+   "disconnect",
+   "Unspecified error"
+  ],
+  [
+   31.0,
+   "connect",
+   "Success"
+  ],
+  [
+   60.043,
+   "disconnect",
+   "Normal disconnection"
+  ]
+ ],
+ "loop_late_s": 0.00959344799957762,
+ "pace": 2.0,
+ "paho_mqtt": "2.1.0",
+ "pit_events": [
+  [
+   "start",
+   "{\"host\": \"127.0.0.1\", \"port\": 45553, \"topic\": \"sem/car/telemetry\"}"
+  ],
+  [
+   "connect",
+   "Success; session_present=False"
+  ],
+  [
+   "disconnect",
+   "Unspecified error"
+  ],
+  [
+   "connect",
+   "Success; session_present=True"
+  ],
+  [
+   "start",
+   "{\"host\": \"127.0.0.1\", \"port\": 45553, \"topic\": \"sem/car/telemetry\"}"
+  ],
+  [
+   "connect",
+   "Success; session_present=True"
+  ],
+  [
+   "disconnect",
+   "Normal disconnection"
+  ],
+  [
+   "stop",
+   "{\"stored\": 91, \"duplicate\": 0, \"rejected\": 0}"
+  ]
+ ],
+ "pit_exit_code": 0,
+ "published": 240,
+ "repo_commit": "0b7255e20a012bd192f7a1fb1fddf902f7c8c4c0",
+ "run_id": "HOSTMQTT-0001",
+ "scenario": {
+  "broker_down": [
+   40.0,
+   60.0
+  ],
+  "gnss_out": [
+   90.0,
+   100.0
+  ],
+  "inject_duplicate": 20.0,
+  "inject_invalid": 15.0,
+  "pit_down": [
+   75.0,
+   85.0
+  ]
+ },
+ "service_ms_max": {
+  "after_broker": 1.3286170001265418,
+  "after_pit": 0.4640510001081566,
+  "broker_down": 0.8320770002683275,
+  "normal": 1.2660150000556314,
+  "pit_down": 0.35939899998993496
+ },
+ "service_ms_p99": {
+  "after_broker": 0.29781900002490147,
+  "after_pit": 0.30447300014202483,
+  "broker_down": 0.06324099967969232,
+  "normal": 0.2841479999915464,
+  "pit_down": 0.2911480000875599
+ },
+ "working_tree_dirty": true
+}

@@ -1,6 +1,6 @@
 # Host end-to-end demonstration (HOST SIMULATION)
 
-Run `HOSTSIM-0001`, 120 s, commit `0b40193e2d5a` plus uncommitted changes (the commit that adds these outputs). Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, simulated LTE and MQTT; nothing here was measured on hardware.
+Run `HOSTSIM-0001`, 120 s, commit `0b7255e20a01` plus uncommitted changes (the commit that adds these outputs). Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, simulated LTE and MQTT; nothing here was measured on hardware.
 
 | Check | Result | Evidence |
 |---|---|---|
@@ -20,8 +20,8 @@ STLG log 1122 KiB for 120 s = 9.35 KiB/s; the 8 MB flash of the telematics propo
 
 ## Pit-side CSIA replay (shadow; not an evaluation)
 
-1200 ticks at 10 Hz; front-left wheel hall lost from 80 to 90 s: attributed to wheel_l 0.1 s after onset. Ticks naming any other suspect, or naming one outside the fault window: 65; ambiguous ticks: 530; unobservable ticks: 5. Host runtime per tick: mean 2.10 ms, p99 3.68 ms, max 5.20 ms; peak traced Python memory 1785 KiB (x86-64 CPython, not a target figure).
+1200 ticks at 10 Hz; front-left wheel hall lost from 80 to 90 s: attributed to wheel_l 0.1 s after onset. Ticks naming any other suspect, or naming one outside the fault window: 65; ambiguous ticks: 530; unobservable ticks: 5. Host runtime per tick: mean 1.42 ms, p99 2.66 ms, max 3.14 ms; peak traced Python memory 1785 KiB (x86-64 CPython, not a target figure).
 
 Relationship failures (lambda > lam_fail) outside the injected fault window: E6_power_balance 507 ticks.
 
-Two causes, both in the frozen v1 adapter's power balance (E6), measured on this run: (1) E6 compares the latest p_dc (ctrl_energy, 10 Hz) with the latest iq and rotor speed (100 Hz) at the tick, without time alignment; with the speed-hold policy moving iq between p_dc samples the residual standard deviation at cruise (25-45 s) is 28.9 W, against 1.4 W when iq and speed are interpolated to the p_dc sample time (allowed 1 sigma about 5.7 W). (2) Its loss model (8 % of mechanical power + 3 W) does not describe this plant's copper loss: a fit of p_dc - p_mech gives 0.159 iq^2 + 3.02 W (1.5 R iq^2 with R = 0.1 ohm), so at launch current the I^2R loss reads as a fault. The v1 synthetic evaluation generated p_dc with the adapter's own loss form and constant current within pulses, so it tested neither. docs/CSIA_EVALUATION_v2.md treats both with a frozen protocol and a new untouched evaluation set.
+Two causes, both in the frozen v1 adapter's power balance (E6), measured on this run: (1) E6 compares the latest p_dc (ctrl_energy, 10 Hz) with the latest iq and rotor speed (100 Hz) at the tick, without time alignment; with the speed-hold policy moving iq between p_dc samples the residual standard deviation at cruise (25-45 s) is 28.9 W, against 1.4 W when iq and speed are interpolated to the p_dc sample time (allowed 1 sigma about 5.7 W). (2) Its loss model (8 % of mechanical power + 3 W) does not describe this plant's copper loss: a fit of p_dc - p_mech gives 0.159 iq^2 + 3.02 W (1.5 R iq^2 with R = 0.1 ohm), so at launch current the I^2R loss reads as a fault. The v1 synthetic evaluation generated p_dc with the adapter's own loss form and constant current within pulses, so it tested neither. docs/csia/EVALUATION_PROTOCOL_v2.md treats both with a frozen protocol and a new untouched evaluation set (results: docs/csia/EVALUATION_RESULTS_v2.md).

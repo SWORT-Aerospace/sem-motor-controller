@@ -64,6 +64,8 @@ CHECKS = [
      r"contract violations.*", 600, False),
     ("host_demo", "host simulation", [PY, "tools/run_host_demo.py", "--out", "build/host_demo"], "zero",
      r"^DEMO .*", 1800, False),
+    ("mqtt_demo", "host simulation", [PY, "tools/run_mqtt_demo.py", "--out", "build/mqtt_demo"], "zero",
+     r"MQTT (ALL PASS|FAILURES|NOT AVAILABLE).*|MQTT FAIL.*", 900, False),
     ("optimisation_quick", "studies", [PY, "tools/run_optimization.py", "--quick"], "zero", r".*kJ.*", 3600, False),
     ("optimisation_full", "studies", [PY, "tools/run_optimization.py"], "zero", r".*kJ.*", 7200, True),
     ("electrical", "studies", [PY, "tools/run_electrical_calcs.py"], "zero", r".+", 600, False),
@@ -94,7 +96,15 @@ def tool_versions() -> dict:
             return f"unavailable ({type(e).__name__})"
     return {"python": sys.version.split()[0], "platform": platform.platform(),
             "gcc": v(["gcc", "--version"]), "cmake": v(["cmake", "--version"]),
-            "arm-none-eabi-gcc": v(["arm-none-eabi-gcc", "--version"]), "kicad-cli": v(["kicad-cli", "version"])}
+            "arm-none-eabi-gcc": v(["arm-none-eabi-gcc", "--version"]), "kicad-cli": v(["kicad-cli", "version"]),
+            "mosquitto": mosquitto_version()}
+
+
+def mosquitto_version() -> str:
+    sys.path.insert(0, str(ROOT))
+    from tools import mqtt_broker
+    b = mqtt_broker.find_mosquitto()
+    return mqtt_broker.version(b) if b else "unavailable (no mosquitto binary)"
 
 
 def git(*args) -> str:
@@ -143,7 +153,7 @@ def main() -> int:
         (out / "logs" / f"{cid}.log").write_text(f"$ {' '.join(map(str, cmd))}\n{text}")
         lines = [ln.strip() for ln in text.splitlines() if re.search(rx, ln.strip())]
         ok = (rc == 0) if expect == "zero" else (rc != 0 and rc not in (-9, 127))
-        if cid == "kicad_erc" and rc == 2:
+        if cid in ("kicad_erc", "mqtt_demo") and rc == 2:
             status = "NOT AVAILABLE"
         else:
             status = "PASS" if ok else "FAIL"

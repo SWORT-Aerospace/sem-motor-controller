@@ -92,7 +92,7 @@ class TelematicsNode:
         self.p_acc = [0.0, 0]                 # p_batt samples since the last uplink (mean)
         self.gnss_latest = (math.nan, math.nan, 0, False)
         self.sup_rate: collections.Counter = collections.Counter()  # requests per whole second (control health)
-        self.drop_log: list[tuple[float, str, int]] = []
+        self.drop_log: list[tuple[float, str, int]] = []   # (time, reason, uplink seq dropped)
 
     # ---- time helpers ------------------------------------------------------------------
     def t_us(self, t_true: float) -> int:
@@ -199,21 +199,34 @@ class TelematicsNode:
         msg = self._message(t_true)
         self.up_seq += 1
         if not self.link.up(t_true):
-            if len(self.uq) >= self.cfg.uplink_queue_capacity:
-                self.uq.popleft()
-                self.c["uplink_dropped"] += 1
-                self.drop_log.append((t_true, "uplink_queue_full", 1))
-            self.uq.append(msg)
+            self._backlog(t_true, msg)
             return
         while self.uq:                                  # backlog first, oldest first, flagged
             old = self.uq.popleft()
             old["replayed"] = True
-            self._send(t_true, old)
-        self._send(t_true, msg)
+            if not self._send(t_true, old):
+                self.uq.appendleft(old)                 # the link refused it: keep it, try again next period
+                self._backlog(t_true, msg)
+                return
+        if not self._send(t_true, msg):
+            self._backlog(t_true, msg)
 
-    def _send(self, t_true: float, msg: dict) -> None:
-        self.link.deliver(t_true, self.cfg.topic, msg["seq"], json.dumps(msg, sort_keys=True).encode())
+    def _backlog(self, t_true: float, msg: dict) -> None:
+        if len(self.uq) >= self.cfg.uplink_queue_capacity:
+            dropped = self.uq.popleft()
+            self.c["uplink_dropped"] += 1
+            self.drop_log.append((t_true, "uplink_queue_full", dropped["seq"]))
+        self.uq.append(msg)
+
+    def _send(self, t_true: float, msg: dict) -> bool:
+        """Hand one message to the link. A link may refuse (returns False), e.g. a real
+        MQTT client whose connection dropped between the up() check and the publish;
+        the in-process SimLink never refuses (returns None)."""
+        ok = self.link.deliver(t_true, self.cfg.topic, msg["seq"], json.dumps(msg, sort_keys=True).encode())
+        if ok is False:
+            return False
         self.c["uplink_sent"] += 1
+        return True
 
     def close(self, t_true: float) -> None:
         while self.q:                                   # orderly shutdown: drain everything

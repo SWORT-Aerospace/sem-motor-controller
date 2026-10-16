@@ -60,13 +60,13 @@
  "csia": {
   "csia_version": "0.8.0",
   "detect_latency_s": 0.09662725160191599,
-  "peak_traced_kib": 1785.0,
+  "peak_traced_kib": 1784.8681640625,
   "relationship_failures_outside_fault_window": {
    "E6_power_balance": 507
   },
-  "tick_ms_max": 5.203611000069941,
-  "tick_ms_mean": 2.095196176672592,
-  "tick_ms_p99": 3.6799219997192267,
+  "tick_ms_max": 3.1396330000461603,
+  "tick_ms_mean": 1.418704530845692,
+  "tick_ms_p99": 2.6606670003275212,
   "ticks": 1200,
   "ticks_ambiguous": 530,
   "ticks_unobservable": 5,
@@ -100,7 +100,7 @@
   "stored": 228
  },
  "reimport_new_records": 0,
- "repo_commit": "0b40193e2d5a8ec68a0d8dc551ad8962d1a7accf",
+ "repo_commit": "0b7255e20a012bd192f7a1fb1fddf902f7c8c4c0",
  "run_id": "HOSTSIM-0001",
  "storage": {
   "bytes_per_s": 9571.016666666666,

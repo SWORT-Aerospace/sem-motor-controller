@@ -1,19 +1,27 @@
-"""Pit-side ingestion into one SQLite file (HOST SIMULATION of the proposed pipeline).
+"""Pit-side ingestion into one SQLite file (host software).
 
 The telematics data-flow proposal: MQTT broker -> parsing service (Python,
 parse + validate) -> SQLite (runs + samples); flash / SD / USB log files ->
-log import -> the same database. This module is that service, without a
-network: live messages are read from the simulated broker, logs from STLG files.
+log import -> the same database. This module is the parse/validate/store step.
+Live messages reach it either from the in-process simulated broker of the host
+demonstration (`ingest_live`) or from a real MQTT broker through
+`host/pit/mqtt_ingest.py` (`ingest_payload`, one message at a time); logs come
+from STLG files (`import_log`).
 
 Rules:
   * a live message is validated before it is stored; a rejected message is
     recorded with its reason, never silently skipped or repaired;
+  * every receipt is recorded in `rx` with its outcome (stored, duplicate,
+    rejected), so duplicates and rejections are counted, not inferred;
   * every key is idempotent: re-delivered (replayed) live messages and a
     re-imported log add no rows;
   * unknown values stay NULL;
   * times are kept in the clock domain they were measured in (telematics
-    microseconds) next to the UTC derived from the logged PPS edges, with its
-    quality ("pps" interpolated, "holdover" extrapolated, "none").
+    microseconds, `t_local_ms` for live messages) next to the UTC derived from
+    the logged PPS edges, with its quality ("pps" interpolated, "holdover"
+    extrapolated, "none"). `received_s` is the receiver's clock: simulation
+    seconds in the host demonstration, Unix seconds of the pit computer for a
+    real broker.
 """
 from __future__ import annotations
 
@@ -43,6 +51,9 @@ CREATE TABLE IF NOT EXISTS signals (
   PRIMARY KEY (run_id, block, idx, name));
 CREATE INDEX IF NOT EXISTS signals_by_name ON signals (run_id, name, t_local_us);
 CREATE TABLE IF NOT EXISTS imports (run_id TEXT NOT NULL, source TEXT NOT NULL, report_json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS rx (
+  rx INTEGER PRIMARY KEY AUTOINCREMENT, received_s REAL NOT NULL, topic TEXT NOT NULL, dup_flag INTEGER,
+  outcome TEXT NOT NULL, run_id TEXT, seq INTEGER, reason TEXT);
 """
 
 # controller fields kept as signals (name -> (message, field))
@@ -66,18 +77,32 @@ def connect(path: pathlib.Path) -> sqlite3.Connection:
 
 
 # ---------------------------------------------------------------- live (MQTT)
+def _is_int(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)        # JSON true/false are not integers here
+
+
+def _is_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
 def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
+    """Parse and check one live message. Returns (message, None) or (None, reason)."""
     try:
         m = json.loads(payload)
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
         return None, f"not JSON ({type(e).__name__})"
     if not isinstance(m, dict) or m.get("schema") != SCHEMA:
         return None, "wrong or missing schema"
-    for k, typ in (("run_id", str), ("seq", int), ("t_local_ms", int), ("ctrl", dict), ("replayed", bool)):
-        if not isinstance(m.get(k), typ):
-            return None, f"field {k} missing or not {typ.__name__}"
+    for k, ok, what in (("run_id", lambda v: isinstance(v, str) and v != "", "a non-empty string"),
+                        ("seq", _is_int, "an integer"), ("t_local_ms", _is_int, "an integer"),
+                        ("ctrl", lambda v: isinstance(v, dict), "an object"),
+                        ("replayed", lambda v: isinstance(v, bool), "a boolean")):
+        if not ok(m.get(k)):
+            return None, f"field {k} missing or not {what}"
     if m["seq"] < 0:
         return None, "negative seq"
+    if m["t_local_ms"] < 0:
+        return None, "negative t_local_ms"
     st = m["ctrl"].get("state")
     if st is not None and st not in STATES:
         return None, f"unknown state {st!r}"
@@ -85,31 +110,70 @@ def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
         v = m["ctrl"].get(k)
         if v is None:
             continue
-        if not isinstance(v, (int, float)) or not math.isfinite(v) or not lo <= v <= hi:
+        if not _is_num(v) or not lo <= v <= hi:
             return None, f"ctrl.{k}={v!r} outside [{lo}, {hi}]"
     if m.get("utc_q") not in ("pps", "holdover", "none"):
         return None, "bad utc_q"
+    if m.get("utc") is not None and not _is_num(m["utc"]):
+        return None, "utc not a finite number or null"
+    if m["utc_q"] == "none" and m.get("utc") is not None:
+        return None, "utc given with utc_q none"
+    if m.get("utc_err_s") is not None and not (_is_num(m["utc_err_s"]) and m["utc_err_s"] >= 0):
+        return None, "utc_err_s not a non-negative number or null"
+    c = m.get("counters")
+    if c is not None and not (isinstance(c, dict) and all(_is_int(v) and v >= 0 for v in c.values())):
+        return None, "counters not an object of non-negative integers"
     return m, None
 
 
+def ingest_payload(db: sqlite3.Connection, received_s: float, topic: str, payload: bytes,
+                   dup_flag: bool | None = None, commit: bool = True) -> tuple[str, str | None]:
+    """Validate and store one live message; record the receipt in `rx`.
+
+    Returns (outcome, reason): outcome is "stored", "duplicate" (same run_id
+    and seq already stored; nothing changes) or "rejected" (reason given).
+    `dup_flag` is the MQTT DUP bit when the transport reports it (None otherwise).
+    """
+    m, why = validate_live(payload)
+    if m is None:
+        run_id = None
+        try:
+            j = json.loads(payload)
+            run_id = j.get("run_id") if isinstance(j, dict) and isinstance(j.get("run_id"), str) else None
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            pass
+        db.execute("INSERT INTO rejected VALUES (?,?,?,?)",
+                   (run_id, "live", why, payload[:120].decode("utf-8", "replace")))
+        db.execute("INSERT INTO rx (received_s, topic, dup_flag, outcome, run_id, seq, reason) VALUES (?,?,?,?,?,?,?)",
+                   (received_s, topic, None if dup_flag is None else int(dup_flag), "rejected", run_id, None, why))
+        outcome = "rejected"
+    else:
+        cur = db.execute("INSERT OR IGNORE INTO live VALUES (?,?,?,?,?,?,?,?)",
+                         (m["run_id"], m["seq"], m["t_local_ms"], m.get("utc"), m["utc_q"],
+                          json.dumps(m, sort_keys=True), received_s, int(m["replayed"])))
+        outcome = "stored" if cur.rowcount else "duplicate"
+        db.execute("INSERT INTO rx (received_s, topic, dup_flag, outcome, run_id, seq, reason) VALUES (?,?,?,?,?,?,?)",
+                   (received_s, topic, None if dup_flag is None else int(dup_flag), outcome, m["run_id"], m["seq"],
+                    None))
+    if commit:
+        db.commit()
+    return outcome, why
+
+
 def ingest_live(db: sqlite3.Connection, broker: list[tuple[float, str, bytes]], topic: str) -> dict:
+    """Ingest every message of the in-process simulated broker (host demonstration)."""
     rep = {"messages": 0, "stored": 0, "duplicates": 0, "rejected": 0, "replayed_stored": 0, "reasons": {}}
     for t, top, payload in sorted(broker, key=lambda x: x[0]):
         if top != topic:
             continue
         rep["messages"] += 1
-        m, why = validate_live(payload)
-        if m is None:
+        outcome, why = ingest_payload(db, t, top, payload, commit=False)
+        if outcome == "rejected":
             rep["rejected"] += 1
             rep["reasons"][why] = rep["reasons"].get(why, 0) + 1
-            db.execute("INSERT INTO rejected VALUES (?,?,?,?)", (None, "live", why, payload[:120].decode("utf-8", "replace")))
-            continue
-        cur = db.execute("INSERT OR IGNORE INTO live VALUES (?,?,?,?,?,?,?,?)",
-                         (m["run_id"], m["seq"], m["t_local_ms"], m.get("utc"), m["utc_q"],
-                          json.dumps(m, sort_keys=True), t, int(m["replayed"])))
-        if cur.rowcount:
+        elif outcome == "stored":
             rep["stored"] += 1
-            rep["replayed_stored"] += int(m["replayed"])
+            rep["replayed_stored"] += int(json.loads(payload)["replayed"])
         else:
             rep["duplicates"] += 1
     db.commit()

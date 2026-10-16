@@ -38,6 +38,8 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import time
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -81,7 +83,20 @@ def _bad_vbus(b: bytes) -> bytes:
     return json.dumps(m, sort_keys=True).encode()
 
 
-def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict:
+def default_io(us) -> list:
+    """Driver inputs of the host demonstration (controller time)."""
+    return sorted([io_event(0, arm=False, throttle=0.0, eco=False), io_event(us(0.1), arm=True),
+                   io_event(us(0.3), eco=True), io_event(us(45.8), eco=False), io_event(us(46.0), eco=True),
+                   io_event(us(BRAKE[0]), brake=True), io_event(us(BRAKE[1]), brake=False),
+                   io_event(us(97.5), eco=False), io_event(us(98.0), eco=True)], key=lambda e: e.t_us)
+
+
+def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_ID, flash_stalls=(FLASH_STALL,),
+                supervisor_stalls=(SUP_STALL,), gnss_outages=(GNSS_OUT,), wheel_faults=(WHEEL_FAULT,),
+                io_schedule=None, sup_off: float | None = SUP_OFF, ncfg: NodeConfig | None = None,
+                kind: str = "HOST SIMULATION - not a vehicle run") -> SimpleNamespace:
+    """Everything one co-simulation run needs: configuration, controller process,
+    telematics node with its log writer, sensors and the given uplink `link`."""
     out.mkdir(parents=True, exist_ok=True)
     cfg_path = ROOT / "config" / "vehicle.synthetic.yaml"
     cfg = ct.load_yaml(cfg_path)
@@ -91,16 +106,16 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
     kt = 1.5 * cfg["motor"]["pole_pairs"] * cfg["motor"]["flux_linkage_Wb"]   # as tools/config_tool.py derives it
     cal = build / "cal" / "synthetic.bin"
     clock = LocalClock()
-    pps = PpsModel(outages=(GNSS_OUT,))
-    scfg = SensorConfig(wheel_circumference_m=C, faults=(("wheel_dropout", 0, *WHEEL_FAULT),))
+    pps = PpsModel(outages=tuple(gnss_outages))
+    scfg = SensorConfig(wheel_circumference_m=C, faults=tuple(("wheel_dropout", 0, *w) for w in wheel_faults))
     sensors = Sensors(scfg)
     git = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     # modified or untracked files outside build/ (ignored) mean the outputs are not from `git` alone
     dirty = bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
                                 capture_output=True, text=True).stdout.strip())
-    ncfg = NodeConfig()
+    ncfg = ncfg or NodeConfig()
     meta = {
-        "run_id": RUN_ID, "kind": "HOST SIMULATION - not a vehicle run",
+        "run_id": run_id, "kind": kind,
         "format": {"name": "STLG", "version": stlg.VERSION, "block_payload_bytes": stlg.BLOCK_BYTES},
         "clock": {"domain": "telematics", "unit": "us", "utc_from": "logged PPS edges"},
         "storage_bytes": ncfg.storage_bytes,
@@ -113,25 +128,44 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
                     "status": "wheel_ppr PROVISIONAL; channel assignment PROVISIONAL"},
     }
     writer = stlg.Writer(out / "run.stlg", meta, ncfg.storage_bytes)
-    link = SimLink(outages=(LTE_DOWN,), mangle={24: _truncate, 26: _bad_vbus})
     sup = Supervisor(SupervisorConfig(max_torque_Nm=t_max), speed_hold_policy(6.0, 1.5, C, gear, t_max))
-    node = TelematicsNode(ncfg, clock, writer, link, sup, RUN_ID, flash_stalls=(FLASH_STALL,),
-                          supervisor_stalls=(SUP_STALL,))
+    node = TelematicsNode(ncfg, clock, writer, link, sup, run_id, flash_stalls=tuple(flash_stalls),
+                          supervisor_stalls=tuple(supervisor_stalls))
     hc = HostController(build / "semmc_host", cal, out / "controller.csv", out / "controller_tx.log", decimate=10)
     us = lambda t: int(round(t * 1e6))  # noqa: E731
-    io = sorted([io_event(0, arm=False, throttle=0.0, eco=False), io_event(us(0.1), arm=True),
-                 io_event(us(0.3), eco=True), io_event(us(45.8), eco=False), io_event(us(46.0), eco=True),
-                 io_event(us(BRAKE[0]), brake=True), io_event(us(BRAKE[1]), brake=False),
-                 io_event(us(97.5), eco=False), io_event(us(98.0), eco=True)], key=lambda e: e.t_us)
+    io = io_schedule(us) if io_schedule else default_io(us)
+    return SimpleNamespace(cfg=cfg, C=C, gear=gear, t_max=t_max, kt=kt, cal=cal, clock=clock, pps=pps, scfg=scfg,
+                           sensors=sensors, git=git, dirty=dirty, ncfg=ncfg, meta=meta, writer=writer, link=link,
+                           sup=sup, node=node, hc=hc, io=io, us=us, sup_off=sup_off, run_id=run_id)
+
+
+def simulate(ch: SimpleNamespace, duration: float, actions=(), pace: float | None = None):
+    """Step the chain for `duration` seconds of controller time.
+
+    actions: (t, callable(t)) run once when the step time reaches t.
+    pace: if given, sleep so that simulated time advances `pace` times faster
+    than the wall clock (needed when a real network peer, such as an MQTT
+    broker, is in the loop). Returns (truth rows, controller summary).
+    """
+    us, node, sensors, pps, hc, sup = ch.us, ch.node, ch.sensors, ch.pps, ch.hc, ch.sup
+    io = list(ch.io)
+    acts = sorted(actions, key=lambda a: a[0])
     truth = []
     n = int(round(duration / DT))
     t_prev = 0.0
     pending = []
     pps_rng = np.random.default_rng(5)
+    wall0 = time.monotonic()
     try:
         for k in range(n + 1):
             t = round(k * DT, 6)
-            if t >= SUP_OFF:
+            while acts and acts[0][0] <= t:
+                acts.pop(0)[1](t)
+            if pace:
+                delay = wall0 + t / pace - time.monotonic()
+                if delay > 0:
+                    time.sleep(delay)
+            if ch.sup_off is not None and t >= ch.sup_off:
                 sup.enabled = False
             due = [e for e in io if e.t_us <= us(t)]
             io = [e for e in io if e.t_us > us(t)]
@@ -150,6 +184,15 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
     finally:
         summary_c = hc.close()
     node.close(duration)
+    return truth, summary_c
+
+
+def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict:
+    link = SimLink(outages=(LTE_DOWN,), mangle={24: _truncate, 26: _bad_vbus})
+    ch = build_chain(out, build, link)
+    truth, summary_c = simulate(ch, duration)
+    cfg, C, gear, kt, scfg, clock, pps = ch.cfg, ch.C, ch.gear, ch.kt, ch.scfg, ch.clock, ch.pps
+    node, writer, ncfg, git, dirty = ch.node, ch.writer, ch.ncfg, ch.git, ch.dirty
 
     # ---------------------------------------------------------------- pit
     dbp = out / "pit.sqlite"
@@ -245,7 +288,7 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
           f"controller input energy (bus shunt) {e_ctrl / 1000:.3f} kJ vs simulated battery-terminal energy "
           f"{e_plant / 1000:.3f} kJ: {rel * 100:.3f} % apart; integrated {integ:.2f} s, gap {gap:.2f} s "
           "(last ctrl_energy_quality before the end of the run)")
-    # CSIA (reported, not a pass/fail claim about CSIA quality: see docs/CSIA_EVALUATION_v2.md)
+    # CSIA (reported, not a pass/fail claim about CSIA quality: see docs/csia/EVALUATION_RESULTS_v2.md)
     f0, f1 = clock.local(WHEEL_FAULT[0]), clock.local(WHEEL_FAULT[1])
     tl = cs["timeline"]
     det = next((r["t_local_s"] for r in tl if f0 <= r["t_local_s"] <= f1 + 2 and "wheel_l" in r["suspects"]), None)
@@ -309,7 +352,8 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
           "describe this plant's copper loss: a fit of p_dc - p_mech gives 0.159 iq^2 + 3.02 W (1.5 R iq^2 with "
           "R = 0.1 ohm), so at launch current the I^2R loss reads as a fault. The v1 synthetic evaluation generated "
           "p_dc with the adapter's own loss form and constant current within pulses, so it tested neither. "
-          "docs/CSIA_EVALUATION_v2.md treats both with a frozen protocol and a new untouched evaluation set.", ""]
+          "docs/csia/EVALUATION_PROTOCOL_v2.md treats both with a frozen protocol and a new untouched evaluation set "
+          "(results: docs/csia/EVALUATION_RESULTS_v2.md).", ""]
     (out / "summary.md").write_text("\n".join(L))
     return res
 
