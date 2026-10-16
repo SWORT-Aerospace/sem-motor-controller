@@ -123,9 +123,16 @@ The controller's calibration identity is logged twice: as the blob hash in the h
 * While LTE is down the unit keeps the newest 30 messages (15 s), drops the oldest and counts them; on reconnection the backlog is sent oldest first with `replayed = true`.
 * Pit ingestion validates every message (schema, types, states, ranges) and stores rejections with their reason; keys are idempotent: `(run_id, seq)` for live messages, `(run_id, block, index)` for log records, so replays and re-imports add no rows.
 * Offline import reads the STLG file from flash, SD or USB into the same SQLite database, with telematics time and PPS-derived UTC and quality per record.
+* **Transport (v1.1 of this section, v0.5).**
+  * Car side: MQTT 3.1.1, QoS 1 (at least once). The unit hands a message to the client only while connected; the client holds at most 10 unacknowledged messages and resends them, DUP set, after reconnecting.
+  * Pit side: a subscriber with a persistent session (clean session off, fixed client id) that re-subscribes on every connection. It records every receipt in `rx` with its outcome (stored, duplicate, rejected) and the DUP flag, and commits before acknowledging, so a crash causes a redelivery, never a loss.
+  * The broker persists sessions and queued messages.
+  * A broker acknowledgement is not delivery to the pit: a broker that loses its state can acknowledge messages no subscriber receives. Gaps are therefore reported by `seq`, and the local log stays the complete record.
+  * Host implementation: `host/telematics/mqtt_link.py`, `host/pit/mqtt_ingest.py`, `tools/mqtt_broker.py`; setup `docs/MQTT_SETUP.md`.
+* **Power and emergency stop.** The telematics unit is powered from the propulsion battery downstream of the joulemeter (2026 Articles 56d, 57b); its consumption is part of the official result. The emergency stop removes its power at once (Article 37e); the log loses at most its open block, and the modem needs about 8 s after power-up before its UART is ready (A7672X Hardware Design V1.04).
 * The link is monitoring only: no inbound message leads to a CAN write; no remote arming, mode selection or limit change. A future pit-to-car message (for example a schedule between runs) may be applied only while the vehicle is stopped and DISARMED, and confirmed locally.
 
-Host demonstration of this whole chain: `python3 tools/run_host_demo.py --out build/host_demo` (section 13).
+Host demonstrations of this chain: `python3 tools/run_host_demo.py --out build/host_demo` (simulated link, section 13) and `python3 tools/run_mqtt_demo.py --out build/mqtt_demo` (real local Mosquitto broker, `docs/generated/mqtt_demo/summary.md`).
 
 ## 11. Connectors
 
