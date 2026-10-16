@@ -347,7 +347,7 @@ def _write_md(out):
             L.append(f"| {k} | {_fmt(v)} | `{json.dumps(v['params'], default=float)}` |")
         for k, n in c["notes"].items():
             if "reason" in n or not n.get("dp_feasible", True):
-                L.append(f"| {k} | — | **infeasible** | | | | | | | | {n.get('dp_reason') or n.get('reason')} |")
+                L.append(f"| {k} | n/a | **infeasible** | | | | | | | | {n.get('dp_reason') or n.get('reason')} |")
         L.append("")
         if tname.startswith("A"):
             L += [f"**Torque-only on track A is physically infeasible.** Coasting from rest at 700 m (top of the 1 % "

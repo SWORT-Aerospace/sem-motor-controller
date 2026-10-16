@@ -1,5 +1,5 @@
 /* GENERATED from protocol/protocol.yaml by tools/gen_protocol.py - do not edit. */
-/* semmc CAN protocol v1.1, spec hash 3365b84b45a16c63 */
+/* semmc CAN protocol v1.1, spec hash 16ff00853dfda3ce */
 #ifndef SEMMC_PROTOCOL_H
 #define SEMMC_PROTOCOL_H
 
@@ -8,7 +8,7 @@
 
 #define SEMMC_PROTO_MAJOR 1u
 #define SEMMC_PROTO_MINOR 1u
-#define SEMMC_PROTO_SPEC_HASH "3365b84b45a16c63"
+#define SEMMC_PROTO_SPEC_HASH "16ff00853dfda3ce"
 #define SEMMC_NOMINAL_BITRATE 500000u
 #define SEMMC_FRAME_LEN 8u
 

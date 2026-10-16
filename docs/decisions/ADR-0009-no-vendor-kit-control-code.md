@@ -1,4 +1,4 @@
-# ADR-0009 — Purpose-built control core; MCSDK for reference only
+# ADR-0009: Purpose-built control core; MCSDK for reference only
 
 **Context.** ST X-CUBE-MCSDK (latest seen 6.4.x, license SLA0048 "Ultimate Liberty", snippet-level) supports STM32G4 and provides a complete FOC stack. The SEM rules (UNVERIFIED search extracts) require a *purpose-built* controller and state that "motor controller evaluation kits, individual kit components, and their software are outlawed."
 

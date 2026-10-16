@@ -1,5 +1,5 @@
 /* GENERATED from protocol/protocol.yaml by tools/gen_protocol.py - do not edit. */
-/* spec hash 3365b84b45a16c63. Conversion arithmetic is in double (slow-loop only), matching the Python codec. */
+/* spec hash 16ff00853dfda3ce. Conversion arithmetic is in double (slow-loop only), matching the Python codec. */
 #include "semmc_protocol.h"
 
 #include <math.h>

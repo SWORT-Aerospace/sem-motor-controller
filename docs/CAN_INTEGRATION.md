@@ -1,4 +1,4 @@
-# CAN integration: reference-project analysis (Cornell CHUDS) — OPTIONAL ADAPTER
+# CAN integration: reference-project analysis (Cornell CHUDS): OPTIONAL ADAPTER
 
 > **v0.3 status: REFERENCE PROJECT, NOT OUR VEHICLE.** Everything below describes Cornell's CHUDS bus, observed in a reference repository. It was written in v0.2 as if it were our vehicle's bus; that was an unsupported assumption (`docs/PROVENANCE_AUDIT.md`). Our vehicle's telematics proposal (v0.1, 14/10/2026) shows a **CAN 2.0B** bus. The actual bus is **UNKNOWN** until the team confirms it (`docs/VEHICLE_INTERFACE_MATRIX.md`).
 > * CHUDS support stays an **optional adapter**: the core is transport-neutral and the identifier block is a calibration value (ADR-0012).
@@ -21,7 +21,7 @@ Evidence: Cornell `urban-concept@c422c0f` (shallow clone; read, not modified) an
 | Payload | `[type][body_len][body…]`; no magic byte ("any 11-bit CAN-FD frame with a plausible header decodes as CHUDS") | `addressing.md` |
 | Emergency STOP | 0x000 (most severe) from the VCU; "every node with outputs goes to safe states"; the aux nodes act on it | `addressing.md`; `elec/src/front_aux/main.cpp:99`, `back_aux/main.cpp:173` |
 | Drive-command timeout | open question in CHUDS | `addressing.md`, open questions |
-| Wiring, connector, termination, stub lengths | **not documented in the repository** | — |
+| Wiring, connector, termination, stub lengths | **not documented in the repository** | n/a |
 
 ## 2. What the controller must do to coexist
 

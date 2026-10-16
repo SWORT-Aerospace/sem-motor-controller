@@ -1,4 +1,4 @@
-# Architecture Freeze v0.1 — SEM telemetry-informed motor controller
+# Architecture Freeze v0.1: SEM telemetry-informed motor controller
 
 **Status: ARCHITECTURE FREEZE COMPLETE (v0.1, conditional) · HOST IMPLEMENTATION VERIFIED · HARDWARE DESIGN BLOCKED · NOT FABRICATION READY**
 
@@ -42,7 +42,7 @@ An architecture freeze fixes **boundaries and interfaces**. It is not manufactur
 
 * **Sensored FOC with hall sensors** (sector decode, period-based speed, intra-sector angle interpolation, sector-centre angle at standstill), `id_ref = 0`. MTPA is deferred because its value depends on saliency, which is unknown.
 * **Current sampling:** three low-side shunts. A phase is "measured" only if its low-side window was valid this cycle. With exactly two measured phases, the third is **reconstructed and flagged**, and the KCL residual is **unavailable** (`mc_currents_resolve`).
-* **Loops:** fast loop at PWM rate (single precision only — verified: `mc_core_fast_step` calls no soft-double routines on Cortex-M4F); slow loop at 1 kHz (protection, state machine, arbitration, freshness); CAN TX/RX tasks outside the current ISR.
+* **Loops:** fast loop at PWM rate (single precision only; verified: `mc_core_fast_step` calls no soft-double routines on Cortex-M4F); slow loop at 1 kHz (protection, state machine, arbitration, freshness); CAN TX/RX tasks outside the current ISR.
 * **Torque path:** owner request → (hardware trip / fault / not armed → 0 now) → (driver absent / brake / eco-cancel → 0 now) → static, battery-current, derate and speed limits → supervisor-declared bounds (ECO only) → slew → `iq_ref = T / Kt`. The supervisor can only ever *tighten* this path.
 
 ## 5. State machine (frozen)
@@ -53,12 +53,12 @@ Evaluation order on each slow tick: BOOT first, then latched faults (from any st
 
 | ID | From → To | Guard | Side effects |
 |---|---|---|---|
-| T1 `BOOT_CONFIG_OK` | BOOT → SELF_TEST | calibration blob parsed, sim-valid; on a **hardware build** also hardware-valid, bench-measured, `physical_output_permitted` | — |
+| T1 `BOOT_CONFIG_OK` | BOOT → SELF_TEST | calibration blob parsed, sim-valid; on a **hardware build** also hardware-valid, bench-measured, `physical_output_permitted` | n/a |
 | T2 `BOOT_CONFIG_BAD` | BOOT → FAULT_LATCHED | otherwise | latch `CONFIG_INVALID` (never resettable) |
 | T3 `SELFTEST_PASS` | SELF_TEST → DISARMED | ≥ 50 ms in SELF_TEST; driver ready, no driver fault, no watchdog fault, current offsets OK, Vbus valid and in [UV trip, OV trip], hall sector legal, both temperatures valid | arm needs a fresh OFF→ON edge |
 | T4 `SELFTEST_FAIL` | SELF_TEST → FAULT_LATCHED | self-test complete and not passed | latch `SELFTEST` |
 | T5 `ARM` | DISARMED → READY | arm-switch **OFF→ON edge observed after boot/disarm**, e-stop chain OK, throttle released, no active or latched faults, output permitted, no hardware trip | clear pending eco edge |
-| T6 `MANUAL_ENGAGE` | READY → MANUAL | mode switch = manual, driver present, engage | — |
+| T6 `MANUAL_ENGAGE` | READY → MANUAL | mode switch = manual, driver present, engage | n/a |
 | T7 `ECO_ENGAGE` | READY/MANUAL → ECO_ASSIST | eco switch ON with an **edge pending**, supervisor OK (session established, request fresh, limits fresh, request references a held limits set), throttle released, no brake/cancel, driver present | consume eco edge |
 | T8 `ECO_DRIVER_CANCEL` | ECO_ASSIST → READY | brake or cancel | torque 0 **now**; throttle latch set |
 | T9 `ECO_DESELECT` | ECO_ASSIST → READY | eco switch OFF | throttle latch set |

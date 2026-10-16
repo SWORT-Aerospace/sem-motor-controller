@@ -1,4 +1,4 @@
-# ADR-0012 — Transport-neutral core; CAN identifier block per vehicle; CHUDS only as an optional adapter
+# ADR-0012: Transport-neutral core; CAN identifier block per vehicle; CHUDS only as an optional adapter
 
 **Status:** Accepted (v0.3). The vehicle bus is still to be confirmed.
 

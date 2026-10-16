@@ -56,10 +56,10 @@ Format v1 (`firmware/include/semmc/mc_config.h`): `"SMCB"`, format version, sche
 | Dead-man sense | in, digital | from the dead-man switch (also in the hardware enable chain) | READY when released |
 | Hall A/B/C + supply | in | protected inputs; supply and open-drain vs push-pull **unknown** | sector, speed, angle |
 | Motor temperature | in, analog | sensor type **unknown** | derate / trip |
-| Motor phases U/V/W | power out | — | — |
-| Battery + / − (after the vehicle e-stop and fuse) | power in | precharge required | — |
-| CAN H/L | bidirectional | — | §1 |
-| Debug UART / SWD | bench only | not populated or disabled for competition | — |
+| Motor phases U/V/W | power out | n/a | n/a |
+| Battery + / − (after the vehicle e-stop and fuse) | power in | precharge required | n/a |
+| CAN H/L | bidirectional | n/a | §1 |
+| Debug UART / SWD | bench only | not populated or disabled for competition | n/a |
 
 ## 4. Companion ↔ controller responsibilities
 | Function | Owner |

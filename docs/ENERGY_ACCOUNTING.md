@@ -21,10 +21,10 @@ E_wheel = ΔKE + W_resistive + W_friction_brake                                 
 | Motor drag when coupled and unpowered | vehicle model (resistive force) | no (it is vehicle kinetic energy) | Only without a freewheel. In coast the battery supplies only `aux`. |
 | Rolling, aerodynamic, grade, cornering | vehicle model | no (supplied from `E_wheel` or kinetic energy) | |
 | **Friction brake** | simulator / DP (`F_brake·distance`) | **no** | Reported separately as `brake_energy_J`: this is kinetic energy (that was paid for earlier by the battery) dissipated by the **driver's** brake. Never added to `E_batt`. Never confused with coast. |
-| Regeneration | — | — | Disabled (ADR-0007); the map refuses negative torque. |
-| Battery internal resistance loss | — | **excluded by definition** | Inside the battery, upstream of the terminals. |
-| Harness, fuse, connector, precharge-resistor, DC-link ESR losses | — | **not modelled** | Small but non-zero, and on the controller side of the terminals. Add them as a measured term once the harness exists (stage 6). |
-| Kinetic energy left at the finish | — | **no credit** | The terminal condition is "finish line crossed; final speed free" for every strategy. Final speed is reported per run. |
+| Regeneration | n/a | n/a | Disabled (ADR-0007); the map refuses negative torque. |
+| Battery internal resistance loss | n/a | **excluded by definition** | Inside the battery, upstream of the terminals. |
+| Harness, fuse, connector, precharge-resistor, DC-link ESR losses | n/a | **not modelled** | Small but non-zero, and on the controller side of the terminals. Add them as a measured term once the harness exists (stage 6). |
+| Kinetic energy left at the finish | n/a | **no credit** | The terminal condition is "finish line crossed; final speed free" for every strategy. Final speed is reported per run. |
 
 ## 2. Checks that run on every simulation
 

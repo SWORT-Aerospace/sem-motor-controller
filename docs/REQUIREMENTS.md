@@ -27,7 +27,7 @@ Minimize battery energy over a valid completed run, subject to finish time, driv
 
 | ID | Requirement | Src | Verification | Status |
 |---|---|---|---|---|
-| EL-1 | Maximum voltage at any point ≤ 60 V **by design**, including transients and capacitors | R? 57a | An (`max_bus_voltage`), HW double-pulse overshoot measurement | open — needs pack data |
+| EL-1 | Maximum voltage at any point ≤ 60 V **by design**, including transients and capacitors | R? 57a | An (`max_bus_voltage`), HW double-pulse overshoot measurement | open; needs pack data |
 | EL-2 | Inverter bus rating ≥ V_max_charged × (1 + measured margin) | P | T validator rule `BUS_RATING_MARGIN`; HW stage 4 | open |
 | EL-3 | Phase-current hardware trip below the current-sense full scale; software trip below the hardware trip; operating limit below the software trip | P | T rules `CURRENT_TRIP_ORDER`, `CURRENT_SENSE_RANGE` | host-verified (rules) |
 | EL-4 | Phase RMS, phase peak and battery average currents tracked and reported separately | P | I `models/inverter/losses.py`; protocol fields `iq_A`, `ibatt_A` | done (models) |

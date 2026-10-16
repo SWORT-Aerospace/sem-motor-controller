@@ -1,4 +1,4 @@
-# CAN messages - semmc protocol v1.1 (GENERATED, spec hash `3365b84b45a16c63`)
+# CAN messages - semmc protocol v1.1 (GENERATED, spec hash `16ff00853dfda3ce`)
 
 Generated from `protocol/protocol.yaml` by `tools/gen_protocol.py`; do not edit.
 

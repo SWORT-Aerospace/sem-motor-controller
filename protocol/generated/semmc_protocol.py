@@ -1,13 +1,13 @@
 """GENERATED from protocol/protocol.yaml by tools/gen_protocol.py - do not edit.
 
-semmc CAN protocol v1.1, spec hash 3365b84b45a16c63.
+semmc CAN protocol v1.1, spec hash 16ff00853dfda3ce.
 """
 import math
 import struct
 
 PROTOCOL_MAJOR = 1
 PROTOCOL_MINOR = 1
-SPEC_HASH = "3365b84b45a16c63"
+SPEC_HASH = "16ff00853dfda3ce"
 
 MESSAGES = {
  "ctrl_fault": {

@@ -14,18 +14,18 @@ Status meanings:
 | Phase MOSFETs ×6 | UNRESOLVED (representative CSD19536KTT, 100 V D2PAK) | UNRESOLVED | the envelope shows a few W per device to ~40 A peak with 2.4–5 mΩ parts | motor peak and continuous current, V_bat,max (V_DS ≥ 1.5·V_bat,max) | CSD19535KTT, BSC040N10NS5 | generic symbol |
 | Phase shunts ×3 | UNRESOLVED (representative 2512, 4-terminal) | UNRESOLVED | Kelvin sensing; value from I_fs and CSA gain (`current_sense_error_budget.md`) | motor peak current; 38-week lead time seen for the 1 mΩ Kelvin part | 2-terminal 2512 with Kelvin pads (accuracy trade-off) | generic symbol |
 | DC-bus meter | INA228AIDGSR (VSSOP-10) | CANDIDATE | 85 V common mode, 20-bit, energy accumulator; independent of the phase shunts | US stock gap in the snapshot | INA229 (SPI), INA238 | **UNVERIFIED** placeholder pin numbers |
-| Bus shunt | UNRESOLVED | UNRESOLVED | INA228 full-scale range vs I_batt,max | I_batt,max | — | generic |
+| Bus shunt | UNRESOLVED | UNRESOLVED | INA228 full-scale range vs I_batt,max | I_batt,max | n/a | generic |
 | DC-link bulk | UNRESOLVED (representative 220 µF / 100 V low-ESR) | UNRESOLVED | ripple current from the envelope table | I_ph,rms, V_bat,max, temperature | polymer / OS-CON | generic |
-| Fuse, TVS, reverse polarity, precharge R, bypass P-FET | UNRESOLVED | UNRESOLVED | — | BMS short-circuit current, V_bat,max, C_link, harness decision | — | generic |
+| Fuse, TVS, reverse polarity, precharge R, bypass P-FET | UNRESOLVED | UNRESOLVED | n/a | BMS short-circuit current, V_bat,max, C_link, harness decision | n/a | generic |
 | CAN transceiver | TJA1051T/3/1J (SO-8) | CANDIDATE | 3.3 V VIO variant; CAN FD-capable; also valid on a classic CAN 2.0B bus (vehicle bus UNKNOWN); pinout verified by the KiCad library | bus wiring and termination location | TCAN1042V-class (verify pin compatibility) | KiCad library |
-| CAN ESD | NUP2105LT1G | CANDIDATE | standard dual-line CAN TVS | — | PESD2CAN | KiCad library |
+| CAN ESD | NUP2105LT1G | CANDIDATE | standard dual-line CAN TVS | n/a | PESD2CAN | KiCad library |
 | Aux buck | LM5164DDAR (SO-8 PowerPAD) | CANDIDATE | 100 V input class: margin over an unknown ≤ 60 V battery | V_bat,min (UVLO), V_bat,max; LM5164-Q1 was out of stock (16 weeks) in a snapshot | LM5164QDDARQ1 | KiCad library |
-| 3.3 V LDO | TLV75533PDBVR | CANDIDATE | low noise for the analog rail | — | TLV757P | KiCad library |
+| 3.3 V LDO | TLV75533PDBVR | CANDIDATE | low noise for the analog rail | n/a | TLV757P | KiCad library |
 | Watchdog | MAX6369KA+T | CANDIDATE | pin-selectable timeout; open-drain WDO into the hardware permit chain | timeout from the hazard analysis | TPS3431, STWD100 | KiCad library |
 | OV comparator + reference | TLV7041DBVR + TL431BIDBZR | CANDIDATE | open-drain output, wired-OR into BKIN2; independent of firmware | OV threshold from V_bat,max | TLV3691, LM4041 | KiCad library |
-| Enable AND gate | SN74LVC1G08DBVR | CANDIDATE | ENABLE = MCU_DRV_EN AND HW_PERMIT | — | 74AHC1G08 | KiCad library |
-| Safety-loop isolator | PC817-class | CANDIDATE | isolates the vehicle loop voltage | loop voltage (LED resistor) | — | KiCad library |
-| Connectors | UNRESOLVED | UNRESOLVED | — | vehicle harness families (agree with the vehicle team) | — | generic |
+| Enable AND gate | SN74LVC1G08DBVR | CANDIDATE | ENABLE = MCU_DRV_EN AND HW_PERMIT | n/a | 74AHC1G08 | KiCad library |
+| Safety-loop isolator | PC817-class | CANDIDATE | isolates the vehicle loop voltage | loop voltage (LED resistor) | n/a | KiCad library |
+| Connectors | UNRESOLVED | UNRESOLVED | n/a | vehicle harness families (agree with the vehicle team) | n/a | generic |
 
 ## Decisions still open
 1. Reverse-polarity protection: an active ideal-diode stage, or harness keying only.

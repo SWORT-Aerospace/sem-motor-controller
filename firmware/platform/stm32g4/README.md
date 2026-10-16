@@ -1,4 +1,4 @@
-# STM32G4 platform layer — NOT IMPLEMENTED (v0.1)
+# STM32G4 platform layer: NOT IMPLEMENTED (v0.1)
 
 No embedded motor-control firmware image exists. The portable core cross-compiles for Cortex-M4F (`firmware/cmake/arm-none-eabi-cortex-m4f.cmake`, `SEMMC_PORTABLE_ONLY=ON`): about 29.5 kB of unlinked text, and **no software double-precision calls inside `mc_core_fast_step`** (checked with `arm-none-eabi-objdump`). That is a portability check, not a firmware build.
 

@@ -72,7 +72,7 @@ The tolerance analysis computes ISO 11898-1 conditions I–III. The CAN FD switc
 * **A real KiCad ERC was not run:** KiCad 7 has no CLI ERC, and installing KiCad 9 here was refused by the environment's permission policy. `tools/run_kicad_erc.sh` runs it on any machine with KiCad 8+.
 
 ## 6. Remaining schematic blockers
-1. Primary datasheets (attach the PDFs to the session).
+1. Primary datasheets (add the PDFs under `docs/reference/datasheets/`).
 2. The DRV8353S symbol for the orderable package.
 3. A real KiCad ERC.
 4. The crystal (after the bus).
@@ -96,7 +96,7 @@ A bench-supply limit bounds only the battery-input current. The checklist adds D
 * **No result is attributed to TrustCore**: no ablation shows a contribution, and its only detector was the worst.
 * The next evaluation is planned but not run.
 
-## 9. Tests run (this session, x86-64 host and arm-none-eabi; nothing on hardware)
+## 9. Tests run (v0.3, x86-64 host and arm-none-eabi; nothing on hardware)
 | Command | Result |
 |---|---|
 | fresh `cmake` + build (`-Werror`, ASan+UBSan) + `ctest` | 0 warnings; **6/6 suites, 4,006 checks, 0 failures**. New: CAN block relocation with a full ECO engagement at base 0x500; transport-neutral message API; rule 40 mutations |
@@ -108,7 +108,7 @@ A bench-supply limit bounds only the battery-input current. The checklist adds D
 | **Not run** | KiCad ERC; anything on hardware; a real CAN socket |
 
 ## 10. Inputs still missing
-* `bk4000tg_kicad.zip` and `telemetry.pdf` were supplied in another tool and never reached this workspace. **Please attach both directly to this Claude session.** Until then no Cornell or other hardware is substituted for them.
+* `bk4000tg_kicad.zip` and `telemetry.pdf` were referenced by the vehicle team but not received. (v0.4: requested in `docs/INPUT_SHEET.md`.) Until then no Cornell or other hardware is substituted for them.
 * The two telematics PDFs that did arrive are used as design inputs.
 
 Questions for the physical team (short, prioritised): [`PHYSICAL_TEAM_QUESTIONNAIRE.md`](PHYSICAL_TEAM_QUESTIONNAIRE.md). Repository move: [`MIGRATION.md`](MIGRATION.md).

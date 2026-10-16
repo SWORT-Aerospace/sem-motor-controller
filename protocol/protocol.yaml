@@ -1,4 +1,4 @@
-# SEM motor-controller CAN contract — SINGLE SOURCE OF TRUTH.
+# SEM motor-controller CAN contract: SINGLE SOURCE OF TRUTH.
 # tools/gen_protocol.py generates matching C and Python codecs and golden
 # vectors from this file. Generated files carry the schema hash; CI fails if
 # they are stale.
