@@ -64,3 +64,17 @@ def test_invalid_speed_is_not_treated_as_zero_or_last_value():
     s.tick(0.12)
     r = _last_request(s)
     assert r["torque_Nm"] == 0.0 and r["coast"] and r["reason"] == "telemetry_invalid"
+
+
+def test_pulse_and_coast_hysteresis_and_coast_request():
+    from host.telemetry_adapter.supervisor import Telemetry, pulse_and_coast_policy
+    pol = pulse_and_coast_policy(5.5, 6.5, 1.0, 1.5, 10.0)
+    k = 1.5 / (2 * math.pi) / 10.0
+    tel = Telemetry()
+    out = []
+    for v in (5.0, 6.0, 6.6, 6.0, 5.6, 5.4, 6.0):        # rise through the band, fall through it
+        tel.speed_mech_rad_s = v / k
+        out.append(pol(0.0, tel))
+    assert out == [(1.0, False), (1.0, False), (0.0, True), (0.0, True), (0.0, True), (1.0, False), (1.0, False)]
+    tel.speed_mech_rad_s = math.nan
+    assert pol(0.0, tel) == (0.0, False)

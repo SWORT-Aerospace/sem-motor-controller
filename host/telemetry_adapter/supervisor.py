@@ -163,3 +163,24 @@ def speed_hold_policy(target_mps: float, kp_Nm_per_mps: float, wheel_circumferen
         torque = max(0.0, min(max_torque, kp_Nm_per_mps * (target_mps - v) + 0.15))
         return torque, False
     return policy
+
+
+def pulse_and_coast_policy(v_lo_mps: float, v_hi_mps: float, pulse_torque_Nm: float,
+                           wheel_circumference_m: float, gear_ratio: float) -> Policy:
+    """Hysteresis pulse-and-coast: pulse_torque_Nm until v_hi, then coast with a
+    coast request (the controller turns its gates off in gate-off coast mode)
+    until v_lo. Two set points and one torque; the band is chosen offline
+    (docs/METHOD_SELECTION.md). An invalid speed gives zero torque, no coast."""
+    k = wheel_circumference_m / (2.0 * math.pi) / gear_ratio
+    state = {"pulse": True}
+
+    def policy(t_s: float, tel: Telemetry):
+        if math.isnan(tel.speed_mech_rad_s):
+            return 0.0, False
+        v = tel.speed_mech_rad_s * k
+        if state["pulse"] and v >= v_hi_mps:
+            state["pulse"] = False
+        elif not state["pulse"] and v <= v_lo_mps:
+            state["pulse"] = True
+        return (pulse_torque_Nm, False) if state["pulse"] else (0.0, True)
+    return policy
