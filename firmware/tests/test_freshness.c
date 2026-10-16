@@ -125,6 +125,7 @@ static void test_fresh_samples_after_a_delayed_one_are_accepted(void)
     mc_fresh_init(&f, 100000u, 1u, 100u);
     (void)mc_fresh_on_rx(&f, MS(0), 7u, 1u, 10u, 1000u);
     CHECK(mc_fresh_on_rx(&f, MS(40), 7u, 1u, 11u, 1020u) == MC_RX_ACCEPTED_NEW);       /* 20 ms late */
+    CHECK_EQ_INT(f.lag_us, 19200);       /* docs/MATH_SPEC.md (3.8): 0 + 40 - 20 - 0.02 x 40 ms = 19.2 ms */
     /* 120 ms of silence, then a cached sample whose source time is 120 ms old */
     CHECK(mc_fresh_on_rx(&f, MS(160), 7u, 1u, 12u, 1040u) == MC_RX_TIME_DISCONTINUITY);
     /* fresh samples again */
