@@ -357,8 +357,6 @@
     )
   )
 
-  (no_connect (at 441.96 109.22) (uuid 9dfe2142-3e06-5243-9b59-95793a8edbed))
-
   (text "Logic rails run from VBAT_PROT (before precharge), so the MCU is alive while the link precharges."
     (at 20.0 20.0 0)
     (effects (font (size 1.8 1.8)) (justify left))

@@ -560,7 +560,11 @@ def build(check: bool) -> int:
             for num, name, px, py, pa, et, net in pins:
                 ax, ay = round(X + px, 4), round(Y - py, 4)
                 if net is None:
-                    sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
+                    # A pin the library already types as no_connect needs no flag: KiCad 8 ERC reports
+                    # the extra flag as both "connected" and "dangling" (seen on J801 KEY, MAX6369 NC,
+                    # TLV755 NC).
+                    if et != "no_connect":
+                        sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
                     continue
                 if not prt.ref.startswith("#"):          # power flags are not netlist components
                     expected.setdefault(net, set()).add((prt.ref, num))
