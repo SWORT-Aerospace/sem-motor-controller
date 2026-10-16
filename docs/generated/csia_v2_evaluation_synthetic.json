@@ -1,0 +1,1403 @@
+{
+ "meta": {
+  "n_scenarios": 94,
+  "n_nominal": 24,
+  "lam": 9.0,
+  "e6": {
+   "R_ohm": 0.09968870756066192,
+   "align_max_gap_s": 0.03,
+   "c_sw_W_per_A": 0.12536599575795193,
+   "p0_W": 3.1618515849106323,
+   "s0_W": 2.1988208734164827,
+   "u_R": 0.15,
+   "u_rel": 0.03
+  },
+  "runtime_s": 191.35863494873047,
+  "memory_kib": {
+   "B1": 372.453125,
+   "R3": 720.44140625,
+   "R3v": 341.1630859375,
+   "CSIA1": 504.8818359375,
+   "CSIA2": 502.2021484375,
+   "TRUST2": 343.6630859375,
+   "B1+CSIA2": 505.8115234375
+  },
+  "decision": {
+   "CSIA2_vs_R3v": {
+    "more_attributed": 14,
+    "more_misattributed": 4,
+    "more_fa_per_h": 0.0,
+    "supported": false
+   },
+   "TRUST2_vs_R3v": {
+    "more_attributed": 4,
+    "more_misattributed": 22,
+    "more_fa_per_h": 52.467532467532465,
+    "supported": false
+   },
+   "recommended": "R3v"
+  },
+  "freeze_file": "docs/csia/V2_FREEZE.json"
+ },
+ "aggregate": {
+  "B1": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 209,
+   "fa_per_h": 36.19047619047619,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 69,
+   "fa_attr_episodes": 209,
+   "fa_attr_per_h": 36.19047619047619,
+   "n_faults": 70,
+   "missed": 65,
+   "attributed": 5,
+   "misattributed": 16,
+   "lat_detect_med": 0.36244166820435453,
+   "lat_detect_p90": 0.3718228812859934,
+   "lat_attr_med": 0.36244166820435453,
+   "lat_elig_med": 0.29999999999999716,
+   "lat_elig_p90": 0.29999999999999716,
+   "ambiguous_med": 0.0,
+   "fa_by_nodes": {
+    "gnss": 209
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 1,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 2,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 3,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 2,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 1,
+     "lat_detect_med": null,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 1,
+     "lat_detect_med": 0.36244166820435453,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 1,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 2,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 1,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 2,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    }
+   },
+   "coverage": 0.07142857142857142,
+   "tick_ms_mean": 0.07380063887153936
+  },
+  "R3": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 6,
+   "fa_per_h": 1.0389610389610389,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 2,
+   "fa_attr_episodes": 0,
+   "fa_attr_per_h": 0.0,
+   "n_faults": 70,
+   "missed": 14,
+   "attributed": 0,
+   "misattributed": 0,
+   "lat_detect_med": 2.6826241900418495,
+   "lat_detect_p90": 21.557972136397126,
+   "lat_attr_med": null,
+   "lat_elig_med": 1.0999999999999943,
+   "lat_elig_p90": 21.400000000000006,
+   "ambiguous_med": 1.0,
+   "fa_by_nodes": {
+    "dc_meter,phase_current": 6
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 0.3536623226786446,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 0.35299277219364456,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 0.4810717612854063,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 11.874532157511453,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": []
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 1,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 37.57575854625628,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": []
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": []
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 0.2900262493151544,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 6.827244119205986,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 1.5079068657040153,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 21.557972136397126,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 0.26178854406794017,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 9.950367623915582,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 11.763632446191423,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 12.736560117902513,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    }
+   },
+   "coverage": 0.8,
+   "tick_ms_mean": 0.21411540194673034
+  },
+  "R3v": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 6,
+   "fa_per_h": 1.0389610389610389,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 2,
+   "fa_attr_episodes": 0,
+   "fa_attr_per_h": 0.0,
+   "n_faults": 70,
+   "missed": 14,
+   "attributed": 34,
+   "misattributed": 0,
+   "lat_detect_med": 2.6826241900418495,
+   "lat_detect_p90": 21.557972136397126,
+   "lat_attr_med": 0.39034994957911806,
+   "lat_elig_med": 1.0999999999999943,
+   "lat_elig_p90": 21.400000000000006,
+   "ambiguous_med": 0.5625,
+   "fa_by_nodes": {
+    "dc_meter,phase_current": 6
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.3536623226786446,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.35299277219364456,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.4810717612854063,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 11.874532157511453,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": []
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 1,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 37.57575854625628,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": []
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": []
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.2900262493151544,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 6.827244119205986,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 1.5079068657040153,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 21.557972136397126,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.26178854406794017,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 9.950367623915582,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 11.763632446191423,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 12.736560117902513,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    }
+   },
+   "coverage": 0.8,
+   "tick_ms_mean": 0.1961881866229452
+  },
+  "CSIA1": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 206,
+   "fa_per_h": 35.670995670995666,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 64,
+   "fa_attr_episodes": 190,
+   "fa_attr_per_h": 32.9004329004329,
+   "n_faults": 70,
+   "missed": 14,
+   "attributed": 49,
+   "misattributed": 16,
+   "lat_detect_med": 3.2074824349362814,
+   "lat_detect_p90": 25.95455335341842,
+   "lat_attr_med": 4.882693484533377,
+   "lat_elig_med": 1.5,
+   "lat_elig_p90": 22.4,
+   "ambiguous_med": 0.03508771929824561,
+   "fa_by_nodes": {
+    "dc_meter,phase_current": 193,
+    "dc_meter": 13
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 2,
+     "lat_detect_med": 0.3536623226786446,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "dc_meter",
+      "imu",
+      "wheel_r"
+     ]
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 1,
+     "lat_detect_med": 0.35299277219364456,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "dc_meter"
+     ]
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 3,
+     "lat_detect_med": 0.4810717612854063,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "dc_meter",
+      "imu"
+     ]
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 2,
+     "misattributed": 1,
+     "lat_detect_med": 11.874532157511453,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": [
+      "dc_meter"
+     ]
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 1,
+     "attributed": 0,
+     "misattributed": 1,
+     "lat_detect_med": 37.57575854625628,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": [
+      "dc_meter"
+     ]
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": []
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 1,
+     "lat_detect_med": 0.2900262493151544,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "dc_meter"
+     ]
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 6.827244119205986,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 3,
+     "misattributed": 1,
+     "lat_detect_med": 1.5079068657040153,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "dc_meter"
+     ]
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 1,
+     "lat_detect_med": 21.557972136397126,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "dc_meter"
+     ]
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.26178854406794017,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 5,
+     "lat_detect_med": 9.950367623915582,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "rotor"
+     ]
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 2,
+     "misattributed": 0,
+     "lat_detect_med": 22.46363244619142,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 14.431927234171496,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    }
+   },
+   "coverage": 0.8,
+   "tick_ms_mean": 0.34090384266004353
+  },
+  "CSIA2": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 6,
+   "fa_per_h": 1.0389610389610389,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 2,
+   "fa_attr_episodes": 0,
+   "fa_attr_per_h": 0.0,
+   "n_faults": 70,
+   "missed": 14,
+   "attributed": 48,
+   "misattributed": 4,
+   "lat_detect_med": 2.6826241900418495,
+   "lat_detect_p90": 21.557972136397126,
+   "lat_attr_med": 4.407906865704007,
+   "lat_elig_med": 1.0999999999999943,
+   "lat_elig_p90": 21.400000000000006,
+   "ambiguous_med": 0.03734439834024896,
+   "fa_by_nodes": {
+    "dc_meter,phase_current": 6
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 2,
+     "lat_detect_med": 0.3536623226786446,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "imu",
+      "wheel_r"
+     ]
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.35299277219364456,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 2,
+     "lat_detect_med": 0.4810717612854063,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "imu"
+     ]
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 11.874532157511453,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": []
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 1,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": 37.57575854625628,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": []
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": []
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.2900262493151544,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 6.827244119205986,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 3,
+     "misattributed": 0,
+     "lat_detect_med": 1.5079068657040153,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 21.557972136397126,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.26178854406794017,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 9.950367623915582,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 3,
+     "misattributed": 0,
+     "lat_detect_med": 11.763632446191423,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 12.736560117902513,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    }
+   },
+   "coverage": 0.8,
+   "tick_ms_mean": 0.35544966368943154
+  },
+  "TRUST2": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 309,
+   "fa_per_h": 53.506493506493506,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 68,
+   "fa_attr_episodes": 326,
+   "fa_attr_per_h": 56.450216450216445,
+   "n_faults": 70,
+   "missed": 11,
+   "attributed": 38,
+   "misattributed": 22,
+   "lat_detect_med": 9.145689269292475,
+   "lat_detect_p90": 20.669594562447855,
+   "lat_attr_med": 8.873154689123048,
+   "lat_elig_med": 8.399999999999999,
+   "lat_elig_p90": 19.200000000000003,
+   "ambiguous_med": 0.8008048289738431,
+   "fa_by_nodes": {
+    "dc_meter,phase_current": 97,
+    "imu,rotor,wheel_drive": 33,
+    "gnss,imu,rotor,wheel_drive": 32,
+    "imu": 18,
+    "gnss": 16,
+    "rotor,wheel_drive": 14
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 7.189216452793993,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 11.62440780970158,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 0,
+     "misattributed": 5,
+     "lat_detect_med": 11.31830579516486,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "imu"
+     ]
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 0,
+     "misattributed": 3,
+     "lat_detect_med": 17.77453215751143,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": [
+      "dc_meter",
+      "phase_current"
+     ]
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 2,
+     "misattributed": 2,
+     "lat_detect_med": 28.58512954437697,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": [
+      "dc_meter",
+      "phase_current"
+     ]
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 0,
+     "attributed": 0,
+     "misattributed": 0,
+     "lat_detect_med": null,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": []
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 1,
+     "misattributed": 4,
+     "lat_detect_med": 5.498353797428791,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "wheel_drive"
+     ]
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 2,
+     "misattributed": 1,
+     "lat_detect_med": 8.41220915924032,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "wheel_drive"
+     ]
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 4.282693484533382,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 15.65797213639712,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 2.26178854406794,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 7.050367623915591,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 2,
+     "misattributed": 4,
+     "lat_detect_med": 3.863632446191417,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "phase_current"
+     ]
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 1,
+     "misattributed": 3,
+     "lat_detect_med": 11.833186608358034,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "phase_current"
+     ]
+    }
+   },
+   "coverage": 0.8428571428571429,
+   "tick_ms_mean": 0.3539506577413078
+  },
+  "B1+CSIA2": {
+   "op_hours": 5.775,
+   "nominal_hours": 1.9993333333333334,
+   "fa_episodes": 215,
+   "fa_per_h": 37.229437229437224,
+   "fa_upper95_per_h": null,
+   "fa_nominal_episodes": 71,
+   "fa_attr_episodes": 209,
+   "fa_attr_per_h": 36.19047619047619,
+   "n_faults": 70,
+   "missed": 9,
+   "attributed": 53,
+   "misattributed": 19,
+   "lat_detect_med": 1.1908930476585624,
+   "lat_detect_p90": 21.41132366912393,
+   "lat_attr_med": 3.285938557393692,
+   "lat_elig_med": 1.0999999999999943,
+   "lat_elig_p90": 21.400000000000006,
+   "ambiguous_med": 0.03116883116883117,
+   "fa_by_nodes": {
+    "gnss": 209,
+    "dc_meter,phase_current": 6
+   },
+   "by_kind": {
+    "wheel_l_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 2,
+     "lat_detect_med": 0.3536623226786446,
+     "first_eligible_med": 0.053662322678633245,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss",
+      "imu",
+      "wheel_r"
+     ]
+    },
+    "wheel_r_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 2,
+     "lat_detect_med": 0.35299277219364456,
+     "first_eligible_med": 0.0529927721936474,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "wheel_l_intermittent": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 5,
+     "lat_detect_med": 0.4810717612854063,
+     "first_eligible_med": 0.042594965421272946,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss",
+      "imu"
+     ]
+    },
+    "rotor_stuck": {
+     "n": 5,
+     "detected": 3,
+     "attributed": 0,
+     "misattributed": 2,
+     "lat_detect_med": 11.874532157511453,
+     "first_eligible_med": 0.07626998371294746,
+     "unobservable_frac_med": 0.6054964369230622,
+     "never_eligible": 1,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "rotor_scale": {
+     "n": 5,
+     "detected": 1,
+     "attributed": 0,
+     "misattributed": 1,
+     "lat_detect_med": 37.57575854625628,
+     "first_eligible_med": 7.181454011746368,
+     "unobservable_frac_med": 0.861055171831428,
+     "never_eligible": 2,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "rotor_dropout": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 1,
+     "lat_detect_med": 0.36244166820435453,
+     "first_eligible_med": 0.03137428340204451,
+     "unobservable_frac_med": 0.9993303000421556,
+     "never_eligible": 3,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "gnss_offset": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.2900262493151544,
+     "first_eligible_med": 0.09002624931515868,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "gnss_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 0,
+     "lat_detect_med": 6.827244119205986,
+     "first_eligible_med": 0.027244119205981576,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "imu_bias": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 3,
+     "misattributed": 1,
+     "lat_detect_med": 1.5079068657040153,
+     "first_eligible_med": 0.06959456244786111,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "imu_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 4,
+     "misattributed": 2,
+     "lat_detect_med": 21.557972136397126,
+     "first_eligible_med": 0.05455335341841305,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "current_bias": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 0.26178854406794017,
+     "first_eligible_med": 0.05432751762037924,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "current_drift": {
+     "n": 5,
+     "detected": 5,
+     "attributed": 5,
+     "misattributed": 0,
+     "lat_detect_med": 9.950367623915582,
+     "first_eligible_med": 0.0503676239155908,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": []
+    },
+    "dc_gain": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 3,
+     "misattributed": 1,
+     "lat_detect_med": 11.763632446191423,
+     "first_eligible_med": 0.044236292519471476,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    },
+    "dc_drift": {
+     "n": 5,
+     "detected": 4,
+     "attributed": 4,
+     "misattributed": 2,
+     "lat_detect_med": 12.736560117902513,
+     "first_eligible_med": 0.03656011790251057,
+     "unobservable_frac_med": 0.0,
+     "never_eligible": 0,
+     "wrong_nodes": [
+      "gnss"
+     ]
+    }
+   },
+   "coverage": 0.8714285714285714,
+   "tick_ms_mean": 0.4341858784170084
+  }
+ }
+}
