@@ -1,0 +1,444 @@
+{
+ "commit": "4c8b5bf25882c188603642e84134fed653f1c1fe",
+ "branch": "eng/v0.4-verification-integration",
+ "dirty_before": [],
+ "tools": {
+  "python": "3.13.16",
+  "platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+  "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "cmake": "cmake version 3.28.3",
+  "arm-none-eabi-gcc": "arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009",
+  "kicad-cli": "7.0.11"
+ },
+ "mode": "full",
+ "checks": [
+  {
+   "id": "gen_config",
+   "group": "generation",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_config.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": []
+  },
+  {
+   "id": "gen_protocol",
+   "group": "generation",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_protocol.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": []
+  },
+  {
+   "id": "gen_dbc",
+   "group": "generation",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_dbc.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "protocol/generated/semmc_base0x300.dbc: current"
+   ]
+  },
+  {
+   "id": "fetch_csia",
+   "group": "dependencies",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/fetch_csia.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 1.4,
+   "summary": [
+    "fetched CSIA 848f5563a528ae5ca3c2d3883c86d7287d6a4585 into .deps/csia-trust-layer"
+   ]
+  },
+  {
+   "id": "cfg_synthetic_sim",
+   "group": "configuration",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/config_tool.py validate config/vehicle.synthetic.yaml --mode sim",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.2,
+   "summary": [
+    "config/vehicle.synthetic.yaml: VALID for mode=sim"
+   ]
+  },
+  {
+   "id": "cfg_unconfigured_hw",
+   "group": "configuration",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/config_tool.py validate config/vehicle.unconfigured.yaml --mode hw",
+   "expected": "nonzero",
+   "rc": 1,
+   "status": "PASS",
+   "seconds": 0.3,
+   "summary": [
+    "config/vehicle.unconfigured.yaml: INVALID (93 issue(s)) for mode=hw"
+   ]
+  },
+  {
+   "id": "c_configure",
+   "group": "firmware",
+   "command": "cmake -S firmware -B build -G Ninja -DPython3_EXECUTABLE=/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.4,
+   "summary": [
+    "-- Build files have been written to: /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/build"
+   ]
+  },
+  {
+   "id": "c_build",
+   "group": "firmware",
+   "command": "cmake --build build",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 2.1,
+   "summary": []
+  },
+  {
+   "id": "ctest",
+   "group": "firmware",
+   "command": "ctest --test-dir build --output-on-failure -V",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 17.2,
+   "summary": [
+    "4: 1966 checks, 0 failures",
+    "5: 46 checks, 0 failures",
+    "6: 1043 checks, 0 failures",
+    "7: 326246 checks, 0 failures",
+    "8: 1237899 checks, 0 failures",
+    "100% tests passed, 0 tests failed out of 8"
+   ]
+  },
+  {
+   "id": "property_soak",
+   "group": "firmware",
+   "command": "build/test_core_properties 100 30",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 130.8,
+   "summary": [
+    "100 seeds x 30 s from base seed 0x01234567",
+    "slow steps 3000000, ECO steps 641109 (entries 1632), brake steps 321447, recovery checks 1257928",
+    "13733755 checks, 0 failures"
+   ]
+  },
+  {
+   "id": "arm_configure",
+   "group": "portability",
+   "command": "cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_PORTABLE_ONLY=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.4,
+   "summary": [
+    "-- Build files have been written to: /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/build-arm"
+   ]
+  },
+  {
+   "id": "arm_build",
+   "group": "portability",
+   "command": "cmake --build build-arm",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.9,
+   "summary": []
+  },
+  {
+   "id": "arm_size",
+   "group": "portability",
+   "command": "arm-none-eabi-size -t build-arm/libsemmc_core.a",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.0,
+   "summary": [
+    "31955\t      0\t      0\t  31955\t   7cd3\t(TOTALS)"
+   ],
+   "soft_double_calls_in_fast_step": 0
+  },
+  {
+   "id": "pytest",
+   "group": "python",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 -m pytest -rs -p no:cacheprovider",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 84.1,
+   "summary": []
+  },
+  {
+   "id": "replay",
+   "group": "host simulation",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 host/replay/replay.py tests/simulation/replay_sample.semmc.log --out build/replay",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.6,
+   "summary": [
+    "6.080 s  req   1.200  acc   0.404  CLAMP_DERATE|SLEW",
+    "6.100 s  req   1.200  acc   0.504  CLAMP_DERATE|SLEW",
+    "6.120 s  req   1.200  acc   0.604  CLAMP_DERATE|SLEW",
+    "6.140 s  req   1.200  acc   0.704  CLAMP_DERATE|SLEW",
+    "6.160 s  req   1.200  acc   0.804  CLAMP_DERATE|SLEW",
+    "44 distinct requested/accepted/reason combinations; full table in build/replay/commands.csv"
+   ]
+  },
+  {
+   "id": "contract_report",
+   "group": "host simulation",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/control_contract_report.py --build build",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.4,
+   "summary": [
+    "contract violations in 'after' run: none"
+   ]
+  },
+  {
+   "id": "host_demo",
+   "group": "host simulation",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_host_demo.py --out build/host_demo",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 24.5,
+   "summary": [
+    "DEMO PASS offline_import_complete_and_idempotent: blocks 282 ok / 0 corrupt, records 70506, bad-CRC frames 0; second import added 0 rows",
+    "DEMO PASS live_path_validated_and_accounted: published 240, stored 228 (30 replayed after the outage), rejected 2 {'not JSON (JSONDecodeError)': 1, 'ctrl.vbus_V=9999.0 outside [0.0, 100.0]': 1}, dropped on the car 10 (expected 10); every sequence number accounted for: True",
+    "DEMO PASS utc_alignment_with_quality: largest UTC error 0.72 us with PPS (60535 records); 7.4 us in holdover (9971 records, GNSS outage 15 s, bound 50 ppm x age)",
+    "DEMO PASS energy_boundary_and_gaps_reported: controller input energy (bus shunt) 5.805 kJ vs simulated battery-terminal energy 5.797 kJ: 0.139 % apart; integrated 120.00 s, gap 0.00 s (last ctrl_energy_quality before the end of the run)",
+    "DEMO PASS pit_csia_replay_runs: 1200 ticks; wheel_l fault detected after 0.1 s",
+    "DEMO ALL PASS: 9/9 checks; outputs in build/host_demo"
+   ]
+  },
+  {
+   "id": "optimisation_full",
+   "group": "studies",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_optimization.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 577.3,
+   "summary": []
+  },
+  {
+   "id": "electrical",
+   "group": "studies",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_electrical_calcs.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 1.6,
+   "summary": [
+    "| 8 | 3.02 | 2.30 |",
+    "| 10 | 2.23 | 1.47 |",
+    "| 15 | 1.51 | 0.65 |",
+    "| 20 | 1.33 | 0.37 |",
+    "| 30 | 1.33 | 0.16 |",
+    "| 40 | 1.46 | 0.09 |"
+   ]
+  },
+  {
+   "id": "csia_dev_study",
+   "group": "studies",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_csia_study.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 7.3,
+   "summary": [
+    "Notes:",
+    "- Rotor-speed and power-balance relationships exist only while the motor drives through the freewheel; in this scenario the car coasts ~18 s between pulses, so detection of those faults waits for the next pulse (latency is regime-bound, reported, not hidden).",
+    "- B2 'first' times are NOT meaningful where B2 was already alarming on the fault-free run (e.g. rotor_vs_wheel_drive alarms during freewheel coasting): its detection is confounded by its nuisance rate.",
+    "- B2 raises an alarm on a residual but cannot say which sensor is wrong; B1 only sees stale/NaN/out-of-range values, so stuck-in-range, bias and gain faults pass it.",
+    "- Ambiguous ticks are periods where the evidence supports disagreement only; the adapter reports them instead of guessing.",
+    "Adapter + CSIA TrustCore tick time on this host (x86-64, CPython, HOST BENCHMARK - not a target measurement): mean 0.20 ms, max 2.65 ms at 10 Hz."
+   ]
+  },
+  {
+   "id": "policy_comparison",
+   "group": "studies",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_policy_comparison.py --duration 300",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 131.5,
+   "summary": [
+    "speed hold 6.0 m/s                         3.996 J/m at 6.09 m/s, gates off 27 %, dKE -0.004 J/m, cu 0.090, mech 3.440, other 0.465, window 260 s",
+    "pulse 1.0 N*m, coast 5.5-6.5 m/s           4.450 J/m at 5.99 m/s, gates off 91 %, dKE -0.006 J/m, cu 0.544, mech 3.373, other 0.533, window 223 s",
+    "pulse 2.0 N*m, coast 5.5-6.5 m/s           4.947 J/m at 6.03 m/s, gates off 95 %, dKE +0.002 J/m, cu 1.007, mech 3.398, other 0.542, window 221 s",
+    "pulse 1.0 N*m, coast 5.0-7.0 m/s           4.499 J/m at 5.97 m/s, gates off 92 %, dKE +0.009 J/m, cu 0.560, mech 3.412, other 0.527, window 207 s"
+   ]
+  },
+  {
+   "id": "csia_eval_v1_rerun",
+   "group": "studies",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_csia_evaluation.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 203.0,
+   "summary": [
+    "\"missed\": 11,",
+    "\"attributed\": 53,",
+    "\"misattributed\": 23,",
+    "\"lat_detect_med\": 0.9782878877182384",
+    "}",
+    "}"
+   ]
+  },
+  {
+   "id": "kicad_connectivity",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_kicad_schematic.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 15.1,
+   "summary": [
+    "* intended nets: 135",
+    "* problems: 0"
+   ]
+  },
+  {
+   "id": "kicad_drift",
+   "group": "hardware",
+   "command": "git diff --exit-code --stat -- hardware/kicad hardware/bom/BOM_draft.csv :!hardware/kicad/semmc.net",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.0,
+   "summary": []
+  },
+  {
+   "id": "pin_type_check",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/pin_type_check.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "173 nets, 0 findings -> hardware/kicad/PIN_TYPE_CHECK.md"
+   ]
+  },
+  {
+   "id": "hw_consistency",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/hw_consistency.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "OPEN  PR8 independent over-current comparator on BKIN2: none in the draft: hardware over-current shutdown is the gate driver's VDS monitoring through nFAULT -> BKIN (threshold depends on the MOSFET R_DS(on), i.e. on",
+    "OPEN  BM2 motor/battery-dependent parts stay unresolved: 42 BOM lines are UNRESOLVED (ratings depend on the motor, battery, harness or rules); no fabrication release while any remains",
+    "OPEN  TM3 dead time and PWM frequency: synthetic 200 ns at 20 kHz; dead time depends on the selected MOSFETs' switching times, PWM frequency on the motor inductance",
+    "OPEN  PW2 rail current budgets: supply currents of the candidate ICs were not read from primary datasheets; regulator ratings vs loads to be checked when the parts are chosen (input sheet)",
+    "wrote hardware/review/CONSISTENCY_CHECK.md: {'PASS': 14, 'OPEN': 4}"
+   ]
+  },
+  {
+   "id": "kicad_erc",
+   "group": "hardware",
+   "command": "bash tools/run_kicad_erc.sh",
+   "expected": "zero",
+   "rc": 2,
+   "status": "NOT AVAILABLE",
+   "seconds": 0.1,
+   "summary": [
+    "kicad-cli 7.0.11: 'sch erc' needs KiCad 8 or newer (or run ERC from the Eeschema GUI)."
+   ]
+  },
+  {
+   "id": "timing_budget",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/timing_budget.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "\"t_needed_before_sample_s\": 1.6999999999999998e-06,",
+    "\"d_max_sampleable\": 0.932,",
+    "\"duty_max_config\": 0.98,",
+    "\"min_valid_phases_over_svpwm_angles\": 2,",
+    "\"worst_angle_deg\": 5.500000000000001",
+    "} 34 2e-07"
+   ]
+  },
+  {
+   "id": "clock_tree",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/clock_tree.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 1.3,
+   "summary": [
+    "wrote /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/hardware/timing/clock_tree_alternatives.md (28 clock trees x 4 bus cases)"
+   ]
+  },
+  {
+   "id": "hardware_calcs",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/hardware_calcs.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.2,
+   "summary": [
+    "wrote /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/hardware/calculations/current_sense_error_budget.md /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/hardware/calculations/power_stage_envelope.md"
+   ]
+  },
+  {
+   "id": "price_bom",
+   "group": "hardware",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/price_bom.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "**Conclusion: the budget is not shown to be feasible.** At least one range reaches past its limit, so feasibility cannot be claimed until the spread is closed. Closing the spread takes: a live PCB quote for the actual board size and copper weight; live distributor quotes for the snippet lines; the motor and battery ratings (they fix the representative power-stage lines and the heatsink); and an inventory check of the passives and equipment the team already owns. Each of these narrows the range, and `tools/price_bom.py` recomputes the statement."
+   ]
+  },
+  {
+   "id": "telematics_budget",
+   "group": "integration",
+   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/telematics_budget.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "controller 394 f/s, supervisor 72 f/s; flash lasts 16.9 min for semmc frames"
+   ]
+  }
+ ],
+ "regenerated_tracked_files_changed": [
+  "M docs/generated/csia_comparison_synthetic.md",
+  " M docs/generated/csia_evaluation_synthetic.json",
+  " M docs/generated/csia_evaluation_synthetic.md",
+  " M docs/generated/optimization_synthetic.json",
+  " M docs/generated/optimization_synthetic.md"
+ ],
+ "counts": {
+  "PASS": 31,
+  "FAIL": 0,
+  "NOT AVAILABLE": 1
+ }
+}

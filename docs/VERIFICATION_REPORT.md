@@ -76,9 +76,15 @@ A measurement error in a new tool was caught before publication: the first versi
 | 38933753179, 38933760570 (PR #1, push and pull request) | `e7a0b57` (PR #1 with the drift fix) | success |
 | 38942663476 (first run with ERC) | `3d98c2e` | success; ERC 0 errors, 215 warnings |
 | 38943419930 | `3a1c496` | success; ERC 0 errors, 9 warnings (library-version differences: symbols embedded from the KiCad 7 library, checked against KiCad 8) |
+| 38944073133 | `4c8b5bf` | success (`host` and `erc`); ERC 0 errors, 9 warnings as above |
 
-The final run of this branch is listed in the pull request.
+Later runs of this branch are listed on the pull request.
 
-## 6. Full verification record at the final commit
+## 6. Full verification record
 
-`docs/generated/verification/verification.md` (and `.json`, logs not committed): every check of `tools/verify_all.py --full` in a fresh clone of the commit named in the record.
+`docs/generated/verification/verification.md` (and `.json`; logs not committed): every check of `tools/verify_all.py --full`, run in a fresh clone and a new virtual environment at `4c8b5bf`. The commit that adds the record changes only this report and the record itself.
+
+Result: **31 PASS, 0 FAIL, 1 NOT AVAILABLE.** The NOT AVAILABLE check is `kicad_erc`, because this host has KiCad 7. ERC runs in CI on KiCad 8.0.9 instead (run 38944073133). The full studies regenerated five tracked files, and their numbers matched the committed results exactly. Only wall-clock fields differed:
+* the optimisation `solve_s` and the table's seconds column;
+* the CSIA v1 re-run's `runtime_s`;
+* the host tick-time line of the CSIA development study.
