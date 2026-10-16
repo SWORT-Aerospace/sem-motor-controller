@@ -1,13 +1,13 @@
 """GENERATED from protocol/protocol.yaml by tools/gen_protocol.py - do not edit.
 
-semmc CAN protocol v1.0, spec hash 193e498f6cb45df6.
+semmc CAN protocol v1.1, spec hash 3365b84b45a16c63.
 """
 import math
 import struct
 
 PROTOCOL_MAJOR = 1
-PROTOCOL_MINOR = 0
-SPEC_HASH = "193e498f6cb45df6"
+PROTOCOL_MINOR = 1
+SPEC_HASH = "3365b84b45a16c63"
 
 MESSAGES = {
  "ctrl_fault": {
@@ -939,6 +939,42 @@ MESSAGES = {
     "invalid": None,
     "raw_lo": 0,
     "raw_hi": 15
+   }
+  ]
+ },
+ "ctrl_energy_quality": {
+  "id": 803,
+  "data_id": 2851,
+  "period_s": 0.1,
+  "sender": "controller",
+  "fields": [
+   {
+    "name": "integrated_s",
+    "start": 16,
+    "width": 24,
+    "kind": "scaled",
+    "signed": False,
+    "invalid": 16777215,
+    "raw_lo": 0,
+    "raw_hi": 16777214,
+    "scale": 0.01,
+    "offset": 0,
+    "min": 0,
+    "max": 167772.14
+   },
+   {
+    "name": "gap_s",
+    "start": 40,
+    "width": 24,
+    "kind": "scaled",
+    "signed": False,
+    "invalid": 16777215,
+    "raw_lo": 0,
+    "raw_hi": 16777214,
+    "scale": 0.01,
+    "offset": 0,
+    "min": 0,
+    "max": 167772.14
    }
   ]
  },

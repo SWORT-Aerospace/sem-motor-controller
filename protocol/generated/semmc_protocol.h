@@ -1,5 +1,5 @@
 /* GENERATED from protocol/protocol.yaml by tools/gen_protocol.py - do not edit. */
-/* semmc CAN protocol v1.0, spec hash 193e498f6cb45df6 */
+/* semmc CAN protocol v1.1, spec hash 3365b84b45a16c63 */
 #ifndef SEMMC_PROTOCOL_H
 #define SEMMC_PROTOCOL_H
 
@@ -7,8 +7,8 @@
 #include <stdint.h>
 
 #define SEMMC_PROTO_MAJOR 1u
-#define SEMMC_PROTO_MINOR 0u
-#define SEMMC_PROTO_SPEC_HASH "193e498f6cb45df6"
+#define SEMMC_PROTO_MINOR 1u
+#define SEMMC_PROTO_SPEC_HASH "3365b84b45a16c63"
 #define SEMMC_NOMINAL_BITRATE 500000u
 #define SEMMC_FRAME_LEN 8u
 
@@ -306,6 +306,20 @@ typedef struct {
 } semmc_ctrl_validity_t;
 semmc_result_t semmc_encode_ctrl_validity(const semmc_ctrl_validity_t *m, uint8_t out[8]);
 semmc_result_t semmc_decode_ctrl_validity(const uint8_t *in, uint8_t len, semmc_ctrl_validity_t *m);
+
+/* ctrl_energy_quality - Completeness of ctrl_energy.energy_J. integrated_s is the time over which battery power was integrated; gap_s is the time NOT integrated because battery current or bus voltage was invalid, or because an update interval exceeded the integration limit. energy_J is complete only while gap_s is 0. */
+#define SEMMC_ID_CTRL_ENERGY_QUALITY 0x323u
+#define SEMMC_DATAID_CTRL_ENERGY_QUALITY 0x0B23u
+#define SEMMC_PERIOD_US_CTRL_ENERGY_QUALITY 100000u
+#define SEMMC_F_CTRL_ENERGY_QUALITY_INTEGRATED_S (1u << 0)
+#define SEMMC_F_CTRL_ENERGY_QUALITY_GAP_S (1u << 1)
+typedef struct {
+    uint8_t seq;
+    float integrated_s; /* s */
+    float gap_s; /* s */
+} semmc_ctrl_energy_quality_t;
+semmc_result_t semmc_encode_ctrl_energy_quality(const semmc_ctrl_energy_quality_t *m, uint8_t out[8]);
+semmc_result_t semmc_decode_ctrl_energy_quality(const uint8_t *in, uint8_t len, semmc_ctrl_energy_quality_t *m);
 
 /* csia_advisory - CSIA vehicle-adapter advisory. v0.1 = SHADOW ONLY: the controller logs and re-reports it but never changes a command because of it (ADR-0008). */
 #define SEMMC_ID_CSIA_ADVISORY 0x328u

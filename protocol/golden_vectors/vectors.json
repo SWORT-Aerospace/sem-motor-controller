@@ -1,9 +1,9 @@
 {
- "spec_hash": "193e498f6cb45df6",
+ "spec_hash": "3365b84b45a16c63",
  "protocol": {
   "name": "semmc",
   "major": 1,
-  "minor": 0,
+  "minor": 1,
   "nominal_bitrate": 500000,
   "frame_format": "classic_8byte"
  },
@@ -406,6 +406,24 @@
   },
   {
    "index": 15,
+   "msg": "ctrl_energy_quality",
+   "id": 803,
+   "seq": 14,
+   "values": {
+    "integrated_s": 1234.56,
+    "gap_s": 0.3
+   },
+   "bytes": "b80e40e2011e0000",
+   "saturated": [],
+   "invalid": [],
+   "decoded": {
+    "integrated_s": 1234.56005859375,
+    "gap_s": 0.30000001192092896
+   },
+   "note": ""
+  },
+  {
+   "index": 16,
    "msg": "ctrl_fault",
    "id": 768,
    "seq": 11,
@@ -427,7 +445,7 @@
    "note": ""
   },
   {
-   "index": 16,
+   "index": 17,
    "msg": "csia_advisory",
    "id": 808,
    "seq": 12,
@@ -459,7 +477,7 @@
    "note": ""
   },
   {
-   "index": 17,
+   "index": 18,
    "msg": "ctrl_identity",
    "id": 816,
    "seq": 13,

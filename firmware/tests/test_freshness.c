@@ -98,6 +98,103 @@ static void test_resync_after_gap_rejects_old_frame(void)
     CHECK(mc_fresh_status(&f, MS(2030)) == MC_VAL_OK);
 }
 
+/* Found by test_core_properties: a frame rejected as TIME_DISCONTINUITY did not
+ * advance the sequence state, so its re-delivery 20 ms later was accepted. */
+static void test_rejected_frame_redelivered_is_duplicate(void)
+{
+    mc_fresh_t f;
+    mc_fresh_init(&f, 100000u, 1u, 100u);
+    (void)mc_fresh_on_rx(&f, MS(0), 7u, 1u, 10u, 1000u);
+    (void)mc_fresh_on_rx(&f, MS(20), 7u, 1u, 11u, 1020u);
+    /* claims 140 ms of source time in 20 ms: rejected */
+    CHECK(mc_fresh_on_rx(&f, MS(40), 7u, 1u, 12u, 1160u) == MC_RX_TIME_DISCONTINUITY);
+    const mc_time_us_t t_new = f.last_new_rx_us;
+    /* the same frame re-delivered later, when its timing would look plausible */
+    CHECK(mc_fresh_on_rx(&f, MS(80), 7u, 1u, 12u, 1160u) == MC_RX_DUPLICATE);
+    CHECK(mc_fresh_on_rx(&f, MS(130), 7u, 1u, 12u, 1160u) == MC_RX_DUPLICATE);  /* also once stale */
+    CHECK(f.last_new_rx_us == t_new);
+}
+
+/* An old cached sample after a short silence used to be accepted as a RESYNC
+ * (only its step from the previous, already 20 ms late, sample was checked),
+ * and every fresh sample after it was then rejected until the 30 s ambiguity
+ * limit: supervisor input lost for 30 s. */
+static void test_fresh_samples_after_a_delayed_one_are_accepted(void)
+{
+    mc_fresh_t f;
+    mc_fresh_init(&f, 100000u, 1u, 100u);
+    (void)mc_fresh_on_rx(&f, MS(0), 7u, 1u, 10u, 1000u);
+    CHECK(mc_fresh_on_rx(&f, MS(40), 7u, 1u, 11u, 1020u) == MC_RX_ACCEPTED_NEW);       /* 20 ms late */
+    /* 120 ms of silence, then a cached sample whose source time is 120 ms old */
+    CHECK(mc_fresh_on_rx(&f, MS(160), 7u, 1u, 12u, 1040u) == MC_RX_TIME_DISCONTINUITY);
+    /* fresh samples again */
+    for (int k = 0; k <= 20; k++)
+        CHECK(mc_rx_renews(mc_fresh_on_rx(&f, MS(180 + 20 * k), 7u, 1u, (uint8_t)(13 + k),
+                                          (uint16_t)(1180 + 20 * k))));
+    CHECK(mc_fresh_status(&f, MS(590)) == MC_VAL_SESSION_NEW);  /* fresh; session never acknowledged here */
+}
+
+/* Delay that grows a little with every frame (each step well inside the
+ * tolerance) must be caught once the total exceeds it. */
+static void test_creeping_delay_is_bounded(void)
+{
+    mc_fresh_t f;
+    mc_fresh_init(&f, 100000u, 1u, 100u);
+    (void)mc_fresh_on_rx(&f, MS(0), 7u, 1u, 0u, 1000u);
+    int accepted_late = 0;
+    for (int k = 1; k <= 40; k++) {
+        /* local 20 ms per frame, source only 10 ms: data ages 10 ms per frame */
+        const mc_rx_result_t r = mc_fresh_on_rx(&f, MS(20 * k), 7u, 1u, (uint8_t)k, (uint16_t)(1000 + 10 * k));
+        if (r == MC_RX_ACCEPTED_NEW && 10 * k > 100 + 20) accepted_late++;
+    }
+    CHECK_EQ_INT(accepted_late, 0);   /* nothing more than tolerance + drift allowance behind */
+    CHECK(f.n_rejected > 0);
+}
+
+/* Found by the 100-seed soak: the controller rebooted while the companion was
+ * stalled; the companion's first frame under the new tag carried a request
+ * computed 220 ms earlier. That delayed sample became the timing reference and
+ * every fresh sample after it looked like a forward jump: locked out. */
+static void test_delayed_first_sample_is_reanchored(void)
+{
+    mc_fresh_t f;
+    mc_fresh_init(&f, 100000u, 1u, 100u);
+    CHECK(mc_fresh_on_rx(&f, MS(1000), 7u, 1u, 40u, 780u) == MC_RX_ACCEPTED_FIRST);   /* 220 ms old */
+    CHECK(mc_fresh_on_rx(&f, MS(1020), 7u, 1u, 41u, 1020u) == MC_RX_TIME_DISCONTINUITY); /* candidate */
+    CHECK(mc_fresh_on_rx(&f, MS(1040), 7u, 1u, 42u, 1040u) == MC_RX_ACCEPTED_NEW);       /* agrees: re-anchor */
+    for (int k = 1; k <= 10; k++)
+        CHECK(mc_fresh_on_rx(&f, MS(1040 + 20 * k), 7u, 1u, (uint8_t)(42 + k), (uint16_t)(1040 + 20 * k)) ==
+              MC_RX_ACCEPTED_NEW);
+}
+
+/* One CRC-valid frame with a corrupted source time must not move the reference. */
+static void test_single_forward_jump_does_not_move_reference(void)
+{
+    mc_fresh_t f;
+    mc_fresh_init(&f, 100000u, 1u, 100u);
+    (void)mc_fresh_on_rx(&f, MS(0), 7u, 1u, 0u, 1000u);
+    CHECK(mc_fresh_on_rx(&f, MS(20), 7u, 1u, 1u, 1020u) == MC_RX_ACCEPTED_NEW);
+    CHECK(mc_fresh_on_rx(&f, MS(40), 7u, 1u, 2u, 9000u) == MC_RX_TIME_DISCONTINUITY);
+    for (int k = 3; k <= 12; k++)
+        CHECK(mc_fresh_on_rx(&f, MS(20 * k), 7u, 1u, (uint8_t)k, (uint16_t)(1000 + 20 * k)) == MC_RX_ACCEPTED_NEW);
+}
+
+/* Found by the soak: after the tracker had gone stale, a frame re-sent from
+ * earlier (lower sequence than one seen 20 ms before) was accepted, because
+ * past the freshness window only source time was checked. */
+static void test_older_frame_rejected_after_stale(void)
+{
+    mc_fresh_t f;
+    mc_fresh_init(&f, 100000u, 1u, 100u);
+    (void)mc_fresh_on_rx(&f, MS(0), 7u, 1u, 20u, 1000u);
+    (void)mc_fresh_on_rx(&f, MS(20), 7u, 1u, 21u, 1020u);
+    /* stale; frame 28 arrives with an implausible source time and is rejected */
+    CHECK(mc_fresh_on_rx(&f, MS(600), 7u, 1u, 28u, 1780u) == MC_RX_TIME_DISCONTINUITY);
+    /* frame 25, sent before 28, re-delivered 20 ms later: older than one already seen */
+    CHECK(mc_fresh_on_rx(&f, MS(620), 7u, 1u, 25u, 1600u) == MC_RX_REORDERED_OLD);
+    CHECK(f.last_new_rx_us == MS(20));
+}
+
 static void test_seq_only_mode(void)
 {
     mc_fresh_t f;
@@ -129,6 +226,12 @@ int main(void)
     RUN(test_source_reboot_is_new_session);
     RUN(test_clock_domain_and_time_jump);
     RUN(test_resync_after_gap_rejects_old_frame);
+    RUN(test_rejected_frame_redelivered_is_duplicate);
+    RUN(test_fresh_samples_after_a_delayed_one_are_accepted);
+    RUN(test_creeping_delay_is_bounded);
+    RUN(test_delayed_first_sample_is_reanchored);
+    RUN(test_single_forward_jump_does_not_move_reference);
+    RUN(test_older_frame_rejected_after_stale);
     RUN(test_seq_only_mode);
     RUN(test_time_extend);
     TEST_MAIN_END();

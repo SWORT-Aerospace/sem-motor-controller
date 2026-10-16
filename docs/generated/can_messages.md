@@ -1,4 +1,4 @@
-# CAN messages - semmc protocol v1.0 (GENERATED, spec hash `193e498f6cb45df6`)
+# CAN messages - semmc protocol v1.1 (GENERATED, spec hash `3365b84b45a16c63`)
 
 Generated from `protocol/protocol.yaml` by `tools/gen_protocol.py`; do not edit.
 
@@ -19,6 +19,7 @@ Every frame: 8 bytes, 11-bit id, byte 0 = CRC-8/SAE-J1850 over [DataID LE16] + b
 | 0x320 | `ctrl_energy` | controller | 100 ms | 0x0B20 |
 | 0x321 | `ctrl_thermal` | controller | 100 ms | 0x0B21 |
 | 0x322 | `ctrl_validity` | controller | 100 ms | 0x0B22 |
+| 0x323 | `ctrl_energy_quality` | controller | 100 ms | 0x0B23 |
 | 0x328 | `csia_advisory` | companion | 100 ms | 0x0B28 |
 | 0x330 | `ctrl_identity` | controller | 1000 ms | 0x0B30 |
 
@@ -188,6 +189,15 @@ Per-signal validity nibbles (bit0 missing, bit1 stale, bit2 invalid/nonfinite/ o
 | v_sup_req | 52..55 | raw | - | - | - | - | - | - |
 | v_sup_limits | 56..59 | raw | - | - | - | - | - | - |
 | v_hall | 60..63 | raw | - | - | - | - | - | - |
+
+## `ctrl_energy_quality` (0x323)
+
+Completeness of ctrl_energy.energy_J. integrated_s is the time over which battery power was integrated; gap_s is the time NOT integrated because battery current or bus voltage was invalid, or because an update interval exceeded the integration limit. energy_J is complete only while gap_s is 0.
+
+| field | bits | kind | scale | offset | min | max | unit | invalid raw |
+|---|---|---|---|---|---|---|---|---|
+| integrated_s | 16..39 | scaled | 0.01 | 0 | 0 | 167772.14 | s | 16777215 |
+| gap_s | 40..63 | scaled | 0.01 | 0 | 0 | 167772.14 | s | 16777215 |
 
 ## `csia_advisory` (0x328)
 
