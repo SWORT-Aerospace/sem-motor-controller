@@ -1,4 +1,4 @@
-# ADR-0008 — CSIA shadow mode and evidence gate
+# ADR-0008: CSIA shadow mode and evidence gate
 
 CSIA runs on the companion as a vehicle adapter (`host/csia_adapter`) wrapping the pinned `TrustCore` (Python, double precision). The controller only tracks and re-reports `csia_advisory` frames; `mc_csia_may_restrict()` is hard-wired `false`.
 
@@ -14,7 +14,7 @@ The adapter therefore reports freshness, evidence, observability and trust separ
 2. A nuisance-alarm rate below a pre-registered bound.
 3. Detection and isolation of every injected fault class within pre-registered latency, with zero misattributions.
 4. Measured incremental benefit over B1/B2 baselines.
-5. A target timing benchmark (or a float port validated against defined numerical tolerances — not claimed parity).
+5. A target timing benchmark (or a float port validated against defined numerical tolerances; not claimed parity).
 6. A new ADR.
 
 Restriction would only ever **tighten** supervisory bounds. It never commands torque and never acts on the controller's own protection.

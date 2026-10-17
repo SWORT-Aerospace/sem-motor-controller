@@ -7,7 +7,7 @@
 DRAFT - NOT FOR FABRICATION. The schematic captures the functional design
 (docs/HARDWARE_ARCHITECTURE.md). Every value that depends on the unknown motor,
 battery, harness or event rules is written as UNRESOLVED; every part whose
-pinout could not be checked against a primary datasheet in this environment
+pinout has not yet been checked against a primary datasheet
 carries Pin_check = UNVERIFIED. No PCB, footprint assignment, Gerber or
 fabrication BOM is produced from this.
 
@@ -22,7 +22,6 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
-import datetime
 import pathlib
 import re
 import subprocess
@@ -41,6 +40,9 @@ OUT = ROOT / "hardware" / "kicad"
 LIBDIR = pathlib.Path("/usr/share/kicad/symbols")
 PROJECT = "semmc"
 REV = "D0.2-draft"
+# Date of revision REV, changed together with it. Not the generation date: regenerating the
+# same revision must reproduce the committed files byte for byte (the CI drift gate).
+REV_DATE = "2026-10-15"
 NS = uuidlib.UUID("6f1d2c1e-5e3a-4c55-9a77-5e3b0c0f0a11")
 
 POWER = {"VBAT_PROT", "VDC", "PGND", "GND", "+5V", "+3V3", "+3V3A"}
@@ -319,7 +321,7 @@ def sheets(mcu_map: dict) -> list:
         P("J", "Connector_Generic", "Conn_01x04", "CAN", {"1": "CAN_H", "2": "CAN_L", "3": "GND", "4": "CAN_SHLD"},
           status=U, rating="vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)"),
         C("1nF", "CAN_SHLD", "GND", status=U, rating="shield termination per harness"),
-    ], ["500 kbit/s classic CAN, IDs 0x300-0x33F (docs/INTERFACE_CONTROL.md). Bit timing and termination must match the vehicle bus."]))
+    ], ["Classic CAN at 500 kbit/s assumed; protocol block 0x300-0x33F, base set by calibration (docs/ICD.md section 2). Bit timing and termination must match the vehicle bus."]))
     # 12 ------------------------------------------------------------- aux rails
     S.append(("aux_rails", "Auxiliary rails and ground star point", [
         P("U", "Regulator_Switching", "LM5164DDA", "LM5164 (candidate)", {"1": "GND", "2": "VBAT_PROT", "3": "BUCK_EN",
@@ -487,7 +489,7 @@ def build(check: bool) -> int:
     write_custom_lib(OUT / f"{PROJECT}.kicad_sym")
     design = sheets(mcu_map_from_csv())
     root_uuid = uid("root")
-    date = datetime.date.today().isoformat()
+    date = REV_DATE
     # net -> sheets using it
     use = {}
     for sname, _t, parts, _n in design:
@@ -558,7 +560,11 @@ def build(check: bool) -> int:
             for num, name, px, py, pa, et, net in pins:
                 ax, ay = round(X + px, 4), round(Y - py, 4)
                 if net is None:
-                    sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
+                    # A pin the library already types as no_connect needs no flag: KiCad 8 ERC reports
+                    # the extra flag as both "connected" and "dangling" (seen on J801 KEY, MAX6369 NC,
+                    # TLV755 NC).
+                    if et != "no_connect":
+                        sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
                     continue
                 if not prt.ref.startswith("#"):          # power flags are not netlist components
                     expected.setdefault(net, set()).add((prt.ref, num))
@@ -664,7 +670,12 @@ def check_netlist(expected: dict, design) -> int:
     if r.returncode != 0:
         print(r.stdout, r.stderr)
         return 2
-    tree = _sexp(net_path.read_text())
+    # kicad-cli records the absolute checkout path and the export time; make the
+    # committed netlist independent of both (repository-relative paths, revision date).
+    text = net_path.read_text().replace(str(OUT) + "/", "hardware/kicad/")
+    text = re.sub(r'^(    \(date ")[^"]*("\))$', lambda m: m.group(1) + REV_DATE + m.group(2), text, count=1, flags=re.M)
+    net_path.write_text(text)
+    tree = _sexp(text)
     nets_node = next(x for x in tree if isinstance(x, list) and x and x[0] == "nets")
     got = {}
     for n in nets_node[1:]:
@@ -695,8 +706,8 @@ def check_netlist(expected: dict, design) -> int:
              f"* intended nets: {len(expected)}", f"* KiCad nets: {len(got)} (of which no-connect singletons: {len(unc)})",
              f"* problems: {len(problems)}", ""]
     lines += [f"- {p}" for p in problems] or ["No mismatches: KiCad connectivity equals the intended connectivity."]
-    lines += ["", "This checks connectivity only. It is not an electrical rules check (KiCad 7 has no CLI ERC) and "
-              "not a design review."]
+    lines += ["", "This checks connectivity only. It is not an electrical rules check (the KiCad ERC runs separately: "
+              "`tools/run_kicad_erc.sh` with KiCad 8 or newer, in the CI `erc` job) and not a design review."]
     rep.write_text("\n".join(lines) + "\n")
     print("\n".join(lines[4:8]))
     for p in problems[:30]:

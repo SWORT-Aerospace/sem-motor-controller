@@ -15,26 +15,29 @@ Legend for "how to obtain": **M** measure · **D** datasheet / manufacturer · *
 | `motor.flux_linkage_Wb` | 0.010 | M: spin the motor, measure **line-line peak** back-EMF e_LL at ω_e; λ = e_LL / (√3 · ω_e) | amplitude-invariant; Kt = 1.5·p·λ (N·m/A peak) |
 | rated / max mechanical speed | 300 / 450 rad/s | D | max speed with back-EMF < min battery V (rule `BACKEMF_EXCEEDS_MIN_BUS`) |
 | continuous RMS / peak phase current, peak duration | 15 A / 40 A / 10 s | D + M (thermal test) | |
-| `motor.max_winding_temp_degC`, winding sensor type | 120 °C, — | D | NTC/PTC/KTY or none |
+| `motor.max_winding_temp_degC`, winding sensor type | 120 °C,; | D | NTC/PTC/KTY or none |
 | `motor.rotor_sensor`, hall supply, output type, `hall_code_to_sector`, `hall_angle_offset_rad` | hall, 5 V, 1-3-2-6-4-5, 0 | M: rotate slowly, record codes vs back-EMF zero crossings | open-drain vs push-pull sets the input protection |
 | `motor.inertia_kg_m2` | 2e-4 | D or spin-down test | sim only |
 
-## 2. Battery and BMS (UNKNOWN)
+## 2. Battery and BMS (UNKNOWN; two values team-reported)
+
+Team message, 2026-10-16: **48 V nominal, 10 Ah rated** (about 480 Wh nominal, not measured usable energy). Not datasheet-verified; the hardware configuration keeps these fields null and notes the report (`docs/BATTERY.md`). They do not give the chemistry, cell count, maximum or minimum voltage, current limits or BMS thresholds; 10 Ah is not a current limit.
+
 
 | Parameter | SIM | How | Notes |
 |---|---|---|---|
 | chemistry, series cells | NMC, 12S | U + D | lithium assumed by rules (R?) |
-| min / nominal / max-charged V | 36 / 43.2 / 50.4 V | D + M | **≤ 60 V by design at any point (R? 57a)** |
+| min / nominal / max-charged V | 36 / 43.2 / 50.4 V | D + M | nominal team-reported 48 V; **at most 60 V by design at any point (2026 Art. 57a, read)**; max and min unknown |
 | BMS continuous / peak discharge, duration | 30 A / 60 A / 10 s | D | the controller limit must be ≤ the BMS limit |
 | BMS max charge current | 5 A | D | regen deferred |
-| capacity (Wh) | — | D | < 1000 Wh (R? 57d iv) |
-| battery short-circuit current | — | D / M | fuse breaking capacity |
+| capacity | null (team-reported 10 Ah, about 480 Wh nominal) | D | at most 1,000 Wh (2026 Art. 57d iv, read) |
+| battery short-circuit current | null | D / M | fuse breaking capacity |
 
 ## 3. Vehicle (UNKNOWN for the target car)
 
 | Parameter | SIM | How |
 |---|---|---|
-| category (Prototype vs Urban Concept) | prototype | U — not stated in the telematics proposal (v0.1); Cornell (reference project) targets UC |
+| category (Prototype vs Urban Concept) | prototype | U; not stated in the telematics proposal (v0.1); Cornell (reference project) targets UC |
 | mass with driver | 100 kg | M (scales) |
 | gear ratio, wheel circumference (loaded) | 10, 1.50 m | M |
 | freewheel/clutch present | yes | I |
@@ -61,11 +64,11 @@ max motor/manual torque · max phase current · battery current limit (≤ BMS) 
 | Item | Status |
 |---|---|
 | Competition year/event/region | **U** (`vehicle.competition_event` null) |
-| Edition of rules in force | **R** — 2027 Chapter I exists; contents unread |
-| Attempt format (laps, time limit) | **R** — only US 2025 seen ("4 laps in 35 min", ~25 km/h) |
+| Edition of rules in force | **R**: 2027 Chapter I exists; contents unread |
+| Attempt format (laps, time limit) | **R**: only US 2025 seen ("4 laps in 35 min", ~25 km/h) |
 | Budget | $500–1,000, provisional (user). Priced draft: `docs/BUDGET.md` (not shown feasible yet) |
 | Delivery deadline | **U** |
-| Existing controller and its baseline performance | **U** — none identified |
+| Existing controller and its baseline performance | **U**: none identified |
 | Cooling, enclosure, harness, connector constraints | **U** |
 | Who performs and signs bench measurements (`calibration.measured_by`) | **U** |
 | Hazard-analysis owner and reference | **U** |

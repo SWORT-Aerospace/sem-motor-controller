@@ -1,0 +1,157 @@
+# Hardware: motor-controller draft
+
+This directory holds the draft hardware design of the motor controller. **Nothing here has been built, energised or tested. The schematic is a draft without footprints or layout, and no part has been ordered.** Every file that says DRAFT, CANDIDATE, UNRESOLVED or UNVERIFIED means exactly that.
+
+## 1. What this directory contains
+
+* **A draft schematic generated from Python data.** The circuit (parts, values, pin-to-net connections, rating notes) is written as data in [`tools/gen_kicad_schematic.py`](../tools/gen_kicad_schematic.py). The script writes a hierarchical KiCad schematic into [`kicad/`](kicad/). KiCad is the open-source electronics design suite used here: Eeschema is its schematic editor and `kicad-cli` its command-line tool. Every sheet title marks the schematic as a DRAFT, NOT FOR FABRICATION.
+* **Bill of materials (BOM) and pricing evidence** in [`bom/`](bom/): the draft BOM grouped from the schematic data, dated price evidence per line, the priced BOM, and the source file of the telemetry procurement table. Details: [`bom/README.md`](bom/README.md).
+* **Calculations** in [`calculations/`](calculations/): the phase-current-sense error budget and the power-stage loss and thermal envelope. Details: [`calculations/README.md`](calculations/README.md).
+* **Timing** in [`timing/`](timing/): the microcontroller (MCU) timing allocation and current-sampling window budget, and the clock-tree alternatives with the CAN bit timing for each candidate bus. CAN (Controller Area Network) is the vehicle bus the controller uses.
+* **Protection** in [`protection/`](protection/): the shutdown truth table, showing how each protective input reaches the gate outputs and which paths work without firmware.
+* **Part selection** in [`selection/`](selection/): the candidate parts and their status, the register of primary datasheets still to be read, and the pinout verification records.
+* **Interfaces** in [`interfaces/`](interfaces/): candidate MCU pin allocations generated from ST's pin database. Details: [`interfaces/README.md`](interfaces/README.md).
+* **Bring-up checklist** in [`bringup/`](bringup/): the staged bench procedure for a future board built from a reviewed, non-draft design.
+* **Review checks** in [`review/`](review/): the generated cross-artefact consistency check and the human design-review checklist.
+* [`schematic_plan/`](schematic_plan/): the v0.1 sheet plan, superseded by the KiCad draft and kept as a record.
+
+The functional design that this schematic implements is described in [`docs/HARDWARE_ARCHITECTURE.md`](../docs/HARDWARE_ARCHITECTURE.md).
+
+## 2. Who works here
+
+Hardware and power-electronics members of the team: schematic changes (made in the generator, see section 7), part selection and datasheet checks, ratings once the motor and battery are known, pricing, and preparation of the bench bring-up. Firmware members read the pin allocation, the timing budget and the truth table from here; the firmware itself is in [`firmware/`](../firmware/), and the STM32G4 platform notes are in [`firmware/platform/stm32g4/README.md`](../firmware/platform/stm32g4/README.md).
+
+## 3. Schematic sheets
+
+The root sheet [`kicad/semmc.kicad_sch`](kicad/semmc.kicad_sch) (A3) holds one sheet symbol per hierarchical sheet. The sheet names and titles below are the ones the generator writes.
+
+| File | Sheet name | Title | What it covers |
+|---|---|---|---|
+| [`01_power_input.kicad_sch`](kicad/01_power_input.kicad_sch) | `power_input` | Power input, protection, bus shunt, precharge | Battery connector J101, fuse, TVS (transient voltage suppressor) diode, reverse-polarity block (a placeholder symbol: ideal-diode stage or keyed harness, not decided), input capacitor, four-terminal bus shunt for the INA228, precharge resistor and bypass P-channel MOSFET. The bypass is driven by a small N-channel MOSFET from `PRECHG_EN`, which has a 100 k pull-down, so the bypass is off while the MCU is in reset. Firmware closes it only after the link reaches 0.95 x the battery voltage. Also holds the PWR_FLAG markers, which tell the ERC (electrical rules check) that a rail is driven; they are not components. |
+| [`02_dc_link.kicad_sch`](kicad/02_dc_link.kicad_sch) | `dc_link` | DC link, bus-voltage sense, independent over-voltage trip | Three polarized bulk and three ceramic capacitor positions (all UNRESOLVED), bleeder resistor, bus-voltage divider to the ADC input `VBUS_SENSE` (ADC: analog-to-digital converter), and a TLV7041 comparator with a TL431 2.495 V reference. The comparator's open-drain output `BRK2_N` goes to TIM1_BKIN2, so a bus over-voltage stops the PWM outputs without firmware. |
+| [`03_bridge.kicad_sch`](kicad/03_bridge.kicad_sch) | `bridge` | Six-switch bridge and low-side shunts | Six N-channel MOSFETs (all UNRESOLVED), 0 ohm series gate-resistor options, three four-terminal low-side phase shunts, motor phase connector J301. |
+| [`04_gate_drive.kicad_sch`](kicad/04_gate_drive.kicad_sch) | `gate_drive` | Gate driver, enable chain, startup states | DRV8353S candidate gate driver (a project symbol whose pin names and numbers are placeholders), charge-pump and internal-regulator capacitors marked "TYPICAL - verify", nFAULT pull-up, and a 74LVC1G08 AND gate: driver ENABLE = `MCU_DRV_EN` AND `HW_PERMIT`, so firmware alone cannot enable the driver. Pull-downs hold both enable nets low; six PWM pull-down positions are DNP (do not populate). |
+| [`05_current_sense.kicad_sch`](kicad/05_current_sense.kicad_sch) | `current_sense` | Phase-current sensing (CSA outputs to three ADCs) | Per phase: a DNP differential filter capacitor at the shunt, a 100 ohm / 470 pF filter between the gate driver's current-sense amplifier (CSA) output and the ADC input, and a test point. Sampling the three phases on three ADCs from one timer trigger is proposed, not substantiated. |
+| [`06_bus_measurement.kicad_sch`](kicad/06_bus_measurement.kicad_sch) | `bus_measurement` | DC-bus energy meter (INA228-class) | INA228 power and energy monitor on I2C (address pins A0 and A1 to GND), 10 ohm + 100 nF input filter, I2C and ALERT pull-ups. Energy is integrated from this meter, never from the phase shunts. |
+| [`07_temperature.kicad_sch`](kicad/07_temperature.kicad_sch) | `temperature` | Power-stage and motor temperature | A 10 k NTC thermistor (negative temperature coefficient) at the low-side MOSFETs with a bias resistor and RC filter; motor-temperature connector J701 with an UNRESOLVED bias resistor (the motor's sensor type is unknown), RC filter and ESD diode. |
+| [`08_mcu_debug.kicad_sch`](kicad/08_mcu_debug.kicad_sch) | `mcu_debug` | MCU, clock, debug, external watchdog | STM32G474VET6 (LQFP100) with its function pins taken from [`interfaces/pin_allocation_STM32G474VBCETx.csv`](interfaces/pin_allocation_STM32G474VBCETx.csv), decoupling, ferrite bead to the analog rail +3V3A, BOOT0 pull-down, reset button, an HSE crystal position whose frequency is not selected, SWD (Serial Wire Debug) connector, bench UART header, two LEDs, and a MAX6369 watchdog whose output resets the MCU and pulls `HW_PERMIT` low through a diode. Unused MCU pins are no-connect. |
+| [`09_hall_inputs.kicad_sch`](kicad/09_hall_inputs.kicad_sch) | `hall_inputs` | Hall sensor inputs | Hall connector J901, solder jumper selecting a 5 V or 3.3 V hall supply, UNRESOLVED polyfuse, and per channel a pull-up (assumes open-collector hall outputs), RC filter and ESD diode. |
+| [`10_driver_controls.kicad_sch`](kicad/10_driver_controls.kicad_sch) | `driver_controls` | Wired driver controls and safety-loop sense | 12-pin driver-controls connector J1001, polyfuse on the 5 V sensor supply, two throttle tracks (divider for a 0 to 5 V pedal, pull-down so an open wire reads 0), six switch inputs (brake, eco cancel, mode, arm, fault reset, dead-man) with pull-up, RC filter and ESD diode, and a PC817 optocoupler that drives `HW_PERMIT` high only while the vehicle safety loop is energised. |
+| [`11_can_phy.kicad_sch`](kicad/11_can_phy.kicad_sch) | `can_phy` | CAN physical layer | TJA1051T/3 transceiver (5 V supply, 3.3 V logic side), mode pin held low for normal mode, NUP2105L ESD protection, split termination (2 x 60.4 ohm and 4.7 nF) behind two open solder jumpers that are closed only if this node is a bus end, CAN connector J1101 and a shield capacitor. |
+| [`12_aux_rails.kicad_sch`](kicad/12_aux_rails.kicad_sch) | `aux_rails` | Auxiliary rails and ground star point | LM5164 buck converter from `VBAT_PROT` to +5V (UVLO divider, on-time resistor and inductor UNRESOLVED), TLV75533 regulator from +5V to +3V3, the PGND-GND net tie (single point at the shunt ground), test points. The logic rails run from `VBAT_PROT`, before the precharge, so the MCU is alive while the link charges. |
+
+Conventions in the generated sheets:
+* Reference designators carry the sheet number: R301 is the first resistor on sheet 03, U1201 the first IC on sheet 12.
+* Power rails (`VBAT_PROT`, `VDC`, `PGND`, `GND`, `+5V`, `+3V3`, `+3V3A`) are global labels. Nets used on more than one sheet go through hierarchical labels and sheet pins; all other nets are local labels.
+* Each symbol carries a hidden `Status` field and, where they apply, `Rating_basis` (what the rating must be derived from), `MPN` (manufacturer part number of the candidate) and `Pin_check` (evidence for the pin numbers). These fields are copied into the BOM.
+* Each sheet prints its design notes (for example the precharge rule or the placeholder warning on the DRV8353S) as text on the sheet.
+
+[`kicad/semmc_schematic_DRAFT.pdf`](kicad/semmc_schematic_DRAFT.pdf) is a PDF export for reading without KiCad. No tool in the repository writes it; it was last committed at v0.3, and the sheets have changed slightly since (redundant no-connect markers removed). Re-export it from KiCad after regenerating.
+
+## 4. Important files
+
+| File | What it does | Inputs | Outputs |
+|---|---|---|---|
+| [`tools/gen_kicad_schematic.py`](../tools/gen_kicad_schematic.py) | Holds the circuit as Python data and writes the schematic and the draft BOM; with `--check` it also exports the netlist with `kicad-cli` and compares it with the intended nets | its own design data; [`interfaces/pin_allocation_STM32G474VBCETx.csv`](interfaces/pin_allocation_STM32G474VBCETx.csv); the KiCad symbol library in `/usr/share/kicad/symbols`; the Python package `kiutils` | `kicad/*.kicad_sch`, `kicad/semmc.kicad_sym`, `kicad/semmc.kicad_pro`, `kicad/sym-lib-table`, `bom/BOM_draft.csv`; with `--check` also `kicad/semmc.net` and `kicad/CONNECTIVITY_CHECK.md` |
+| [`kicad/semmc.kicad_sch`](kicad/semmc.kicad_sch) and the 12 sheets | The draft schematic, readable in Eeschema (KiCad 7 or newer) | the generator | the netlist exported by `kicad-cli` |
+| [`kicad/semmc.kicad_sym`](kicad/semmc.kicad_sym) | Project symbols that the KiCad library lacks: DRV8353S (placeholder pins), INA228 (pin numbers cross-checked against the KiCad library), RPP_BLOCK (unresolved reverse-polarity block) | the generator | symbols used by the sheets |
+| [`kicad/semmc.net`](kicad/semmc.net) | Netlist exported by KiCad, with repository-relative paths and the revision date | the schematic | input to `tools/hw_consistency.py` and `tools/pin_type_check.py` |
+| [`interfaces/pin_allocation_STM32G474VBCETx.csv`](interfaces/pin_allocation_STM32G474VBCETx.csv) | Candidate MCU pin map for the LQFP100 package used in the schematic (`VBCETx` stands for ST's family name STM32G474V(B-C-E)Tx). The LQFP80 and LQFP64 files are for comparison; the LQFP64 allocation is incomplete (both throttle inputs missing) | ST's open pin database, through `tools/pin_allocation.py` | read by the generator, `tools/hw_consistency.py` and the tests |
+| [`bom/BOM_draft.csv`](bom/BOM_draft.csv) | Draft BOM: 100 lines covering 206 components, grouped by symbol, value and candidate MPN | the generator's design data | input to `tools/price_bom.py` |
+| [`bom/pricing.yaml`](bom/pricing.yaml) | Hand-maintained price evidence per BOM line: evidence class (snippet, representative or allowance), source, retrieval date, availability, alternates; also project items, equipment, spares and revision allowance | web-search snapshots of distributor pages (2026-10-15) and stated allowances | input to `tools/price_bom.py` |
+| [`bom/BOM_priced.csv`](bom/BOM_priced.csv) | Draft BOM plus price ranges, supplier, availability and evidence per line; every footprint is `UNASSIGNED (draft)` | `bom/BOM_draft.csv`, `bom/pricing.yaml` | written by `tools/price_bom.py`, together with [`docs/BUDGET.md`](../docs/BUDGET.md) and `docs/generated/budget.json` |
+| [`bom/procurement.yaml`](bom/procurement.yaml) | Hand-maintained source of the project procurement table: motor controller, telemetry, shared wiring, development equipment, recurring connectivity | per line: item, purpose, category, status, quantity, candidate, requirement, blocker, evidence; a dated price only with supplier, date and reference; or an estimate reference into `docs/generated/budget.json` (motor-controller lines come from the priced draft BOM) | the `README.md` budget table and `docs/PROCUREMENT.md`, through `tools/gen_procurement.py` |
+| [`review/CONSISTENCY_CHECK.md`](review/CONSISTENCY_CHECK.md) | Cross-artefact check of the draft with a PASS, FAIL or OPEN result per item | `kicad/semmc.net`, the LQFP100 pin allocation, `bom/BOM_draft.csv`, the generator's MCU net map, `firmware/platform/stm32g4/README.md`, `config/vehicle.synthetic.yaml`, `tools/timing_budget.py` | written by `tools/hw_consistency.py` |
+| [`timing/timing_budget.md`](timing/timing_budget.md) (+ `.json`) | PWM, dead-time encoding, ADC sampling window, break-input routing, startup pin states and interrupt budget | `config/vehicle.synthetic.yaml` (values tagged [C]) and constants in the script tagged [R] recalled, [A] assumed or [D] design | written by `tools/timing_budget.py` |
+| [`timing/clock_tree_alternatives.md`](timing/clock_tree_alternatives.md) (+ `.json`) | Complete clock trees for candidate crystals (8 to 40 MHz) and CPU frequencies, with CAN bit timing for four candidate buses. Selects no crystal | limits from ST's HAL and CMSIS sources (cited by file and line), `config/vehicle.synthetic.yaml` | written by `tools/clock_tree.py` |
+| [`calculations/current_sense_error_budget.md`](calculations/current_sense_error_budget.md), [`calculations/power_stage_envelope.md`](calculations/power_stage_envelope.md) | Current-sense error over full-scale current and amplifier gain; MOSFET loss and junction-temperature envelope over phase current and bus voltage | `models/inverter/losses.py`, snippet MOSFET values (UNVERIFIED) | written by `tools/hardware_calcs.py` |
+| [`protection/SHUTDOWN_TRUTH_TABLE.md`](protection/SHUTDOWN_TRUTH_TABLE.md) (hand-maintained) | How each fault reaches the outputs, and what still stops the motor if one path fails | the schematic's protection paths; the control-contract layers in [`docs/CONTROL_CONTRACT.md`](../docs/CONTROL_CONTRACT.md) | requirements on the gate driver, the TIM1 configuration and the watchdog timeout (its section 3) |
+| [`selection/COMPONENT_SELECTION.md`](selection/COMPONENT_SELECTION.md) (hand-maintained) | Candidate or UNRESOLVED status of each function, the reason, alternates and what blocks a freeze | datasheet snippets, the calculations | the candidate MPNs, which match those in the generator and in `bom/pricing.yaml` |
+| [`selection/DATASHEET_REGISTER.md`](selection/DATASHEET_REGISTER.md) (hand-maintained) | The primary datasheets still to be read and the values needed from each; every row is open | web-search titles of manufacturer documents | the values to fill in before any layout |
+| [`selection/PINOUT_VERIFICATION.md`](selection/PINOUT_VERIFICATION.md) (hand-maintained) | Evidence level of each IC's pin numbers, reset states, current-sense topology and schematic checks | ST pin database, KiCad library | what remains to check per IC |
+| [`bringup/BENCH_BRINGUP_CHECKLIST.md`](bringup/BENCH_BRINGUP_CHECKLIST.md) (hand-maintained) | Staged bench procedure (unpowered, logic only, gates, first switching, motor on a stand) with current and energy limits | the stages of [`docs/VALIDATION_PLAN.md`](../docs/VALIDATION_PLAN.md) | measurement records per board and step, once a board exists |
+| [`review/REVIEW_CHECKLIST.md`](review/REVIEW_CHECKLIST.md) (hand-maintained) | The human design review (stage 0 gate) to be completed before any fabrication | all of the above | the signed review |
+
+## 5. What is confirmed in the draft and what is unresolved
+
+"Confirmed" below means established in the draft files and checked by the tools in section 6. None of it is a measurement, and none of it replaces the design review.
+
+### 5.1 Established in the draft
+
+* **Connectivity.** KiCad's exported netlist equals the intended connectivity on all 135 intended nets, with 0 problems ([`kicad/CONNECTIVITY_CHECK.md`](kicad/CONNECTIVITY_CHECK.md)).
+* **Protection topology** ([`review/CONSISTENCY_CHECK.md`](review/CONSISTENCY_CHECK.md): 14 PASS, 0 FAIL, 4 OPEN):
+  * the gate-driver ENABLE has one driver, the AND gate; the MCU only reads it back;
+  * every enable (`MCU_DRV_EN`, `DRV_EN_GATED`, `HW_PERMIT`, `PRECHG_EN`) has a pull-down to GND, so it is off by default;
+  * the gate-driver nFAULT reaches TIM1_BKIN (pin PE15) and the over-voltage comparator reaches TIM1_BKIN2 (pin PC3), each with a pull-up;
+  * a watchdog timeout pulls `HW_PERMIT` low and resets the MCU;
+  * `HW_PERMIT` comes from the safety-loop optocoupler; the MCU only senses it.
+* **MCU pins.** All 45 allocated MCU functions carry the intended net. The MCU pin numbers come from ST's machine-readable pin database. For TJA1051T/3, LM5164, TLV75533, 74LVC1G08, MAX6369 and INA228 the pin numbers match the KiCad official library, which is secondary evidence only ([`selection/PINOUT_VERIFICATION.md`](selection/PINOUT_VERIFICATION.md)).
+* **BOM coverage.** The 100 BOM lines cover every one of the 206 schematic components exactly once, with matching values and quantities.
+* **Power rails.** Every powered rail traces to a regulator output or to the battery connector.
+* **Candidate parts** are named for the functions that do not depend on the motor or battery ratings (MCU, gate driver, bus meter, CAN transceiver, buck converter, regulator, watchdog, comparator and reference, AND gate, optocoupler): [`selection/COMPONENT_SELECTION.md`](selection/COMPONENT_SELECTION.md). They are candidates, not selections: their datasheets are still to be read and their availability confirmed.
+
+### 5.2 Unresolved
+
+* **42 of the 100 BOM lines are UNRESOLVED.** Most wait for the motor and battery ratings; the others wait for the harness, the vehicle bus or the sensor types. They are mostly on the bridge (10 lines), the power input (9), the DC link (6) and the auxiliary rails (5): the six bridge MOSFETs, the bypass and precharge-driver FETs, phase and bus shunts, bulk and ceramic capacitors, fuse, TVS, reverse-polarity block, precharge resistor, bleeder, over-voltage divider and hysteresis, buck input capacitors, UVLO divider, on-time resistor and inductor. The rest are the crystal and its load capacitors, the six external connectors, the CAN termination and hall-supply jumpers, the hall polyfuse, the motor-temperature bias and the safety-loop LED resistor. `tools/price_bom.py` prices the rating-dependent lines with representative parts that are not selections.
+* **Battery.** The team reported a 48 V nominal, 10 Ah battery (team message, not datasheet-verified). **No component is rated from 48 V alone:** the rating bases in the schematic are written against the maximum battery voltage `V_bat,max`, its transients and a margin, and against the battery and BMS current limits, all still unknown. 10 Ah is a charge capacity, not a current limit. See [`docs/BATTERY.md`](../docs/BATTERY.md).
+* **Connectors and pinouts.** All six external connectors are UNRESOLVED: battery (J101), motor phases (J301), motor temperature (J701), halls (J901), driver controls (J1001) and CAN (J1101). The draft assigns signals to generic connector pins; the connector families, pinouts and the CAN termination location wait for the harness agreement with the vehicle team ([`docs/ICD.md`](../docs/ICD.md#11-connectors) section 11; the wired I/O list is in section 3 of the superseded [`docs/archive/INTERFACE_CONTROL.md`](../docs/archive/INTERFACE_CONTROL.md)).
+* **Footprints are unassigned.** Every symbol's footprint field is empty and `bom/BOM_priced.csv` lists every footprint as `UNASSIGNED (draft)`. There is no PCB, layout, Gerber or fabrication BOM.
+* **Placeholder and secondary pinouts.** The DRV8353S symbol's pin names and numbers are placeholders and must be renumbered from TI's datasheet before any footprint. No primary datasheet has been read for any part ([`selection/DATASHEET_REGISTER.md`](selection/DATASHEET_REGISTER.md)).
+* **Values that depend on unknown inputs:** the crystal frequency (depends on the vehicle bus), hall supply and output stage, motor-temperature sensor type and bias, safety-loop voltage (optocoupler LED resistor), over-voltage trip threshold, buck undervoltage lockout.
+* **OPEN consistency items:** an independent over-current comparator on TIM1_BKIN2 (none in the draft; decide after the motor peak current is known), the UNRESOLVED BOM lines, dead time and PWM frequency (depend on the MOSFETs and the motor inductance), and the rail current budgets.
+* **Budget.** The priced draft does not show the budget to be feasible ([`docs/BUDGET.md`](../docs/BUDGET.md)); the ranges narrow only with live quotes and the motor and battery ratings.
+
+What the team needs to supply, in priority order: [`docs/INPUT_SHEET.md`](../docs/INPUT_SHEET.md).
+
+## 6. Checks and how to run them
+
+Run every command from the repository root, inside the virtual environment created from `requirements.txt`. Each check below rewrites its report or output file; see section 7.
+
+| Check | Command | Needs | What it does and where the result goes |
+|---|---|---|---|
+| Schematic connectivity | `python3 tools/gen_kicad_schematic.py --check` | Python packages from `requirements.txt` (`kiutils`), the KiCad symbol library in `/usr/share/kicad/symbols`, and `kicad-cli` (KiCad 7 is enough) | Regenerates every schematic file and `bom/BOM_draft.csv`, then exports the netlist with `kicad-cli` and compares every intended net with KiCad's connectivity. Writes `kicad/semmc.net` and `kicad/CONNECTIVITY_CHECK.md`; exit 1 on any mismatch. Connectivity only: not an ERC and not a design review. |
+| Schematic drift | `git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'` | git | Run after the connectivity check, as CI does: a difference means the committed files are not what the generator produces. |
+| KiCad ERC | `bash tools/run_kicad_erc.sh`, then `python3 tools/erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors` | KiCad 8 or newer (the script exits 2 with KiCad 7) | Runs KiCad's electrical rules check on the draft and writes `kicad/ERC_REPORT.rpt` and `.json` (not committed). CI runs it in the `erc` job of [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) with KiCad 8 from the KiCad 8.0 PPA (8.0.9 in the recorded runs), uploads the report as the `erc-report` artifact and fails on any ERC error. Latest recorded CI result: **0 errors and 9 warnings**, all library-version differences (symbols embedded from the KiCad 7 library, checked by KiCad 8) ([`docs/VERIFICATION_REPORT.md`](../docs/VERIFICATION_REPORT.md) section 5). |
+| Pin-type rules | `python3 tools/pin_type_check.py` | `kicad/semmc.net` from the connectivity check | Applies a subset of ERC pin-type rules to KiCad's netlist and writes `kicad/PIN_TYPE_CHECK.md` (current: 173 nets, 0 findings). Always exits 0; read the report. |
+| Consistency | `python3 tools/hw_consistency.py` | `kicad/semmc.net` from the connectivity check | Checks protection topology, pins, BOM coverage, timing against configuration and power rails. Each item is **PASS** (holds in the exported design), **FAIL** (two files contradict each other; must be fixed) or **OPEN** (needs a datasheet, a measurement or a vehicle decision). Writes `review/CONSISTENCY_CHECK.md`; exit 1 on any FAIL. |
+| Pricing | `python3 tools/price_bom.py` | `bom/BOM_draft.csv`, `bom/pricing.yaml` | Prices each BOM line as a low-high range and computes the budget scenarios and the feasibility statement from the high ends. Stops if a BOM line has no pricing rule. Writes `bom/BOM_priced.csv`, `docs/BUDGET.md` and `docs/generated/budget.json`. |
+| Timing budget | `python3 tools/timing_budget.py` | `config/vehicle.synthetic.yaml` | Recomputes the PWM, dead-time, sampling-window and break-path figures. Writes `timing/timing_budget.md` and `.json`. |
+| Clock tree | `python3 tools/clock_tree.py` | `config/vehicle.synthetic.yaml` | Recomputes the clock-tree alternatives and CAN bit timings. Writes `timing/clock_tree_alternatives.md` and `.json`. |
+| Calculations | `python3 tools/hardware_calcs.py` | `models/inverter/losses.py` | Writes the two reports in `calculations/`. |
+| Pin allocation | `python3 tools/pin_allocation.py --db /path/to/STM32_open_pin_data --commit <sha>` | a local clone of ST's `STM32_open_pin_data` repository (the committed files used commit `7d1f1514ed5583ec5007ad91236b4e1d377295b1`) | Allocates the controller's functions to pins for every STM32G474 package. Writes the three CSV files in `interfaces/` and `docs/generated/pin_allocation.md`. Checks signal availability and pin uniqueness only. Re-run the generator afterwards, since it reads the LQFP100 file. |
+| Hardware tests | `python3 -m pytest tests/hardware` | as above; the connectivity test is skipped without `kicad-cli` | Among other checks, runs the connectivity check, the timing budget and the pricing (rewriting their outputs), and requires the consistency checker to catch deliberately broken copies of the netlist. |
+
+After a change to the design data, a typical sequence is: connectivity check, drift check, pin-type check, consistency check, pricing, then the ERC (in CI, or locally with KiCad 8), and a commit of every changed output. Every tool is listed with its exact command in [`tools/README.md`](../tools/README.md).
+
+## 7. Generated files: do not edit by hand
+
+These files are written by tools. A hand edit is lost at the next run, and for the schematic it fails the CI drift check.
+
+| Files | Generated by |
+|---|---|
+| `kicad/semmc.kicad_sch`, `kicad/01_power_input.kicad_sch` to `kicad/12_aux_rails.kicad_sch`, `kicad/semmc.kicad_sym`, `kicad/semmc.kicad_pro`, `kicad/sym-lib-table` | `tools/gen_kicad_schematic.py` |
+| `kicad/semmc.net`, `kicad/CONNECTIVITY_CHECK.md` | `tools/gen_kicad_schematic.py --check` |
+| `kicad/PIN_TYPE_CHECK.md` | `tools/pin_type_check.py` |
+| `kicad/ERC_REPORT.rpt`, `kicad/ERC_REPORT.json` (when produced locally; not committed) | `tools/run_kicad_erc.sh` |
+| `bom/BOM_draft.csv` | `tools/gen_kicad_schematic.py` |
+| `bom/BOM_priced.csv` | `tools/price_bom.py` |
+| `review/CONSISTENCY_CHECK.md` | `tools/hw_consistency.py` |
+| `timing/timing_budget.md`, `timing/timing_budget.json` | `tools/timing_budget.py` |
+| `timing/clock_tree_alternatives.md`, `timing/clock_tree_alternatives.json` | `tools/clock_tree.py` |
+| `calculations/current_sense_error_budget.md`, `calculations/power_stage_envelope.md` | `tools/hardware_calcs.py` |
+| `interfaces/pin_allocation_STM32G474VBCETx.csv`, `..._MBCETx.csv`, `..._RBCETx.csv` | `tools/pin_allocation.py` |
+
+To change the schematic, edit the design data in `sheets()` of `tools/gen_kicad_schematic.py` (the `CUSTOM` table for project symbols), regenerate, run the checks in section 6 and commit the generator and every regenerated file together. Changes made in Eeschema are overwritten by the next run. To change prices, edit `bom/pricing.yaml` and re-run `tools/price_bom.py`.
+
+Hand-maintained: `bom/pricing.yaml`, `bom/procurement.yaml`, `bom/BOM_candidates.csv` (the v0.1 conditional BOM, kept as a record), the README files, and the Markdown documents in `bringup/`, `protection/`, `selection/`, `schematic_plan/` and `review/REVIEW_CHECKLIST.md`. The PDF `kicad/semmc_schematic_DRAFT.pdf` is a manual export (section 3).
+
+## 8. Current limitations
+
+* **Draft, not for fabrication.** No footprints, layout, Gerbers or fabrication outputs exist, by design. No board exists, so nothing has been measured, and the bring-up checklist applies only to a future board built from a reviewed design.
+* **The checks show agreement, not correctness.** The connectivity, pin-type and consistency checks show that the files agree with each other and with the intended design; the ERC checks schematic rules. None of them shows that the circuit works: that needs the design review ([`review/REVIEW_CHECKLIST.md`](review/REVIEW_CHECKLIST.md)) and bench measurements ([`bringup/BENCH_BRINGUP_CHECKLIST.md`](bringup/BENCH_BRINGUP_CHECKLIST.md)).
+* **The primary datasheets of the controller parts have not been read into the register yet** (the INA228 datasheet was read for the energy-measurement decision, `docs/DESIGN_DECISIONS.md` D2). Values tagged [R] (recalled), [S] (search snippet) or "TYPICAL - verify" may not be carried into a layout until the register row is filled.
+* **Proposed, not substantiated:** simultaneous phase-current sampling on three ADCs from one trigger; it needs the timer and ADC configuration and a bench measurement.
+* **Protection gaps recorded for the review:** no independent over-current comparator (hardware over-current shutdown relies on the gate driver's drain-source voltage monitoring through nFAULT), no on-board series disconnect if the gate driver fails with a gate on, and no detection of a safety-loop optocoupler that fails on ([`protection/SHUTDOWN_TRUTH_TABLE.md`](protection/SHUTDOWN_TRUTH_TABLE.md) section 2).
+* **Firmware not ready for a board:** the STM32G4 platform layer (timers, ADC, CAN driver, precharge logic) is not written, so bring-up stage 2 cannot start.
+* **Vehicle bus unknown:** bit rate, classic CAN or CAN FD, identifier block and termination are not confirmed, so the crystal is not selected.
+* **Prices are snapshots and allowances,** not quotes; nothing has been purchased.

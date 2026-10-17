@@ -1,4 +1,4 @@
-Nominal bit rate 500 kbit/s; total utilisation 13.7 % (semmc frames 12.3 %), plus a REFERENCE-PROJECT load case (Cornell CHUDS, modelled conservatively); our vehicle bus's other traffic is UNKNOWN.
+Nominal bit rate 500 kbit/s; total utilisation 13.9 % (semmc frames 12.6 %), plus a REFERENCE-PROJECT load case (Cornell CHUDS, modelled conservatively); our vehicle bus's other traffic is UNKNOWN.
 
 | id | message | ours | period ms | C us | WCRT ms | note |
 |---|---|---|---|---|---|---|
@@ -20,5 +20,6 @@ Nominal bit rate 500 kbit/s; total utilisation 13.7 % (semmc frames 12.3 %), plu
 | 0x320 | ctrl_energy | yes | 100 | 270 | 5.99 |  |
 | 0x321 | ctrl_thermal | yes | 100 | 270 | 6.26 |  |
 | 0x322 | ctrl_validity | yes | 100 | 270 | 6.53 |  |
-| 0x328 | csia_advisory | yes | 100 | 270 | 6.80 |  |
-| 0x330 | ctrl_identity | yes | 1000 | 270 | 6.80 |  |
+| 0x323 | ctrl_energy_quality | yes | 100 | 270 | 6.80 |  |
+| 0x328 | csia_advisory | yes | 100 | 270 | 7.07 |  |
+| 0x330 | ctrl_identity | yes | 1000 | 270 | 7.07 |  |

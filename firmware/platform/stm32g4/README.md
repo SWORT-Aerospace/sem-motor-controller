@@ -1,9 +1,9 @@
-# STM32G4 platform layer — NOT IMPLEMENTED (v0.1)
+# STM32G4 platform layer: NOT IMPLEMENTED (v0.1)
 
 No embedded motor-control firmware image exists. The portable core cross-compiles for Cortex-M4F (`firmware/cmake/arm-none-eabi-cortex-m4f.cmake`, `SEMMC_PORTABLE_ONLY=ON`): about 29.5 kB of unlinked text, and **no software double-precision calls inside `mc_core_fast_step`** (checked with `arm-none-eabi-objdump`). That is a portability check, not a firmware build.
 
 ## Vendor tooling assessment (ST X-CUBE-MCSDK)
-* Seen (search snippets only): MCSDK 6.4.x supports STM32G4; license SLA0048 ("Ultimate Liberty" mix). Not downloaded; st.com unreachable.
+* Seen (search snippets only): MCSDK 6.4.x supports STM32G4; license SLA0048 ("Ultimate Liberty" mix). Not downloaded.
 * Decision (ADR-0009): use MCSDK as a **reference** for TIM1/ADC injected-trigger configuration and timing, but not generated control code, until the Art. 66a "kit software" question is answered.
 * Use STM32CubeG4 HAL/LL (BSD-3) for peripheral bring-up, subject to the same rule confirmation.
 
@@ -29,7 +29,7 @@ Fast step on M4F at 170 MHz: TBD by measurement on hardware (GPIO toggle + scope
   * Nominal timing: NBRP 1, NTSEG1 63, NTSEG2 16 (80 tq, 80 %).
   * Data timing: DBRP 1, DTSEG1 15, DTSEG2 4 (20 tq, 80 %).
   * Register encodings subtract 1 [R].
-  * Needed only to coexist with an FD bus such as CHUDS (`docs/CAN_INTEGRATION.md`, reference project). Acceptance filter: the configured 64-identifier block, standard ids only.
+  * Needed only to coexist with an FD bus such as CHUDS (`docs/archive/CAN_INTEGRATION.md`, reference project). Acceptance filter: the configured 64-identifier block, standard ids only.
 * **TIM1:** centre-aligned complementary PWM.
   * BDTR: DTG per `hardware/timing/timing_budget.md`; BKIN (PE15, nFAULT) and BKIN2 (PC3, OV comparator) active low; BKF 4; OSSI = 1, OISx = OISxN = 0; AOE = 0.
   * PROPOSED: TRGO2 starts ADC1/ADC2 (dual simultaneous injected) and ADC3 (injected) at the PWM valley. Simultaneity is not substantiated until the trigger configuration, ADC synchronization and acquisition windows are written and measured (bring-up stage 4).

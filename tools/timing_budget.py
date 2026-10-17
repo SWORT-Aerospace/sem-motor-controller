@@ -5,8 +5,8 @@
 
 Every constant is tagged:
   [C]  from this project's configuration (config/vehicle.synthetic.yaml) - synthetic
-  [R]  recalled from STM32G4 / DRV835x documentation, NOT verified here (st.com and
-       ti.com unreachable from this environment) - check against RM0440 / DS12288 /
+  [R]  recalled from STM32G4 / DRV835x documentation, NOT yet verified against the
+       datasheets - check against RM0440 / DS12288 /
        SLVSDY6x before relying on it
   [A]  engineering assumption to be MEASURED at bench stage 3/4
   [D]  design value chosen in the schematic draft
@@ -39,6 +39,22 @@ K = {
     "brk_filter_samples": (4, "D", "TIM1 BKF digital filter length (N samples at f_DTS)"),
     "fast_isr_cycles_est": (None, "A", "FOC fast-step cycles: MEASURE with DWT->CYCCNT at stage 2"),
 }
+
+
+def _load_config_values() -> None:
+    """[C] entries come from the configuration, so the budget cannot drift from it."""
+    import yaml
+    cfg = yaml.safe_load((ROOT / "config" / "vehicle.synthetic.yaml").read_text())
+    for key, (_val, tag, path) in list(K.items()):
+        if tag != "C":
+            continue
+        node = cfg
+        for part in path.split(" ")[0].split("."):
+            node = node[part]
+        K[key] = (float(node), tag, path)
+
+
+_load_config_values()
 
 
 def v(k):

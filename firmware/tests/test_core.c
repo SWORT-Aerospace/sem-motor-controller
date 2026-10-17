@@ -31,6 +31,11 @@ static uint16_t SUP_SRC_MS;
 static bool SUP_FREEZE_SRC; /* re-send cached sample (src time frozen) */
 static mc_time_us_t SUP_LAST_REQ_T;
 static uint32_t SUP_BASE = MC_PROTO_MSG_FIRST; /* CAN id of protocol message 0x300 on the emulated bus */
+/* Test hooks: last transmitted frame per protocol message, and forced measurement validity. */
+static uint8_t LAST_TX[MC_PROTO_MSG_SPAN][8];
+static bool HAVE_TX[MC_PROTO_MSG_SPAN];
+static bool FORCE_VBUS_VAL_ON, FORCE_IBATT_VAL_ON;
+static mc_validity_t FORCE_VBUS_VAL, FORCE_IBATT_VAL;
 
 static void sim_init_blob(mc_build_kind_t build, const uint8_t *blob, size_t len)
 {
@@ -52,6 +57,8 @@ static void sim_init_blob(mc_build_kind_t build, const uint8_t *blob, size_t len
     SUP_SRC_MS = 0;
     SUP_FREEZE_SRC = false;
     SUP_SEQ_REQ = SUP_SEQ_LIM = SUP_SEQ_HELLO = 0u; /* no state leaks between tests */
+    memset(HAVE_TX, 0, sizeof HAVE_TX);
+    FORCE_VBUS_VAL_ON = FORCE_IBATT_VAL_ON = false;
 }
 
 static void sim_init(mc_build_kind_t build)
@@ -107,6 +114,8 @@ static void run_ms(int ms)
                 SI.t_fet_val = s.t_fet_valid ? MC_VAL_OK : MC_VAL_INVALID;
                 SI.t_motor_degC = s.t_mot_degC;
                 SI.t_motor_val = s.t_mot_valid ? MC_VAL_OK : MC_VAL_INVALID;
+                if (FORCE_VBUS_VAL_ON) SI.vbus_val = FORCE_VBUS_VAL;
+                if (FORCE_IBATT_VAL_ON) SI.ibatt_val = FORCE_IBATT_VAL;
             }
         }
         if (SUP_ON && i % 20 == 0) sup_tx();
@@ -114,6 +123,11 @@ static void run_ms(int ms)
         uint32_t id;
         uint8_t d[8];
         while (mc_core_can_tx_poll(&C, T, &id, d)) {
+            const uint32_t msg = id - SUP_BASE;
+            if (msg < MC_PROTO_MSG_SPAN) {
+                memcpy(LAST_TX[msg], d, 8u);
+                HAVE_TX[msg] = true;
+            }
             if (id == bus_id(SEMMC_ID_CTRL_SESSION)) {
                 semmc_ctrl_session_t s;
                 if (semmc_decode_ctrl_session(d, 8u, &s).status == SEMMC_OK && s.companion_session_echo == SUP_SESSION)
@@ -472,6 +486,136 @@ static void test_contract_reengage_bounded_by_newest_envelope(void)
     CHECK(C.arb.accepted_Nm == 0.0f);
 }
 
+/* Found by test_core_properties: after a bus-off the session was reset and the
+ * next hello re-issued the SAME tag (it was derived from boot id and companion
+ * session only), so a request frame recorded before the bus-off became valid
+ * again and was accepted as the first sample of the "new" session. */
+static void test_bus_off_recovery_rejects_frames_from_before(void)
+{
+    eco_with(7u, 2.0f, 0.8f);
+    const uint8_t old_tag = SUP_TAG;
+    uint8_t stale[8];
+    semmc_sup_torque_req_t r = {(uint8_t)(SUP_SEQ_REQ + 40u), old_tag, 7u, false, 0u, 2.0f,
+                                (uint16_t)(T / 1000u + 400u)};
+    (void)semmc_encode_sup_torque_req(&r, stale);       /* sits in a gateway queue across the bus-off */
+    uint8_t seen[8] = {old_tag};
+    int n_seen = 1;
+    for (int cycle = 0; cycle < 6; cycle++) {
+        mc_core_on_can_bus_off(&C, true);
+        run_ms(1);
+        CHECK_EQ_INT(C.sm.state, MC_ST_READY);
+        CHECK(C.sess.tag == 0u);
+        mc_core_on_can_bus_off(&C, false);
+        SUP_ON = true;                                  /* same companion session re-handshakes */
+        run_ms(600);                                    /* the emulated companion sends hello every 500 ms */
+        SUP_ON = false;
+        CHECK(C.sess.tag != 0u && C.sess.tag == SUP_TAG);
+        for (int k = 0; k < n_seen; k++) CHECK(C.sess.tag != seen[k]);  /* distinct from every earlier tag */
+        seen[n_seen++] = C.sess.tag;
+        const mc_time_us_t before = C.fr_req.last_new_rx_us;
+        const uint32_t mism = C.can.rx_tag_mismatch;
+        T += 400000u;                                   /* the queued frame's time would now look plausible */
+        mc_core_on_can_rx(&C, T, bus_id(SEMMC_ID_SUP_TORQUE_REQ), stale, 8u);
+        CHECK(C.fr_req.last_new_rx_us == before);
+        CHECK(C.can.rx_tag_mismatch == mism + 1u);
+        run_ms(1);
+        CHECK(C.arb.accepted_Nm == 0.0f);
+    }
+}
+
+/* ---- measurement validity reaches telemetry unchanged -------------------- */
+static void test_flagged_vbus_is_reported_invalid_not_healthy(void)
+{
+    /* A bus voltage the platform flags (stale ADC, failed plausibility) but
+     * whose number is finite must not appear healthy on the bus: the
+     * protection layer already faults on it, and telemetry must agree. */
+    sim_init(MC_BUILD_HOST_SIM);
+    arm();
+    run_ms(150);
+    CHECK(HAVE_TX[SEMMC_ID_CTRL_VALIDITY - MC_PROTO_MSG_FIRST]);
+    semmc_ctrl_validity_t v;
+    CHECK(semmc_decode_ctrl_validity(LAST_TX[SEMMC_ID_CTRL_VALIDITY - MC_PROTO_MSG_FIRST], 8u, &v).status == SEMMC_OK);
+    CHECK_EQ_INT((int)v.v_vbus, 0);
+    FORCE_VBUS_VAL_ON = true;
+    FORCE_VBUS_VAL = MC_VAL_STALE; /* finite value, flagged by the platform */
+    run_ms(250);
+    CHECK(C.prot.latched & MC_FAULT_BIT(MC_F_VBUS_SENSE_INVALID));
+    CHECK(semmc_decode_ctrl_validity(LAST_TX[SEMMC_ID_CTRL_VALIDITY - MC_PROTO_MSG_FIRST], 8u, &v).status == SEMMC_OK);
+    CHECK(v.v_vbus != 0u);
+    semmc_ctrl_motion_t m;
+    CHECK(semmc_decode_ctrl_motion(LAST_TX[SEMMC_ID_CTRL_MOTION - MC_PROTO_MSG_FIRST], 8u, &m).status == SEMMC_OK);
+    CHECK(isnan(m.vbus_V));
+}
+
+static void test_no_measurement_reported_before_it_exists(void)
+{
+    /* Frames sent before the first slow step must not carry zero-initialised
+     * measurements as if they were real. */
+    sim_init(MC_BUILD_HOST_SIM);
+    uint32_t id;
+    uint8_t d[8];
+    int seen = 0;
+    while (mc_core_can_tx_poll(&C, 0u, &id, d)) {
+        if (id == SEMMC_ID_CTRL_MOTION) {
+            semmc_ctrl_motion_t m;
+            CHECK(semmc_decode_ctrl_motion(d, 8u, &m).status == SEMMC_OK);
+            CHECK(isnan(m.vbus_V) && isnan(m.speed_mech_rad_s));
+            seen++;
+        } else if (id == SEMMC_ID_CTRL_CURRENTS) {
+            semmc_ctrl_currents_t m;
+            CHECK(semmc_decode_ctrl_currents(d, 8u, &m).status == SEMMC_OK);
+            CHECK(isnan(m.ibatt_A));
+            seen++;
+        } else if (id == SEMMC_ID_CTRL_THERMAL) {
+            semmc_ctrl_thermal_t m;
+            CHECK(semmc_decode_ctrl_thermal(d, 8u, &m).status == SEMMC_OK);
+            CHECK(isnan(m.t_fet_degC) && isnan(m.t_motor_degC));
+            seen++;
+        } else if (id == SEMMC_ID_CTRL_VALIDITY) {
+            semmc_ctrl_validity_t v;
+            CHECK(semmc_decode_ctrl_validity(d, 8u, &v).status == SEMMC_OK);
+            CHECK(v.v_vbus != 0u && v.v_ibatt != 0u && v.v_t_fet != 0u && v.v_t_motor != 0u);
+            seen++;
+        }
+    }
+    CHECK_EQ_INT(seen, 4);
+}
+
+static void test_energy_gaps_are_counted_not_hidden(void)
+{
+    /* Intervals without a usable battery power (invalid current or voltage, or
+     * a late slow step) are reported as gap time; energy_J never integrates them. */
+    sim_init(MC_BUILD_HOST_SIM);
+    arm();
+    SI.driver.throttle = 0.3f;
+    run_ms(400);
+    CHECK_EQ_INT(C.sm.state, MC_ST_MANUAL);
+    CHECK(C.energy_J > 0.0 && C.energy_gap_s < 1e-9);
+    const double e0 = C.energy_J, g0 = C.energy_gap_s, i0 = C.energy_integrated_s;
+    FORCE_IBATT_VAL_ON = true;
+    FORCE_IBATT_VAL = MC_VAL_MISSING;
+    run_ms(200);
+    CHECK(C.energy_J == e0);                                     /* nothing integrated */
+    CHECK(fabs((C.energy_gap_s - g0) - 0.2) < 0.0025);
+    CHECK(isnan(C.p_batt_W));
+    FORCE_IBATT_VAL_ON = false;
+    run_ms(100);
+    CHECK(C.energy_J > e0 && C.energy_integrated_s > i0 + 0.09);
+    /* a slow step 100 ms late: counted as gap, not integrated as one rectangle */
+    const double e1 = C.energy_J, g1 = C.energy_gap_s;
+    T += 100000u;
+    mc_core_slow_step(&C, T, &SI);
+    CHECK(C.energy_J == e1);
+    CHECK(fabs((C.energy_gap_s - g1) - 0.1) < 1e-6);
+    run_ms(150);
+    semmc_ctrl_energy_quality_t q;
+    CHECK(HAVE_TX[SEMMC_ID_CTRL_ENERGY_QUALITY - MC_PROTO_MSG_FIRST]);
+    CHECK(semmc_decode_ctrl_energy_quality(LAST_TX[SEMMC_ID_CTRL_ENERGY_QUALITY - MC_PROTO_MSG_FIRST], 8u, &q).status ==
+          SEMMC_OK);
+    CHECK(fabs(q.gap_s - C.energy_gap_s) < 0.011);
+    CHECK(q.integrated_s > 0.5f);
+}
+
 /* ---- transport independence ------------------------------------------- */
 #include "semmc/mc_crc.h"
 
@@ -567,6 +711,10 @@ int main(void)
     RUN(test_contract_limits_refresh_keeps_previous_set);
     RUN(test_contract_reordered_request_ignored);
     RUN(test_contract_reengage_bounded_by_newest_envelope);
+    RUN(test_bus_off_recovery_rejects_frames_from_before);
+    RUN(test_flagged_vbus_is_reported_invalid_not_healthy);
+    RUN(test_no_measurement_reported_before_it_exists);
+    RUN(test_energy_gaps_are_counted_not_hidden);
     RUN(test_can_binding_relocates_block);
     RUN(test_core_message_interface_is_transport_neutral);
     TEST_MAIN_END();

@@ -3,7 +3,7 @@ MODE_SWITCH,PC13,2,GPIO,,CANDIDATE - AF/timing not verified
 PWM_A_HI,PC0,8,TIM1_CH1,gate driver INHA,CANDIDATE - AF/timing not verified
 PWM_B_HI,PC1,9,TIM1_CH2,INHB,CANDIDATE - AF/timing not verified
 PWM_C_HI,PC2,10,TIM1_CH3,INHC,CANDIDATE - AF/timing not verified
-PWM_BREAK2,PC3,11,TIM1_BKIN2,hardware trip input: independent bus/phase over-current comparator,CANDIDATE - AF/timing not verified
+PWM_BREAK2,PC3,11,TIM1_BKIN2,"hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option)",CANDIDATE - AF/timing not verified
 ISENSE_A,PA0,12,ADC1_IN1,CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed),CANDIDATE - AF/timing not verified
 ISENSE_B,PA1,13,ADC2_IN2,CSA B -> ADC2 fast channel,CANDIDATE - AF/timing not verified
 HALL_B,PA4,18,TIM3_CH2,,CANDIDATE - AF/timing not verified

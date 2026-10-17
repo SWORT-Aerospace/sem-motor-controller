@@ -1,4 +1,4 @@
-# REAL-HARDWARE configuration — UNCONFIGURED.
+# REAL-HARDWARE configuration: UNCONFIGURED.
 #
 # Every value that has not been verified from a source or measured on the real
 # vehicle is null. Do NOT replace nulls with plausible defaults: a
@@ -64,7 +64,9 @@ battery:
   bms_peak_discharge_current_A: null
   bms_peak_duration_s: null
   bms_max_charge_current_A: null
-  notes: null
+  # team message 2026-10-16: 48 V nominal, 10 Ah rated (not datasheet-verified; docs/BATTERY.md).
+  # Kept out of the fields above, which take verified or measured values only.
+  notes: "team-reported 48 V nominal, 10 Ah rated (~480 Wh nominal, not measured usable); pending datasheet"
 
 vehicle:
   category: null             # UNKNOWN: not stated in the telematics proposal v0.1; Cornell repos (reference project) target Urban Concept
@@ -128,6 +130,6 @@ supervision:
   timeout_s: null                  # 100 ms is PROVISIONAL and simulation-only
   timing_status: provisional_simulation_only
   limits_timeout_s: null
-  can_id_base: null                # UNKNOWN: needs the vehicle team's CAN id allocation (docs/VEHICLE_INTERFACE_MATRIX.md)
+  can_id_base: null                # UNKNOWN: needs the vehicle team's CAN id allocation (docs/ICD.md section 2)
   hazard_analysis_ref: null        # required before any hardware build
   notes: "Pending vehicle hazard and latency analysis."

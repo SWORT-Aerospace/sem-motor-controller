@@ -1,9 +1,9 @@
-# CI for sem-motor-controller. NOTE: GitHub only runs workflows from a
-# repository ROOT. While this project lives in a subdirectory of another
-# repository this file is inert; it becomes active once the directory is
-# split into its own repository (ADR-0001).
+# CI for sem-motor-controller (repository root of SWORT-Aerospace/sem-motor-controller).
+# Host tests only: nothing here touches hardware.
 name: ci
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   host:
     runs-on: ubuntu-24.04
@@ -13,13 +13,25 @@ jobs:
         with:
           python-version: "3.13"
       - name: Toolchain
-        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi
+        # kicad + kicad-symbols: the schematic connectivity gate needs kicad-cli and the symbol library;
+        # without them tests/hardware skips that gate instead of running it.
+        # mosquitto: the MQTT broker for the telemetry pipeline tests (Ubuntu 24.04 package, 2.0.18).
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi kicad kicad-symbols mosquitto
+          kicad-cli version
+          /usr/sbin/mosquitto -h | head -1
       - name: Python deps (pinned)
         run: pip install -r requirements.txt
       - name: Generated files are current
         run: |
           python tools/gen_config.py --check
           python tools/gen_protocol.py --check
+          python tools/gen_dbc.py --check
+          python tools/gen_procurement.py --check
+          python tools/wheel_sensor_check.py --check
+          python tools/coastdown_sensitivity.py --check
+          python tools/check_links.py
       - name: Fetch pinned CSIA core
         run: python tools/fetch_csia.py
       - name: Configs validate as expected
@@ -31,8 +43,22 @@ jobs:
           cmake -S firmware -B build -G Ninja
           cmake --build build
           ctest --test-dir build --output-on-failure
+      - name: Schematic connectivity gate (KiCad netlist vs intended nets; not an ERC)
+        run: |
+          python tools/gen_kicad_schematic.py --check
+          # the committed schematic, symbols and draft BOM must equal the generator's output
+          # (semmc.net is excluded: it embeds an export date and an absolute path)
+          git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'
       - name: Python tests
-        run: python -m pytest
+        # a missing MQTT broker is a failure here, not a skip
+        env:
+          SEMMC_REQUIRE_MQTT: "1"
+        run: python -m pytest -rs
+      - name: Host demonstrations (simulated uplink; real Mosquitto broker; shadow replay)
+        run: |
+          python tools/run_host_demo.py --out build/host_demo
+          python tools/run_mqtt_demo.py --out build/mqtt_demo
+          python tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay
       - name: Portable core cross-compile (Cortex-M4F, compile check only)
         run: |
           cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_PORTABLE_ONLY=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
@@ -43,3 +69,29 @@ jobs:
           python tools/run_optimization.py --quick
           python tools/run_electrical_calcs.py
           python tools/run_csia_study.py
+  erc:
+    # Real KiCad ERC on the committed draft schematic. Ubuntu 24.04 ships KiCad 7,
+    # whose kicad-cli has no `sch erc`; KiCad 8 comes from the KiCad project's PPA.
+    # The report is uploaded whatever the result; the job fails on any ERC error.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: KiCad 8 (ppa:kicad/kicad-8.0-releases)
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-8.0-releases
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kicad kicad-symbols
+          kicad-cli version
+      - name: ERC
+        run: bash tools/run_kicad_erc.sh
+      - name: Upload ERC report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erc-report
+          path: hardware/kicad/ERC_REPORT.*
+      - name: Summary (fails on any ERC error)
+        run: python tools/erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors

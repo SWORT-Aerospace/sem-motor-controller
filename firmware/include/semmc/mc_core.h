@@ -35,6 +35,10 @@
 #define MC_FW_MINOR 1u
 
 #define MC_CLOCK_DOMAIN_COMPANION 1u
+/* Longest slow-step interval that is integrated into energy_J; a longer interval
+ * (a stalled or late slow step) is counted in energy_gap_s instead of being
+ * integrated as one rectangle of the latest power. */
+#define MC_ENERGY_MAX_DT_S 0.02f
 
 typedef enum { MC_SUP_LINK_NONE = 0, MC_SUP_LINK_HELLO = 1, MC_SUP_LINK_ESTABLISHED = 2, MC_SUP_LINK_LOST = 3 } mc_sup_link_t;
 
@@ -110,6 +114,7 @@ typedef struct {
     mc_csia_shadow_t csia;
     /* supervisor */
     mc_sup_session_t sess;
+    uint32_t tags_issued;      /* session tags issued since boot; survives session resets */
     mc_fresh_t fr_req, fr_limits, fr_hello;
     mc_supervisor_input_t sup;
     /* Double-buffered supervisor bounds: [0] = newest committed set, [1] = the
@@ -138,8 +143,11 @@ typedef struct {
     float id_meas_A, iq_meas_A;
     mc_phase_currents_t pc;
     float p_batt_W;
-    double energy_J;           /* battery-side, integrated in the slow step */
+    double energy_J;           /* controller input (bus shunt), integrated in the slow step */
+    double energy_integrated_s; /* time covered by energy_J */
+    double energy_gap_s;       /* time NOT integrated: invalid V or I, or update interval > MC_ENERGY_MAX_DT_S */
     float slow_vbus_V;
+    mc_validity_t slow_vbus_val; /* platform flags + finiteness; telemetry reports it as is */
     float slow_ibatt_A;
     mc_validity_t slow_ibatt_val;
     float t_fet_degC, t_motor_degC;

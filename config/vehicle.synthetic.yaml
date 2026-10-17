@@ -1,5 +1,5 @@
 # ===========================================================================
-#  SYNTHETIC SIMULATION CONFIGURATION — NOT A REAL VEHICLE, NOT A REAL MOTOR
+#  SYNTHETIC SIMULATION CONFIGURATION: NOT A REAL VEHICLE, NOT A REAL MOTOR
 # ===========================================================================
 # Every number below was chosen by the developer so that host simulation,
 # tests and model development can proceed while the real motor/battery are

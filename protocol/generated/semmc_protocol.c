@@ -1,5 +1,5 @@
 /* GENERATED from protocol/protocol.yaml by tools/gen_protocol.py - do not edit. */
-/* spec hash 193e498f6cb45df6. Conversion arithmetic is in double (slow-loop only), matching the Python codec. */
+/* spec hash 16ff00853dfda3ce. Conversion arithmetic is in double (slow-loop only), matching the Python codec. */
 #include "semmc_protocol.h"
 
 #include <math.h>
@@ -105,8 +105,9 @@ int semmc_msg_index(uint32_t can_id)
     case 0x320u: return 10;
     case 0x321u: return 11;
     case 0x322u: return 12;
-    case 0x328u: return 13;
-    case 0x330u: return 14;
+    case 0x323u: return 13;
+    case 0x328u: return 14;
+    case 0x330u: return 15;
     default: return -1;
     }
 }
@@ -520,6 +521,30 @@ semmc_result_t semmc_decode_ctrl_validity(const uint8_t *in, uint8_t len, semmc_
     m->v_sup_req = get_bits(in, 52u, 4u);
     m->v_sup_limits = get_bits(in, 56u, 4u);
     m->v_hall = get_bits(in, 60u, 4u);
+    return r;
+}
+
+semmc_result_t semmc_encode_ctrl_energy_quality(const semmc_ctrl_energy_quality_t *m, uint8_t out[8])
+{
+    semmc_result_t r = {SEMMC_OK, 0u, 0u, 0u};
+    uint8_t b[8] = {0};
+    b[1] = m->seq;
+    put_bits(b, 16u, 24u, enc_scaled(m->integrated_s, 0.0, 167772.14, 0.01, 0.0, 0LL, 16777214LL, true, 16777215LL, 24u, (1u << 0), &r));
+    put_bits(b, 40u, 24u, enc_scaled(m->gap_s, 0.0, 167772.14, 0.01, 0.0, 0LL, 16777214LL, true, 16777215LL, 24u, (1u << 1), &r));
+    if (r.status != SEMMC_OK) { memset(out, 0, 8); return r; }
+    b[0] = semmc_crc8_data_id(SEMMC_DATAID_CTRL_ENERGY_QUALITY, &b[1]);
+    memcpy(out, b, 8);
+    return r;
+}
+
+semmc_result_t semmc_decode_ctrl_energy_quality(const uint8_t *in, uint8_t len, semmc_ctrl_energy_quality_t *m)
+{
+    semmc_result_t r = {SEMMC_OK, 0u, 0u, 0u};
+    if (len != 8u) { r.status = SEMMC_E_LEN; return r; }
+    if (semmc_crc8_data_id(SEMMC_DATAID_CTRL_ENERGY_QUALITY, &in[1]) != in[0]) { r.status = SEMMC_E_CRC; return r; }
+    m->seq = in[1];
+    m->integrated_s = dec_scaled((int64_t)get_bits(in, 16u, 24u), 0.0, 167772.14, 0.01, 0.0, 0LL, 16777214LL, true, 16777215LL, (1u << 0), &r);
+    m->gap_s = dec_scaled((int64_t)get_bits(in, 40u, 24u), 0.0, 167772.14, 0.01, 0.0, 0LL, 16777214LL, true, 16777215LL, (1u << 1), &r);
     return r;
 }
 

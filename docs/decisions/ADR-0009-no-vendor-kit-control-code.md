@@ -1,4 +1,4 @@
-# ADR-0009 — Purpose-built control core; MCSDK for reference only
+# ADR-0009: Purpose-built control core; MCSDK for reference only
 
 **Context.** ST X-CUBE-MCSDK (latest seen 6.4.x, license SLA0048 "Ultimate Liberty", snippet-level) supports STM32G4 and provides a complete FOC stack. The SEM rules (UNVERIFIED search extracts) require a *purpose-built* controller and state that "motor controller evaluation kits, individual kit components, and their software are outlawed."
 
@@ -15,4 +15,4 @@
 * It does not address general MCU libraries (CMSIS, HAL/LL), a vendor SDK obtained without a kit, or bench-only use of evaluation boards.
 * MCSDK is not used because the project does not need it and because its "kit software" status is ambiguous.
 * HAL/LL use for the platform layer is undecided and pending the organisers' answer. A register-level LL/CMSIS platform is the low-risk default.
-* Element-by-element mapping and organiser questions: `docs/RULES_RECONCILIATION.md`.
+* Element-by-element mapping and organiser questions: `docs/archive/RULES_RECONCILIATION.md`.

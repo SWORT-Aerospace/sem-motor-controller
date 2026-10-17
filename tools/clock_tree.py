@@ -17,8 +17,8 @@ Evidence tags:
        STMicroelectronics/stm32g4xx_hal_driver @a6001282 and
        STMicroelectronics/cmsis_device_g4 @626ee412 (file:line in the report).
   [Sc] a comment in that ST source (weaker than a macro or register width).
-  [R]  recalled from DS12288 / RM0440 / ISO 11898-1, NOT verified here: st.com is
-       not reachable from this environment.
+  [R]  recalled from DS12288 / RM0440 / ISO 11898-1, NOT yet verified against
+       the datasheet.
   [A]  assumption of this analysis (stated, adjustable).
 Where [Sc] and [R] disagree, the narrower range is used and both are shown.
 """
@@ -312,7 +312,7 @@ def main() -> int:
               f"{mhz(r['hse'])} MHz crystal -> {r['bus']['FD']['kernel']}, data {100*r['bus']['FD']['data']['sp']:.1f} % "
               f"with {r['bus']['FD']['data']['tq']} tq" + (" (kernel above the 48 MHz note)" if r['bus']['FD']['above_48MHz'] else "")
               for r in rows if r["pll"] and r["sysclk"] == 170e6 and r["bus"]["FD"]) + ".",
-          "* **Not verified here** (st.com unreachable): DS12288 PLL ranges, the FDCAN kernel maximum, the ADC clock "
+          "* **Not yet verified against the datasheet:** DS12288 PLL ranges, the FDCAN kernel maximum, the ADC clock "
           "maximum, flash wait states per frequency, and ISO 11898-1:2015 FD conditions IV-V. Each is tagged above.",
           "* **Decision rule**: confirm the vehicle bus (classic or FD; bit rates; sample points; transceivers; cable "
           "length), then pick the crystal from these tables, then re-run this tool and `tools/timing_budget.py` with the "

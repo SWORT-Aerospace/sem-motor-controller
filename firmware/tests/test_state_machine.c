@@ -585,6 +585,43 @@ static void test_contract_reengage_after_brake_starts_from_zero(void)
     CHECK(R.arb.iq_ref_A == 0.0f);
 }
 
+/* docs/MATH_SPEC.md section 3: the numerical examples of the L2/L3 bounds,
+ * computed by the arbiter itself (synthetic configuration). */
+static void test_math_spec_examples(void)
+{
+    rig_init();
+    to_ready();
+    CHECK_NEAR(R.p.kt_Nm_per_A, 0.06f, 1e-6f);                       /* 1.5 * 4 * 0.010 */
+    /* (3.1) t_static = min(2.0, 0.06 * 40) = 2.0 N*m */
+    R.meas.speed_mech_rad_s = 300.0f;
+    R.drv.throttle = 1.0f;
+    step(1000);
+    CHECK_NEAR(R.arb.hard_ceiling_Nm, 2.0f, 1e-5f);
+    /* (3.2) battery bound at 300 rad/s, 46 V: 0.7 * 46 * 30 / 300 = 3.22 N*m (does not bind) */
+    CHECK(0.7f * 46.0f * 30.0f / 300.0f > 2.0f);
+    /* (3.3) speed taper at 440 rad/s: (450 - 440) / (450 - 400) = 0.2 -> 0.4 N*m */
+    R.meas.speed_mech_rad_s = 440.0f;
+    step(1);
+    CHECK_NEAR(R.arb.hard_ceiling_Nm, 0.4f, 1e-4f);
+    CHECK(R.arb.accepted_Nm <= 0.4f + 1e-6f);                         /* clamped on the same update */
+    /* (3.4) ECO power envelope at 250 rad/s, 100 W: 100 * 0.7 / 250 = 0.28 N*m */
+    rig_init();
+    to_ready();
+    R.meas.speed_mech_rad_s = 250.0f;
+    R.sup.torque_req_Nm = 2.0f;
+    R.sup.max_torque_Nm = 2.0f;
+    R.sup.max_batt_power_W = 100.0f;
+    engage_eco();
+    step(1000);
+    CHECK_NEAR(R.arb.envelope_Nm, 0.28f, 1e-5f);
+    CHECK_NEAR(R.arb.accepted_Nm, 0.28f, 1e-4f);
+    CHECK_NEAR(R.arb.iq_ref_A, 0.28f / 0.06f, 2e-3f);                 /* (2.7) 4.67 A */
+    /* (3.5) slew: +5 N*m/s gives 0.005 N*m per 1 ms update */
+    CHECK_NEAR(R.p.slew_up_Nm_s * 0.001f, 0.005f, 1e-7f);
+    /* (3.6) worst-case ramp at slew_down_fast: 2.0 / 100 = 20 ms <= supervision timeout 100 ms */
+    CHECK(2.0f / R.p.slew_down_fast_Nm_s <= R.p.sup_timeout_s + 1e-6f);
+}
+
 int main(void)
 {
     RUN(test_no_torque_after_reset_with_switch_held);
@@ -604,6 +641,7 @@ int main(void)
     RUN(test_config_invalid_never_resets);
     RUN(test_throttle_implausible_faults);
     RUN(test_contract_hard_ceiling_clamps_next_update);
+    RUN(test_math_spec_examples);
     RUN(test_contract_hard_ceiling_independent_of_slew_settings);
     RUN(test_contract_battery_ceiling_at_rising_speed);
     RUN(test_contract_envelope_ramp_bounded);

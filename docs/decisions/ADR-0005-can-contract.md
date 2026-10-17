@@ -1,4 +1,4 @@
-# ADR-0005 — CAN contract v1
+# ADR-0005: CAN contract v1
 
 > **Amended by [ADR-0012](ADR-0012-transport-neutral-interface.md) (v0.3).** The message set, framing, integrity and session rules stand. The CHUDS references below describe a **reference project**, not our vehicle; the bus identifier block and the bit rate are now per-vehicle choices.
 

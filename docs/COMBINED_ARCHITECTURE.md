@@ -52,8 +52,8 @@ flowchart LR
 | CSIA, phase B (after the next detector freeze and a new held-out evaluation, `csia/EVALUATION_RESULTS.md` §6) | telematics unit, shadow task (C, float32 port needed) | 10 Hz advisory | CAN + direct sensors | advisory frames are recorded by the controller and **never** used for control (ADR-0008) |
 | Logging | telematics unit: microSD for raw frames, QSPI flash for a decimated summary | continuous | storage | control unaffected |
 | Live telemetry | telematics unit → LTE → MQTT broker | 1–5 Hz, best effort | cellular coverage | control unaffected |
-| Schedule and configuration updates | pit → telematics unit by USB or SD card, **vehicle stopped** | between runs | a person | — |
-| Energy accounting | official joulemeter (vehicle); controller INA228 (controller input); BMS | 10 Hz | — | — |
+| Schedule and configuration updates | pit → telematics unit by USB or SD card, **vehicle stopped** | between runs | a person | n/a |
+| Energy accounting | official joulemeter (vehicle); controller INA228 (controller input); BMS | 10 Hz | n/a | n/a |
 
 **CSIA does not execute in the motor controller** beyond recording advisory frames, and **never in the cloud**. The supervisor does not execute in the pit or the cloud.
 
@@ -85,7 +85,7 @@ The proposal's optional driver-input node may **mirror** these on CAN for loggin
 | L0 hardware shutdown | board hardware | firmware, CAN, telematics, LTE |
 | L1/L2 inhibits and hard ceilings, MANUAL driving | controller firmware, local sensors, wired inputs | CAN, telematics, LTE, cloud |
 | L3/L4 ECO operation | the above + CAN + the telematics supervisor task | LTE, MQTT, pit, cloud |
-| Logging, live telemetry, pit analysis, offline CSIA | everything above | — (nothing depends on them) |
+| Logging, live telemetry, pit analysis, offline CSIA | everything above | none (nothing depends on them) |
 
 **The pit/cloud connection is outside the control dependency chain.** In v1 the telematics firmware has no path from LTE/MQTT to the CAN bus during a run. Losing LTE changes nothing in control. The CAN bus is a physically trusted domain (ADR-0005); a cellular link that could write to it would end that assumption.
 
@@ -111,7 +111,7 @@ The telematics unit becomes a **supervisory element** in ECO. Its failures are b
 | Time base | GNSS PPS + RTC | controller free-running µs timer; supervisor messages carry source time (ms) | the unit timestamps on receipt; align to GNSS time | receive-timestamp resolution |
 | Power supply | wide-range DC input, buck 5 V and 3.3 V | controller logic from its own battery input through LM5164 | both draw auxiliary power (§7) | which battery feeds each board; joulemeter position |
 | Downlink | MQTT broker; direction not stated | none needed | **one-way only** in v1; no cloud → CAN path | confirm |
-| CSIA | not mentioned | offline now (pit); onboard shadow later | runs on the telematics unit or the pit computer, never in the controller's control path | — |
+| CSIA | not mentioned | offline now (pit); onboard shadow later | runs on the telematics unit or the pit computer, never in the controller's control path | n/a |
 | Display | LED bar "burn / coast" (optional) | optimiser produces burn / coast / brake guidance | a natural fit for the guidance channel | LED count, location, readability |
 
 ## 7. Logging capacity and auxiliary power

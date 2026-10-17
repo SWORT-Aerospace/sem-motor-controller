@@ -1,4 +1,4 @@
-# ADR-0003 — Motor-dependent architecture
+# ADR-0003: Motor-dependent architecture
 
 **Decision.** Path A (frozen if C1 holds): three-phase MOSFET inverter, three low-side shunts, hall sensors, sensored FOC with `id = 0`.
 
