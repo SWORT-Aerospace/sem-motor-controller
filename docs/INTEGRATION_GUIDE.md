@@ -1,6 +1,6 @@
-# Integration guide
+# Vehicle interface specification (integration guide)
 
-This is the authoritative list of the connections between the motor controller, the vehicle, the telemetry unit and the pit. It is kept with three classes apart:
+This is the single authoritative specification of the connections between the motor controller, the vehicle, the telemetry unit and the pit: motor and motor feedback (2.2), battery and BMS (2.8), throttle, brake, enable and emergency shutdown (2.1, 2.3, 5), wheel-speed measurement (2.9), controller-to-telematics communication (2.4 to 2.6), sensors and display (3, 4), power distribution and grounding (2.7). [`ICD.md`](ICD.md) holds the protocol, timing and logging details it refers to; [`INPUT_SHEET.md`](INPUT_SHEET.md) asks for what is unknown; [`BLOCKERS.md`](BLOCKERS.md) tracks it. It is kept with three classes apart:
 
 * **Confirmed in the design** (section 2): defined in a repository file that a tool checks: the draft schematic (its netlist is compared with the intended nets by `tools/gen_kicad_schematic.py --check` and `tools/hw_consistency.py`), the CAN protocol (`protocol/protocol.yaml`, codecs and golden vectors), or host code with tests. "Confirmed" means the files agree. **It does not mean measured, reviewed or agreed with the vehicle team**: no board exists.
 * **Proposed** (section 3): from the team's telematics proposal or the candidate research ([`TELEMETRY_CANDIDATES.md`](TELEMETRY_CANDIDATES.md)), not yet in a checked file.
@@ -61,14 +61,14 @@ None of these signals can be set over CAN; their sampled values are echoed in `d
 
 | Signal | MCU pin (candidate) | Destination | Notes | Verification |
 |---|---|---|---|---|
-| PWM high A, B, C | PC0, PC1, PC2 (TIM1_CH1 to CH3) | gate driver INHA to INHC | six-PWM mode; DNP pull-down positions | logic analyser at the driver inputs with the bridge unpowered |
-| PWM low A, B, C | PE8, PB0, PB1 (TIM1_CH1N to CH3N) | INLA to INLC | dead time not set (depends on the MOSFETs) | as above |
+| PWM high A, B, C | PC0, PC1, PC2 (TIM1_CH1 to CH3, AF2 verified against ST's pin database) | gate driver INHA to INHC | six-PWM mode; 100 kΩ pull-downs fitted (v0.6) | acceptance S4 with the bench image `semmc_stm32g474_pwmtest`, driver unpowered |
+| PWM low A, B, C | PE8 (AF2), PB0, PB1 (AF6) (TIM1_CH1N to CH3N) | INLA to INLC | dead time from `inverter.deadtime_s` (depends on the MOSFETs); the bench image uses 1.0 µs | as above |
 | `MCU_DRV_EN` | PD0 | 74LVC1G08 input A | 100 kΩ pull-down; ENABLE = `MCU_DRV_EN` AND `HW_PERMIT`, output pulled down | `hw_consistency.py`; bench: either input low disables the driver |
 | gate-driver SPI | PA5, PA6, PA7, NSS on PD5 | DRV8353S candidate | pin numbers of the driver symbol are placeholders | datasheet before any footprint |
 | nFAULT | PE15 (TIM1_BKIN) and PE1 | timer break input | open drain, pull-up; PWM off in timer hardware | bench: force nFAULT low, outputs go to the safe state |
-| Bus over-voltage `BRK2_N` | PC3 (TIM1_BKIN2) | timer break input 2 | TLV7041 comparator with a TL431 2.495 V reference; threshold divider UNRESOLVED | bench: raise the supply past the threshold with the bridge unloaded |
+| Bus over-voltage `BRK2_N` | PC3 (TIM1_BKIN2) | timer break input 2 | TLV7041 comparator, TL431 2.495 V reference through 10 kΩ, 390 kΩ hysteresis (trip +0.8 %, release -2.5 % around the divider's value); threshold divider UNRESOLVED | acceptance S6.6 |
 | Watchdog | PE0 (WDI), PE5 (reset sense) | MAX6369 | WDO resets the MCU and pulls `HW_PERMIT` low through a diode | bench: stop servicing, confirm reset and driver disable |
-| Precharge | PC6 (`PRECHG_EN`) | bypass driver FET | 100 kΩ pull-down, bypass open at power-up and in reset; closing rule V_DC ≥ 0.95 V_BAT; **closing logic not written** | bench stage with a current-limited supply |
+| Precharge | PC6 (`PRECHG_EN`) | bypass driver FET | 100 kΩ pull-down, bypass open at power-up and in reset; closes when V_DC ≥ `power.precharge_complete_fraction` x V_BAT within `power.precharge_timeout_s` (`firmware/src/io/mc_precharge.c`, host-tested); waits for the INA228 driver (B-INA), so it never closes in this revision | acceptance S6.4 |
 | Phases | - | J301 pins 1 to 3 | ratings wait for the motor and battery | - |
 | Battery input | - | J101 pins 1 (VBAT_IN), 2 (PGND) | fuse, TVS, reverse-polarity block, all rating-dependent | - |
 
@@ -121,6 +121,41 @@ Full layouts: [`generated/can_messages.md`](generated/can_messages.md). Load at 
 | Broker | Mosquitto 2.0.18 with persistence, loopback only in the tests | `tools/mqtt_broker.py`, `tools/mqtt/mosquitto.conf` | `run_mqtt_demo.py` (12 checks) |
 | Analysis | shadow replay (B1, R3v, CSIA2) and energy per distance | `host/pit/shadow_replay.py`, `host/pit/energy.py`, `tools/run_pit_replay.py` | `test_shadow_replay.py`, `test_pit_energy.py` |
 
+### 2.7 Power distribution and grounding
+
+| Path | Design | Source | Verification |
+|---|---|---|---|
+| Battery input | J101 → fuse → TVS → reverse-polarity block → `VBAT_PROT` → bus shunt (INA228) → `VBAT_SH` → precharge resistor with the P-FET bypass → `VDC` (DC link) | sheet 01 | `hw_consistency.py` PW1; acceptance S1, S6 |
+| Logic supply | LM5164 buck from `VBAT_PROT` (before the precharge: the MCU runs while the link charges) → +5 V → TLV75533 → +3V3 → ferrite bead → +3V3A (VDDA, VREF+) | sheet 12 | PW1; acceptance S3.1 to S3.4 |
+| Ground | PGND (power stage, shunts) and GND (logic) are separate nets joined only at the net tie NT1201 at the phase-shunt ground | sheet 12 | connectivity check; acceptance S1.5 |
+| Telemetry supply | not from the controller: the telemetry unit has its own protected DC-DC from the propulsion battery downstream of the joulemeter (Articles 56d, 57b), sized for the modem's 2 A peaks (A7672X Hardware Design V1.04 p. 26) | procurement line "Protected DC-DC supply"; `hardware/review/DESIGN_REVIEW.md` 11 | supply droop during transmit bursts |
+
+### 2.8 Battery and BMS
+
+| Item | Status | Value | Source |
+|---|---|---|---|
+| Nominal voltage, capacity | reported, not verified | 48 V, 10 Ah | team message 2026-10-16 ([`BATTERY.md`](BATTERY.md)) |
+| Maximum charged and minimum voltage, chemistry, cells, current limits, BMS thresholds | unknown | null in the configuration | Q1 |
+| Power connection | confirmed in the design | J101 pins 1 (VBAT_IN), 2 (PGND), ratings UNRESOLVED | sheet 01 |
+| Battery-side measurement | confirmed in the design, driver blocked | INA228 on the battery side of the precharge: voltage, current and energy | sheet 06; B-INA |
+| BMS data link | unknown | none in the controller design; whether the BMS has one (CAN, UART) is part of Q1 | - |
+
+### 2.9 Wheel speed
+
+The controller measures rotor speed only, from the motor's hall sensors (2.2). Wheel speed is measured by the telemetry unit (proposed, section 3 row 11), logged as wheel windows in the STLG log and sent in the live summary (`wheel.speed_mps` since `sem.telemetry.v2`, null without a fresh window). The pit derives distance and energy per distance from the logged windows (`host/pit/energy.py`).
+
+### 2.10 Proposed decisions in this revision
+
+Not yet decisions: each needs the named input or a review before it is recorded in [`DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md).
+
+| Proposal | Why | Needs |
+|---|---|---|
+| 16 MHz crystal, 160 MHz SYSCLK | exact classic CAN bit rates with the FDCAN kernel on the crystal; the internal RC's tolerance exceeds the CAN limit (`hardware/review/DESIGN_REVIEW.md` 13) | Q4 (bus bit rate) |
+| Brake switch normally closed | an open wire then reads as braking | Q6 |
+| Precharge on the controller board | the controller sequences it with its own measurements | Q1 and the vehicle's contactor arrangement (open decision 4 in `hardware/selection/COMPONENT_SELECTION.md`) |
+| Hardware overcurrent through the MCU's internal comparators into the timer break | a path independent of the gate driver without a schematic change (`DESIGN_REVIEW.md` 5) | Q2 (peak current), Q3 (RM0440) |
+| Zero-current offsets measured with the driver awake and all gates off | the driver's amplifiers may be off while it is disabled | Q3 (DRV8353) |
+
 ## 3. Proposed
 
 Telemetry unit side. Source: the team's telematics proposal (STM32U575) and the candidate research; the board files have not been received, so no pin is allocated.
@@ -146,7 +181,7 @@ Telemetry unit side. Source: the team's telematics proposal (STM32U575) and the 
 | Battery connector, isolation and fuse order | connector type, emergency isolation position relative to the joulemeter, fuse ratings | vehicle wiring plan; the event rules |
 | Telemetry power | DC-DC input rating (from the maximum pack voltage with transients), fuse, where the branch leaves the main wiring | battery datasheet; telemetry board files |
 | Display [16] | type, interface, power (vehicle-powered through the joulemeter, or an unmodified device with a built-in battery, Article 57i) | display decision |
-| Vehicle CAN bus | bit rate, classic or FD, other nodes and their identifiers, termination positions | input sheet item 5 |
+| Vehicle CAN bus | bit rate, classic or FD, other nodes and their identifiers, termination positions | input sheet Q4 |
 | All external connectors | families and pinouts (J101, J301, J701, J901, J1001, J1101; telemetry board) | harness agreement ([`ICD.md`](ICD.md) 11) |
 | Driver controls | contact types, switch polarities, pedal type and supply, safety-loop voltage | vehicle team |
 | Motor feedback | Hall output stage and supply; motor temperature sensor type | motor datasheet |

@@ -4,7 +4,7 @@ Eight stages from the host software that exists today to a fair comparison of en
 
 **Safety.** Every energised test (stages 5 to 8) is carried out by qualified team members under their own laboratory and event safety procedures. Nothing in this repository authorises energising a board, and no step is to be carried out autonomously.
 
-The controller stages map onto the hardware validation stages of [`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 2 and the bench procedure [`../hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`](../hardware/bringup/BENCH_BRINGUP_CHECKLIST.md); the telemetry stages use the bench checks E1 to E9 of [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) 4.
+The controller stages map onto the hardware validation stages of [`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 2 and the bench procedure [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md); the telemetry stages use the bench checks E1 to E9 of [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) 4.
 
 | Stage | Goal | Status |
 |---|---|---|
@@ -62,7 +62,7 @@ The controller stages map onto the hardware validation stages of [`VALIDATION_PL
 ## Stage 5. Reviewed controller hardware and staged bring-up
 
 * **Prerequisites:** battery and BMS datasheets (maximum and minimum voltage, currents), motor data, the primary datasheets in [`../hardware/selection/DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md), footprints and a layout, the signed design review ([`../hardware/review/REVIEW_CHECKLIST.md`](../hardware/review/REVIEW_CHECKLIST.md)), and the STM32G4 platform layer (ADC, PWM, timers, CAN driver, precharge closing logic, watchdog servicing).
-* **Files:** `hardware/`, `firmware/platform/stm32g4/README.md`, [`../hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`](../hardware/bringup/BENCH_BRINGUP_CHECKLIST.md).
+* **Files:** `hardware/`, `firmware/platform/stm32g4/README.md`, [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md).
 * **Equipment:** current-limited bench supply above the maximum pack voltage, oscilloscope with a differential probe (borrowed; not in the budget), multimeters, dummy load, SWD programmer.
 * **Test procedure:** the bring-up checklist stages 1 to 5: unpowered inspection, logic only, gates with the power stage disabled, first energised switching at low voltage with both current limits set and probed, motor on a stand with the wheel free.
 * **Completion evidence:** the signed review; measurement tables and scope captures for each stage; a vehicle configuration with `provenance: bench_measured` that passes hardware-mode validation.

@@ -8,7 +8,7 @@
 > * **Cornell CHUDS is a reference project, not our vehicle.** Every statement here that our bus is CHUDS / CAN FD 500k/2M, that the controller must run in FD mode, or that IDs must avoid CHUDS classes is an unsupported assumption (`PROVENANCE_AUDIT.md`).
 > * **"8 MHz cannot reach the data-phase sample point, so the schematic uses 40 MHz" is withdrawn.** An 8 MHz crystal with a 160 MHz CPU gives exact 500k/2M at 80 %/80 % through PLLQ. The crystal is now unselected (`../hardware/timing/clock_tree_alternatives.md`).
 > * **"The three phase currents are now on three ADCs with the same trigger"** describes a proposal. It is not substantiated until trigger configuration, synchronisation, acquisition windows and a measurement confirm it.
-> * **"Current limited to ≤ 2 A by the supply and by the configuration"** (§7) conflated two quantities. A supply limit bounds only the battery-input current; the phase-current limit is set and probed separately (`../hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`).
+> * **"Current limited to ≤ 2 A by the supply and by the configuration"** (§7) conflated two quantities. A supply limit bounds only the battery-input current; the phase-current limit is set and probed separately (`BENCH_BRINGUP_CHECKLIST_v0.5.md`).
 > * **"0 contract violations"** (§2) means command-ceiling compliance plus envelope-ramp compliance against a ramp of ≥ 100 N·m/s with a 20 ms deadline (synthetic). It says nothing about phase current.
 > * **KiCad "connectivity, 0 problems" was never an ERC.** The v0.3 pin-type check and the real-ERC blocker are in `REVIEW_v0.3.md`.
 

@@ -1,25 +1,50 @@
-# Inputs needed from the team (v0.5, prioritised)
+# Questionnaire for the physical team (v0.6)
 
-Each item unblocks named work. Until it arrives the value stays null in the configuration and every dependent result stays synthetic. Add files under `docs/reference/` (datasheets in `docs/reference/datasheets/`, vehicle files in `docs/reference/vehicle/`) or attach them to a GitHub issue in this repository; one issue per item keeps the answer, its author and its date together. The longer v0.3 questionnaire (`PHYSICAL_TEAM_QUESTIONNAIRE.md`) remains the detailed reference.
+Answer in this order: documents and photos first (part A), then team decisions (part B). Measurements (part C)
+come later and need a board or the vehicle. Each question names what its answer unlocks; the register
+[`BLOCKERS.md`](BLOCKERS.md) tracks them. Until an answer arrives the value stays null in the configuration and
+everything that depends on it stays blocked or synthetic.
 
-| # | Input | Unblocks | From |
+How to send: put files under `docs/reference/` (datasheets in `docs/reference/datasheets/`, photos and vehicle
+files in `docs/reference/vehicle/`) or attach them to a GitHub issue in this repository, one issue per question,
+so the answer, its author and its date stay together.
+
+Already received: the battery is **48 V nominal, 10 Ah** (team message, 2026-10-16, not datasheet-verified). The
+maximum charged voltage, the cut-off voltage, the current limits and the chemistry are not inferred from it.
+
+## A. Documents and photos (send first)
+
+| # | Ask | Send | Unlocks |
 |---|---|---|---|
-| 1 | **Motor**: datasheet or type (sinusoidal PMSM or trapezoidal BLDC), pole pairs, phase resistance, Ld/Lq, flux linkage or Kt, continuous and peak current, Hall placement and supply, temperature sensor | FOC vs six-step (`METHOD_SELECTION.md` 3), current and voltage ratings, MOSFETs, shunts, dead time, PWM frequency, every power-stage BOM line | vehicle team |
-| 2 | **Battery and BMS**: received so far, from a team message (2026-10-16), not datasheet-verified: 48 V nominal, 10 Ah rated (`docs/BATTERY.md`). Next: battery and BMS model numbers, label photos and datasheets giving chemistry, series cells, maximum charged and minimum voltage, continuous and peak discharge current, BMS thresholds and interface, charge and regenerative current, connector | voltage ratings, fuse, TVS, precharge, bulk capacitors, battery current limit, telematics DC-DC input rating; the 60 V and 1,000 Wh rule checks | vehicle team |
-| 3 | **Battery-power map near cruise** (bench: speed × torque grid, power at the bus shunt) and a **coast-down** (speed vs time, flat road) | the energy-strategy decision: pulse-and-coast only if battery power is non-convex in torque (`MATH_SPEC.md` 4.5); DP and policy parameters | controls lead with the vehicle team, at bench stage 6 |
-| 4 | **Event and rules**: which event, season and country the team enters; the governing Chapter I (the organisers' site lists a 2027 edition, not yet read; a third-party copy of the 2026 edition was read in v0.5, `RULES_COMPLIANCE.md`); the event's Chapter II (time limit, laps, stops). If the event is in the 2027 season, every 2026 finding is re-checked against the 2027 text; later amendments, if any, have not been | DP constraints, rules compliance | team lead |
-| 5 | **Vehicle CAN bus**: CAN 2.0B or FD, bit rate and sample point, the 64-identifier block for the controller, other traffic, termination positions | clock tree, DBC base, bus-load check (`ICD.md` 2) | vehicle team, telematics engineer |
-| 6 | **`telemetry.pdf` and `bk4000tg_kicad.zip`** (referenced, not received) | review of the existing telemetry design and prior board; which parts the telematics PCB assembly already contains (GNSS, LTE, IMU, DC-DC, CAN transceiver lines of `PROCUREMENT.md`) | whoever holds them |
-| 7 | **Driver controls**: throttle sensor type and tracks, brake switch NO/NC, dead-man contacts, safety-loop voltage, which switches exist | input circuits, HW_PERMIT optocoupler, wired authority (`ICD.md` 6) | vehicle team |
-| 8 | **Supervisor placement**: the STM32U575 measurements of `ICD.md` 12 (task jitter under logging and LTE, CAN RX at 466 frames/s, flash bandwidth, RAM), or another computer, or manual only | ECO operation | telematics engineer |
-| 9 | **Log storage plan**: 8 MB lasts 14.6 min at the full rate; microSD, compression or decimation | `ICD.md` 9 | telematics engineer |
-| 10 | **Wheel sensors**: maximum vehicle speed, wheel circumference, which wheels are instrumented, magnet count, magnet radius on the hub, sensor mounting and air gap; a bench measurement of the field window of one magnet pass. The DRV5032 is rejected for wheel speed (`generated/wheel_sensor_check.md`) | the wheel-speed sensor and magnet lines (`PROCUREMENT.md`), CSIA wheel relationships | vehicle team |
-| 11 | **Connectors and harness**: types and pinouts for battery, phases, driver controls, halls, CAN | `ICD.md` 11, BOM connector lines | vehicle team |
-| 12 | **Gate-off coast behaviour**: a minimum gate-off dwell or policy hysteresis (speed hold switched the gates 2752 times in 260 s on the host plant) | first powered test | controls lead, decision |
-| 13 | **Bench and people**: current-limited supply, oscilloscope with differential probe, current probe, ST-LINK, USB-CAN; who performs and signs energised tests | bring-up stages 2 to 7 (`hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`) | team lead |
-| 14 | **Datasheets** of the candidate parts: STM32G474 DS12288 and RM0440, DRV8353, INA228, TJA1051, LM5164, TLV755P, MAX6369; for telemetry, STM32U575 DS13737 and the current DRV5032 revision (`TELEMETRY_CANDIDATES.md`) | pinout verification (`hardware/selection/PINOUT_VERIFICATION.md`), timing constants marked [R] | anyone with access |
-| 15 | **Budget inputs**: a live PCB quote for the board size and copper weight, distributor quotes, an inventory of owned passives and equipment; whether the telemetry lines share the $500 to $1,000 budget; dated quotes (supplier, date, reference) for the telemetry lines | closing the price spread (`hardware/bom/README.md`); the telemetry budget table (`PROCUREMENT.md`) | team lead |
-| 16 | **Event country, mobile operator and SIM**: where the event is, which operator covers the track, its LTE bands | the A7672 variant (A7672E, A7672SA, A7672S), LTE antenna, SIM and data plan | team lead |
-| 17 | **Driver display**: type (LED bar, screen, phone) and power arrangement. Article 57i allows a built-in battery only in an unmodified, self-contained device; otherwise the display runs from the vehicle system through the joulemeter | the display line; any display firmware | team lead, vehicle team |
-| 18 | **Telematics board battery**: the proposal names a BQ25622E charger, which implies a battery on the board; Article 57b allows no accessory battery on a Battery Electric vehicle | the telematics PCB line; power design | telematics engineer |
-| 19 | **Steering geometry (optional)**: lock-to-lock angle at the intended sensor position, shaft for a coaxial magnet | the steering-angle sensor line (AS5600 is single-turn) | vehicle team |
+| Q1 | **Battery and BMS** | model numbers of the battery and the BMS; a photo of the battery label; both datasheets | every voltage rating of the power stage (MOSFETs, capacitors, TVS, fuse, precharge), the over-voltage trip and the logic-supply undervoltage lockout; the battery current limit, fuse and bus shunt (B-BAT-V, B-BAT-I) |
+| Q2 | **Motor** | model number; a nameplate photo; the datasheet; photos of the phase, hall and temperature connectors | MOSFET and shunt current ratings, the current-sense gain, the motor parameters of the controller, the hall input circuit, three connectors (B-MOTOR) |
+| Q3 | **Datasheet PDFs** (this environment cannot download them) | the files listed in [`hardware/selection/DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md): DRV8353 (SLVSDY6), INA228, STM32G474 DS12288, RM0440, ES0430, MAX6369, TJA1051, LM5164, TLV755P, TLV7041, TL431; or ask the environment owner to allow ti.com, st.com, nxp.com, analog.com and onsemi.com | the gate-driver pinout and firmware (the motor cannot be driven without it), the battery-side meter and the precharge, footprints, the timing values now marked as assumptions (B-DRV, B-INA, B-ST-DOCS, B-PART-DOCS) |
+| Q4 | **Vehicle CAN bus** | a description: the nodes on the bus, bit rate, classic CAN or CAN FD, the identifier block for the motor controller (64 consecutive identifiers), where the bus is terminated | the crystal choice (16 MHz proposed), CAN on in the firmware, the termination jumpers, supervised ECO mode (B-CAN) |
+| Q5 | **Connectors and mounting** | photos of the mating connectors with part numbers (battery, motor phases, halls, motor temperature, driver controls, CAN); photos and dimensions of where the controller mounts; whether a metal plate can carry the MOSFETs' heat | the board outline, connector footprints and the thermal design: the layout cannot start without them (B-HARNESS, B-MECH) |
+| Q6 | **Driver controls and sensors** | pedal model and datasheet (one or two tracks, output range); the brake switch type (normally open or normally closed) and the other switches; the safety-loop voltage and how the emergency stop and dead-man are wired; the power-stage NTC the team wants | the pedal calibration and plausibility check, the safety-loop optocoupler resistor, the temperature conversion (B-PEDAL, B-LOOP, B-NTC) |
+| Q7 | **Event and rules** | the event name and the official rule PDF of the edition that applies | discharge requirements, the purpose-built-controller rule, joulemeter and telemetry power (B-RULES) |
+| Q8 | **Telemetry files** | `telemetry.pdf` and `bk4000tg_kicad.zip` (referenced, not received) | which telemetry parts the existing board already has; how it is powered without an accessory battery (Article 57b) |
+
+## B. Team decisions
+
+| # | Decide | Unlocks |
+|---|---|---|
+| Q9 | Hand assembly or an assembly service; outer copper weight; the PCB fabricator | footprint variants, stencil, layout rules, the fabrication budget line (B-ASSY) |
+| Q10 | Where the ECO supervisor runs (the telematics MCU, another computer, or manual only) and the log storage (8 MB lasts 14.6 min at the full rate; microSD, compression or decimation) | the supervisor task budget and the log plan (`ICD.md` 9 and 12) |
+| Q11 | Who performs and signs energised tests; which bench equipment the team owns (current-limited supply, oscilloscope and differential probe, current probe, ST-LINK, USB-CAN) | acceptance stages S2 to S8 ([`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md)); the equipment lines of the budget |
+| Q12 | The driver display (type and power) and the event country and mobile operator | the display line, the LTE modem variant and SIM |
+| Q13 | A minimum gate-off dwell or hysteresis for coasting (speed hold switched the gates 2752 times in 260 s on the host plant) | the first powered test of the speed-hold policy |
+
+## C. Measurements (later, need a board or the vehicle)
+
+| # | Measure | When | Unlocks |
+|---|---|---|---|
+| Q14 | Battery-power map near cruise (speed x torque grid, power at the bus shunt) and a coast-down (speed against time on a flat road) | acceptance S8 / vehicle | the energy-strategy decision (`MATH_SPEC.md` 4.5) |
+| Q15 | Wheel sensors: maximum speed, wheel circumference, which wheels, magnet count and radius, air gap, and the field window of one magnet pass | vehicle | the wheel-speed sensor line and the wheel relationships of the diagnosis |
+| Q16 | Steering geometry (optional): lock-to-lock angle at the sensor position | vehicle | the steering-angle sensor |
+
+## Old item numbers
+
+v0.5 items map to: 1 -> Q2, 2 -> Q1, 3 -> Q14, 4 -> Q7, 5 -> Q4, 6 -> Q8, 7 -> Q6, 8 -> Q10, 9 -> Q10, 10 -> Q15,
+11 -> Q5, 12 -> Q13, 13 -> Q11, 14 -> Q3, 15 -> Q9 and `BLOCKERS.md` B-QUOTE, 16 -> Q12, 17 -> Q12, 18 -> Q8,
+19 -> Q16. The detailed v0.3 questionnaire is in [`archive/PHYSICAL_TEAM_QUESTIONNAIRE.md`](archive/PHYSICAL_TEAM_QUESTIONNAIRE.md).

@@ -1,0 +1,539 @@
+# Physical acceptance procedures for the motor-controller board (single source).
+#
+# docs/BENCH_ACCEPTANCE.md is generated from this file by tools/acceptance.py; record templates are generated
+# from it and filled records are checked against it. Edit here, then run: python3 tools/acceptance.py render
+#
+# Limits: every numeric limit names its source. A limit that needs a value that does not exist yet is
+# `pending` with what it waits for; the step is still carried out and its value recorded, but it cannot pass
+# or fail on that limit. Values written cfg:<path> are read from the vehicle configuration given to
+# `tools/acceptance.py check --config`; a null there makes the limit pending.
+# A step with `blocked_by` cannot be run until that item is closed (docs/BLOCKERS.md).
+schema: semmc.acceptance.v1
+
+intro: |
+  Staged acceptance of the motor-controller board, from an unpowered board to the vehicle. Each stage needs the
+  previous one passed and recorded. Energised stages are carried out by qualified team members under their lab's
+  safety procedure, with a second person present. Nothing in this repository performs or automates an energised
+  step; the tools only read the board and check the records.
+
+rules:
+  - "Two limits are stated and checked in every energised stage: the battery-input (DC) current, bounded by the bench supply's current limit, and the phase current, which the supply limit does NOT bound (at low speed the bridge can circulate a phase current many times the supply current, and the DC link can discharge far above it). Phase current is measured with a current probe on a phase lead, never inferred from the supply reading."
+  - "DC-link stored energy is 0.5 C V^2. Before touching or moving a probe: supply off, measure V_DC with a meter and wait for the discharge. An open precharge bypass does not discharge the link."
+  - "Regeneration is disabled in firmware, but the MOSFET body diodes rectify the motor's back-EMF into the link once the line-to-line peak back-EMF exceeds V_DC (rotor speed about V_DC / (sqrt(3) p lambda)). Never spin the rotor above that speed with the board connected to a supply that cannot sink current."
+  - "A step that fails a limit marked stop stops the stage: power off, record, and do not continue until the cause is understood and the step passes."
+  - "Every record names the board serial, the firmware image and its SHA-256, the configuration file and its calibration version, the instruments with serial numbers, the operator and the witness."
+
+stages:
+  - id: S0
+    title: Preconditions
+    purpose: The board, its documentation and its firmware are the ones the tests are meant for.
+    energised: false
+    equipment: []
+    setup: []
+    steps:
+      - id: S0.1
+        action: Identify the board revision and serial; locate its release package (tools/release_gate.py manifest).
+        expect: The release gate passed for this revision and the package checksums match.
+        kind: observation
+      - id: S0.2
+        action: Build both images from a clean checkout (firmware/platform/stm32g4/FLASHING.md step 1) and record their SHA-256.
+        expect: Revision without "-modified"; semmc_stm32g474 and semmc_stm32g474_pwmtest built.
+        kind: observation
+      - id: S0.3
+        action: Confirm the signed design review (hardware/review/REVIEW_CHECKLIST.md) for this revision.
+        expect: Signed, with every open item either closed or accepted for bench testing.
+        kind: observation
+    stop_conditions:
+      - Any precondition not met.
+    evidence:
+      - Release manifest, image hashes, signed review.
+
+  - id: S1
+    title: Unpowered inspection and continuity
+    purpose: Find assembly defects before any power is applied.
+    energised: false
+    equipment:
+      - Stereo microscope or loupe
+      - Four-wire milliohm meter (shunts)
+      - Multimeter
+    setup:
+      - No supply connected. Precharge resistor not fitted on the first board, so the DC link and the gate driver stay unpowered in stages 2 to 5.
+    steps:
+      - id: S1.1
+        action: Inspect against the assembly drawing - polarity of electrolytic capacitors, TVS, diodes and LEDs; orientation of every IC; solder bridges on the LQFP-100 and WQFN-40.
+        expect: No defect.
+        kind: observation
+        stop: true
+      - id: S1.2
+        action: Resistance between the battery terminals of J101 (VBAT_IN to PGND), both polarities.
+        expect: No short. The reading rises while the input capacitors charge from the meter.
+        kind: measurement
+        unit: ohm
+        limit: {pending: "expected steady value from the fitted input parts in the release BOM"}
+        stop: true
+      - id: S1.3
+        action: Resistance +5V to GND, +3V3 to GND, +3V3A to GND.
+        expect: No short on any rail.
+        kind: measurement
+        unit: ohm
+        limit: {pending: "expected values from the release BOM (regulator feedback and load resistors)"}
+        stop: true
+      - id: S1.4
+        action: Four-wire resistance of each phase shunt and of the bus shunt.
+        expect: The BOM value within its tolerance.
+        kind: measurement
+        unit: ohm
+        limit: {pending: "shunt values and tolerances are UNRESOLVED (motor and battery current)"}
+      - id: S1.5
+        action: Confirm PGND and GND meet only at the net tie NT1201 (inspection of the layout and the assembled board).
+        expect: One connection point.
+        kind: observation
+      - id: S1.6
+        action: Fuse fitted and of the rating in the release BOM.
+        expect: As the BOM.
+        kind: observation
+    stop_conditions:
+      - A short on any rail or on the battery input.
+      - A reversed polarised part.
+    evidence:
+      - Photographs of both sides; meter readings with instrument serial.
+
+  - id: S2
+    title: Current-limited logic-power start-up
+    purpose: The logic rails start from the battery input with the power stage unpowered, and the MCU is reachable.
+    energised: true
+    equipment:
+      - Bench supply with adjustable current limit
+      - Multimeter
+      - ST-LINK with OpenOCD 0.12 or later
+      - 3.3 V USB-serial adapter
+    setup:
+      - Precharge resistor not fitted (DC link and gate driver unpowered).
+      - Supply into J101, voltage above the LM5164 start threshold set by the fitted UVLO divider and below the lowest input rating of the parts on VBAT_PROT; current limit at its lowest setting.
+    steps:
+      - id: S2.1
+        action: Raise the current limit in small steps until the rails come up; record the limit at which they do and the idle input current.
+        expect: Rails come up without the supply sitting at its limit.
+        kind: measurement
+        unit: A
+        limit: {pending: "logic current budget (consistency item PW2) from the fitted parts"}
+        stop: true
+      - id: S2.2
+        action: Read the device identifier over SWD - OpenOCD `mdw 0xE0042000`, bits 11..0.
+        expect: 0x469 (STM32G47x/G48x).
+        kind: measurement
+        unit: hex
+        limit: {equals: "0x469", source: "OpenOCD v0.12.0 src/flash/nor/stm32l4x.h DEVID_STM32G47_G48XX at DBGMCU_IDCODE 0xE0042000"}
+        stop: true
+      - id: S2.3
+        action: With NRST held low, measure MCU_DRV_EN, DRV_EN_GATED, PRECHG_EN and the six PWM test points against GND.
+        expect: All at 0 V (pull-downs, MCU pins high impedance).
+        kind: measurement
+        unit: V
+        limit: {pending: "input low thresholds of the 74LVC1G08, the DRV8353 and the bypass driver (datasheets)"}
+        stop: true
+      - id: S2.4
+        action: Flash the controller image (FLASHING.md steps 2 and 3) and capture the boot report on the UART.
+        expect: "Banner with the recorded revision; calibration: none in flash; pwm: sampling only; can: off; gate driver and battery meter reported as not in this revision."
+        kind: observation
+      - id: S2.5
+        action: "tools/bench_read.py --samples 5 --json: state, platform faults, inputs."
+        expect: "state FAULT_LATCHED (no calibration); platform faults include gate_driver_not_configured, battery_meter_not_read, pwm_not_configured, can_off; drv_en_gated not set."
+        kind: observation
+    stop_conditions:
+      - Input current at the limit without the rails starting.
+      - Any enable or gate-signal test point not at 0 V with NRST low.
+      - Smoke, smell, a hot part.
+    evidence:
+      - Supply settings and readings; OpenOCD log; UART capture; bench_read JSON.
+
+  - id: S3
+    title: Power rails and clock
+    purpose: The rails are inside the MCU's operating range and the clock tree runs at its design frequency.
+    energised: true
+    equipment:
+      - Multimeter
+      - Oscilloscope with 20 MHz bandwidth limit and a frequency counter function
+    setup:
+      - As stage 2, controller image running.
+    steps:
+      - id: S3.1
+        action: +3V3 at the MCU decoupling capacitors.
+        expect: About 3.3 V (TLV75533).
+        kind: measurement
+        unit: V
+        limit: {min: 1.71, max: 3.6, source: "STM32G474 operating VDD, ST STM32_open_pin_data@7d1f1514; the regulator tolerance is in its datasheet (open)"}
+        stop: true
+      - id: S3.2
+        action: +3V3A at VREF+.
+        expect: About 3.3 V, within the same range.
+        kind: measurement
+        unit: V
+        limit: {min: 1.71, max: 3.6, source: "as S3.1; VDDA and VREF+ limits are in DS12288 (open)"}
+        stop: true
+      - id: S3.3
+        action: +5V at the CAN transceiver.
+        expect: Set by the LM5164 feedback divider.
+        kind: measurement
+        unit: V
+        limit: {pending: "LM5164 VFB (datasheet) and TJA1051 VCC range (datasheet)"}
+      - id: S3.4
+        action: Ripple on +3V3A (oscilloscope, 20 MHz bandwidth limit).
+        expect: Recorded for the current-sense error budget.
+        kind: measurement
+        unit: mV
+        limit: {pending: "ADC accuracy budget (hardware/calculations/current_sense_error_budget.md) needs the CSA data"}
+      - id: S3.5
+        action: Frequency at test point WDG_WDI.
+        expect: 500 Hz (one edge per 1 kHz slow step, TIM6 from the 160 MHz clock).
+        kind: measurement
+        unit: Hz
+        limit: {nominal: 500.0, pending: "tolerance of the clock source (DS12288 for HSI16, the crystal datasheet for HSE)"}
+        stop_note: A reading not close to 500 Hz (for example 50 Hz or 5 kHz) means a clock-tree error; stop.
+      - id: S3.6
+        action: External watchdog - halt the core with the debugger (DRV_ENABLE is low in this image) and measure the time from the last WDG_WDI edge to WDG_RST_N going low.
+        expect: The MAX6369 timeout of the strapped code; the MCU resets and HW_PERMIT is pulled low.
+        kind: measurement
+        unit: s
+        limit: {min: 0.020, source: "longest gap between WDI edges in the firmware (20 ms during the start-up offset measurement, main.c measure_offsets); the strap's nominal value is in the MAX6369 datasheet (open)"}
+        stop: true
+      - id: S3.7
+        action: Two bench_read samples a known time apart - fast_count increase per second.
+        expect: The TIM1 sampling rate, 10 kHz without a calibration.
+        kind: measurement
+        unit: Hz
+        limit: {nominal: 10000.0, pending: "clock source tolerance as S3.5"}
+    stop_conditions:
+      - A rail outside the MCU's operating range.
+      - WDI frequency far from 500 Hz.
+      - Watchdog timeout shorter than 20 ms.
+    evidence:
+      - Meter readings; oscilloscope screenshots of WDG_WDI, WDG_RST_N and the ripple.
+
+  - id: S4
+    title: PWM and break behaviour with propulsion disabled
+    purpose: The TIM1 outputs, dead time and hardware break paths behave as designed at the MCU pins, with the gate driver disabled and unpowered.
+    energised: true
+    equipment:
+      - Oscilloscope, four channels, 100 MHz or more
+      - 1 kohm resistor on a clip lead (to pull a test point to GND)
+    setup:
+      - As stage 2 (precharge resistor not fitted; driver unpowered).
+      - Flash the bench image semmc_stm32g474_pwmtest (it switches the gate signals; DRV_ENABLE stays low). Never load it on a board whose bridge is powered.
+    steps:
+      - id: S4.1
+        action: UART banner and DRV_EN_GATED during the whole stage.
+        expect: "Banner \"semmc stm32g474 BENCH PWM TEST\"; DRV_EN_GATED at 0 V throughout."
+        kind: observation
+        stop: true
+      - id: S4.2
+        action: Frequency at PWM_A_HI.
+        expect: 10 kHz (160 MHz / (2 x 8000)).
+        kind: measurement
+        unit: Hz
+        limit: {nominal: 10000.0, pending: "clock source tolerance as S3.5"}
+      - id: S4.3
+        action: High-side pulse width on PWM_A_HI, PWM_B_HI, PWM_C_HI.
+        expect: "Duty 25 / 50 / 75 % of 100 us, each shortened by the dead time: about 24, 49 and 74 us."
+        kind: measurement
+        unit: us
+        limit: {pending: "the dead-time insertion rule is in RM0440 (open); record the three widths"}
+      - id: S4.4
+        action: Dead time on each phase, between one output falling and its complement rising (both edges).
+        expect: 1.000 us programmed (DTG 0x90 at 160 MHz).
+        kind: measurement
+        unit: us
+        limit: {min: 1.0, source: "dead time programmed by the bench image (mc_tim_dtg_encode, firmware/tests/test_io.c); never shorter"}
+        stop: true
+      - id: S4.5
+        action: Trigger on both outputs of each phase high at the same time.
+        expect: Never.
+        kind: observation
+        stop: true
+      - id: S4.6
+        action: Pull test point DRV_NFAULT to GND through 1 kohm; measure from that edge to the last PWM output low. Release, then press fault reset.
+        expect: All six outputs low; they stay low after release until fault reset; bench_read shows break_driver.
+        kind: measurement
+        unit: ns
+        limit: {pending: "TIM1 break path delay (RM0440, DS12288); digital filter 4 samples = 25 ns is the firmware's part"}
+        stop: true
+      - id: S4.7
+        action: Same with test point BRK2_N (over-voltage break, BKIN2).
+        expect: As S4.6; bench_read shows break_overvolt.
+        kind: measurement
+        unit: ns
+        limit: {pending: "as S4.6"}
+        stop: true
+    stop_conditions:
+      - DRV_EN_GATED not low.
+      - Dead time shorter than programmed, or any overlap of complementary outputs.
+      - A break input that does not stop all six outputs.
+    evidence:
+      - Oscilloscope screenshots of each measurement with the time base visible; bench_read JSON.
+
+  - id: S5
+    title: Sensor calibration
+    purpose: Measure the calibration values of the wired inputs and sensors and write them into the vehicle configuration.
+    energised: true
+    equipment:
+      - Multimeter
+      - Reference thermometer
+      - The vehicle's pedal, switches and hall-sensor motor (or their harness)
+    setup:
+      - As stage 2, controller image running.
+    steps:
+      - id: S5.1
+        action: Pedal - each track's voltage at the connector at released and at full travel (meter); write controls.throttle_*_V.
+        expect: Two distinct end points per track.
+        kind: measurement
+        unit: V
+        limit: {pending: "pedal sensor datasheet (part unknown)"}
+      - id: S5.2
+        action: Pedal divider - apply a known voltage at a throttle pin of J1001 and read raw_throttle; ratio = V_applied / (counts x VREF / 4096); write controls.throttle_divider_ratio.
+        expect: (10 k + 18 k) / 18 k = 1.556 from the drawn values.
+        kind: measurement
+        unit: ratio
+        limit: {nominal: 1.556, pending: "resistor tolerances in the release BOM"}
+      - id: S5.3
+        action: Pedal plausibility after writing the calibration - sweep the pedal; open each track wire.
+        expect: pedal_frac_a and pedal_frac_b follow travel and agree; an open track makes the throttle invalid.
+        kind: measurement
+        unit: fraction
+        limit: {max: "cfg:controls.throttle_track_tolerance", source: "track disagreement allowed by the calibration"}
+      - id: S5.4
+        action: Each switch input (brake, eco cancel, mode, arm, fault reset, dead-man) closed and open; bench_read inputs.
+        expect: Each bit follows its switch; the brake follows controls.brake_switch.
+        kind: observation
+      - id: S5.5
+        action: Hall inputs - turn the rotor slowly by hand (board unpowered on the motor side) and log the hall code.
+        expect: Six distinct codes in a repeating order; never 0 or 7.
+        kind: observation
+      - id: S5.6
+        action: Power-stage NTC - raw_temp_fet at a known temperature (reference thermometer on the MOSFET area).
+        expect: The temperature from the NTC calibration agrees with the reference within the NTC's tolerance.
+        kind: measurement
+        unit: degC
+        limit: {pending: "NTC part number and tolerance"}
+      - id: S5.7
+        action: Phase-current zero offsets (raw_current_avg) with the driver awake and all gates off.
+        expect: Offsets for inverter.current_offset_counts.
+        kind: measurement
+        unit: counts
+        blocked_by: B-DRV
+        limit: {pending: "DRV8353 configuration (the amplifiers may be off while the driver is disabled)"}
+    stop_conditions:
+      - A track or switch input that does not respond.
+      - An invalid hall code.
+    evidence:
+      - Readings, the updated configuration file and its validation output.
+
+  - id: S6
+    title: Precharge and fault behaviour
+    purpose: The DC link charges through the precharge path, the bypass closes only when the link is charged, and the protective paths act.
+    energised: true
+    equipment:
+      - Bench supply able to reach the over-voltage trip, with current limit
+      - Multimeter, oscilloscope
+    setup:
+      - Precharge resistor fitted; bridge MOSFETs fitted; motor not connected; controller image with a hardware-valid calibration.
+      - "Battery-input limit: supply current limit at the lowest value that charges the link. Phase current: none (driver disabled)."
+    steps:
+      - id: S6.1
+        action: Step the supply on and record V_DC against time.
+        expect: An RC rise with tau = R_precharge x C_link.
+        kind: measurement
+        unit: s
+        limit: {pending: "precharge resistor and link capacitance (UNRESOLVED)"}
+      - id: S6.2
+        action: Bus-voltage divider - V_DC (meter) and raw_vbus; ratio = V_DC / (counts x VREF / 4096); write inverter.vbus_divider_ratio.
+        expect: The ratio of the fitted divider.
+        kind: measurement
+        unit: ratio
+        limit: {pending: "divider values (UNRESOLVED, from the over-voltage trip)"}
+      - id: S6.3
+        action: Battery-side voltage from the INA228 against a meter.
+        expect: Agreement within the INA228's accuracy.
+        kind: measurement
+        unit: V
+        blocked_by: B-INA
+        limit: {pending: "INA228 datasheet"}
+      - id: S6.4
+        action: Bypass closure - record the link voltage and battery-side voltage at the moment PRECHG_EN rises, and the time from supply on.
+        expect: "Closure at power.precharge_complete_fraction x battery voltage, within power.precharge_timeout_s."
+        kind: measurement
+        unit: fraction
+        blocked_by: B-INA
+        limit: {min: "cfg:power.precharge_complete_fraction", source: "calibration"}
+      - id: S6.5
+        action: Precharge fault - remove the battery-side reading or slow the charge so the timeout expires.
+        expect: Bypass stays open; precharge state FAULT; fault reset clears it.
+        kind: observation
+        blocked_by: B-INA
+      - id: S6.6
+        action: Over-voltage trip - raise the supply slowly until BRK2_N goes low; then lower until it releases.
+        expect: "Trip 0.8 % above 2.495 V x divider ratio; release 2.5 % below (hardware/review/DESIGN_REVIEW.md item 6)."
+        kind: measurement
+        unit: V
+        limit: {pending: "divider values from V_bat,max (UNRESOLVED)"}
+        stop: true
+      - id: S6.7
+        action: Safety loop - with the loop energised, HW_PERMIT high; open the loop.
+        expect: HW_PERMIT low; state DISARMED; DRV_EN_GATED low.
+        kind: observation
+        stop: true
+      - id: S6.8
+        action: Discharge - supply off, record V_DC against time to a level the lab's safety rules permit to touch.
+        expect: Exponential decay through the bleeder and divider.
+        kind: measurement
+        unit: s
+        limit: {pending: "bleeder value (UNRESOLVED) and the required discharge time (rules / hazard analysis)"}
+    stop_conditions:
+      - The link does not charge, or charges faster than its RC predicts (bypass or resistor fault).
+      - The over-voltage break does not act.
+      - HW_PERMIT stays high with the loop open.
+    evidence:
+      - Oscilloscope captures of V_DC, PRECHG_EN and BRK2_N; bench_read JSON; the calibration file used.
+
+  - id: S7
+    title: Low-energy motor testing
+    purpose: First switching into the motor at low current - hall alignment, motor parameters and the current loop.
+    energised: true
+    blocked_by: B-DRV
+    equipment:
+      - Current probe on a phase lead
+      - Motor on a stand with the wheel free
+      - Bench supply able to sink current, or a clamp sized for the rotor energy
+    setup:
+      - "Battery-input limit: supply current limit at limits.battery_current_limit_A or lower. Phase-current limit: limits.max_phase_current_A at a small fraction of the motor's continuous rating, verified with the current probe."
+    steps:
+      - id: S7.1
+        action: Hall table and offset - low-current alignment; write motor.hall_code_to_sector and motor.hall_angle_offset_rad.
+        expect: A consistent table on repeated runs.
+        kind: observation
+      - id: S7.2
+        action: Measure R_s, L_d, L_q and the flux linkage (docs/VALIDATION_PLAN.md stage 5); write them with provenance bench_measured.
+        expect: The configuration validates in hardware mode.
+        kind: observation
+      - id: S7.3
+        action: Current-loop step response at low current (current probe and ctrl_currents).
+        expect: Tracks the reference without overshoot beyond the tuning target.
+        kind: measurement
+        unit: A
+        limit: {max: "cfg:limits.max_phase_current_A", source: "calibrated phase-current limit"}
+        stop: true
+      - id: S7.4
+        action: Phase-current gain against the current probe, per phase.
+        expect: Residual gain error recorded for the error budget.
+        kind: measurement
+        unit: percent
+        limit: {pending: "current-sense error budget"}
+      - id: S7.5
+        action: Fault injection - hall disconnect, phase-sense loss, CAN unplug, brake, dead-man, emergency stop (the host fault list, docs/VALIDATION_PLAN.md section 3).
+        expect: Each produces the state and torque response in hardware/protection/SHUTDOWN_TRUTH_TABLE.md.
+        kind: observation
+        stop: true
+    stop_conditions:
+      - Phase current above limits.max_phase_current_A on the probe.
+      - FET temperature above inverter.fet_temp_derate_start_degC.
+      - Link voltage approaching the over-voltage trip while the rotor turns.
+    evidence:
+      - Current-probe captures, logs (ctrl_currents, ctrl_status), the bench_measured configuration.
+
+  - id: S8
+    title: Controlled load testing
+    purpose: Thermal and efficiency behaviour under a known load up to the rated current.
+    energised: true
+    blocked_by: B-DRV
+    equipment:
+      - Dynamometer or brake load; power analyser on the battery input; thermocouples on the MOSFETs and the motor
+    setup:
+      - Load steps defined from the motor's continuous rating; current limits as stage 7, raised one step at a time.
+    steps:
+      - id: S8.1
+        action: Steady-state at each load step until temperatures settle.
+        expect: FET and motor temperatures below their derate starts.
+        kind: measurement
+        unit: degC
+        limit: {max: "cfg:inverter.fet_temp_derate_start_degC", source: "calibrated derate start"}
+        stop: true
+      - id: S8.2
+        action: Battery-input current at each step (power analyser and INA228).
+        expect: Below the battery current limit; the two readings agree within the INA228 accuracy.
+        kind: measurement
+        unit: A
+        limit: {max: "cfg:limits.battery_current_limit_A", source: "calibrated battery current limit"}
+        stop: true
+      - id: S8.3
+        action: Controller efficiency map (input power vs mechanical output).
+        expect: Recorded for docs/EFFICIENCY_RESEARCH.md.
+        kind: measurement
+        unit: percent
+        limit: {pending: "no acceptance limit: an input to the energy strategy"}
+    stop_conditions:
+      - A temperature trip or derate the test did not plan.
+      - Battery current above its limit.
+    evidence:
+      - Load, current, voltage and temperature logs with timestamps.
+
+  - id: S9
+    title: Controller and telematics integration
+    purpose: The controller and the telematics unit exchange the protocol messages, and losing the link never affects manual driving.
+    energised: true
+    blocked_by: B-CAN
+    equipment:
+      - The telematics unit with its own supply; USB-CAN adapter; the host tools (host/logger, generated DBC)
+    setup:
+      - Board on the vehicle bus or a bench bus at supervision.can_bitrate_bps, terminated as planned; crystal build (SEMMC_HSE_HZ).
+    steps:
+      - id: S9.1
+        action: Decode every controller frame with the generated DBC.
+        expect: Identifiers inside supervision.can_id_base ... +0x3F; CRC and sequence valid.
+        kind: observation
+      - id: S9.2
+        action: Supervisor handshake and ECO request from the telematics unit.
+        expect: Session established; ECO_ASSIST only after the driver's selection.
+        kind: observation
+      - id: S9.3
+        action: Unplug the CAN cable during ECO_ASSIST.
+        expect: ECO left within the supervision timeout; manual driving unaffected.
+        kind: measurement
+        unit: s
+        limit: {max: "cfg:supervision.timeout_s", source: "calibrated supervision timeout"}
+        stop: true
+      - id: S9.4
+        action: Telematics log - ctrl messages and wheel/temperature records at their protocol rates; MQTT uplink with a broker outage.
+        expect: The host checks of docs/MQTT_SETUP.md pass on the recorded data.
+        kind: observation
+    stop_conditions:
+      - Any effect of the link on manual driving.
+    evidence:
+      - CAN capture, telematics log, pit database.
+
+  - id: S10
+    title: Vehicle testing after bench acceptance
+    purpose: First runs in the vehicle, after stages 1 to 9 passed on this board.
+    energised: true
+    blocked_by: B-VEH
+    equipment:
+      - The vehicle, its emergency stop and dead-man, a closed area
+    setup:
+      - The event's safety rules and the team's procedure apply; the bench results of this board are on file.
+    steps:
+      - id: S10.1
+        action: Static checks in the vehicle - emergency stop, dead-man, brake, arm, each removes torque.
+        expect: As the shutdown truth table, without the motor turning.
+        kind: observation
+        stop: true
+      - id: S10.2
+        action: Low-speed roll with manual control, then a brake application.
+        expect: Brake removes torque on the next update.
+        kind: observation
+        stop: true
+      - id: S10.3
+        action: ECO assist at low speed with the telematics supervisor, then supervisor loss.
+        expect: As stage 9 in the vehicle.
+        kind: observation
+    stop_conditions:
+      - Any unexpected torque, noise or temperature.
+    evidence:
+      - Run logs and the operator's notes.

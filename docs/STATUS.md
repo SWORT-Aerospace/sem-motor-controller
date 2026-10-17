@@ -44,7 +44,7 @@ Draft only: no footprints, no layout, no fabrication outputs, no orders. Power-s
 | CSIA v2 protocol and results | [`docs/csia/EVALUATION_PROTOCOL_v2.md`](csia/EVALUATION_PROTOCOL_v2.md), [`docs/csia/EVALUATION_RESULTS_v2.md`](csia/EVALUATION_RESULTS_v2.md) |
 | Hardware status, BOM and budget | [`docs/HARDWARE_ARCHITECTURE.md`](HARDWARE_ARCHITECTURE.md), [`hardware/bom/README.md`](../hardware/bom/README.md), [`docs/BUDGET.md`](BUDGET.md) |
 | Inputs needed from the team (prioritised) | [`docs/INPUT_SHEET.md`](INPUT_SHEET.md) |
-| Validation plan and bench bring-up | [`docs/VALIDATION_PLAN.md`](VALIDATION_PLAN.md), [`hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`](../hardware/bringup/BENCH_BRINGUP_CHECKLIST.md) |
+| Validation plan and bench bring-up | [`docs/VALIDATION_PLAN.md`](VALIDATION_PLAN.md), [`docs/BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md) |
 | Decisions | [`docs/DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) (D1 to D10, v0.5); [`docs/decisions/`](decisions/) (ADR-0001 to ADR-0012) |
 | Integration and the staged plan | [`docs/INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md), [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) |
 | Every document with its status | [`docs/README.md`](README.md); every file: [`docs/FILE_INDEX.md`](FILE_INDEX.md) |

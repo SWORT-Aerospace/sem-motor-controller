@@ -72,7 +72,7 @@ def main() -> int:
          f"slew_down_fast x dt on every update, so the worst-case deadline is max_motor_torque / slew_down_fast = {tmax:g} / {sfast:g} = "
          f"{1e3*tmax/sfast:.0f} ms, which validator rule 38 bounds by supervision.timeout_s = {1e3*tout:.0f} ms; "
          "SYNTHETIC values). They do **not** show the physical phase-current response (current-loop tracking on a "
-         "real motor) or the battery-input current; those need bench measurements (`hardware/bringup/`).", "",
+         "real motor) or the battery-input current; those need bench measurements (`docs/BENCH_ACCEPTANCE.md`).", "",
          "> Host harness `firmware/platform/host/contract_report_main.c` on the synthetic configuration. "
          "Before = arbiter/core of commit `c0df363`; after = this tree. The hard ceiling and envelope columns "
          "are computed by an **independent oracle in the harness** from the contract (not read back from the "

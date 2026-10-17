@@ -1,4 +1,6 @@
-# Bench bring-up checklist (draft, for the vehicle team)
+# Bench bring-up checklist (draft, for the vehicle team): SUPERSEDED
+
+> **Superseded by [`BENCH_ACCEPTANCE.md`](../BENCH_ACCEPTANCE.md) (v0.6),** generated from `hardware/acceptance/procedures.yaml` with sourced limits, stop conditions, record templates and a record checker. Kept as the record of v0.2 to v0.5; its safety rules carried over.
 
 **Precondition: this checklist applies to a board built from a REVIEWED, non-draft schematic and layout.** No board exists yet. The draft schematic is not fabrication-ready (rating-dependent parts UNRESOLVED, pinouts UNVERIFIED).
 
