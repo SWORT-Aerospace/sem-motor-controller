@@ -15,6 +15,8 @@ A research extension of the telemetry project, kept apart from the vehicle work.
 | [`DIAGNOSIS.md`](DIAGNOSIS.md) | The reference diagnosis, the actions and their costs, schedulers A to F |
 | [`RECORDER.md`](RECORDER.md) | The proposed telemetry-unit recorder: interface, versioned wire format, tests, host timing |
 | [`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md) | The experiments that would test the assumptions, the equipment, and the next physical action |
+| [`RESULTS.md`](RESULTS.md) | Every failure found in development and the change made, the development pilot, and the final results with their uncertainty |
+| [`PREREGISTRATION.md`](PREREGISTRATION.md) | The frozen protocol of the final evaluation (endpoints, criteria, sample size, analysis), with [`preregistration.json`](preregistration.json) |
 
 ## Steps
 
@@ -25,8 +27,8 @@ A research extension of the telemetry project, kept apart from the vehicle work.
 | 3. Identifiability (gate 1) | [`IDENTIFIABILITY.md`](IDENTIFIABILITY.md) | done; passed conditionally |
 | 4. Causal evaluation harness | [`HARNESS.md`](HARNESS.md) | done |
 | 5. Diagnosis, actions, schedulers, baselines | [`DIAGNOSIS.md`](DIAGNOSIS.md) | done |
-| 6. Development pilot, pre-registration, final evaluation | see the results section below | in progress |
-| 7. Recorder interface, demonstration, physical validation plan | [`RECORDER.md`](RECORDER.md), [`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md) | in progress |
+| 6. Development pilot, pre-registration, final evaluation | [`RESULTS.md`](RESULTS.md), [`PREREGISTRATION.md`](PREREGISTRATION.md) | pre-registered; the final evaluation runs once, from the pre-registration commit |
+| 7. Recorder interface, demonstration, physical validation plan | [`RECORDER.md`](RECORDER.md), [`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md) | host work done; the physical experiments need equipment |
 
 ## Layout and commands
 
@@ -44,6 +46,7 @@ research/
   recorder/               portable C recorder for the telemetry unit, with host tests
   run_identifiability.py  gate 1 tables
   run_pilot.py            calibration and development pilot
+  make_preregistration.py writes the frozen manifest (preregistration.json)
   run_final.py            the pre-registered final evaluation (run once)
   run_demo.py             three-episode demonstration
   generated/              generated results (do not edit)
@@ -54,6 +57,15 @@ tests/research/           tests of all of the above
 python3 -m pytest -q tests/research                        # a few minutes
 python3 research/run_identifiability.py --check            # recomputes gate 1 and compares (several minutes)
 python3 research/run_demo.py                               # the demonstration
+```
+
+The development pilot and the final evaluation (each takes 20 to 40 minutes on four cores):
+
+```sh
+python3 research/run_pilot.py calibrate --episodes 24      # calibration split
+python3 research/run_pilot.py calibrate-baselines --episodes 16
+python3 research/run_pilot.py dev --per-kind 10            # development split
+python3 research/run_final.py --commit <pre-registration commit>   # refuses to run if a frozen file changed
 ```
 
 The code uses only numpy, the repository's vehicle and powertrain models (`models/vehicle/`) and, for the comparison, the frozen CSIA adapters (`host/csia_adapter/`, unchanged).
