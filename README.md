@@ -386,6 +386,7 @@ Every check in one command, with a written record: `python3 tools/verify_all.py 
 | Pit tools and analysis | [`host/README.md`](host/README.md), [`docs/MQTT_SETUP.md`](docs/MQTT_SETUP.md) | tests in `tests/integration/`; reports from `run_pit_replay.py` |
 | Energy strategy and models | [`models/README.md`](models/README.md), [`docs/ENERGY_METHODS.md`](docs/ENERGY_METHODS.md) | matched comparisons as in section D |
 | CSIA | [`docs/csia/`](docs/csia/), [`host/pit/shadow_replay.py`](host/pit/shadow_replay.py) | shadow reports; the frozen v2 files unchanged |
+| Research: diagnosis with budgeted record requests (host simulation, kept apart from the vehicle work) | [`research/README.md`](research/README.md) | pre-registered results in `research/generated/final/`; the next bench experiment in [`research/PHYSICAL_VALIDATION.md`](research/PHYSICAL_VALIDATION.md) |
 | Tests and checks | [`tests/README.md`](tests/README.md), [`tools/README.md`](tools/README.md) | a test that fails before the change and passes after it |
 | Decisions and their evidence | [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) | a new entry: requirement, evidence, choice, implementation, test |
 
@@ -418,3 +419,4 @@ Nobody is assigned yet; each row is open for a volunteer. The order follows what
 * Design decisions with their evidence: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md).
 * Status in detail and verification results: [`docs/STATUS.md`](docs/STATUS.md), [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md).
 * What the team needs to supply: [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md).
+* Research extension (budgeted evidence acquisition for timing-aware diagnosis; host simulation only, nothing on the vehicle): [`research/README.md`](research/README.md).

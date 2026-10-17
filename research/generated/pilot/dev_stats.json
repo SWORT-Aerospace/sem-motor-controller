@@ -1,0 +1,887 @@
+{
+ "schedulers": {
+  "A": {
+   "n_fault": 40,
+   "correct": 29,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 0,
+   "missed": 11,
+   "undecided": 0,
+   "coverage": 0.725,
+   "risk": 0.0,
+   "true_in_set": 0.725,
+   "mean_set_size": 0.725,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 2,
+   "n_unmodelled": 10,
+   "mean_bytes": 0.0,
+   "median_decide_delay_s": 23.667680946815175,
+   "median_cpu_s": 3.234625933499906,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 0,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 10,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 19,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "B": {
+   "n_fault": 40,
+   "correct": 30,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 2,
+   "missed": 8,
+   "undecided": 0,
+   "coverage": 0.75,
+   "risk": 0.0,
+   "true_in_set": 0.75,
+   "mean_set_size": 0.75,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 3,
+   "n_unmodelled": 10,
+   "mean_bytes": 184938.48571428572,
+   "median_decide_delay_s": 23.398924425411703,
+   "median_cpu_s": 2.3445814229999966,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 3,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 7,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 17,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 2,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "C": {
+   "n_fault": 40,
+   "correct": 30,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 0,
+   "missed": 10,
+   "undecided": 0,
+   "coverage": 0.75,
+   "risk": 0.0,
+   "true_in_set": 0.75,
+   "mean_set_size": 0.75,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 6,
+   "n_unmodelled": 10,
+   "mean_bytes": 63836.485714285714,
+   "median_decide_delay_s": 29.122391087284257,
+   "median_cpu_s": 3.598421242999919,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 0,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 10,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 20,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    }
+   }
+  },
+  "D": {
+   "n_fault": 40,
+   "correct": 30,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 0,
+   "missed": 10,
+   "undecided": 0,
+   "coverage": 0.75,
+   "risk": 0.0,
+   "true_in_set": 0.75,
+   "mean_set_size": 0.75,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 2,
+   "n_unmodelled": 10,
+   "mean_bytes": 31922.314285714285,
+   "median_decide_delay_s": 24.122391087284253,
+   "median_cpu_s": 2.261645647999959,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 1,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 9,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 19,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "E": {
+   "n_fault": 40,
+   "correct": 35,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 1,
+   "missed": 4,
+   "undecided": 0,
+   "coverage": 0.875,
+   "risk": 0.0,
+   "true_in_set": 0.875,
+   "mean_set_size": 0.875,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 5,
+   "n_unmodelled": 10,
+   "mean_bytes": 40088.77142857143,
+   "median_decide_delay_s": 12.780440470023619,
+   "median_cpu_s": 2.178083275000077,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 7,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 3,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 18,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "F": {
+   "n_fault": 40,
+   "correct": 36,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 1,
+   "missed": 3,
+   "undecided": 0,
+   "coverage": 0.9,
+   "risk": 0.0,
+   "true_in_set": 0.9,
+   "mean_set_size": 0.9,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 5,
+   "n_unmodelled": 10,
+   "mean_bytes": 36245.84285714286,
+   "median_decide_delay_s": 12.577101227753317,
+   "median_cpu_s": 2.0854320430000683,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 7,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 3,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 19,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 0,
+     "undecided": 0
+    }
+   }
+  },
+  "F_doublecount": {
+   "n_fault": 40,
+   "correct": 36,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 1,
+   "missed": 3,
+   "undecided": 0,
+   "coverage": 0.9,
+   "risk": 0.0,
+   "true_in_set": 0.9,
+   "mean_set_size": 0.9,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 5,
+   "n_unmodelled": 10,
+   "mean_bytes": 36046.92857142857,
+   "median_decide_delay_s": 12.577101227753317,
+   "median_cpu_s": 2.121443844499595,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 7,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 3,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 19,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 0,
+     "undecided": 0
+    }
+   }
+  },
+  "F_noamb": {
+   "n_fault": 40,
+   "correct": 34,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 3,
+   "missed": 3,
+   "undecided": 0,
+   "coverage": 0.85,
+   "risk": 0.0,
+   "true_in_set": 0.85,
+   "mean_set_size": 0.85,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 7,
+   "n_unmodelled": 10,
+   "mean_bytes": 56107.114285714284,
+   "median_decide_delay_s": 38.983779712293924,
+   "median_cpu_s": 3.820833532499897,
+   "by_truth": {
+    "HB": {
+     "correct": 9,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 8,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 2,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 17,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 2,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "F_notiming": {
+   "n_fault": 40,
+   "correct": 28,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 8,
+   "missed": 4,
+   "undecided": 0,
+   "coverage": 0.7,
+   "risk": 0.0,
+   "true_in_set": 0.7,
+   "mean_set_size": 0.7,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 5,
+   "n_unmodelled": 10,
+   "mean_bytes": 37610.75714285715,
+   "median_decide_delay_s": 12.12239108728425,
+   "median_cpu_s": 0.7331919760000005,
+   "by_truth": {
+    "HB": {
+     "correct": 10,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 0,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 7,
+     "missed": 3,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 18,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  }
+ },
+ "pairs": {
+  "F-A/correct": {
+   "diff": 0.175,
+   "lo": 0.05,
+   "hi": 0.325,
+   "n": 40
+  },
+  "F-A/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-A/bytes": {
+   "diff": 39029.1,
+   "lo": 34613.20375,
+   "hi": 43567.451875,
+   "n": 40
+  },
+  "F-A/matched": {
+   "matched_coverage": 0.725,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.17500000000000004,
+   "coverage_diff_ci": [
+    0.04999999999999993,
+    0.30000000000000004
+   ],
+   "n": 40
+  },
+  "F-B/correct": {
+   "diff": 0.15,
+   "lo": 0.0,
+   "hi": 0.3,
+   "n": 40
+  },
+  "F-B/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-B/bytes": {
+   "diff": -145906.7,
+   "lo": -150313.72812500002,
+   "hi": -141372.12875,
+   "n": 40
+  },
+  "F-B/matched": {
+   "matched_coverage": 0.75,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.15000000000000002,
+   "coverage_diff_ci": [
+    0.0,
+    0.30000000000000004
+   ],
+   "n": 40
+  },
+  "F-C/correct": {
+   "diff": 0.15,
+   "lo": 0.025,
+   "hi": 0.3,
+   "n": 40
+  },
+  "F-C/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-C/bytes": {
+   "diff": -50428.625,
+   "lo": -64288.77625,
+   "hi": -34324.91,
+   "n": 40
+  },
+  "F-C/matched": {
+   "matched_coverage": 0.75,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.15000000000000002,
+   "coverage_diff_ci": [
+    0.02500000000000002,
+    0.275
+   ],
+   "n": 40
+  },
+  "F-D/correct": {
+   "diff": 0.15,
+   "lo": 0.025,
+   "hi": 0.3,
+   "n": 40
+  },
+  "F-D/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-D/bytes": {
+   "diff": 7655.0,
+   "lo": 2956.57625,
+   "hi": 12436.502500000004,
+   "n": 40
+  },
+  "F-D/matched": {
+   "matched_coverage": 0.75,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.15000000000000002,
+   "coverage_diff_ci": [
+    0.025000000000000022,
+    0.275
+   ],
+   "n": 40
+  },
+  "F-E/correct": {
+   "diff": 0.025,
+   "lo": 0.0,
+   "hi": 0.075,
+   "n": 40
+  },
+  "F-E/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-E/bytes": {
+   "diff": -2003.875,
+   "lo": -4212.718125,
+   "hi": -208.91437499999986,
+   "n": 40
+  },
+  "F-E/matched": {
+   "matched_coverage": 0.875,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.025000000000000022,
+   "coverage_diff_ci": [
+    0.0,
+    0.07500000000000007
+   ],
+   "n": 40
+  },
+  "F-F_noamb/correct": {
+   "diff": 0.05,
+   "lo": -0.075,
+   "hi": 0.175,
+   "n": 40
+  },
+  "F-F_noamb/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-F_noamb/bytes": {
+   "diff": -20996.925,
+   "lo": -25093.57,
+   "hi": -16891.381250000002,
+   "n": 40
+  },
+  "F-F_noamb/matched": {
+   "matched_coverage": 0.85,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.050000000000000044,
+   "coverage_diff_ci": [
+    -0.07500000000000007,
+    0.17499999999999993
+   ],
+   "n": 40
+  },
+  "F-F_notiming/correct": {
+   "diff": 0.2,
+   "lo": 0.075,
+   "hi": 0.325,
+   "n": 40
+  },
+  "F-F_notiming/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-F_notiming/bytes": {
+   "diff": -1695.3,
+   "lo": -3855.6,
+   "hi": -87.6,
+   "n": 40
+  },
+  "F-F_notiming/matched": {
+   "matched_coverage": 0.7,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.20000000000000007,
+   "coverage_diff_ci": [
+    0.07500000000000007,
+    0.32500000000000007
+   ],
+   "n": 40
+  },
+  "F-F_doublecount/correct": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-F_doublecount/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  "F-F_doublecount/bytes": {
+   "diff": 348.1,
+   "lo": -160.85,
+   "hi": 1049.075,
+   "n": 40
+  },
+  "F-F_doublecount/matched": {
+   "matched_coverage": 0.9,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.0,
+   "coverage_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "n": 40
+  }
+ },
+ "compare": {
+  "CSIA2": {
+   "H0": {
+    "clean": 20
+   },
+   "HB": {
+    "missed": 10
+   },
+   "HT": {
+    "missed": 10
+   },
+   "HL": {
+    "missed": 20
+   },
+   "HU": {
+    "other": 10
+   }
+  },
+  "MHT/frames": {
+   "H0": {
+    "clean": 20
+   },
+   "HB": {
+    "correct": 10
+   },
+   "HT": {
+    "correct": 9,
+    "missed": 1
+   },
+   "HL": {
+    "correct": 19,
+    "missed": 1
+   },
+   "HU": {
+    "other": 10
+   }
+  },
+  "MHT/summary": {
+   "H0": {
+    "clean": 19,
+    "false_alarm": 1
+   },
+   "HB": {
+    "correct": 10
+   },
+   "HT": {
+    "missed": 8,
+    "unresolved_incl": 1,
+    "wrong": 1
+   },
+   "HL": {
+    "correct": 19,
+    "unresolved_incl": 1
+   },
+   "HU": {
+    "wrong": 2,
+    "other": 8
+   }
+  },
+  "R3v": {
+   "H0": {
+    "clean": 20
+   },
+   "HB": {
+    "missed": 10
+   },
+   "HT": {
+    "missed": 10
+   },
+   "HL": {
+    "missed": 20
+   },
+   "HU": {
+    "other": 10
+   }
+  },
+  "aligned/frames": {
+   "H0": {
+    "clean": 20
+   },
+   "HB": {
+    "unresolved_incl": 2,
+    "no_fit": 3,
+    "correct": 4,
+    "wrong": 1
+   },
+   "HT": {
+    "correct": 4,
+    "missed": 2,
+    "no_fit": 3,
+    "unresolved_incl": 1
+   },
+   "HL": {
+    "no_fit": 4,
+    "correct": 16
+   },
+   "HU": {
+    "correct": 6,
+    "other": 2,
+    "wrong": 2
+   }
+  },
+  "aligned/summary": {
+   "H0": {
+    "clean": 17,
+    "false_alarm": 3
+   },
+   "HB": {
+    "unresolved_incl": 8,
+    "no_fit": 2
+   },
+   "HT": {
+    "missed": 9,
+    "unresolved_incl": 1
+   },
+   "HL": {
+    "correct": 14,
+    "no_fit": 4,
+    "missed": 2
+   },
+   "HU": {
+    "correct": 1,
+    "other": 8,
+    "wrong": 1
+   }
+  },
+  "reference/frames": {
+   "H0": {
+    "clean": 20
+   },
+   "HB": {
+    "correct": 10
+   },
+   "HT": {
+    "correct": 9,
+    "missed": 1
+   },
+   "HL": {
+    "correct": 20
+   },
+   "HU": {
+    "correct": 9,
+    "other": 1
+   }
+  },
+  "reference/summary": {
+   "H0": {
+    "clean": 20
+   },
+   "HB": {
+    "correct": 10
+   },
+   "HT": {
+    "missed": 9,
+    "no_fit": 1
+   },
+   "HL": {
+    "missed": 1,
+    "correct": 19
+   },
+   "HU": {
+    "correct": 1,
+    "other": 8,
+    "wrong": 1
+   }
+  }
+ }
+}

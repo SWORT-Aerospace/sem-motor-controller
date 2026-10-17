@@ -1,0 +1,475 @@
+{
+ "ablations": {
+  "schedulers": [
+   "F_noamb",
+   "F_notiming",
+   "F_doublecount"
+  ]
+ },
+ "analysis": {
+  "bootstrap_resamples": 4000,
+  "bootstrap_seed": 1,
+  "paired": [
+   [
+    "F",
+    "A"
+   ],
+   [
+    "F",
+    "B"
+   ],
+   [
+    "F",
+    "C"
+   ],
+   [
+    "F",
+    "D"
+   ],
+   [
+    "F",
+    "E"
+   ],
+   [
+    "F",
+    "F_noamb"
+   ],
+   [
+    "F",
+    "F_notiming"
+   ],
+   [
+    "F",
+    "F_doublecount"
+   ]
+  ],
+  "primary": "P1",
+  "reasons": "research/PREREGISTRATION.md",
+  "target_risk": 0.05
+ },
+ "budgets": {
+  "byte_budget": 200000,
+  "d_budget_bytes": 36245,
+  "deadline_s": 40.0,
+  "decide_after_s": 20.0
+ },
+ "calibration": {
+  "aligned_thresholds": {
+   "frames": {
+    "R1": 142.22,
+    "R1dyn": 46.46,
+    "R2": 5.48,
+    "R3": 13.13,
+    "R4": 4.0
+   },
+   "summary": {
+    "R1": 25.14,
+    "R1dyn": 9.99,
+    "R2": 11.34,
+    "R3": 5.2,
+    "R4": 4.0
+   }
+  },
+  "frozen_monitors": {
+   "e6": {
+    "R_ohm": 0.060688441606363955,
+    "align_max_gap_s": 0.03,
+    "c_sw_W_per_A": 1.9094862232071153,
+    "p0_W": 2.239574998428603,
+    "s0_W": 3.8045504706687803,
+    "u_R": 0.15,
+    "u_rel": 0.03
+   },
+   "lam": 9.0,
+   "trust_thr": {
+    "dc_meter": 0.628724855153812,
+    "gnss": 0.8097416188532697,
+    "imu": 0.78,
+    "phase_current": 0.7637329416110352,
+    "rotor": 0.8099050388670934,
+    "wheel_drive": 0.8107252149251075,
+    "wheel_l": 0.78,
+    "wheel_r": 0.78
+   }
+  },
+  "kappa_frames": {
+   "HB": 10.83,
+   "HL": 10.83,
+   "HL_grade": 10.83,
+   "HT": 42.43
+  },
+  "kappa_summary": {
+   "HB": 10.83,
+   "HL": 10.83,
+   "HL_grade": 10.83,
+   "HT": 14.39
+  },
+  "mht_prior_h0": {
+   "frames": 0.931576,
+   "summary": 0.756196
+  },
+  "noise_scale": 1.0,
+  "rel_scale": {
+   "frames": {
+    "R1": 1.0102,
+    "R2": 0.9683,
+    "R3": 1.0226,
+    "R4": 0.9777
+   },
+   "summary": {
+    "R1": 0.4453,
+    "R2": 0.9336,
+    "R3": 0.3874,
+    "R4": 0.9517
+   }
+  },
+  "z_frames": 3.41,
+  "z_summary": 4.68
+ },
+ "compare": {
+  "mht_p_accept": 0.95,
+  "window_s": [
+   45.0,
+   70.0
+  ]
+ },
+ "endpoints": [
+  {
+   "a": "F",
+   "b": "D",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "episodes": "faults",
+   "id": "P1",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "bytes"
+   ],
+   "question": "primary: does F diagnose more fault episodes correctly than random requests at F's mean budget?"
+  },
+  {
+   "a": "F",
+   "b": "A",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "episodes": "faults",
+   "id": "S1",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "bytes"
+   ],
+   "question": "do F's requests add correct diagnoses to the summary alone?"
+  },
+  {
+   "a": "F",
+   "b": "E",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "episodes": "faults",
+   "id": "S2",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "bytes"
+   ],
+   "question": "is the ambiguity-directed rule better than information gain?"
+  },
+  {
+   "a": "F",
+   "b": "B",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": -0.05
+    },
+    {
+     "bound": "hi",
+     "of": "bytes",
+     "op": "<",
+     "value": 0.0
+    }
+   ],
+   "episodes": "faults",
+   "id": "S3",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "bytes"
+   ],
+   "question": "does F match fetching everything at a fraction of the bytes?"
+  },
+  {
+   "a": "F",
+   "b": "C",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "episodes": "faults",
+   "id": "S4",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "bytes"
+   ],
+   "question": "is F better than capturing on detection?"
+  },
+  {
+   "a": "F",
+   "b": "F_noamb",
+   "criterion": [
+    {
+     "bound": "hi",
+     "of": "bytes",
+     "op": "<",
+     "value": 0.0
+    },
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": -0.05
+    }
+   ],
+   "episodes": "faults",
+   "id": "S5",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "bytes"
+   ],
+   "question": "ablation: does the engine's ambiguity information save bytes without losing correct diagnoses?"
+  },
+  {
+   "a": "F",
+   "b": "F_notiming",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "episodes": "HT",
+   "id": "S6",
+   "kind": "paired",
+   "metrics": [
+    "correct"
+   ],
+   "question": "ablation: is the timing allowance needed to diagnose timing errors?"
+  },
+  {
+   "a": "F",
+   "b": "F_notiming",
+   "criterion": [],
+   "episodes": "faults",
+   "id": "S7",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "wrong"
+   ],
+   "question": "ablation: timing allowance, over all fault episodes"
+  },
+  {
+   "a": "F",
+   "b": "F_doublecount",
+   "criterion": [],
+   "episodes": "faults",
+   "id": "S8",
+   "kind": "paired",
+   "metrics": [
+    "correct",
+    "wrong"
+   ],
+   "question": "ablation: does treating the summary and the frames as independent change the result?"
+  },
+  {
+   "among": "supported",
+   "categories": [
+    "wrong"
+   ],
+   "criterion": [
+    {
+     "bound": "hi",
+     "of": "proportion",
+     "op": "<",
+     "value": 0.05
+    }
+   ],
+   "episodes": "faults",
+   "id": "S9",
+   "kind": "proportion",
+   "question": "risk: wrong cause among F's supported decisions on fault episodes",
+   "scheduler": "F"
+  },
+  {
+   "categories": [
+    "correct"
+   ],
+   "criterion": [],
+   "episodes": "faults",
+   "id": "S10",
+   "kind": "proportion",
+   "question": "coverage: fault episodes F diagnoses correctly",
+   "scheduler": "F"
+  },
+  {
+   "categories": [
+    "correct"
+   ],
+   "criterion": [],
+   "episodes": "HU",
+   "id": "S11",
+   "kind": "proportion",
+   "question": "abstention: unmodelled faults F reports as \"no modelled cause fits\"",
+   "scheduler": "F"
+  },
+  {
+   "categories": [
+    "wrong"
+   ],
+   "criterion": [],
+   "episodes": "HU",
+   "id": "S12",
+   "kind": "proportion",
+   "question": "abstention failure: unmodelled faults F attributes to a modelled cause",
+   "scheduler": "F"
+  },
+  {
+   "categories": [
+    "false_alarm",
+    "false_alarm_wrong"
+   ],
+   "criterion": [],
+   "episodes": "H0",
+   "id": "S13",
+   "kind": "proportion",
+   "question": "clean episodes with an alarm (F; the summary monitor is shared by all)",
+   "scheduler": "F"
+  },
+  {
+   "a": "reference/frames",
+   "b": "MHT/frames",
+   "criterion": [],
+   "id": "S14",
+   "kind": "paired_engines",
+   "kinds": [
+    "HB",
+    "HT",
+    "HL",
+    "HL_grade"
+   ],
+   "question": "identical full-rate records: reference diagnosis against the calibrated multiple-hypothesis baseline"
+  },
+  {
+   "a": "reference/frames",
+   "b": "aligned/frames",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "id": "S15",
+   "kind": "paired_engines",
+   "kinds": [
+    "HB",
+    "HT",
+    "HL",
+    "HL_grade"
+   ],
+   "question": "identical full-rate records: reference diagnosis against the aligned residual monitor"
+  },
+  {
+   "a": "reference/frames",
+   "b": "R3v",
+   "criterion": [],
+   "id": "S16",
+   "kind": "paired_engines",
+   "kinds": [
+    "HB",
+    "HT",
+    "HL",
+    "HL_grade"
+   ],
+   "question": "identical records: reference diagnosis against the frozen R3v"
+  }
+ ],
+ "episodes": {
+  "HB": 40,
+  "HL": 30,
+  "HL_grade": 30,
+  "HT": 40,
+  "HU_gain": 30,
+  "none": 60
+ },
+ "frozen_sha256": {
+  "host/csia_adapter/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "host/csia_adapter/adapter.py": "e5a246919a49559090e952a84998e8984139b855cb0e15346f5879f8022c458e",
+  "host/csia_adapter/adapter_v2.py": "d00215fdb0331d0b237ec66f91b999f643f87e402e7dd409ccef88623122f45a",
+  "host/csia_adapter/baselines.py": "2d41d4f10a16e7b77aa74b042f08013993e2339f11b1f375f2124597d25ac484",
+  "host/csia_adapter/eval_set.py": "e6d74e0e7690d56357d7384d9cb5901550d263c15af5f887226b784d3a6c53d3",
+  "host/csia_adapter/eval_set_v2.py": "bc1641d89f1c0ff59b9fc3a4b83a15fe97fb2879c5969fc3883823719d98a5c2",
+  "host/csia_adapter/evaluation.py": "cc6f36c7ccd9d88e9fd2137eeb264939256f86724bf18fc2fc6935d685135b14",
+  "host/csia_adapter/evaluation_v2.py": "ad90979ac1bd433274a3b0701f982c34fc6c9c780e6ad35cc278ca2aa9c2c71b",
+  "host/csia_adapter/synthetic.py": "ef9372d80d4fa7b80e01cea5d7085c78fc01f6441246930811400adbc4822d16",
+  "host/telematics/clocks.py": "dfec01d3ebe9d01e24391adf1086c6458c6bafcc180edeff7d7be670386f47df",
+  "models/inverter/losses.py": "f47e0d722c3a045ed0ee97ff3d8d8eedf1ef7356c76650c402fa2b96ce691330",
+  "models/vehicle/longitudinal.py": "bde7c8a461deab3db132590efae3c21892483b8df7a173793cc6242ae1ff5b94",
+  "models/vehicle/powertrain.py": "84276bd709cb7e22edf286ac54a3884445288071680a7caaf1648c9135eccffb",
+  "research/bea/__init__.py": "fec360242fbbca43266e98524337578f83a8f35a5b13b9c1b147b5521e8e4694",
+  "research/bea/baselines.py": "dab364b21cd4e1dc56ebec2cc04a2816f894c03674c4ea2314fa20eacea75d23",
+  "research/bea/diagnosis.py": "2b394cbe69e37f2713c600fa43d178cafef99920f33b76f54a1604cbe82fd1f2",
+  "research/bea/episode.py": "18aec854dc0e4f63717056f1d4b839dade64493d9bedb4345ef6679cdfba008a",
+  "research/bea/harness.py": "343ad7b0a450855ed8a9caf5545fafe6211124d5b873fef72c08f4d112d99a53",
+  "research/bea/identifiability.py": "2f8d48da13fa0f11d525c7e17d27799b24d3e98fee222ede875e4a858b28ce3a",
+  "research/bea/records.py": "63424044da4888f43763cfba508d52a9b1ae2a6503b9f8b47f94b56e6374d892",
+  "research/bea/relations.py": "c7824e2aaa005b038997cd0d146c720ac88e2b4aeb394ceb2fed3846c40855e5",
+  "research/bea/schedulers.py": "c7f7d12c979be47934e3197c3ed5d2daa8f4266f5c79a73da33103d549da6f83",
+  "research/bea/scoring.py": "4a03c0e3554a5c2a208d9583c833d25a99acb84d591e637ad74e87847dfca580",
+  "research/generated/pilot/calibration.json": "1f66b74ac2c6c6191be19c5e67b4989006f95a07da92c534f60ec70110979a3f",
+  "research/recorder/include/bea_recorder.h": "72ea8ce83f221af309721fee47c26e3f0171d1586c0c5ea7e9e1d85ea75634eb",
+  "research/recorder/src/bea_recorder.c": "3f134fdb6a2a70d5e7b63012c96a1fdabe7cbe420b0cf3cc8bddae6b7d22a0f1",
+  "research/run_final.py": "5706131a5d9b6ea6e2ac23cd4b76738b704442a725abd77c5fa6a1504dc7c344"
+ },
+ "note": "Frozen protocol of the final evaluation. Synthetic host simulation only.",
+ "schedulers": [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F"
+ ],
+ "version": 1
+}

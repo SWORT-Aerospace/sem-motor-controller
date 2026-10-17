@@ -1,0 +1,3635 @@
+{
+ "nominal_sizes": {
+  "HB": 0.2,
+  "HT": 0.1,
+  "HL": 3.0,
+  "HL_grade": 0.01,
+  "HL_wind": 3.0
+ },
+ "units": {
+  "HB": "A",
+  "HT": "s",
+  "HL": "N",
+  "HL_grade": "rad",
+  "HL_wind": "m/s"
+ },
+ "ladder": [
+  0.25,
+  0.5,
+  1.0,
+  2.0,
+  4.0
+ ],
+ "threshold_sigma": 4.0,
+ "nuisance": {
+  "known": {
+   "grade_rad": 0.001,
+   "wind_mps": 1.0,
+   "P0_W": 2.0,
+   "dRs_ohm": 0.01,
+   "dFe_rel": 0.1,
+   "dSw_W_per_A": 0.05,
+   "dTf_Nm": 0.002,
+   "dGm_rel": 0.005,
+   "dKt_rel": 0.02,
+   "dCrr": 0.0003,
+   "dCdA_m2": 0.003,
+   "dmeff_rel": 0.01,
+   "Ioff_A": 0.005,
+   "imu_bias_mps2": 0.005
+  },
+  "uncertain": {
+   "grade_rad": 0.005,
+   "wind_mps": 3.0,
+   "P0_W": 6.0,
+   "dRs_ohm": 0.03,
+   "dFe_rel": 0.3,
+   "dSw_W_per_A": 0.15,
+   "dTf_Nm": 0.005,
+   "dGm_rel": 0.02,
+   "dKt_rel": 0.05,
+   "dCrr": 0.001,
+   "dCdA_m2": 0.01,
+   "dmeff_rel": 0.03,
+   "Ioff_A": 0.03,
+   "imu_bias_mps2": 0.05
+  }
+ },
+ "timing_bound_s": {
+  "known": 0.005,
+  "uncertain": 0.1
+ },
+ "conditions": {
+  "cruise": {
+   "duration_s": 20.0,
+   "v_mps": [
+    7.0,
+    7.0
+   ],
+   "P_W": [
+    40.2,
+    40.2
+   ],
+   "I_max_A": 0.838,
+   "dPdt_max_W_s": 0.0,
+   "drive_fraction": 1.0
+  },
+  "ramp": {
+   "duration_s": 10.0,
+   "v_mps": [
+    3.0,
+    9.0
+   ],
+   "P_W": [
+    319.0,
+    755.0
+   ],
+   "I_max_A": 16.3,
+   "dPdt_max_W_s": 45.8,
+   "drive_fraction": 1.0
+  },
+  "onset": {
+   "duration_s": 15.0,
+   "v_mps": [
+    3.0,
+    8.98
+   ],
+   "P_W": [
+    13.3,
+    753.0
+   ],
+   "I_max_A": 16.2,
+   "dPdt_max_W_s": 5347.0,
+   "drive_fraction": 1.0
+  },
+  "pulse_coast": {
+   "duration_s": 24.0,
+   "v_mps": [
+    6.85,
+    9.83
+   ],
+   "P_W": [
+    0.0,
+    680.0
+   ],
+   "I_max_A": 14.6,
+   "dPdt_max_W_s": 340004.0,
+   "drive_fraction": 0.25
+  },
+  "coast": {
+   "duration_s": 20.0,
+   "v_mps": [
+    8.15,
+    9.0
+   ],
+   "P_W": [
+    0.0,
+    0.0
+   ],
+   "I_max_A": 0.0,
+   "dPdt_max_W_s": 0.0,
+   "drive_fraction": 0.0
+  },
+  "sine": {
+   "duration_s": 20.0,
+   "v_mps": [
+    7.0,
+    7.04
+   ],
+   "P_W": [
+    17.4,
+    63.6
+   ],
+   "I_max_A": 1.33,
+   "dPdt_max_W_s": 36.3,
+   "drive_fraction": 1.0
+  }
+ },
+ "cases": {
+  "A": {
+   "HB->H0": 402.0,
+   "HB->HT": 402.0,
+   "HB->HL": 402.0,
+   "HT->H0": 2382.0,
+   "HT->HB": 2380.0,
+   "HT->HL": 2382.0,
+   "HL->H0": 76.0,
+   "HL->HB": 76.0,
+   "HL->HT": 76.0
+  },
+  "B": {
+   "cruise HT->H0 R1 at 2 Hz, size 0.4 s": 0.0,
+   "cruise HT->H0 R1 at 10 Hz, size 0.4 s": 0.0,
+   "cruise HT->H0 R1 at 100 Hz, size 0.4 s": 0.0,
+   "ramp HB->H0 frames, size 0.2 A": 0.0168,
+   "ramp HB->H0 frames, size 0.8 A": 363.0,
+   "cruise HL->HL_wind frames+IMU, 3 N": 1.61e-10,
+   "cruise HL_wind->HL frames+IMU, 3 m/s": 5.58e-11
+  },
+  "C": {
+   "onset (ramp plus 5 s of buffered cruise) HB->H0 frames, 0.2 A": 155.0,
+   "pulse_coast (coast segment) HB->H0 frames, 0.2 A": 402.0,
+   "coast HL->H0 summary_2Hz, 3 N": 2.25,
+   "coast HL->H0 frames_100Hz, 3 N": 186.0
+  },
+  "D": {
+   "cruise HL->HL_grade at 2 Hz, 12 N": 1.16e-11,
+   "cruise HL_grade->HL at 2 Hz, 0.04 rad": 1.07e-11,
+   "cruise HL->HL_grade at 10 Hz, 12 N": 2.43e-11,
+   "cruise HL_grade->HL at 10 Hz, 0.04 rad": 2.59e-11,
+   "cruise HL->HL_grade at 100 Hz (no wheel counts), 12 N": 6.98e-11,
+   "pulse_coast HL->HL_grade at 2 Hz, 12 N": 0.000225,
+   "pulse_coast HL_grade->HL at 2 Hz, 0.04 rad": 0.000225,
+   "pulse_coast HL->HL_grade at 10 Hz, 12 N": 0.000163,
+   "pulse_coast HL_grade->HL at 10 Hz, 0.04 rad": 0.000163,
+   "pulse_coast HL->HL_grade at 100 Hz (no wheel counts), 12 N": 0.000158,
+   "coast HL->HL_grade at 2 Hz, 12 N": 2.54e-13,
+   "coast HL_grade->HL at 2 Hz, 0.04 rad": 4.72e-05,
+   "coast HL->HL_grade at 10 Hz, 12 N": 0.00193,
+   "coast HL_grade->HL at 10 Hz, 0.04 rad": 0.00193,
+   "coast HL->HL_grade at 100 Hz (no wheel counts), 12 N": 0.0
+  },
+  "E": {
+   "cruise HL->HL_grade frames+IMU (known IMU bias)": {
+    "status": "separable",
+    "min_size": 3.0,
+    "at_floor": false,
+    "d_nominal": 14.9
+   },
+   "cruise HL_grade->HL frames+IMU (known IMU bias)": {
+    "status": "separable",
+    "min_size": 0.0025,
+    "at_floor": true,
+    "d_nominal": 74.5
+   },
+   "cruise HL->HL_grade frames+IMU (uncertain IMU bias)": {
+    "status": "separable",
+    "min_size": 12.0,
+    "at_floor": false,
+    "d_nominal": 7.14e-11
+   },
+   "cruise HL_grade->HL frames+IMU (uncertain IMU bias)": {
+    "status": "separable",
+    "min_size": 0.02,
+    "at_floor": false,
+    "d_nominal": 7.16e-11
+   },
+   "coast HL->HL_grade frames+IMU (known IMU bias)": {
+    "status": "separable",
+    "min_size": 3.0,
+    "at_floor": false,
+    "d_nominal": 15.0
+   },
+   "coast HL_grade->HL frames+IMU (known IMU bias)": {
+    "status": "separable",
+    "min_size": 0.0025,
+    "at_floor": true,
+    "d_nominal": 74.3
+   },
+   "coast HL->HL_grade frames+IMU (uncertain IMU bias)": {
+    "status": "separable",
+    "min_size": 12.0,
+    "at_floor": false,
+    "d_nominal": 9.9e-08
+   },
+   "coast HL_grade->HL frames+IMU (uncertain IMU bias)": {
+    "status": "separable",
+    "min_size": 0.02,
+    "at_floor": false,
+    "d_nominal": 9.9e-08
+   },
+   "cruise HB->HL, torque from bus current (dependent)": 3.51e-11,
+   "cruise HB->HL, torque from phase currents (independent)": 243.0,
+   "pulse_coast HB->HL, torque from bus current (dependent)": 402.0,
+   "pulse_coast HB->HL, torque from phase currents (independent)": 402.0
+  }
+ },
+ "timing_kinds": [
+  {
+   "condition": "onset",
+   "fs_Hz": 100.0,
+   "true": "delay(0.04 s)",
+   "alternative": "lag",
+   "d": 124.0
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 100.0,
+   "true": "delay(0.04 s)",
+   "alternative": "boxcar",
+   "d": 70.5
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 100.0,
+   "true": "lag(0.04 s)",
+   "alternative": "delay",
+   "d": 119.0
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 100.0,
+   "true": "lag(0.04 s)",
+   "alternative": "boxcar",
+   "d": 65.0
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 100.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "delay",
+   "d": 74.9
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 100.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "lag",
+   "d": 66.5
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 10.0,
+   "true": "delay(0.04 s)",
+   "alternative": "lag",
+   "d": 0.717
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 10.0,
+   "true": "delay(0.04 s)",
+   "alternative": "boxcar",
+   "d": 0.00879
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 10.0,
+   "true": "lag(0.04 s)",
+   "alternative": "delay",
+   "d": 4.96
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 10.0,
+   "true": "lag(0.04 s)",
+   "alternative": "boxcar",
+   "d": 1.68
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 10.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "delay",
+   "d": 0.0233
+  },
+  {
+   "condition": "onset",
+   "fs_Hz": 10.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "lag",
+   "d": 0.841
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 100.0,
+   "true": "delay(0.04 s)",
+   "alternative": "lag",
+   "d": 200.0
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 100.0,
+   "true": "delay(0.04 s)",
+   "alternative": "boxcar",
+   "d": 114.0
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 100.0,
+   "true": "lag(0.04 s)",
+   "alternative": "delay",
+   "d": 191.0
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 100.0,
+   "true": "lag(0.04 s)",
+   "alternative": "boxcar",
+   "d": 102.0
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 100.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "delay",
+   "d": 122.0
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 100.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "lag",
+   "d": 105.0
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 10.0,
+   "true": "delay(0.04 s)",
+   "alternative": "lag",
+   "d": 5.08
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 10.0,
+   "true": "delay(0.04 s)",
+   "alternative": "boxcar",
+   "d": 1.45
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 10.0,
+   "true": "lag(0.04 s)",
+   "alternative": "delay",
+   "d": 9.14
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 10.0,
+   "true": "lag(0.04 s)",
+   "alternative": "boxcar",
+   "d": 8.46
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 10.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "delay",
+   "d": 6.04
+  },
+  {
+   "condition": "pulse_coast",
+   "fs_Hz": 10.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "lag",
+   "d": 8.46
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 100.0,
+   "true": "delay(0.04 s)",
+   "alternative": "lag",
+   "d": 1.12
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 100.0,
+   "true": "delay(0.04 s)",
+   "alternative": "boxcar",
+   "d": 0.449
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 100.0,
+   "true": "lag(0.04 s)",
+   "alternative": "delay",
+   "d": 1.12
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 100.0,
+   "true": "lag(0.04 s)",
+   "alternative": "boxcar",
+   "d": 0.533
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 100.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "delay",
+   "d": 0.449
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 100.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "lag",
+   "d": 0.533
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 10.0,
+   "true": "delay(0.04 s)",
+   "alternative": "lag",
+   "d": 0.356
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 10.0,
+   "true": "delay(0.04 s)",
+   "alternative": "boxcar",
+   "d": 0.143
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 10.0,
+   "true": "lag(0.04 s)",
+   "alternative": "delay",
+   "d": 0.356
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 10.0,
+   "true": "lag(0.04 s)",
+   "alternative": "boxcar",
+   "d": 0.169
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 10.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "delay",
+   "d": 0.143
+  },
+  {
+   "condition": "sine",
+   "fs_Hz": 10.0,
+   "true": "boxcar(0.08 s)",
+   "alternative": "lag",
+   "d": 0.169
+  }
+ ],
+ "matrix": [
+  {
+   "pair": "HB-H0",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 34.8
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 1.31e-14
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 9.29e-12
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 9.6e-12
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-H0",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-H0",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 221.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 3.35e-12
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 6.26e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 6.27e-11
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HT",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 34.8
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 1.31e-14
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 9.29e-12
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 9.6e-12
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HL",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 34.8
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 221.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 1.31e-14
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 3.35e-12
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 9.29e-12
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 6.26e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 9.6e-12
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 6.27e-11
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-HL",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 221.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 3.35e-12
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 6.26e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 6.27e-11
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-HL_grade",
+   "condition": "cruise",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.14e-11,
+      "d_max": 1.16e-11
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.12e-11,
+      "d_max": 1.07e-11
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.3e-11,
+      "d_max": 3.32e-11
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.3e-11,
+      "d_max": 3.23e-11
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 2.45e-11,
+      "d_max": 2.43e-11
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 2.47e-11,
+      "d_max": 2.58e-11
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 7.13e-11,
+      "d_max": 7.12e-11
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 7.14e-11,
+      "d_max": 7.22e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 14.9
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.0025,
+      "at_floor": true,
+      "d_nominal": 74.5
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 7.14e-11
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.02,
+      "at_floor": false,
+      "d_nominal": 7.16e-11
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-H0",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0168
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 4.66e-06,
+      "d_max": 0.0696
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0168
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 4.66e-06,
+      "d_max": 0.0696
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-H0",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.000634
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.74e-06,
+      "d_max": 0.00153
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.000634
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.74e-06,
+      "d_max": 0.00153
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-H0",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 7.69e-13
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.23e-13
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 11.2
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 4.61e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 11.7
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 4.61e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HT",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.8,
+      "at_floor": false,
+      "d_nominal": 0.0114
+     },
+     "rev": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 0.000466,
+      "d_max": 0.0285
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 4.66e-06,
+      "d_max": 0.0658
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.21e-06,
+      "d_max": 0.00156
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.8,
+      "at_floor": false,
+      "d_nominal": 0.0114
+     },
+     "rev": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 0.000466,
+      "d_max": 0.0285
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 4.66e-06,
+      "d_max": 0.0658
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.21e-06,
+      "d_max": 0.00156
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HL",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 7.69e-13
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.23e-13
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0168
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 8.16
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 4.66e-06,
+      "d_max": 0.0696
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 3.11e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0168
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 8.75
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 4.66e-06,
+      "d_max": 0.0696
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 3.11e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-HL",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 7.69e-13
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.23e-13
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.000634
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 7.69
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.74e-06,
+      "d_max": 0.00153
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 5.19e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.000634
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 8.31
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.74e-06,
+      "d_max": 0.00153
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 5.19e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-HL_grade",
+   "condition": "ramp",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.23e-12,
+      "d_max": 1.21e-12
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.27e-12,
+      "d_max": 1.33e-12
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 2.39e-13,
+      "d_max": 3.68e-12
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.19e-12,
+      "d_max": 3.8e-12
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.69e-06,
+      "d_max": 0.00346
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.00346,
+      "d_max": 0.00346
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.61e-06,
+      "d_max": 0.000352
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.000203,
+      "d_max": 0.00296
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 5.58
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.0025,
+      "at_floor": true,
+      "d_nominal": 52.6
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 4.61e-06
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.02,
+      "at_floor": false,
+      "d_nominal": 0.000203
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-H0",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 21.2
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 1.46
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 155.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 25.3
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 155.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 25.3
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-H0",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 736.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 0.000114
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 736.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 0.000114
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-H0",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 32.5
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 9.08e-14
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 115.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.00612
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 115.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.00615
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HT",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 20.4
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 1.46
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 155.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 736.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 25.3
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.12e-13
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 155.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 736.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 25.3
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 5.69e-13
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HL",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 21.2
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 32.5
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 1.46
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.22e-13
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 155.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 115.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 25.3
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.0062
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 155.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 115.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 25.3
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.00622
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-HL",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 32.5
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 3.29e-12
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 736.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 115.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 0.000114
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.00609
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 736.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 115.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 0.000114
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.00611
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-HL_grade",
+   "condition": "onset",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.11e-12,
+      "d_max": 1.2e-12
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.11e-12,
+      "d_max": 1.64e-12
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.3e-12,
+      "d_max": 3.36e-12
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.3e-12,
+      "d_max": 3.31e-12
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.00152,
+      "d_max": 0.00152
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.00152,
+      "d_max": 0.00152
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.00612,
+      "d_max": 0.00612
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.00612,
+      "d_max": 0.00612
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 1.5,
+      "at_floor": false,
+      "d_nominal": 15.8
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.0025,
+      "at_floor": true,
+      "d_nominal": 64.4
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.00615
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.02,
+      "at_floor": false,
+      "d_nominal": 0.00615
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-H0",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 56.9
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 49.6
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 402.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 350.0
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 402.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 350.0
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-H0",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 2382.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 4.53e-14
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 2382.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 5.31e-14
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-H0",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 1.49
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 5.39e-15
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 76.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.96e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 77.4
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 2.09e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HT",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 56.6
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 49.6
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 402.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 2380.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 350.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.86e-13
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 402.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 2380.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 350.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 5.34e-14
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HL",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 56.9
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 1.49
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 49.6
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.26e-14
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 402.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 76.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 350.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.96e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 402.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 77.4
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 350.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 2.09e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-HL",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 1.49
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.72e-10
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 2382.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 76.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 4.53e-14
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.96e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 2382.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 77.4
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 5.31e-14
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 2.09e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-HL_grade",
+   "condition": "pulse_coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.000219,
+      "d_max": 0.000219
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.000219,
+      "d_max": 0.000219
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.72e-10,
+      "d_max": 0.000547
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.000547,
+      "d_max": 0.000547
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.89e-07,
+      "d_max": 4.89e-07
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 4.89e-07,
+      "d_max": 4.89e-07
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.96e-06,
+      "d_max": 1.96e-06
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.96e-06,
+      "d_max": 1.96e-06
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 16.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.0025,
+      "at_floor": true,
+      "d_nominal": 80.1
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 2.09e-06
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.02,
+      "at_floor": false,
+      "d_nominal": 2.09e-06
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-H0",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 60.9
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 53.1
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 425.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 371.0
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 425.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 371.0
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-H0",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-H0",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 2.25
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 2.39e-15
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 186.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.95e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 186.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.62e-12
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HT",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 60.9
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 53.1
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 425.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 371.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 425.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 371.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HL",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 60.9
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 2.25
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 53.1
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.18e-15
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 425.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 186.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 371.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.94e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 425.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 186.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.05,
+      "at_floor": true,
+      "d_nominal": 371.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.8e-13
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-HL",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 6.0,
+      "at_floor": false,
+      "d_nominal": 2.25
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 2.39e-15
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 186.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.95e-11
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 186.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 1.62e-12
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-HL_grade",
+   "condition": "coast",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 2.54e-13,
+      "d_max": 2.54e-13
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 2.55e-13,
+      "d_max": 4.72e-05
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 7.62e-13,
+      "d_max": 7.62e-13
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 7.63e-13,
+      "d_max": 7.67e-13
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 6.44e-12,
+      "d_max": 0.00193
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.00193,
+      "d_max": 0.00193
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.95e-11,
+      "d_max": 1.93e-11
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 1.96e-11,
+      "d_max": 0.00651
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 15.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.0025,
+      "at_floor": true,
+      "d_nominal": 74.3
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 9.9e-08
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.02,
+      "at_floor": false,
+      "d_nominal": 9.9e-08
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-H0",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 7.93
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 2.91e-05
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0062
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0062
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-H0",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 2.36e-11
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 3.26
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 106.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.7e-05
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 106.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.83e-05
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-H0",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 468.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000141
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000319
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HT",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 7.87
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 2.36e-11
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 3.42e-05
+     },
+     "rev": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 3.25
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 242.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 106.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.00623
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.71e-05
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 242.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 106.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.00623
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.84e-05
+     }
+    }
+   }
+  },
+  {
+   "pair": "HB-HL",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 7.93
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 2.91e-05
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 468.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0062
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000143
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.1,
+      "at_floor": false,
+      "d_nominal": 243.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 0.0062
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000325
+     }
+    }
+   }
+  },
+  {
+   "pair": "HT-HL",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.4,
+      "at_floor": false,
+      "d_nominal": 2.36e-11
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 1.29e-05,
+      "d_max": 1.29e-05
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "not_separable",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 3.26
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 3.16e-05,
+      "d_max": 3.16e-05
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 106.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 468.0
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.7e-05
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000141
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.025,
+      "at_floor": true,
+      "d_nominal": 106.0
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 469.0
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 0.2,
+      "at_floor": false,
+      "d_nominal": 1.83e-05
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000319
+     }
+    }
+   }
+  },
+  {
+   "pair": "HL-HL_grade",
+   "condition": "sine",
+   "results": {
+    "summary_2Hz/known": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "summary_2Hz/uncertain": {
+     "fwd": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     },
+     "rev": {
+      "status": "no_signature",
+      "min_size": null,
+      "d_nominal": 0.0,
+      "d_max": 0.0
+     }
+    },
+    "frames_100Hz/known": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.5e-05,
+      "d_max": 5.78e-05
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 3.55e-05,
+      "d_max": 0.00997
+     }
+    },
+    "frames_100Hz/uncertain": {
+     "fwd": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.000139,
+      "d_max": 0.000139
+     },
+     "rev": {
+      "status": "collinear",
+      "min_size": null,
+      "d_nominal": 0.000139,
+      "d_max": 0.0225
+     }
+    },
+    "frames_imu/known": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 3.0,
+      "at_floor": false,
+      "d_nominal": 15.2
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.0025,
+      "at_floor": true,
+      "d_nominal": 74.5
+     }
+    },
+    "frames_imu/uncertain": {
+     "fwd": {
+      "status": "separable",
+      "min_size": 12.0,
+      "at_floor": false,
+      "d_nominal": 0.000319
+     },
+     "rev": {
+      "status": "separable",
+      "min_size": 0.02,
+      "at_floor": false,
+      "d_nominal": 0.000319
+     }
+    }
+   }
+  }
+ ]
+}

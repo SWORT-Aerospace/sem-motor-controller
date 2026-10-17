@@ -1,0 +1,27 @@
+{
+ "episodes": 24,
+ "windows": 6923,
+ "noise_scale": 1.0006,
+ "median_J_over_n": {
+  "summary": 0.4523,
+  "frames": 1.0013
+ },
+ "engine": {
+  "noise_scale": 1.0006,
+  "noise_scale_summary": 0.6725,
+  "kappa_summary": {
+   "HB": 10.83,
+   "HT": 32.19,
+   "HL": 10.83,
+   "HL_grade": 10.83
+  },
+  "kappa_frames": {
+   "HB": 10.83,
+   "HT": 38.14,
+   "HL": 10.83,
+   "HL_grade": 10.83
+  }
+ },
+ "rule": "kappa = max(10.83, 1.1 x largest per-episode maximum of J_H0 - J_h on fault-free calibration episodes, with each window's statistics rescaled by its source's noise scale); noise scale = sqrt(median J_H0 / n) over the windows of each source (full-rate frames, summary)",
+ "seconds": 147
+}

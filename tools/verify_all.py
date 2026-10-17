@@ -77,6 +77,8 @@ CHECKS = [
     ("csia_eval_v1_rerun", "studies", [PY, "tools/run_csia_evaluation.py"], "zero", r".+", 7200, True),
     ("wheel_sensor_check", "hardware", [PY, "tools/wheel_sensor_check.py", "--check"], "zero", r".+", 120, False),
     ("coastdown_sensitivity", "studies", [PY, "tools/coastdown_sensitivity.py", "--check"], "zero", r".+", 120, False),
+    ("research_identifiability", "research", [PY, "research/run_identifiability.py", "--check"], "zero", r"check .*", 900, False),
+    ("research_demo", "research", [PY, "research/run_demo.py"], "zero", r"Final: .*", 900, True),
     ("procurement_tables", "hardware", [PY, "tools/gen_procurement.py", "--check"], "zero", r".+", 120, False),
     ("doc_links", "documentation", [PY, "tools/check_links.py"], "zero", r"links: .*|BROKEN .*", 120, False),
     ("kicad_connectivity", "hardware", [PY, "tools/gen_kicad_schematic.py", "--check"], "zero",
