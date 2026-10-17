@@ -43,7 +43,7 @@ fastest fix is to commit the PDFs under `docs/reference/datasheets/` (list in DA
 | 12 | CAN transceiver, termination, protection, connector | verified against [K]; connector and termination location open | vehicle bus bit rate, harness, node position |
 | 13 | Clock source and peripheral timing | firmware supports RC and 16 MHz crystal; **16 MHz proposed**; CAN needs the crystal (tolerance analysis below) | confirmation of the vehicle bus bit rate |
 | 14 | Debug, programming, test points | SWD and UART verified; **21 test points added** | none |
-| - | ERC warnings | each of the 9 reviewed; root cause removed (library version) | the CI ERC run on this revision |
+| - | ERC warnings | each of the 9 reviewed; root cause removed (library version); 0 errors, 0 warnings in CI run 39078886365 | none |
 | - | KiCad version | **standardised on 8.0.9** (tools and pinned libraries) | none |
 
 ## Changes made in this revision
@@ -321,9 +321,10 @@ every symbol and did not raise warnings, so the ERC does not compare them.
 
 **Resolution.** The schematic is now generated from a pinned copy of the KiCad 8.0.9 libraries
 (`tools/fetch_kicad_symbols.py`, SHA-256 checked), and the ERC compares against the same copy
-(`tools/run_kicad_erc.sh`), so embedded and library symbols are the same release. The result is recorded once
-the CI ERC has run on this revision ([docs/VERIFICATION_REPORT.md](../../docs/VERIFICATION_REPORT.md)); it is not
-claimed here.
+(`tools/run_kicad_erc.sh`), so embedded and library symbols are the same release. **Result:** CI run
+39078886365 on commit 40b3dfa (schematic unchanged since a9a378c), KiCad 8.0.9: **0 errors, 0 warnings**
+([docs/VERIFICATION_REPORT.md](../../docs/VERIFICATION_REPORT.md) section 8). A clean ERC checks schematic rules
+only; it does not close any design-review item above.
 
 ## KiCad version
 

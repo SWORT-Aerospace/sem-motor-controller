@@ -248,7 +248,7 @@ blockers:
     done_now: "CI job erc runs kicad-cli sch erc on every push."
     input: "none"
     closure: "ERC runs in CI with no error, and every warning is reviewed."
-    evidence: "CI run 39070286030 (commit 76f4cfc): KiCad 8.0.9, 0 errors, 9 warnings; each warning reviewed in hardware/review/DESIGN_REVIEW.md (library-version differences, no pin, type or net change) and its cause removed by generating from the pinned 8.0.9 libraries; the result on the delivery head is in docs/VERIFICATION_REPORT.md."
+    evidence: "CI run 39070286030 (commit 76f4cfc): KiCad 8.0.9, 0 errors, 9 warnings, each reviewed in hardware/review/DESIGN_REVIEW.md (library-version differences, no pin, type or net change). After generating from the pinned 8.0.9 libraries: CI run 39078886365 (commit 40b3dfa, schematic unchanged since a9a378c): KiCad 8.0.9, 0 errors, 0 warnings."
     unlocks: 0
 
   - id: C-PLATFORM
@@ -308,7 +308,7 @@ blockers:
     done_now: "10 k series input resistor and 390 k hysteresis resistor; TL431 bias 1.7 mA."
     input: "none"
     closure: "Schematic changed and connectivity re-checked."
-    evidence: "commit a9a378c; hardware/review/DESIGN_REVIEW.md item 6; CONNECTIVITY_CHECK.md 136 nets, 0 problems."
+    evidence: "commit a9a378c; hardware/review/DESIGN_REVIEW.md item 6; CONNECTIVITY_CHECK.md 136 nets, 0 problems; CI run 39078886365 (connectivity gate and drift check on KiCad 8.0.9, ERC 0 errors, 0 warnings)."
     unlocks: 0
 
   - id: C-KICAD
@@ -320,5 +320,5 @@ blockers:
     done_now: "KiCad 8 in both jobs; generator and ERC read the same pinned 8.0.9 libraries."
     input: "none"
     closure: "Both jobs on KiCad 8.0.9 with the pinned libraries."
-    evidence: "commit a9a378c; tools/fetch_kicad_symbols.py (SHA-256 pinned); CI result on the delivery head in docs/VERIFICATION_REPORT.md."
+    evidence: "commit a9a378c; tools/fetch_kicad_symbols.py (SHA-256 pinned); CI run 39078886365 (commit 40b3dfa): both jobs on KiCad 8.0.9, the generator's output equals the committed schematic, ERC 0 errors, 0 warnings."
     unlocks: 0

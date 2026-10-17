@@ -1,6 +1,6 @@
-# Verification report (v0.4; v0.5 in section 7)
+# Verification report (v0.4; v0.5 in section 7; v0.6 in section 8)
 
-Environment of every result here: x86-64 Linux host (Python 3.13.16, gcc 13.3, cmake 3.28, arm-none-eabi-gcc 13.2.1, KiCad 7.0.11) and GitHub-hosted ubuntu-24.04 runners (KiCad 8.0.9 for ERC). Nothing here was run on hardware. Commands are run from the repository root. Documentation and previously reported test counts were not taken as evidence: each line below was re-run.
+Environment of every result here: x86-64 Linux host (Python 3.13.16, gcc 13.3, cmake 3.28, arm-none-eabi-gcc 13.2.1, KiCad 7.0.11) and GitHub-hosted ubuntu-24.04 runners (KiCad 8.0.9 for the ERC, and from v0.6 also for the connectivity gate and drift check). Nothing here was run on hardware. Commands are run from the repository root. Documentation and previously reported test counts were not taken as evidence: each line below was re-run.
 
 ## 1. Starting point
 
@@ -145,3 +145,47 @@ Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-A
 | working tree | `tests/integration/test_pit_energy.py` | the README worked example recomputed by independent arithmetic and by the model functions |
 | working tree | `python3 tools/run_optimization.py --quick` | writes `build/optimization_quick/`; `docs/generated/` and `docs/figures/` unchanged |
 | GitHub-hosted CI | runs 38985549136 (push) and 38985552327 (pull request) on `e1b59a6` | success (`host` and `erc`) |
+
+## 8. v0.6: vehicle engineering package
+
+Branch `eng/v0.6-vehicle-package`. Three milestones are tracked separately and none is claimed beyond its evidence: (1) engineering design ready for review, (2) fabrication-ready hardware and buildable target firmware, (3) bench-validated integrated hardware. Status: the design is reviewable with the open items of [`BLOCKERS.md`](BLOCKERS.md); the target firmware builds and links but has not run on a board; the hardware is **not** fabrication-ready (release gate [`generated/release_gate.md`](generated/release_gate.md): FAIL); nothing has been bench-tested.
+
+### 8.1 Repository reconciliation (2026-10-17)
+
+| Branch | Head | Content | Pull request | CI on that head | In the delivery branch |
+|---|---|---|---|---|---|
+| `main` | `3a80039` | v0.3 (`19a327c`) plus one team edit of the v0.3 questionnaire (2026-10-16) | none | run 38990669982: success | yes (merged into v0.5; the edit survives in `archive/PHYSICAL_TEAM_QUESTIONNAIRE.md`) |
+| `ci/declare-deps-run-kicad-gate` | `e7a0b57` | CI dependencies, connectivity gate, drift guard | SWORT-Aerospace/sem-motor-controller#1 into `main`, open | runs 38933753179, 38933760570: success | its first two commits are ancestors; the third is contained as the equivalent commit `d0f22a5` (`git cherry`) |
+| `eng/v0.4-verification-integration` | `0b7255e` | v0.4: verification, safety-property fixes, host data chain, CSIA v2, ICD v1.0, hardware checks | SWORT-Aerospace/sem-motor-controller#2 into `main`, open | runs 38947078278, 38947182903: success | yes (ancestor) |
+| `eng/v0.5-telemetry-integration` | `76f4cfc` | v0.5: telemetry through a real MQTT broker, team documentation, procurement, the robust MQTT timing check | SWORT-Aerospace/sem-motor-controller#3 into `main`, open | runs 39070286030, 39070288670: success | yes (ancestor) |
+| `research/evidence-acquisition` | `73b23c2` | the pre-registered evidence-acquisition research (host simulation) | SWORT-Aerospace/sem-motor-controller#4 into the v0.5 branch, open | runs 39007984139, 39008556098: success | no: kept separate and not extended while the vehicle delivery is blocked |
+| `ci-probe/runner-start` | `51f940c` | a temporary runner diagnostic, labelled "to be deleted" in its commit | none | not relevant | no |
+| `eng/v0.6-vehicle-package` | see 8.3 | v0.5 plus the v0.6 commits | opened for review into `main` | 8.3 | (this branch) |
+
+**Why the default README showed v0.3.** GitHub shows `main`, and no pull request had been merged: every later release was on a branch built on the previous one. The delivery branch contains `main`, PR #1's changes, v0.4 and v0.5, so its pull request alone brings `main` up to date and makes #1 to #3 redundant; #4 stays separate.
+
+**Which reported improvements are committed.** Every item of sections 4, 7 and 8.2 is a commit on the delivery branch (`git log origin/main..eng/v0.6-vehicle-package`). Statements found obsolete and corrected with their evidence: "ERC never run" and "warnings are library-version differences" (now the run, revision and per-warning review, then 0 warnings; `hardware/README.md` 6, `hardware/review/DESIGN_REVIEW.md`); "STM32G4 platform layer not written" (the linked image, `firmware/platform/stm32g4/README.md`); "readable in KiCad 7 or newer" (the project release is KiCad 8.0.9); "no record type for temperature probes" (STLG `TEMP`, ICD 8); the v0.5 bring-up checklist (superseded by [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md), archived).
+
+### 8.2 Closed in this revision
+
+| Item | Evidence |
+|---|---|
+| Flaky MQTT step-timing check on v0.5 | criterion on blocking behaviour, negative test; `76f4cfc`, runs 39070286030 and 39070288670 |
+| KiCad ERC warnings | 9 `lib_symbol_issues` reviewed one by one; cause removed (pinned 8.0.9 libraries); run 39078886365 on `40b3dfa`: 0 errors, 0 warnings |
+| Two KiCad versions | both CI jobs on KiCad 8.0.9 with the SHA-256-pinned libraries; the generator's output equals the committed schematic in run 39078886365 |
+| Over-voltage comparator hysteresis acted on the TL431's low-impedance node (found in review) | 10 k input and 390 k hysteresis resistors, `a9a378c`; `DESIGN_REVIEW.md` item 6 |
+| A fast-loop overcurrent raised during the slow step could be erased (found in review) | `1479d16`; `firmware/tests/test_core_preemption.c` fails on the old code |
+| No target image | `c3f716b`: startup, linker script, clock, PWM and break inputs, ADC with DMA, hall capture, CAN with bus-off, watchdogs, precharge sequencing, calibration store, event log; image built in CI (artifact `semmc-stm32g474-image`); power stage inhibited |
+| MCU alternate functions unchecked | `tools/gen_board_pins.py`: 45 functions, 0 errors against ST's pin database |
+| Temperature logging | STLG `TEMP` record and live summary `sem.telemetry.v3`, producer and consumer tests, host demonstration check with an injected probe fault |
+| Budget categories and scenarios | nine categories, three builds against $500 and $1,000 ([`PROCUREMENT.md`](PROCUREMENT.md)) |
+
+Open items, each with its missing input and closure criterion: [`BLOCKERS.md`](BLOCKERS.md).
+
+### 8.3 CI on the delivery branch
+
+| Run | Commit | Result |
+|---|---|---|
+| 39071741661 | `1b799bb` | failure: `test_file_index_covers_every_tracked_file` (vendored headers not yet in the file index); fixed in the next commits |
+| 39078886365 | `40b3dfa` | success: `host` (generated files, C tests with sanitizers, connectivity gate and drift check on KiCad 8.0.9, Python tests, both demonstrations, Cortex-M4F core, STM32G474 image) and `erc` (0 errors, 0 warnings) |
+
