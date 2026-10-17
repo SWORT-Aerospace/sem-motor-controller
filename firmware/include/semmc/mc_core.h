@@ -15,10 +15,13 @@
  * is one such binding and the only one implemented. Manual driving never
  * depends on any link.
  *
- * Data handoff slow -> fast is a single struct written by the slow step and
- * read by the fast step; on the target this must be done with a sequence
- * lock or with the fast ISR masked for the copy (documented in
- * firmware/platform/stm32g4/README.md). The host simulation is single-threaded.
+ * Data handoff slow -> fast: the slow step computes fast_cmd and publishes it
+ * into the one of two buffers the fast step is not reading, then switches an
+ * index with a single store. The fast step runs in a higher-priority interrupt
+ * on the target and preempts the slow step, so it always reads one complete
+ * command. Flags the fast step raises (overcurrent, invalid dt) are cleared by
+ * the slow step only after it has observed them and published the command
+ * that reacts to them.
  */
 #ifndef SEMMC_MC_CORE_H
 #define SEMMC_MC_CORE_H
@@ -155,7 +158,9 @@ typedef struct {
     mc_driver_inputs_t last_driver;
     uint8_t reset_reason;
     /* fast loop */
-    mc_fast_cmd_t fast_cmd;
+    mc_fast_cmd_t fast_cmd;          /* latest command computed by the slow step */
+    mc_fast_cmd_t fast_pub[2];       /* published copies; the fast step reads fast_pub[fast_pub_idx] */
+    volatile uint8_t fast_pub_idx;
     bool fast_pwm_was_enabled;
     volatile bool fast_overcurrent;
     volatile bool fast_dt_invalid;

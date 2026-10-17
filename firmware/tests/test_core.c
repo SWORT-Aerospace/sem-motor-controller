@@ -338,6 +338,40 @@ static void test_software_overcurrent_trips_in_fast_loop(void)
     CHECK(!C.fast_cmd.pwm_enable);
 }
 
+/* The fast step acts on the command the slow step PUBLISHED, never on the slow step's working copy: a half-
+ * written working copy cannot reach the PWM. After an overcurrent latch the published command is off. */
+static void test_fast_step_reads_published_command_only(void)
+{
+    sim_init(MC_BUILD_HOST_SIM);
+    arm();
+    SI.driver.throttle = 0.3f;
+    run_ms(300);
+    CHECK(C.fast_pub[C.fast_pub_idx].pwm_enable);
+    CHECK(memcmp(&C.fast_pub[C.fast_pub_idx], &C.fast_cmd, sizeof C.fast_cmd) == 0);
+    /* Corrupt the working copy only: the next fast step still runs on the published command. */
+    C.fast_cmd.pwm_enable = false;
+    C.fast_cmd.iq_ref_A = 1.0e6f;
+    sim_sensors_t s;
+    sim_plant_sense(&P, &DUTY, PWM, &s);
+    mc_fast_inputs_t fi = {s.phase, s.hall_code, s.vbus_V, 50e-6f, false};
+    mc_fast_outputs_t fo;
+    mc_core_fast_step(&C, &fi, &fo);
+    CHECK(fo.pwm_enable);
+    CHECK(fabsf(C.iq_meas_A) < PP.max_phase_current_A);
+    /* An overcurrent seen by the fast step is still set when the slow step starts, and the slow step publishes
+     * pwm_enable = false before it clears the flag. */
+    P.fault.current_bias_A[0] = 80.0f;
+    sim_plant_sense(&P, &DUTY, PWM, &s);
+    fi.phase = s.phase;
+    mc_core_fast_step(&C, &fi, &fo);
+    CHECK(!fo.pwm_enable);
+    CHECK(C.fast_overcurrent);
+    mc_core_slow_step(&C, T + 1000u, &SI);
+    CHECK(C.prot.latched & MC_FAULT_BIT(MC_F_SW_OVERCURRENT));
+    CHECK(!C.fast_pub[C.fast_pub_idx].pwm_enable);
+    CHECK(!C.fast_overcurrent);
+}
+
 static void test_hardware_build_rejects_synthetic(void)
 {
     sim_init(MC_BUILD_HARDWARE);
@@ -704,6 +738,7 @@ int main(void)
     RUN(test_limits_update_between_requests);
     RUN(test_reconstructed_phase_is_flagged);
     RUN(test_software_overcurrent_trips_in_fast_loop);
+    RUN(test_fast_step_reads_published_command_only);
     RUN(test_hardware_build_rejects_synthetic);
     RUN(test_gate_driver_fault);
     RUN(test_contract_lower_limits_before_matching_request);

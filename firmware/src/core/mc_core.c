@@ -7,6 +7,7 @@
 #include "semmc/mc_core.h"
 
 #include <math.h>
+#include <stdatomic.h>
 #include <string.h>
 
 #include "semmc_protocol.h"
@@ -287,8 +288,6 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     }
     pi.rotor_stall = c->stall_timer_s >= MC_STALL_TIME_S;
     if (c->config_ok) mc_prot_evaluate(&c->prot, &pi, dt);
-    c->fast_overcurrent = false; /* consumed (latched in prot if it was set) */
-    c->fast_dt_invalid = false;
 
     /* ---- supervisor input ---- */
     c->sup.session_established = c->sess.established && !c->link_down;
@@ -360,6 +359,19 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
                               c->sm.state == MC_ST_DERATED);
     c->fast_cmd.iq_ref_A = c->fast_cmd.pwm_enable ? c->arb.iq_ref_A : 0.0f;
     c->fast_cmd.id_ref_A = c->fast_cmd.pwm_enable ? c->arb.id_ref_A : 0.0f;
+    /* Publish to the fast step: fill the buffer it is not reading, then switch the index with one store.
+     * On the target the fast step preempts this function, so it always sees one complete command. */
+    {
+        const uint8_t next = (uint8_t)(1u - c->fast_pub_idx);
+        c->fast_pub[next] = c->fast_cmd;
+        atomic_signal_fence(memory_order_release);
+        c->fast_pub_idx = next;
+    }
+    /* Clear the fast-step flags only after the command above is published (a latched fault has already
+     * withdrawn pwm_enable), and only those this step observed: a flag the fast step sets after the read
+     * at the top of this function stays set for the next slow step instead of being lost. */
+    if (pi.fast_overcurrent) c->fast_overcurrent = false;
+    if (pi.fast_dt_invalid) c->fast_dt_invalid = false;
 }
 
 /* ---------------------------------------------------------------- fast step */
@@ -383,7 +395,8 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
             if (mc_absf(c->pc.i[k]) > c->p.sw_overcurrent_A) c->fast_overcurrent = true;
         }
     }
-    const bool enable = c->fast_cmd.pwm_enable && dt_ok && !in->hw_trip && !c->fast_overcurrent && !c->fast_dt_invalid;
+    const mc_fast_cmd_t cmd = c->fast_pub[c->fast_pub_idx];
+    const bool enable = cmd.pwm_enable && dt_ok && !in->hw_trip && !c->fast_overcurrent && !c->fast_dt_invalid;
     if (enable && !c->pc.valid) {
         if (c->current_invalid_run < UINT32_MAX) c->current_invalid_run++;
     } else if (c->pc.valid) {
@@ -404,8 +417,8 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
     c->fast_pwm_was_enabled = true;
 
     mc_foc_in_t fi;
-    fi.i_ref.d = c->fast_cmd.id_ref_A;
-    fi.i_ref.q = c->fast_cmd.iq_ref_A;
+    fi.i_ref.d = cmd.id_ref_A;
+    fi.i_ref.q = cmd.iq_ref_A;
     fi.sin_th = sinf(c->theta_e);
     fi.cos_th = cosf(c->theta_e);
     fi.omega_e = c->hall.omega_e;
