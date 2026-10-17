@@ -8,7 +8,8 @@ Loop at the summary period:
      rejects normal operation on `debounce` consecutive evaluations;
   3. after detection, let the scheduler request records, wait, or stop;
   4. at the stop (or the deadline), make the final decision on all evidence received for the decision
-     window, which starts at detection.
+     window, which starts at detection (or with the fetched records that detected the fault); when no
+     modelled cause fits the whole window, a change point inside it is tested (decide_final).
 
 Evidence is assembled without double counting: where full-rate records were fetched, they replace the
 summary for that time, because both measure the same quantities. Ground truth is not visible here; the
@@ -73,6 +74,10 @@ class View:
     deadline_local: Optional[float]
     engine: EngineConfig = EngineConfig()
     tested: dict = dataclasses.field(default_factory=dict)   # hypothesis -> end of the latest fetched window that tested it
+    window_start: Optional[float] = None     # start of the decision window (detected_at unless fetched records detected)
+
+    def decision_start(self) -> Optional[float]:
+        return self.window_start if self.window_start is not None else self.detected_at
 
 
 def frame_rels(seg: Segment, imu: bool) -> dict:
@@ -129,6 +134,35 @@ def decide(view: View, t0: float, t1: float, rc: RunConfig, st: Study) -> Diagno
     return d
 
 
+CHANGE_MIN_AFTER_S = 8.0       # a change point leaves at least this much of the window after it
+CHANGE_STEP_S = 2.0            # candidate change points: every 2 s of the window
+CHANGE_MAX_CANDIDATES = 16
+
+
+def decide_final(view: View, t0: float, t1: float, rc: RunConfig, st: Study) -> Diagnosis:
+    """The final decision. Every hypothesis has a constant size over the window, so a fault that began
+    inside the window can leave no modelled cause fitting. When the whole window gives "no modelled
+    cause fits", candidate change points are tried in time order (every 2 s): the first one before
+    which normal operation is not rejected and after which a modelled cause fits is reported, with the
+    change point in the reason. Otherwise "no fit" stands."""
+    d = decide(view, t0, t1, rc, st)
+    if d.outcome != "no_fit":
+        return d
+    cands = [t0 + CHANGE_STEP_S * k for k in range(1, int((t1 - t0) / CHANGE_STEP_S) + 1)]
+    cands = [c for c in cands if c <= t1 - CHANGE_MIN_AFTER_S]
+    if len(cands) > CHANGE_MAX_CANDIDATES:
+        cands = [cands[int(round(i * (len(cands) - 1) / (CHANGE_MAX_CANDIDATES - 1)))] for i in range(CHANGE_MAX_CANDIDATES)]
+    for c in cands:
+        if decide(view, t0, c, rc, st).outcome not in ("consistent", "insufficient"):
+            continue
+        post = decide(view, c, t1, rc, st)
+        if post.outcome in ("supported", "unresolved"):
+            post.reason = (f"normal operation is not rejected before {c - t0:.1f} s and a modelled cause fits after it "
+                           f"(a fault that began inside the window); " + post.reason)
+            return post
+    return d
+
+
 def run_episode(ep: Episode, scheduler, rc: RunConfig = RunConfig(), st: Study = Study()) -> dict:
     acc = Access(ep)
     view = View(acc.now_local(), [], [], 0, None, None, None, TIMING[rc.default_timing], 0, rc.byte_budget,
@@ -175,7 +209,8 @@ def run_episode(ep: Episode, scheduler, rc: RunConfig = RunConfig(), st: Study =
                                         rc.engine, view.timing_s, (lo, hi), "frames")
                     cpu += time.process_time() - c0
                     if d.outcome in ("supported", "unresolved", "no_fit"):
-                        view.detected_at = lo
+                        # detected now, when the records arrived; the decision window starts with them
+                        view.detected_at, view.window_start = view.now_local, lo
                         view.deadline_local = view.now_local + rc.deadline_s
                         timeline.append((view.now_local, "detected", "fetched records: " + d.outcome + " "
                                          + ",".join(d.hypotheses)))
@@ -202,7 +237,7 @@ def run_episode(ep: Episode, scheduler, rc: RunConfig = RunConfig(), st: Study =
         # the scheduler acts on every step (fixed-rate schedulers also before detection)
         c0 = time.process_time()
         if view.detected_at is not None and (new_r or view.current is None or view.now_local >= last_decide + 2.0):
-            view.current = decide(view, view.detected_at, view.now_local, rc, st)
+            view.current = decide(view, view.decision_start(), view.now_local, rc, st)
             last_decide = view.now_local
             state = (view.current.outcome, view.current.hypotheses)
             if state != last_state:                    # the assessment changed: record it
@@ -224,13 +259,13 @@ def run_episode(ep: Episode, scheduler, rc: RunConfig = RunConfig(), st: Study =
         stop = action == "stop" or (view.deadline_local is not None and view.now_local >= view.deadline_local)
         if view.detected_at is not None and stop and view.pending == 0:
             c0 = time.process_time()
-            d = decide(view, view.detected_at, view.now_local, rc, st)
+            d = decide_final(view, view.decision_start(), view.now_local, rc, st)
             cpu += time.process_time() - c0
             if d.outcome in ("consistent", "insufficient"):
                 # the alarm is cleared: record it, re-arm the monitor and keep watching
-                cleared.append((view.detected_at, view.now_local))
+                cleared.append((view.decision_start(), view.now_local))
                 timeline.append((view.now_local, "cleared", d.outcome + "; monitoring resumes"))
-                view.detected_at = view.deadline_local = view.current = None
+                view.detected_at = view.window_start = view.deadline_local = view.current = None
                 last_state, streak = None, 0
                 getattr(scheduler, "reset", lambda: None)()
                 if t_true >= ep.spec.duration_s:

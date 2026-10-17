@@ -64,15 +64,17 @@ z_h = (J_h − n) / √(2n), where n is the number of samples.
 
 ## 4. Evidence assembly in an episode
 
-**Detection.** A fault is detected by the summary monitor (the last 20 s of summaries, evaluated every second, two consecutive rejections). Fetched full-rate records can also detect it: each one is diagnosed on its own when it arrives. A fetched window found consistent marks as tested each hypothesis it could have shown (reference power at least 4), stamped with the window's end, not with its arrival time.
+**Detection.** A fault is detected by the summary monitor (the last 20 s of summaries, evaluated every second, two consecutive rejections). Fetched full-rate records can also detect it: each one is diagnosed on its own when it arrives. The detection time is the time of the evaluation, or of the records' arrival. A fetched window found consistent marks as tested each hypothesis it could have shown (reference power at least 4), stamped with the window's end, not with its arrival time.
 
 **Cleared alarms.** When the decision after an alarm is "consistent" or "insufficient", the alarm is cleared and counted, the monitor is re-armed and the episode continues.
 
-**Decision window.** It starts at detection. Within it:
+**Decision window.** It starts at detection, or with the fetched records that detected the fault. Within it:
 
 - fetched frame segments are used first (highest rate first, without overlaps);
 - the summary covers the remaining time;
 - the summary is never used for time covered by frames, because both measure the same quantities.
+
+**A fault that began inside the window.** Every hypothesis has a constant size over the window. When the final decision on the whole window is "no modelled cause fits", change points every 2 s are tried in time order, leaving at least 8 s after each: the first one before which normal operation is not rejected and after which a modelled cause fits is reported, with the change point in the reason. If none qualifies, "no modelled cause fits" stands.
 
 **Timing bound.** It is 0.1 s until clock metadata shows the receipt path to be tight (jitter between consecutive sequence numbers below 5 ms); then it is 5 ms.
 

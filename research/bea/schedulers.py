@@ -271,7 +271,7 @@ class EventCapture:
         if not self.sent:
             self.sent = True
             ch = ALL_CHANNELS + (("imu",) if view.imu_available else ())
-            return [Request("clockmeta"), _buffer(ch, view.detected_at - 5.0, view.now_local),
+            return [Request("clockmeta"), _buffer(ch, view.decision_start() - 5.0, view.now_local),
                     Request("capture", ch, 0.0, 0.0, 20.0, 1)]
         return "stop" if view.pending == 0 else None
 
@@ -336,7 +336,7 @@ class _Directed:
                 self.stopped = True
                 return "stop"
             pairs = [(h, g) for i, h in enumerate(hyps) for g in hyps[i + 1:]] or [(h, "H0") for h in hyps]
-            since = view.detected_at
+            since = view.decision_start()
         cands = [c for c in candidates(view, since) if not _fetched(view, c)
                  and view.bytes_used + c.bytes <= self.rc.byte_budget]
         if view.detected_at is None:

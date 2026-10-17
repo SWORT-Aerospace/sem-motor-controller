@@ -27,7 +27,6 @@ from research.bea import diagnosis as D  # noqa: E402
 from research.bea import episode as E  # noqa: E402
 from research.bea import harness as H  # noqa: E402
 from research.bea import schedulers as S  # noqa: E402
-from research.bea.scoring import score  # noqa: E402
 
 OUT = ROOT / "research" / "generated" / "pilot"
 CAL_FILE = OUT / "calibration.json"
@@ -143,43 +142,62 @@ def calibrate_baselines(n: int, procs: int) -> dict:
 
 
 # ----------------------------------------------------------------------------- development runs
-def _dev_worker(args) -> list:
-    i, kind, names, d_budget = args
+ABLATIONS = ("F_noamb", "F_notiming", "F_doublecount")
+PAIRED = [["F", "A"], ["F", "B"], ["F", "C"], ["F", "D"], ["F", "E"],
+          ["F", "F_noamb"], ["F", "F_notiming"], ["F", "F_doublecount"]]
+
+
+def pilot_manifest(d_budget: int) -> dict:
+    """The parts of a manifest that the final runner's functions read, from the calibration file."""
+    cal = json.loads(CAL_FILE.read_text())
+    return {"calibration": {**cal["engine"], "aligned_thresholds": cal["aligned_thresholds"],
+                            "frozen_monitors": {k: cal["frozen_monitors"][k] for k in ("e6", "lam", "trust_thr")}},
+            "budgets": {"byte_budget": 200000, "deadline_s": 40.0, "decide_after_s": 20.0, "d_budget_bytes": d_budget},
+            "compare": {"window_s": [45.0, 70.0], "mht_p_accept": 0.95},
+            "analysis": {"paired": PAIRED, "target_risk": 0.05, "bootstrap_resamples": 1000}}
+
+
+def _dev_worker(args) -> dict:
+    from research import run_final as RF
+    i, kind, names, d_budget, compare = args
     spec = H.draw_episode(SEED_BASE["dev"] + i, "dev", kind)
     ep = H.run_vehicle(spec)
-    rc = load_config()
-    out = []
-    for name in names:
-        t0 = time.time()
-        res = E.run_episode(ep, make_scheduler(name, rc, d_budget, i), rc)
-        sc = score(res, spec.fault.onset_s, rc.imu_available)
-        out.append({"i": i, "kind": kind, "cycle": spec.cycle, "size": spec.fault.size, "scheduler": name,
-                    **{k: res[k] for k in ("outcome", "hypotheses", "bytes", "requests", "cpu_s")},
-                    **sc, "wall_s": round(time.time() - t0, 2), "reason": res["reason"][:200]})
-    return out
+    man = pilot_manifest(d_budget)
+    rc = RF.config(man)
+    rows = RF.episode_rows(ep, spec, list(names), rc, d_budget, i)
+    for r in rows:
+        r["i"] = i
+    comp = {"seed": i, "kind": kind, **RF.compare_on_identical_records(ep, man, rc)} if compare else None
+    return {"rows": rows, "compare": comp}
 
 
 def dev(per_kind: int, procs: int) -> list:
-    jobs = [(k * 1000 + j, kind, ("A", "B", "C", "E", "F"), 0)
+    from research import run_final as RF
+    jobs = [(k * 1000 + j, kind, ("A", "B", "C", "E", "F") + ABLATIONS, 0, True)
             for k, kind in enumerate(DEV_KINDS) for j in range(per_kind)]
     with mp.Pool(procs) as pool:
-        rows = [r for part in pool.map(_dev_worker, jobs) for r in part]
+        out = pool.map(_dev_worker, jobs, chunksize=1)
+    rows = [r for o in out for r in o["rows"]]
+    comp = [o["compare"] for o in out]
     f_bytes = [r["bytes"] for r in rows if r["scheduler"] == "F"]
     d_budget = int(np.mean(f_bytes)) if f_bytes else 60000
-    jobs = [(i, kind, ("D",), d_budget) for (i, kind, _n, _b) in jobs]
+    jobs = [(i, kind, ("D",), d_budget, False) for (i, kind, *_rest) in jobs]
     with mp.Pool(procs) as pool:
-        rows += [r for part in pool.map(_dev_worker, jobs) for r in part]
+        rows += [r for o in pool.map(_dev_worker, jobs, chunksize=1) for r in o["rows"]]
+    stats = RF.analyse(rows, comp, pilot_manifest(d_budget))
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "dev_results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
-    (OUT / "dev_summary.md").write_text(summarise(rows, d_budget))
+    (OUT / "dev_compare.jsonl").write_text("".join(json.dumps(c) + "\n" for c in comp))
+    (OUT / "dev_stats.json").write_text(json.dumps(stats, indent=1, default=float) + "\n")
+    (OUT / "dev_summary.md").write_text(summarise(rows, d_budget, stats))
     return rows
 
 
-def summarise(rows: list, d_budget: int) -> str:
+def summarise(rows: list, d_budget: int, stats: dict) -> str:
     cats = ("correct", "wrong", "unresolved_incl", "unresolved_excl", "no_fit", "missed", "undecided")
     L = ["# Development pilot (not the final evaluation)", "",
          f"Development split only; thresholds from the calibration split. D's byte budget is matched to F's mean: {d_budget} B.", ""]
-    for sch in SCHEDULERS:
+    for sch in SCHEDULERS + ABLATIONS:
         rs = [r for r in rows if r["scheduler"] == sch]
         if not rs:
             continue
@@ -198,6 +216,20 @@ def summarise(rows: list, d_budget: int) -> str:
                      f"supported cause {sum(r['category'] == 'false_alarm_wrong' for r in h0)} | | | | | | "
                      f"| {np.mean([r['bytes'] for r in h0]):.0f} | |")
         L.append("")
+    L += ["## Paired differences over fault episodes (bootstrap 95 % intervals; development data)", "",
+          "| Comparison | difference | interval | n |", "|---|---|---|---|"]
+    for k, v in stats["pairs"].items():
+        if k.endswith("/matched"):
+            L.append(f"| {k} | coverage {v['matched_coverage']:.2f}: risk {v['risk_diff']:+.3f} "
+                     f"[{v['risk_diff_ci'][0]:+.3f}, {v['risk_diff_ci'][1]:+.3f}]; coverage at risk {v['target_risk']:g}: "
+                     f"{v['coverage_diff']:+.3f} [{v['coverage_diff_ci'][0]:+.3f}, {v['coverage_diff_ci'][1]:+.3f}] | | {v['n']} |")
+        else:
+            L.append(f"| {k} | {v['diff']:+.3f} | [{v['lo']:+.3f}, {v['hi']:+.3f}] | {v['n']} |")
+    L += ["", "## Engines on identical records (45 to 70 s of each episode)", "", "| Engine | true cause | outcomes |",
+          "|---|---|---|"]
+    for eng, by in stats["compare"].items():
+        for t, cats in sorted(by.items()):
+            L.append(f"| {eng} | {t} | " + ", ".join(f"{k} {v}" for k, v in sorted(cats.items())) + " |")
     return "\n".join(L) + "\n"
 
 

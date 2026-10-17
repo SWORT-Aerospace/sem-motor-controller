@@ -68,13 +68,34 @@ def config(man: dict) -> E.RunConfig:
                        decide_after_s=man["budgets"]["decide_after_s"])
 
 
-def make(name: str, rc: E.RunConfig, man: dict, seed: int):
-    if name == "D":
-        return S.RandomBursts(rc, man["budgets"]["d_budget_bytes"], seed)
+def make_variant(name: str, rc: E.RunConfig, d_budget: int, seed: int) -> tuple:
+    """(scheduler, run configuration) for a scheduler A to F or an ablation of F."""
+    if name == "F_notiming":
+        rc = dataclasses.replace(rc, engine=dataclasses.replace(rc.engine, timing=False))
+        return S.AmbiguityDirected(rc), rc
+    if name == "F_doublecount":
+        rc = dataclasses.replace(rc, double_count=True)
+        return S.AmbiguityDirected(rc), rc
     if name == "F_noamb":
-        return S.AmbiguityDirectedNoAmbiguity(rc)
+        return S.AmbiguityDirectedNoAmbiguity(rc), rc
+    if name == "D":
+        return S.RandomBursts(rc, d_budget, seed), rc
     return {"A": S.FixedLow, "B": S.FixedHigh, "C": S.EventCapture, "E": S.InformationGain,
-            "F": S.AmbiguityDirected}[name](rc)
+            "F": S.AmbiguityDirected}[name](rc), rc
+
+
+def episode_rows(ep, spec, names: list, rc: E.RunConfig, d_budget: int, seed: int) -> list:
+    """Every scheduler and ablation on one episode (the same records for all: paired)."""
+    rows = []
+    for name in names:
+        sch, rc_i = make_variant(name, rc, d_budget, seed % 100000)
+        t0 = time.time()
+        res = E.run_episode(ep, sch, rc_i)
+        rows.append({"seed": seed, "kind": spec.fault.kind, "cycle": spec.cycle, "size": spec.fault.size, "scheduler": name,
+                     **{k: res[k] for k in ("outcome", "hypotheses", "bytes", "requests", "cpu_s", "J")},
+                     "confidence": confidence(res), **score(res, spec.fault.onset_s, rc.imu_available),
+                     "wall_s": round(time.time() - t0, 2), "reason": res["reason"][:300]})
+    return rows
 
 
 # ----------------------------------------------------------------------------- workers
@@ -83,23 +104,8 @@ def _episode_worker(args) -> dict:
     spec = H.draw_episode(seed, split, kind)
     ep = H.run_vehicle(spec)
     rc = config(man)
-    rows = []
-    for name in man["schedulers"] + man["ablations"]["schedulers"]:
-        rc_i = rc
-        if name == "F_notiming":
-            rc_i = dataclasses.replace(rc, engine=dataclasses.replace(rc.engine, timing=False))
-            sch = S.AmbiguityDirected(rc_i)
-        elif name == "F_doublecount":
-            rc_i = dataclasses.replace(rc, double_count=True)
-            sch = S.AmbiguityDirected(rc_i)
-        else:
-            sch = make(name, rc, man, seed % 100000)
-        t0 = time.time()
-        res = E.run_episode(ep, sch, rc_i)
-        rows.append({"seed": seed, "kind": kind, "cycle": spec.cycle, "size": spec.fault.size, "scheduler": name,
-                     **{k: res[k] for k in ("outcome", "hypotheses", "bytes", "requests", "cpu_s", "J")},
-                     "confidence": confidence(res),
-                     **score(res, spec.fault.onset_s, rc.imu_available), "wall_s": round(time.time() - t0, 2)})
+    rows = episode_rows(ep, spec, man["schedulers"] + man["ablations"]["schedulers"], rc,
+                        man["budgets"]["d_budget_bytes"], seed)
     comp = compare_on_identical_records(ep, man, rc)
     return {"rows": rows, "compare": {"seed": seed, "kind": kind, **comp}}
 
@@ -152,6 +158,8 @@ CATS = ("correct", "wrong", "unresolved_incl", "unresolved_excl", "no_fit", "mis
 
 def bootstrap_diff(a: np.ndarray, b: np.ndarray, n: int = 4000, seed: int = 1) -> tuple:
     """Paired difference of means (a - b) over episodes, with a percentile bootstrap 95 % interval."""
+    if len(a) == 0:
+        return math.nan, math.nan, math.nan
     rng = np.random.default_rng(seed)
     d = a - b
     idx = rng.integers(0, len(d), (n, len(d)))
@@ -169,6 +177,10 @@ def matched(A: dict, B: dict, common: list, target_risk: float, n_boot: int, see
     """Risk at matched coverage (the lower of the two coverages: the more confident decisions of the
     scheduler that commits more often are compared with all decisions of the other) and coverage at the
     pre-registered risk, each as a paired difference a - b with a bootstrap 95 % interval over episodes."""
+    if not common:
+        return {"matched_coverage": math.nan, "risk_diff": math.nan, "risk_diff_ci": [math.nan, math.nan],
+                "target_risk": target_risk, "coverage_diff": math.nan, "coverage_diff_ci": [math.nan, math.nan], "n": 0}
+
     def stat(ids):
         cov = min(sum(A[s]["category"] in ("correct", "wrong") for s in ids),
                   sum(B[s]["category"] in ("correct", "wrong") for s in ids)) / len(ids)

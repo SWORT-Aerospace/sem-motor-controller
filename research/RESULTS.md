@@ -61,9 +61,30 @@ The alarms on clean episodes were the same seven episodes for every scheduler: t
 | On the summary, the coast deceleration paired wheel windows five messages (2.5 s) apart but divided by 0.5 s, overstating the deceleration fivefold; the wheel-count quantisation (0.47 m/s per count in a 0.1 s window) hid this in most windows, not all (−287 N in one calibration window) | windows are paired by their actual spacing |
 | Audits chose, among windows of equal value and cost, the oldest one in the 60 s look-back, often from before the fault; a window found fault-free was counted as testing the present for 30 s after it arrived | a fault-free window counts as testing until 30 s after its own end; audits only consider windows later than the last test; ties go to the most recent window |
 
+**Found by pilot round 3** (the same episodes; [`generated/pilot/round3/`](generated/pilot/round3/)). Correct outcomes per scheduler:
+
+| Scheduler | bias (10) | timing (10) | load (20) | unmodelled reported as no fit (10) | clean episodes with an alarm (20) | mean bytes |
+|---|---|---|---|---|---|---|
+| A | 10 | 0 | 19 | 2 | 1 | 0 |
+| B | 9 | 3 | 13 | 3 | 1 | 184 938 |
+| C | 10 | 0 | 20 | 6 | 1 | 63 836 |
+| D | 10 | 1 | 19 | 2 | 1 | 31 856 |
+| E | 10 | 7 | 18 | 5 | 1 | 40 089 |
+| F | 10 | 7 | 19 | 5 | 1 | 36 246 |
+
+The changes after round 2 removed six of the seven alarms on clean episodes and every "no modelled cause fits" outcome of A, C and D. B, which fetches every channel continuously in 5 s blocks, still ended "no modelled cause fits" on 7 of 40 fault episodes.
+
+| Cause | Change |
+|---|---|
+| When fetched records detected a fault, the detection was stamped with the start of the fetched block rather than with the time the records arrived, so B's detections looked earlier than the onset | the detection time is the arrival time; the decision window still starts with the records that detected the fault |
+| Every hypothesis has a constant size over the decision window. When the window starts with a block that straddles the onset, normal operation fits the part before it and no constant fault fits the whole | when the whole window gives "no modelled cause fits", the final decision tries change points every 2 s, in time order: the first one before which normal operation is not rejected and after which a modelled cause fits is reported, with the change point in the reason; otherwise "no fit" stands |
+| The pilot did not run the ablations or the engine comparison on identical records | both are part of the pilot from round 4 on, so their effect sizes inform the pre-registration |
+
+Round 4 is the last development round: the protocol is frozen after it, whatever it shows.
+
 ## 2. Development pilot, final round
 
-Pending: round 3 of the development pilot, with the changes above, is the last before the pre-registration.
+Pending: round 4 of the development pilot, with the changes above, is the last before the pre-registration.
 
 ## 3. Final evaluation
 
