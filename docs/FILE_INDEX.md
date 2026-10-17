@@ -456,6 +456,7 @@ A separate research area: budgeted evidence acquisition for timing-aware diagnos
 | `tests/research/test_bvls.py` | The bounded least-squares solver against exhaustive enumeration, including collinear and badly scaled columns |
 | `tests/research/test_identifiability.py` | The exact claims of `research/IDENTIFIABILITY.md` on the study model |
 | `tests/research/test_records.py` | Acquisition intervals, sequence gaps across the wrap, duplicates, stale runs, alignment bounds |
+| `tests/research/test_boundary.py` | The research code is diagnostic only: its imports cannot reach CAN, MQTT, serial, sockets or controller command paths; the recorder shares only the firmware CRC |
 | `tests/research/test_scoring.py` | Scoring categories, the confidence of a decision, risk at a given coverage and coverage at a given risk |
 
 ## tests/

@@ -69,6 +69,8 @@ jobs:
           python tools/run_optimization.py --quick
           python tools/run_electrical_calcs.py
           python tools/run_csia_study.py
+      - name: Research generated results are current (identifiability study, about a minute)
+        run: python research/run_identifiability.py --check
   erc:
     # Real KiCad ERC on the committed draft schematic. Ubuntu 24.04 ships KiCad 7,
     # whose kicad-cli has no `sch erc`; KiCad 8 comes from the KiCad project's PPA.
