@@ -28,18 +28,20 @@ CURRENT = {"README.md", "CONTRIBUTING.md", "docs/STATUS.md", "docs/ICD.md", "doc
            "docs/README.md", "docs/FILE_INDEX.md", "docs/INTEGRATION_GUIDE.md", "docs/IMPLEMENTATION_PLAN.md",
            "docs/DESIGN_DECISIONS.md", "docs/DEVELOPMENT.md", "docs/MATH_SPEC.md",
            "config/README.md", "firmware/README.md", "protocol/README.md", "host/README.md", "models/README.md",
-           "hardware/README.md", "tools/README.md", "tests/README.md"}
+           "hardware/README.md", "tools/README.md", "tests/README.md",
+           "research/README.md", "research/PROTOCOL.md", "research/PRIOR_ART.md", "research/IDENTIFIABILITY.md",
+           "research/generated/identifiability.md"}
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)")
 EXT = r"(?:md|py|yaml|yml|json|csv|c|h|txt|sh|toml|cmake|kicad_sch|net)"
 TICK = re.compile(r"`([A-Za-z0-9_./-]+\." + EXT + r")`")
-PLAIN = re.compile(r"(?<![\w`/.-])((?:docs|tools|host|firmware|hardware|config|protocol|tests|models)/[A-Za-z0-9_./-]+\."
+PLAIN = re.compile(r"(?<![\w`/.-])((?:docs|tools|host|firmware|hardware|config|protocol|tests|models|research)/[A-Za-z0-9_./-]+\."
                    + EXT + r")\b")
 # Outputs that tools write but that are deliberately not committed (CI artifacts, smoke runs): a current
 # document may name them although they are absent from a clean checkout.
 UNTRACKED_OUTPUTS = {"hardware/kicad/ERC_REPORT.json", "hardware/kicad/ERC_REPORT.rpt",
                      "docs/generated/csia_evaluation_smoke.md", "docs/generated/csia_evaluation_smoke.json"}
 ROOTS = ("docs/", "tools/", "host/", "firmware/", "hardware/", "config/", "protocol/", "tests/", "models/",
-         ".github/", "README.md")
+         "research/", ".github/", "README.md")
 
 
 def slug(heading: str) -> str:

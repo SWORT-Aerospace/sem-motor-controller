@@ -2,7 +2,7 @@
 
 Every file in the repository, by folder, with its role. Generated files and test fixtures are marked or grouped; build outputs (`build/`, `.deps/`, `.venv/`) are not part of the tree. The documents in `docs/` are listed with their status in [`README.md`](README.md) (current guides, verification results, research, historical records). Each folder has its own guide: [`config/`](../config/README.md), [`firmware/`](../firmware/README.md), [`protocol/`](../protocol/README.md), [`host/`](../host/README.md), [`models/`](../models/README.md), [`hardware/`](../hardware/README.md), [`tools/`](../tools/README.md), [`tests/`](../tests/README.md).
 
-Contents: [Repository root](#repository-root) · [config/](#config) · [firmware/](#firmware) · [protocol/](#protocol) · [host/](#host) · [models/](#models) · [hardware/](#hardware-hardware) · [tools/](#tools-tools) · [tests/](#tests)
+Contents: [Repository root](#repository-root) · [config/](#config) · [firmware/](#firmware) · [protocol/](#protocol) · [host/](#host) · [models/](#models) · [hardware/](#hardware-hardware) · [tools/](#tools-tools) · [research/](#research-research) · [tests/](#tests)
 
 ## Repository root
 
@@ -412,6 +412,24 @@ Paths are relative to the repository root. Every parameter set in this directory
 |---|---|
 | `tools/mqtt/compose.yaml` | Container definition of a local pit broker (eclipse-mosquitto 2.0.18, pinned) for manual work; not used by the tests. |
 | `tools/mqtt/mosquitto.conf` | Loopback-only, unauthenticated Mosquitto configuration with persistence, used by the container and by a manual `mosquitto -c` run. |
+
+## Research (`research/`)
+
+A separate research area: budgeted evidence acquisition for timing-aware diagnosis. Host simulation only; nothing in it runs on the vehicle or changes the controller. Overview: [`../research/README.md`](../research/README.md).
+
+| File | Role in the system |
+|---|---|
+| `research/README.md` | Research question, status of each step, layout and commands |
+| `research/PROTOCOL.md` | Protocol: hypotheses, baseline at the start, electrical measurement boundary, decision gates, data separation, comparisons, reporting |
+| `research/PRIOR_ART.md` | Prior-art review with the access level of every source, baselines derived from it, claims not to make |
+| `research/IDENTIFIABILITY.md` | Identifiability analysis (gate 1): signature model, exact ambiguity conditions, cases A to E, identifiability matrix, gate decision |
+| `research/run_identifiability.py` | Runs the identifiability study and writes `research/generated/identifiability.*`; `--check` recomputes and compares |
+| `research/generated/identifiability.json`, `research/generated/identifiability.md` | Generated results of the identifiability study (do not edit) |
+| `research/bea/records.py` | Measurement record model: receipt and source time, clock domain and bounds, window, sequence, quality flags, calibration identity; loss, duplicate and stale checks |
+| `research/bea/identifiability.py` | Synthetic truth trajectories, relationships R1 to R5 with their signatures and noise, bounded least squares, separation distances, timing-kind comparison |
+| `tests/research/test_bvls.py` | The bounded least-squares solver against exhaustive enumeration, including collinear and badly scaled columns |
+| `tests/research/test_identifiability.py` | The exact claims of `research/IDENTIFIABILITY.md` on the study model |
+| `tests/research/test_records.py` | Acquisition intervals, sequence gaps across the wrap, duplicates, stale runs, alignment bounds |
 
 ## tests/
 
