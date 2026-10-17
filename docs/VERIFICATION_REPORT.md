@@ -1,4 +1,4 @@
-# Verification report (v0.4)
+# Verification report (v0.4; v0.5 in section 7)
 
 Environment of every result here: x86-64 Linux host (Python 3.13.16, gcc 13.3, cmake 3.28, arm-none-eabi-gcc 13.2.1, KiCad 7.0.11) and GitHub-hosted ubuntu-24.04 runners (KiCad 8.0.9 for ERC). Nothing here was run on hardware. Commands are run from the repository root. Documentation and previously reported test counts were not taken as evidence: each line below was re-run.
 
@@ -101,6 +101,15 @@ Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-A
 | The host demo's summary pointed at a CSIA document that does not exist (`CSIA_EVALUATION_v2.md` in `docs/`) | `tools/check_links.py` (paths in current documents) | points at `docs/csia/EVALUATION_PROTOCOL_v2.md` and `EVALUATION_RESULTS_v2.md` |
 | A refused hand-over to the uplink would have lost the message (the simulated link never refused, so this path had never run) | the real MQTT link (a client can refuse when its buffer is full) | the message returns to the bounded backlog; a test covers it |
 | Mosquitto started as root dropped privileges, could not write its persistence, and after a crash acknowledged messages that no subscriber received | MQTT smoke test (session lost: `session_present=False`) | `tools/mqtt_broker.py` keeps the starting user when root; the general behaviour stays as a test (`test_broker_acknowledgement_is_not_end_to_end_delivery`) |
+| `run_optimization.py --quick` (CI, `verify_all.py` quick mode) overwrote the committed full-resolution study results with coarse-grid ones | folder-guide review of `tools/` and `models/` | `--quick` writes to `build/optimization_quick/`; `--out DIR` added; a quick run leaves `docs/generated/` unchanged (checked) |
+| `run_pit_replay.py` added its configuration notes (changed configuration hash, missing counting window) after the report was written, so they reached only the console | folder-guide review of `host/` | `shadow_replay.run(..., notes=...)` writes them into the evidence list; test `test_cli_writes_configuration_notes_into_the_report` |
+| The C test of the identifier block listed 15 of the 16 messages (`ctrl_energy_quality`, 0x323, missing) | folder-guide review of `protocol/` | listed, and the count is checked |
+| `telematics_budget.py` labelled the controller traffic as 11 messages; its 394 frames/s count 12 | same | label corrected, report regenerated |
+| `resistive_force_np` was documented as tested for equality with `resistive_force`, but no test compared them | folder-guide review of `models/` | `test_vectorised_resistive_force_equals_scalar_form` |
+| Generated check reports and records still said the KiCad ERC had not run or remained a blocker (`CONNECTIVITY_CHECK.md`, `PIN_TYPE_CHECK.md`, `PINOUT_VERIFICATION.md`, `HARDWARE_ARCHITECTURE.md`); it has run in CI since v0.4 | folder-guide review of `hardware/` | generator texts and records corrected; historical records (`REVIEW_v0.3.md`, `CHECKPOINT_v0.2.md`) carry a banner instead of being rewritten |
+| `docs/CONTROL_CONTRACT.md` 4 cited a timing file, MCU_TIMING_ALLOCATION.md, that does not exist | folder-guide review of `firmware/` | points at `hardware/timing/timing_budget.md` |
+| Stale counts in current documents (MQTT demonstration "ten checks", host demonstration "nine checks") | review | 12 and 10, as the summaries show |
+| The quick start creates `.venv/` in the repository, which `.gitignore` did not ignore | review of the quick start | `.venv/` ignored |
 
 ### 7.2 Design findings (not defects)
 
@@ -108,6 +117,20 @@ Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-A
 * The telematics proposal's BQ25622E charger implies an on-board battery; 2026 Article 57b allows no accessory battery on a Battery Electric vehicle.
 * Telemetry energy counts in the official result (Article 56d).
 * An unmodelled 0.1 % grade biases a one-direction coast-down by 40 % in rolling resistance (`generated/coastdown_sensitivity.md`).
+* **Rules edition.** A 2027 Chapter I is listed on the organisers' global-rules page (web search, 2026-10-17); the page and the PDF were refused by the proxy (HTTP 403) and were not read. Every 2026 finding is to be re-checked against the governing edition (`RULES_COMPLIANCE.md`).
+* **Controller behaviours recorded for review, not changed** (`firmware/README.md` 9; `DESIGN_DECISIONS.md` D9): a `SELFTEST` fault is cleared by a fault reset without a new self-test before the next arming; a `HALL_INVALID` fault cannot be cleared by the fault-reset input; `sup_hello` freshness is tracked but nothing reads it, so the ICD's 3 s hello window has no effect; `ctrl_fault` is sent early only on entering or leaving `FAULT_LATCHED`; `rx_len_fail` is never incremented (length errors count as `rx_crc_fail`); `ctrl_identity` always sends hardware revision 0.
+* **Documentation and code disagreements recorded, not changed:**
+  * the code numbers the arbiter layers L0 to L4, while the documents say four layers;
+  * `mc_state_machine.h` lists invariants I1 to I9, while other files say I1 to I7;
+  * `firmware/platform/stm32g4/README.md` quotes about 29.5 kB of text; the last build measured 31,955 bytes;
+  * `protocol/protocol.yaml` cites a hand-calculation test file that is `test_protocol_python.py` (changing the comment changes the spec hash);
+  * the frozen `host/csia_adapter/eval_set.py` cites `DEV_SET_FREEZE.md` for `DEV_SET_FREEZE.json` (a frozen file: not edited);
+  * `hardware/kicad/semmc_schematic_DRAFT.pdf` predates the last sheet change;
+  * `COMPONENT_SELECTION.md` calls the INA228 pins placeholders, while the generator uses KiCad-library numbers;
+  * `docs/generated/verification/verification.md` contains absolute temporary paths;
+  * `docs/generated/bus_load.md` is written by no tool;
+  * CI detects stale committed outputs only for the tools with a `--check` form and the schematic `git diff` gate (`tools/README.md` 2).
+* **Research provenance.** The v0.5 research used GitHub-hosted copies of manufacturer documents and GitHub code search, which reaches repositories outside this project; those copies were used as read-only evidence. One DRV5032 copy (revision H) that was obtained through the Git LFS media host after a refusal is excluded from the evidence; the facts used come from revision F (`TELEMETRY_CANDIDATES.md`).
 
 ### 7.3 Commands run and results
 
@@ -116,3 +139,9 @@ Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-A
 | fresh clone of `042044a`, new virtual environment, Mosquitto 2.0.18 (Ubuntu package extracted locally) | the README "Getting started" commands, in order | ctest 8/8 passed; pytest 249 passed; host demo 9/9; MQTT demo 10/10 |
 | working tree | `tools/run_host_demo.py` before and after the refactor | the 70506 log records are identical (NaN-aware comparison); only the dirty-tree flag in the metadata differs |
 | working tree | `python3 -m pytest tests/integration/test_mqtt_pipeline.py` with `SEMMC_REQUIRE_MQTT=1` | 7 passed |
+| fresh clone of `35871e0`, new virtual environment, Mosquitto 2.0.18 through `SEMMC_MOSQUITTO` | the README section F commands, verbatim, in order | ctest 8/8 passed; pytest 269 passed, 0 skipped, 0 failed; host demo 10/10; pit replay report and `energy.json` written; MQTT demo 12/12; `git status` empty afterwards |
+| working tree | the three README diagrams rendered with `@mermaid-js/mermaid-cli` 11.4.0 (Chromium) | all three render; diagram 1 reordered so the driver controls do not appear to pass through the protection block |
+| working tree | README budget table parsed independently and summed per category | every category's TBD and not-counted counts match the subtotal table; rounded rows sum to at most $1 more than the subtotal (the subtotal is rounded after summing; noted under the table); the total estimate equals `budget.json` S1 `complete_buying_equipment` ($415 to $1,189) |
+| working tree | `tests/integration/test_pit_energy.py` | the README worked example recomputed by independent arithmetic and by the model functions |
+| working tree | `python3 tools/run_optimization.py --quick` | writes `build/optimization_quick/`; `docs/generated/` and `docs/figures/` unchanged |
+| GitHub-hosted CI | runs 38985549136 (push) and 38985552327 (pull request) on `e1b59a6` | success (`host` and `erc`) |

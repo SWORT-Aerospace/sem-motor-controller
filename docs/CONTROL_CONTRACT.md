@@ -43,7 +43,7 @@ Provisional numbers: `slew_up` 5 N·m/s, `slew_down` 10 N·m/s, `slew_down_fast`
 ## 4. Timing on the host model
 
 * Slow (supervisory) update: 1 kHz. The new `iq_ref` is handed to the fast loop in the same slow step (`fast_cmd`). The current loop then tracks it within its bandwidth (synthetic ≈ 1 kHz). "Next control update" in this document means the next slow step.
-* On the target, the handoff needs a sequence lock or a masked copy (`firmware/platform/stm32g4/README.md`). The interrupt timing budget is in `hardware/timing/MCU_TIMING_ALLOCATION.md`.
+* On the target, the handoff needs a sequence lock or a masked copy (`firmware/platform/stm32g4/README.md`). The interrupt timing budget is in `hardware/timing/timing_budget.md` (written by `tools/timing_budget.py`).
 
 ## 5. Evidence
 

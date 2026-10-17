@@ -252,6 +252,8 @@ def totals_lines(d: dict, s: dict) -> list[str]:
             f"* Estimated lines: **{range_text(*t['est'], sign='$')}** over {t['n_est']} lines "
             f"({range_text(*owned, sign='$')} if the development equipment is already owned). These ranges come from the "
             "draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.",
+            "* Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a "
+            "subtotal by a few dollars.",
             f"* Unpriced lines: **{t['unpriced']}** (TBD). They come on top of the estimated range, so the complete "
             "cost is not known.",
             f"* Not counted: {t['not_counted']} lines (optional lines, the borrowed oscilloscope, and parts inside the "

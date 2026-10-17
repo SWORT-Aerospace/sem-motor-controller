@@ -287,6 +287,7 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 
 * Priced subtotal from dated quotes: **none**: none of the 36 counted lines has a dated quote.
 * Estimated lines: **$415 to $1,189** over 17 lines ($296 to $785 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
+* Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a subtotal by a few dollars.
 * Unpriced lines: **19** (TBD). They come on top of the estimated range, so the complete cost is not known.
 * Not counted: 3 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
 * Budget: the project budget is about $500 to $1,000; which lines it must cover is **unconfirmed**. With 19 lines unpriced, a fit within $500 to $1,000 is **not established**.
