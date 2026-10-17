@@ -33,7 +33,7 @@ Please answer what you can, with units and the source (datasheet with page, meas
     * a microscope?
 15. Who performs and signs bench measurements, and what is the lab's procedure for energized tests? Is a spare motor (or a small BLDC) available for the first runs?
 
-## Files to attach directly to this Claude session
+## Files to attach directly
 * `bk4000tg_kicad.zip` and `telemetry.pdf`: supplied in another tool, never received here.
 * The 2027 Chapter I and the event's Chapter II rule PDFs.
 * Datasheet PDFs: STM32G474 (DS12288), RM0440, DRV8353, INA228, TJA1051, LM5164.
