@@ -21,6 +21,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+import numpy as np  # noqa: E402
+
 from research.bea import episode as E  # noqa: E402
 from research.bea import harness as H  # noqa: E402
 from research.bea import schedulers as S  # noqa: E402
@@ -44,14 +46,20 @@ def run_one(name: str, e: dict, rc: E.RunConfig) -> dict:
     spec = H.draw_episode(e["seed"], "demo", e["kind"], cycle=e["cycle"])
     spec = dataclasses.replace(spec, fault=dataclasses.replace(spec.fault, size=e["size"], onset_s=e["onset"]))
     ep = H.run_vehicle(spec)
-    res = E.run_episode(ep, S.AmbiguityDirected(rc), rc)
+    sch = S.AmbiguityDirected(rc)
+    res = E.run_episode(ep, sch, rc)
     off = spec.link.clock.local(0.0)
+    pl = ep.plant
+    edges = [(("drive on" if pl.drive[k + 1] else "coast"), round(float(pl.t[k]), 1))
+             for k in np.flatnonzero(np.diff(pl.drive.astype(int)) != 0) if pl.t[k] >= spec.fault.onset_s]
     return {"name": name, "pit_view": {
                 "timeline": [(round(t - off, 2), kind, text) for t, kind, text in res["timeline"]],
                 "outcome": res["outcome"], "hypotheses": res["hypotheses"], "reason": res["reason"],
                 "bytes": res["bytes"], "requests": res["requests"], "summary_bytes": res["summary_bytes"],
+                "audit_cap_bytes": int(sch.audit_frac * rc.byte_budget), "byte_budget": rc.byte_budget,
                 "estimates": res["estimates"]},
             "evaluation_view": {"fault": dataclasses.asdict(spec.fault), "cycle": spec.cycle,
+                                "drive_transitions_after_onset_s": edges,
                                 **score(res, spec.fault.onset_s, rc.imu_available)}}
 
 
@@ -67,6 +75,13 @@ def explain(r: dict) -> str:
     if p["outcome"] == "supported" and hyps == {"HT"}:
         return ("A timing offset of the bus meter's records fits and no other modelled cause does; it shows only at "
                 "power edges, which the 2 Hz summary does not resolve.")
+    if p["outcome"] == "consistent":
+        return ("Normal operation explains every record received, within the tested model. This is not a statement "
+                "that nothing is wrong: it says only that no modelled fault was found in these records.")
+    if p["outcome"] == "unresolved":
+        return f"A fault is detected; these causes fit equally well and the records cannot separate them: {', '.join(sorted(hyps))}."
+    if p["outcome"] == "no_fit":
+        return "A fault is detected and no modelled cause, alone, fits the records."
     return f"{p['outcome']}: {', '.join(sorted(hyps)) or 'no modelled cause'}."
 
 
@@ -80,10 +95,14 @@ def render(runs: list) -> str:
               "| t [s] | event | detail |", "|---|---|---|"]
         L += [f"| {t:.1f} | {k} | {txt} |" for t, k, txt in p["timeline"]]
         L += ["", f"Final: **{p['outcome']}** {{{', '.join(p['hypotheses'])}}}. {explain(r)}", "",
-              f"Requested: {p['requests']} requests, {p['bytes']} bytes (the live summary used {p['summary_bytes']} bytes "
-              "over the same run).", "",
+              f"Reason recorded with the decision: {p['reason'] or 'no alarm was raised'}", "",
+              f"Requested: {p['requests']} requests, {p['bytes']} bytes, against {p['audit_cap_bytes']} bytes allowed for "
+              f"audits before an alarm and {p['byte_budget']} bytes per episode (the live summary used "
+              f"{p['summary_bytes']} bytes over the same run).", "",
               "**Evaluation view** (the injected truth, not visible to the diagnostic):", "",
               f"- fault: {ev['fault']['kind']}, size {ev['fault']['size']:g}, onset {ev['fault']['onset_s']:g} s; drive cycle {ev['cycle']}",
+              "- drive transitions after the onset (true time, s): "
+              + (", ".join(f"{k} at {t:g}" for k, t in ev["drive_transitions_after_onset_s"]) or "none"),
               f"- scored as: {ev['category']}; detection delay {ev['detect_delay_s'] if ev['detect_delay_s'] is None else round(ev['detect_delay_s'], 1)} s;"
               f" decision delay {ev['decide_delay_s'] if ev['decide_delay_s'] is None else round(ev['decide_delay_s'], 1)} s", ""]
     return "\n".join(L) + "\n"
