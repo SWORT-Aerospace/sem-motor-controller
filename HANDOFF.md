@@ -1,6 +1,6 @@
 # Handoff: first milestone (2026-10-14)
 
-> **Current status is in [`docs/REVIEW_v0.3.md`](docs/REVIEW_v0.3.md) (v0.3) and [`docs/CHECKPOINT_v0.2.md`](docs/CHECKPOINT_v0.2.md) (v0.2, with errata) (2026-10-15).** This file is the v0.1 handoff and is kept as a historical record. Superseded by v0.2:
+> **Current status is in the [README](README.md) and [`docs/STATUS.md`](docs/STATUS.md); every document is indexed in [`docs/README.md`](docs/README.md).** The later records [`docs/REVIEW_v0.3.md`](docs/REVIEW_v0.3.md) (v0.3) and [`docs/CHECKPOINT_v0.2.md`](docs/CHECKPOINT_v0.2.md) (v0.2, with errata) are historical too. This file is the v0.1 handoff and is kept as a historical record. Superseded by v0.2:
 > * the optimiser energies in §2 (39.7 / 46.2 / 55.1 kJ) and every v0.1 savings figure, which are **withdrawn**. The v0.1 model let gate-off coast brake implicitly, left an acceleration-clip residual, and checked corner limits at nodes only (`docs/EFFICIENCY_RESEARCH.md` §4);
 > * the CSIA nuisance and attribution figures in §1, which came from the development scenarios. Held-out results are in `docs/csia/EVALUATION_RESULTS.md`;
 > * the arbiter behaviour, now governed by the four-layer contract (`docs/CONTROL_CONTRACT.md`, ADR-0011), and the test counts.

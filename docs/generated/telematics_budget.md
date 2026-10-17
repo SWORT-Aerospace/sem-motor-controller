@@ -6,7 +6,7 @@
 
 | Source | Frames/s | Basis |
 |---|---|---|
-| semmc controller -> bus (11 messages) | 394 | [P] periods in protocol.yaml |
+| semmc controller -> bus (12 messages) | 394 | [P] periods in protocol.yaml |
 | supervisor -> controller (hello, limits, torque request, CSIA advisory) | 72 | [P]; sent by whichever computer runs the supervisor |
 | BMS (cell V, SOC, temps) [T] rates [A] | 10-50 | assumed |
 | wheel speed node [T] rates [A] | 10-100 | assumed |

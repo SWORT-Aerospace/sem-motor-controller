@@ -7,7 +7,9 @@ The database is the pit's SQLite file with the run's local log imported
 (`host/pit/ingest.py import_log`; the host and MQTT demonstrations do this).
 Vehicle parameters come from the configuration the run's metadata names
 (checked against its SHA-256), the freewheel state from the run's plant record
-or the configuration. Writes OUT/report.md, OUT/report.json, OUT/timeline.csv.
+or the configuration. Writes OUT/report.md, OUT/report.json, OUT/timeline.csv,
+and OUT/energy.json: controller-input energy, wheel distance and Wh/km over the
+run (host/pit/energy.py), with what is missing listed.
 Exit code 0 when a report was written (whatever it found), 2 when the run is
 not in the database.
 
@@ -28,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from host.csia_adapter.adapter import AdapterParams  # noqa: E402
-from host.pit import shadow_replay  # noqa: E402
+from host.pit import energy, shadow_replay  # noqa: E402
 from tools import config_tool as ct  # noqa: E402
 
 
@@ -48,11 +50,15 @@ def params_for_run(meta: dict, config: pathlib.Path | None):
     kt = 1.5 * cfg["motor"]["pole_pairs"] * cfg["motor"]["flux_linkage_Wb"]
     plant = meta.get("plant") or {}
     freewheel = plant.get("freewheel", cfg["vehicle"].get("freewheel_present", True))
-    ppr = (meta.get("sensors") or {}).get("wheel_ppr")
+    sens = meta.get("sensors") or {}
+    ppr = sens.get("wheel_ppr")
+    window = sens.get("wheel_window_s")
     if not C or not gear or not kt or not ppr:
         raise SystemExit("wheel circumference, gear ratio, torque constant or wheel pulses per revolution unknown")
+    if window is None:
+        notes.append("wheel counting window not in the run metadata: 0.1 s assumed for the speed quantisation")
     p = AdapterParams(wheel_radius_m=C / (2 * math.pi), gear_ratio=gear, freewheel=bool(freewheel), kt_Nm_per_A=kt)
-    return p, kt, C / (ppr * 0.1), notes
+    return p, kt, C / (ppr * (window or 0.1)), notes
 
 
 def main() -> int:
@@ -69,13 +75,23 @@ def main() -> int:
         return 2
     meta = json.loads(row[0])
     params, kt, wheel_q, notes = params_for_run(meta, a.config)
-    res = shadow_replay.run(db, a.run, params, kt, wheel_q, a.out)
-    res.setdefault("insufficient", []).extend(notes)
+    res = shadow_replay.run(db, a.run, params, kt, wheel_q, a.out, notes=tuple(notes))
     print(f"REPLAY {res['provenance']['data_class']}: {res.get('ticks', 0)} ticks; report in {a.out}/report.md")
     for mon, eps in (res.get("episodes") or {}).items():
         print(f"REPLAY {mon}: {len(eps)} attribution episode(s)")
     for x in res.get("insufficient", []):
         print(f"REPLAY INSUFFICIENT EVIDENCE: {x}")
+    sens = meta.get("sensors") or {}
+    chans = [v for _k, v in sorted((sens.get("wheel_channels") or {"0": "wheel_0"}).items())]
+    per = [energy.run_summary(db, a.run, c, sens.get("wheel_window_s")) for c in chans]
+    cross = energy.compare_channels(per)
+    (a.out / "energy.json").write_text(json.dumps({"channels": per, "cross_check": cross}, indent=1, sort_keys=True))
+    for en in per:
+        if en["Wh_per_km"] is not None:
+            print(f"REPLAY ENERGY: {en['energy_Wh']:.3f} Wh over {en['distance_m']:.1f} m ({en['channel']}) = "
+                  f"{en['Wh_per_km']:.2f} Wh/km at the controller input")
+    for x in sorted({n for en in per for n in en["notes"]}) + cross:
+        print(f"REPLAY ENERGY NOTE: {x}")
     return 0
 
 

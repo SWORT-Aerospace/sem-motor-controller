@@ -7,7 +7,7 @@
    "pass": true
   },
   {
-   "detail": "supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.32/0.68 ms, broker_down 0.07/1.84 ms, after_broker 0.31/2.54 ms, pit_down 0.28/0.70 ms, after_pit 0.31/0.48 ms (supervisor period 20 ms)",
+   "detail": "supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.31/1.75 ms, broker_down 0.07/0.12 ms, after_broker 0.30/1.41 ms, pit_down 0.30/0.49 ms, after_pit 0.31/1.26 ms (supervisor period 20 ms)",
    "id": "control_and_uplink_unaffected_by_broker_outage",
    "pass": true
   },
@@ -97,7 +97,7 @@
  "kind": "HOST SOFTWARE with a real local MQTT broker (not vehicle firmware)",
  "link_events": [
   [
-   -0.522,
+   -0.525,
    "connect",
    "Success"
   ],
@@ -112,18 +112,18 @@
    "Success"
   ],
   [
-   60.042,
+   60.043,
    "disconnect",
    "Normal disconnection"
   ]
  ],
- "loop_late_s": 0.009097990999180183,
+ "loop_late_s": 0.009574908000104188,
  "pace": 2.0,
  "paho_mqtt": "2.1.0",
  "pit_events": [
   [
    "start",
-   "{\"host\": \"127.0.0.1\", \"port\": 59989, \"topic\": \"sem/car/telemetry\"}"
+   "{\"host\": \"127.0.0.1\", \"port\": 56327, \"topic\": \"sem/car/telemetry\"}"
   ],
   [
    "connect",
@@ -139,7 +139,7 @@
   ],
   [
    "start",
-   "{\"host\": \"127.0.0.1\", \"port\": 59989, \"topic\": \"sem/car/telemetry\"}"
+   "{\"host\": \"127.0.0.1\", \"port\": 56327, \"topic\": \"sem/car/telemetry\"}"
   ],
   [
    "connect",
@@ -156,7 +156,7 @@
  ],
  "pit_exit_code": 0,
  "published": 240,
- "repo_commit": "4da4165f9c8485faba3506b99865f6fff2d7d2a0",
+ "repo_commit": "e1b59a60614ff7bdb766f05994655a0af804f4d3",
  "run_id": "HOSTMQTT-0001",
  "scenario": {
   "broker_down": [
@@ -175,18 +175,18 @@
   ]
  },
  "service_ms_max": {
-  "after_broker": 2.5438220000069123,
-  "after_pit": 0.476784999591473,
-  "broker_down": 1.8422329994791653,
-  "normal": 0.6760140004189452,
-  "pit_down": 0.7024790002105874
+  "after_broker": 1.4149019998512813,
+  "after_pit": 1.262353999663901,
+  "broker_down": 0.12001100003544707,
+  "normal": 1.748517999658361,
+  "pit_down": 0.48742299986770377
  },
  "service_ms_p99": {
-  "after_broker": 0.3116170000794227,
-  "after_pit": 0.31443599982594606,
-  "broker_down": 0.06634799956373172,
-  "normal": 0.3192929998476757,
-  "pit_down": 0.2835650002452894
+  "after_broker": 0.2977539998028078,
+  "after_pit": 0.31272200067178346,
+  "broker_down": 0.07036599981802283,
+  "normal": 0.3054489998248755,
+  "pit_down": 0.3009210004165652
  },
  "working_tree_dirty": true
 }

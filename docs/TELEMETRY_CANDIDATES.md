@@ -122,7 +122,7 @@ Notes. N3 is ST's own repository; every other copy is third-party. Older revisio
 
 ## Pricing and availability
 
-**Blocked.** No distributor page could be opened (list above), so no line has a dated price or stock figure. Search-result snippets were not used as prices. The team obtains dated quotes and enters them with supplier, date and reference in `hardware/bom/telemetry_procurement.yaml`.
+**Blocked.** No distributor page could be opened (list above), so no line has a dated price or stock figure. Search-result snippets were not used as prices. The team obtains dated quotes and enters them with supplier, date and reference in `hardware/bom/procurement.yaml`.
 
 ## Verifications still blocked
 

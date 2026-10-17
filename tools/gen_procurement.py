@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
-"""Generate the telemetry procurement tables from hardware/bom/telemetry_procurement.yaml.
+"""Generate the project procurement tables from hardware/bom/procurement.yaml.
 
     python3 tools/gen_procurement.py           -> README.md (budget table between markers), docs/PROCUREMENT.md
     python3 tools/gen_procurement.py --check   (exit 1 if either is not current)
 
-The YAML file is the only source. The generator refuses it (exit 2) when a price
-has no dated source, when Ordered or Received has no order evidence, or when a
-status is not one of Candidate / Selected / Ordered / Received / Blocked. Unknown
-quantities and costs print as TBD; a line total is printed only when both are
-known; the subtotal counts priced lines only and never lines inside the PCB
-assembly; no estimated total is printed while any line is unpriced.
+The YAML file is the only source of lines. Estimated lines take their low-high
+range from the motor-controller pricing (docs/generated/budget.json, written by
+tools/price_bom.py; bring-up equipment from hardware/bom/pricing.yaml), so each
+number exists once. The generator refuses the file (exit 2) when a price has no
+dated source, when an estimate reference does not resolve, when Ordered or
+Received has no order evidence, or when a status is not one of Candidate /
+Selected / Ordered / Received / Blocked. Unknown quantities and costs print as
+TBD, never as zero. Subtotals leave out optional lines, lines marked not
+budgeted and lines inside the telematics PCB assembly; no total is printed while
+any counted line is unpriced.
 """
 from __future__ import annotations
 
 import argparse
 import datetime
+import json
 import pathlib
 import re
 import sys
@@ -22,14 +27,48 @@ import sys
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = ROOT / "hardware" / "bom" / "telemetry_procurement.yaml"
+SRC = ROOT / "hardware" / "bom" / "procurement.yaml"
+BUDGET = ROOT / "docs" / "generated" / "budget.json"
+PRICING = ROOT / "hardware" / "bom" / "pricing.yaml"
 README = ROOT / "README.md"
 DOC = ROOT / "docs" / "PROCUREMENT.md"
 BEGIN, END = "<!-- procurement-table:begin -->", "<!-- procurement-table:end -->"
 STATUSES = ("Candidate", "Selected", "Ordered", "Received", "Blocked")
 
 
-def validate(d: dict) -> list[str]:
+def load_refs() -> tuple[dict, dict]:
+    return json.loads(BUDGET.read_text()), yaml.safe_load(PRICING.read_text())
+
+
+def resolve(est: dict, d: dict, budget: dict, pricing: dict):
+    """(low, high, evidence) for an estimate reference; raises KeyError or ValueError when it does not resolve."""
+    if "pricing" in est:
+        field, _, prefix = est["pricing"].partition("/")
+        for e in pricing[field]:
+            if e["item"].startswith(prefix):
+                return float(e["low"]), float(e["high"]), f"{e['evidence']} (hardware/bom/pricing.yaml {field})"
+        raise KeyError(f"pricing {est['pricing']!r}")
+    ref = est["budget"]
+    ref, _, scen = ref.partition("@")
+    scen = scen or d["estimate_scenario"]
+    s = budget["scenarios"][scen]
+    field, _, prefix = ref.partition("/")
+    where = f"docs/generated/budget.json, {scen.split()[0]}"
+    if prefix:
+        for label, lo, hi, ev in s[field]:
+            if label.startswith(prefix):
+                return float(lo), float(hi), f"{ev} ({where}: {field})"
+        raise KeyError(f"budget {est['budget']!r}")
+    lo, hi = s[field]
+    if field == "parts":
+        mix = ", ".join(f"{v[2]} {k}" for k, v in budget["by_evidence"].items())
+        return float(lo), float(hi), f"BOM lines by evidence: {mix} ({where}: parts)"
+    return float(lo), float(hi), f"computed by tools/price_bom.py ({where}: {field})"
+
+
+def validate(d: dict, budget: dict | None = None, pricing: dict | None = None) -> list[str]:
+    if budget is None or pricing is None:
+        budget, pricing = load_refs()
     err = []
     cats = d.get("categories", {})
     seen = set()
@@ -42,10 +81,15 @@ def validate(d: dict) -> list[str]:
             err.append(f"{i}: status {it.get('status')!r} not one of {', '.join(STATUSES)}")
         if it.get("category") not in cats:
             err.append(f"{i}: unknown category {it.get('category')!r}")
+        if not it.get("purpose"):
+            err.append(f"{i}: purpose missing")
         q = it.get("qty")
         if q is not None and (not isinstance(q, int) or isinstance(q, bool) or q <= 0):
             err.append(f"{i}: qty must be a positive integer or null")
         c = it.get("unit_cost_usd")
+        kinds = [k for k in ("unit_cost_usd", "estimate", "not_budgeted") if it.get(k) is not None]
+        if len(kinds) > 1:
+            err.append(f"{i}: only one of unit_cost_usd, estimate, not_budgeted may be set (has {', '.join(kinds)})")
         if c is not None:
             pr = it.get("price") or {}
             if not isinstance(c, (int, float)) or isinstance(c, bool) or c < 0:
@@ -57,6 +101,15 @@ def validate(d: dict) -> list[str]:
                     datetime.date.fromisoformat(str(pr["date"]))
                 except ValueError:
                     err.append(f"{i}: price.date {pr['date']!r} is not YYYY-MM-DD")
+        if it.get("estimate") is not None:
+            try:
+                lo, hi, _ = resolve(it["estimate"], d, budget, pricing)
+                if hi <= 0 or lo > hi:
+                    err.append(f"{i}: estimate {lo}-{hi} is empty or inverted; use not_budgeted for a zero line")
+            except (KeyError, ValueError, TypeError) as e:
+                err.append(f"{i}: estimate does not resolve: {e}")
+            if q is None:
+                err.append(f"{i}: an estimate needs a quantity")
         if it.get("status") in ("Ordered", "Received") and not it.get("order_evidence"):
             err.append(f"{i}: status {it['status']} needs order_evidence")
     return err
@@ -66,20 +119,60 @@ def money(x: float) -> str:
     return f"{x:,.2f}"
 
 
-def line_total(it: dict):
+def dollars(x: float) -> str:
+    return f"{x:,.0f}"
+
+
+def cost(it: dict, d: dict, budget: dict, pricing: dict) -> dict:
+    """kind: quote | estimate | not_budgeted | assembly | tbd, with unit and line ranges where known."""
     if it.get("in_assembly") is True:
-        return None
+        return {"kind": "assembly"}
+    if it.get("not_budgeted"):
+        return {"kind": "not_budgeted"}
     q, c = it.get("qty"), it.get("unit_cost_usd")
-    return q * c if q is not None and c is not None else None
+    if c is not None:
+        return {"kind": "quote", "unit": (c, c), "line": (q * c, q * c) if q is not None else None}
+    if it.get("estimate") is not None:
+        lo, hi, ev = resolve(it["estimate"], d, budget, pricing)
+        return {"kind": "estimate", "unit": (lo, hi), "line": (q * lo, q * hi), "evidence": ev}
+    return {"kind": "tbd"}
 
 
-def summary(d: dict) -> dict:
-    items = d["items"]
-    counted = [it for it in items if it.get("in_assembly") is not True]
-    priced = [it for it in counted if line_total(it) is not None]
-    return {"lines": len(items), "counted": len(counted), "priced": len(priced),
-            "unpriced": len(counted) - len(priced), "subtotal": sum(line_total(it) for it in priced),
-            "status": {s: sum(1 for it in items if it["status"] == s) for s in STATUSES}}
+def counted(it: dict, k: dict) -> bool:
+    return not it.get("optional") and k["kind"] not in ("assembly", "not_budgeted")
+
+
+def summary(d: dict, budget: dict | None = None, pricing: dict | None = None) -> dict:
+    if budget is None or pricing is None:
+        budget, pricing = load_refs()
+    cats = {}
+    for key in d["categories"]:
+        cats[key] = {"lines": 0, "counted": 0, "quoted": 0.0, "n_quoted": 0, "est": [0.0, 0.0], "n_est": 0,
+                     "unpriced": 0, "not_counted": 0}
+    for it in d["items"]:
+        k = cost(it, d, budget, pricing)
+        c = cats[it["category"]]
+        c["lines"] += 1
+        if not counted(it, k):
+            c["not_counted"] += 1
+            continue
+        c["counted"] += 1
+        if k["kind"] == "quote" and k["line"] is not None:
+            c["n_quoted"] += 1
+            c["quoted"] += k["line"][0]
+            c["est"][0] += k["line"][0]
+            c["est"][1] += k["line"][1]
+        elif k["kind"] == "estimate":
+            c["n_est"] += 1
+            c["est"][0] += k["line"][0]
+            c["est"][1] += k["line"][1]
+        else:
+            c["unpriced"] += 1
+    tot = {f: sum(c[f] for c in cats.values()) for f in ("lines", "counted", "n_quoted", "n_est", "unpriced",
+                                                          "not_counted", "quoted")}
+    tot["est"] = [sum(c["est"][0] for c in cats.values()), sum(c["est"][1] for c in cats.values())]
+    tot["status"] = {s: sum(1 for it in d["items"] if it["status"] == s) for s in STATUSES}
+    return {"categories": cats, "total": tot}
 
 
 def item_label(it: dict) -> str:
@@ -91,59 +184,123 @@ def item_label(it: dict) -> str:
     return lab
 
 
-def table(d: dict) -> list[str]:
-    L = ["| Item | Qty | Unit cost (USD) | Total (USD) | Status |", "|---|---|---|---|---|"]
+def cells(it: dict, k: dict) -> tuple[str, str, str]:
+    q = it.get("qty")
+    qty = "TBD" if q is None else f"{q} {it['unit']}" if it.get("unit") else str(q)
+    if k["kind"] == "quote":
+        unit = money(k["unit"][0])
+        line = money(k["line"][0]) if k["line"] else "TBD"
+    elif k["kind"] == "estimate":
+        unit = f"est. {dollars(k['unit'][0])} to {dollars(k['unit'][1])}"
+        line = f"est. {dollars(k['line'][0])} to {dollars(k['line'][1])}"
+    elif k["kind"] == "not_budgeted":
+        unit = line = "not budgeted"
+    elif k["kind"] == "assembly":
+        unit, line = "in assembly", "-"
+    else:
+        unit = line = "TBD"
+    return qty, unit, line
+
+
+def table(d: dict, budget: dict, pricing: dict) -> list[str]:
+    L = ["| Item | Purpose | Qty | Unit cost (USD) | Total (USD) | Status |", "|---|---|---|---|---|---|"]
     for key, title in d["categories"].items():
         rows = [it for it in d["items"] if it["category"] == key]
         if not rows:
             continue
-        L.append(f"| **{title}** | | | | |")
+        L.append(f"| **{title}** | | | | | |")
         for it in rows:
-            q = it.get("qty")
-            c = it.get("unit_cost_usd")
-            t = line_total(it)
-            L.append(f"| {item_label(it)} | {q if q is not None else 'TBD'} | {money(c) if c is not None else 'TBD'} | "
-                     f"{money(t) if t is not None else 'TBD'} | {it['status']} |")
+            qty, unit, line = cells(it, cost(it, d, budget, pricing))
+            L.append(f"| {item_label(it)} | {' '.join(it['purpose'].split())} | {qty} | {unit} | {line} | "
+                     f"{it['status']} |")
     return L
 
 
-def totals_lines(d: dict) -> list[str]:
-    s = summary(d)
+def range_text(lo: float, hi: float, sign: str = "") -> str:
+    return f"{sign}{dollars(lo)} to {sign}{dollars(hi)}" if hi > 0 else "none priced"
+
+
+def subtotal_table(d: dict, s: dict) -> list[str]:
+    L = ["| Category | Lines | Estimated (USD) | Dated quotes | Unpriced (TBD) | Not counted |",
+         "|---|---|---|---|---|---|"]
+    for key, title in d["categories"].items():
+        c = s["categories"][key]
+        if not c["lines"]:
+            continue
+        L.append(f"| {title} | {c['lines']} | {range_text(*c['est'])} ({c['n_est'] + c['n_quoted']} lines) | "
+                 f"{c['n_quoted']} | {c['unpriced']} | {c['not_counted']} |")
+    t = s["total"]
+    L.append(f"| **All categories** | {t['lines']} | **{range_text(*t['est'])}** ({t['n_est'] + t['n_quoted']} lines) "
+             f"| {t['n_quoted']} | **{t['unpriced']}** | {t['not_counted']} |")
+    return L
+
+
+def totals_lines(d: dict, s: dict) -> list[str]:
+    t = s["total"]
+    dev = s["categories"].get("development", {"est": [0, 0]})
     lo, hi = d["budget"]["overall_usd"]
-    sub = (f"**${money(s['subtotal'])}** from {s['priced']} of {s['counted']} lines with a dated price"
-           if s["priced"] else f"**none**: none of the {s['counted']} lines has a dated price")
-    share = d["budget"]["telemetry_share"]
-    return [f"* Known priced subtotal: {sub}.",
-            f"* Unpriced lines: **{s['unpriced']}** (shown as TBD).",
-            "* Estimated total: **not stated**. It needs a dated price for every counted line and an agreed scope "
-            "(which lines, how many units, shipping and tax, contingency).",
-            f"* Budget: the project budget is about ${lo:,} to ${hi:,}. Whether the telemetry lines share it with the "
-            f"motor-controller BOM ([`docs/BUDGET.md`](docs/BUDGET.md)) is **{share}**.",
-            "* Status: " + ", ".join(f"{k} {v}" for k, v in s["status"].items()) + ". Nothing has been ordered.",
+    owned = (t["est"][0] - dev["est"][0], t["est"][1] - dev["est"][1])
+    quotes = (f"**${money(t['quoted'])}** from {t['n_quoted']} of {t['counted']} counted lines"
+              if t["n_quoted"] else f"**none**: none of the {t['counted']} counted lines has a dated quote")
+    if t["est"][0] > hi:
+        fit = f"the estimated lines alone are above ${hi:,} even at the low end"
+    elif t["unpriced"]:
+        fit = (f"with {t['unpriced']} lines unpriced, a fit within ${lo:,} to ${hi:,} is **not established**")
+    else:
+        fit = f"the range above is the whole estimate; compare it with ${lo:,} to ${hi:,}"
+    return [f"* Priced subtotal from dated quotes: {quotes}.",
+            f"* Estimated lines: **{range_text(*t['est'], sign='$')}** over {t['n_est']} lines "
+            f"({range_text(*owned, sign='$')} if the development equipment is already owned). These ranges come from the "
+            "draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.",
+            f"* Unpriced lines: **{t['unpriced']}** (TBD). They come on top of the estimated range, so the complete "
+            "cost is not known.",
+            f"* Not counted: {t['not_counted']} lines (optional lines, the borrowed oscilloscope, and parts inside the "
+            "telematics PCB assembly line).",
+            f"* Budget: the project budget is about ${lo:,} to ${hi:,}; which lines it must cover is "
+            f"**{d['budget']['scope']}**. {fit[0].upper() + fit[1:]}.",
+            "* Status: " + ", ".join(f"{k} {v}" for k, v in t["status"].items()) + ". Nothing has been ordered.",
             "* A separate battery for the driver display is not an approved purchase: Article 57i allows built-in "
             "batteries only in unmodified, self-contained display or communication devices, and Article 57b allows "
             "no accessory battery on a Battery Electric vehicle."]
 
 
-def readme_block(d: dict) -> str:
-    return "\n".join([BEGIN, f"Telemetry procurement, generated from "
-                      "[`hardware/bom/telemetry_procurement.yaml`](hardware/bom/telemetry_procurement.yaml) "
-                      f"(updated {d['updated']}). Requirements, candidates and what blocks each line: "
-                      "[`docs/PROCUREMENT.md`](docs/PROCUREMENT.md). The motor-controller BOM is separate: "
-                      "[`hardware/bom/README.md`](hardware/bom/README.md).", "", *table(d), "", *totals_lines(d), END])
+def readme_block(d: dict, budget: dict | None = None, pricing: dict | None = None) -> str:
+    if budget is None or pricing is None:
+        budget, pricing = load_refs()
+    s = summary(d, budget, pricing)
+    return "\n".join([BEGIN, "Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) "
+                      f"(updated {d['updated']}) by `tools/gen_procurement.py`; edit the YAML file, not this table. "
+                      "Requirements, candidates, cost sources and what blocks each line: "
+                      "[`docs/PROCUREMENT.md`](docs/PROCUREMENT.md).", "", "**Subtotals**", "",
+                      *subtotal_table(d, s), "", *totals_lines(d, s), "", "**Lines**", "", *table(d, budget, pricing),
+                      END])
 
 
-def doc(d: dict) -> str:
-    L = ["# Telemetry procurement", "",
-         f"Generated by `tools/gen_procurement.py` from `hardware/bom/telemetry_procurement.yaml` (updated "
-         f"{d['updated']}); edit the YAML file, not this page. Nothing has been ordered. Prices: no line has a dated "
-         "quote yet (distributor sites were unreachable from the build environment); a price enters only with its "
-         "supplier, date and reference.", "",
+def to_docs(line: str) -> str:
+    """Rewrite repository-root links for a page in docs/."""
+    return re.sub(r"\]\((?!https?:|#)([^)]+)\)",
+                  lambda m: "](" + (m.group(1)[5:] if m.group(1).startswith("docs/") else "../" + m.group(1)) + ")",
+                  line)
+
+
+def doc(d: dict, budget: dict | None = None, pricing: dict | None = None) -> str:
+    if budget is None or pricing is None:
+        budget, pricing = load_refs()
+    s = summary(d, budget, pricing)
+    L = ["# Project procurement", "",
+         f"Generated by `tools/gen_procurement.py` from `hardware/bom/procurement.yaml` (updated {d['updated']}); edit "
+         "the YAML file, not this page. Nothing has been ordered. No line has a dated quote yet (distributor sites "
+         "were unreachable from the build environment); a quote enters only with its supplier, date and reference. "
+         "Estimated lines take their range from the draft controller BOM pricing "
+         f"(`docs/generated/budget.json`, scenario \"{d['estimate_scenario']}\"), which `tools/price_bom.py` writes "
+         "from `hardware/bom/BOM_draft.csv` and `hardware/bom/pricing.yaml`.", "",
          "Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (requirements and "
          "compatibility checked), **Ordered** and **Received** (only with order evidence), **Blocked** (an input is "
-         "missing; the column says which).", "", "## Summary", "", *table(d), "",
-         *[x.replace("](docs/", "](") for x in totals_lines(d)], "", "## Lines in detail", "",
-         "| Item | Category | Candidate | Requirement | Blocked by | Evidence |", "|---|---|---|---|---|---|"]
+         "missing; the detail table says which).", "", "## Subtotals", "", *subtotal_table(d, s), "",
+         *[to_docs(x) for x in totals_lines(d, s)], "", "## Lines", "", *table(d, budget, pricing), "",
+         "## Lines in detail", "",
+         "| Item | Category | Candidate | Requirement | Blocked by | Cost source | Evidence |",
+         "|---|---|---|---|---|---|---|"]
     for it in d["items"]:
         ev = it.get("evidence")
         evl = "-"
@@ -151,21 +308,29 @@ def doc(d: dict) -> str:
             path, _, anchor = ev.partition("#")
             rel = path[len("docs/"):] if path.startswith("docs/") else "../" + path
             evl = f"[`{path}{'#' + anchor if anchor else ''}`]({rel}{'#' + anchor if anchor else ''})"
+        k = cost(it, d, budget, pricing)
+        src = {"quote": lambda: f"quote: {it['price']['supplier']}, {it['price']['reference']}, {it['price']['date']}",
+               "estimate": lambda: f"estimate, {k['evidence']}",
+               "not_budgeted": lambda: f"not budgeted: {it['not_budgeted']}",
+               "assembly": lambda: "inside the telematics PCB assembly line",
+               "tbd": lambda: "none yet"}[k["kind"]]()
         L.append(f"| {item_label(it)} | {d['categories'][it['category']]} | {it.get('candidate') or '-'} | "
-                 f"{' '.join(str(it.get('requirement') or '-').split())} | {it.get('blocked_by') or '-'} | {evl} |")
+                 f"{' '.join(str(it.get('requirement') or '-').split())} | {it.get('blocked_by') or '-'} | {src} | "
+                 f"{evl} |")
     L += ["", "## Related", "",
           "* Candidate research and sources: [`TELEMETRY_CANDIDATES.md`](TELEMETRY_CANDIDATES.md).",
           "* Battery facts and what they do not establish: [`BATTERY.md`](BATTERY.md).",
           "* Rules read for these lines: [`RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md).",
-          "* Motor-controller BOM and budget scenarios: [`../hardware/bom/README.md`](../hardware/bom/README.md), "
-          "[`BUDGET.md`](BUDGET.md).", ""]
+          "* Motor-controller BOM, pricing evidence and budget scenarios: "
+          "[`../hardware/bom/README.md`](../hardware/bom/README.md), [`BUDGET.md`](BUDGET.md).", ""]
     return "\n".join(L)
 
 
-def render_readme(d: dict, text: str) -> str:
+def render_readme(d: dict, text: str, budget: dict | None = None, pricing: dict | None = None) -> str:
     if BEGIN not in text or END not in text:
         raise SystemExit(f"README.md has no {BEGIN} ... {END} markers")
-    return re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), lambda _m: readme_block(d), text, flags=re.S)
+    block = readme_block(d, budget, pricing)
+    return re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), lambda _m: block, text, flags=re.S)
 
 
 def main() -> int:
@@ -173,19 +338,21 @@ def main() -> int:
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
     d = yaml.safe_load(SRC.read_text())
-    err = validate(d)
+    budget, pricing = load_refs()
+    err = validate(d, budget, pricing)
     if err:
         print("procurement file refused:\n  " + "\n  ".join(err))
         return 2
-    new_readme = render_readme(d, README.read_text())
-    new_doc = doc(d)
+    new_readme = render_readme(d, README.read_text(), budget, pricing)
+    new_doc = doc(d, budget, pricing)
+    t = summary(d, budget, pricing)["total"]
     if a.check:
-        stale = [p.name for p, t in ((README, new_readme), (DOC, new_doc)) if not p.exists() or p.read_text() != t]
+        stale = [p.name for p, x in ((README, new_readme), (DOC, new_doc)) if not p.exists() or p.read_text() != x]
         if stale:
             print("not current: " + ", ".join(stale) + " (run tools/gen_procurement.py)")
             return 1
-        s = summary(d)
-        print(f"procurement tables current: {s['lines']} lines, {s['priced']} priced, {s['unpriced']} unpriced")
+        print(f"procurement tables current: {t['lines']} lines, {t['n_quoted']} quoted, {t['n_est']} estimated, "
+              f"{t['unpriced']} unpriced, {t['not_counted']} not counted")
         return 0
     README.write_text(new_readme)
     DOC.write_text(new_doc)

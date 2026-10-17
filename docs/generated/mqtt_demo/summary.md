@@ -1,11 +1,11 @@
 # Telemetry pipeline through a real MQTT broker (HOST SOFTWARE)
 
-Run `HOSTMQTT-0001`, 120 s of controller time at 2x wall-clock speed, commit `4da4165f9c84` plus uncommitted changes. Broker: mosquitto version 2.0.18 on loopback; client: paho-mqtt 2.1.0. Command: `python3 tools/run_mqtt_demo.py --out build/mqtt_demo`. Synthetic plant and sensors; the car side is the host model of the telematics unit, not its firmware, and no LTE modem is involved. Nothing here was measured on hardware.
+Run `HOSTMQTT-0001`, 120 s of controller time at 2x wall-clock speed, commit `e1b59a60614f` plus uncommitted changes. Broker: mosquitto version 2.0.18 on loopback; client: paho-mqtt 2.1.0. Command: `python3 tools/run_mqtt_demo.py --out build/mqtt_demo`. Synthetic plant and sensors; the car side is the host model of the telematics unit, not its firmware, and no LTE modem is involved. Nothing here was measured on hardware.
 
 | Check | Result | Evidence |
 |---|---|---|
 | `broker_outage_detected_and_recovered` | PASS | broker killed at 40.0 s, client saw the disconnect 1 ms later (wall); broker restarted at 60.0 s, client reconnected 0.95 s later (wall), i.e. 1.9 s of controller time |
-| `control_and_uplink_unaffected_by_broker_outage` | PASS | supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.32/0.68 ms, broker_down 0.07/1.84 ms, after_broker 0.31/2.54 ms, pit_down 0.28/0.70 ms, after_pit 0.31/0.48 ms (supervisor period 20 ms) |
+| `control_and_uplink_unaffected_by_broker_outage` | PASS | supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.31/1.75 ms, broker_down 0.07/0.12 ms, after_broker 0.30/1.41 ms, pit_down 0.30/0.49 ms, after_pit 0.31/1.26 ms (supervisor period 20 ms) |
 | `local_log_complete_during_broker_outage` | PASS | records written 71525 = imported 71525 (286 blocks ok, 0 corrupt, 0 sequence gaps); log queue and storage drops 0/0; CAN records per second while the broker was down 454-464, before it 444-464 |
 | `uplink_backlog_bounded_and_drops_counted` | PASS | backlog high water 30/30; dropped on the car 14 (counter) = 14 (sequence numbers 79..92); none of them reached the pit |
 | `every_sequence_number_accounted` | PASS | published 240: stored at pit 226, dropped on car (queue full) 14, never acknowledged by broker 0, acknowledged by broker, not at pit 0, never handed to the link 0 |

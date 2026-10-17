@@ -87,7 +87,8 @@ def classify(meta: dict) -> dict:
 
 
 def run(db: sqlite3.Connection, run_id: str, params: AdapterParams, kt: float, wheel_q_mps: float,
-        out: pathlib.Path | None = None) -> dict:
+        out: pathlib.Path | None = None, notes: tuple[str, ...] = ()) -> dict:
+    """notes: caller's findings (for example a changed configuration) written into the report's evidence list."""
     row = db.execute("SELECT meta_json FROM runs WHERE run_id=?", (run_id,)).fetchone()
     meta = json.loads(row[0]) if row else {}
     prov = classify(meta)
@@ -98,7 +99,7 @@ def run(db: sqlite3.Connection, run_id: str, params: AdapterParams, kt: float, w
            "params": {k: getattr(params, k) for k in ("wheel_radius_m", "gear_ratio", "kt_Nm_per_A", "freewheel")},
            "shadow_mode": "advisory only: no CAN, MQTT or controller interface; no torque command; no protection change"}
     if not data:
-        res.update(ticks=0, insufficient=["no decoded signals for this run in the database"])
+        res.update(ticks=0, insufficient=[*notes, "no decoded signals for this run in the database"])
         return _write(res, [], out)
 
     mons = make_monitors(params, lam, e6)
@@ -140,7 +141,7 @@ def run(db: sqlite3.Connection, run_id: str, params: AdapterParams, kt: float, w
     res["signals"] = {s: {"samples": n_samples[s], "fresh_tick_share": round(cover[s] / ticks, 3)} for s in SIGNALS}
     res["relationships"] = {r: {"needs": ins + aux, "active_ticks": active[r]} for r, (ins, aux) in RELATIONSHIPS.items()}
 
-    insufficient = []
+    insufficient = list(notes)
     if not prov["synthetic"]:
         insufficient.append("vehicle parameters and the E6 power-balance model are the frozen synthetic ones; "
                             "they must be identified on this vehicle's development data before any result is used")

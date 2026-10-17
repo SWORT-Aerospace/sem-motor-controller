@@ -24,12 +24,20 @@ CURRENT = {"README.md", "docs/STATUS.md", "docs/ICD.md", "docs/INPUT_SHEET.md", 
            "docs/TELEMETRY_CANDIDATES.md", "docs/TELEMETRY_EMBEDDED_PORT.md", "docs/PROCUREMENT.md", "docs/BATTERY.md",
            "docs/MQTT_SETUP.md", "docs/ENERGY_METHODS.md", "docs/VERIFICATION_REPORT.md", "docs/RULES_COMPLIANCE.md",
            "docs/generated/mqtt_demo/summary.md", "docs/generated/wheel_sensor_check.md",
-           "docs/generated/host_demo/summary.md", "docs/generated/coastdown_sensitivity.md"}
+           "docs/generated/host_demo/summary.md", "docs/generated/coastdown_sensitivity.md",
+           "docs/README.md", "docs/FILE_INDEX.md", "docs/INTEGRATION_GUIDE.md", "docs/IMPLEMENTATION_PLAN.md",
+           "docs/DESIGN_DECISIONS.md", "docs/DEVELOPMENT.md", "docs/MATH_SPEC.md",
+           "config/README.md", "firmware/README.md", "protocol/README.md", "host/README.md", "models/README.md",
+           "hardware/README.md", "tools/README.md", "tests/README.md"}
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)")
 EXT = r"(?:md|py|yaml|yml|json|csv|c|h|txt|sh|toml|cmake|kicad_sch|net)"
 TICK = re.compile(r"`([A-Za-z0-9_./-]+\." + EXT + r")`")
 PLAIN = re.compile(r"(?<![\w`/.-])((?:docs|tools|host|firmware|hardware|config|protocol|tests|models)/[A-Za-z0-9_./-]+\."
                    + EXT + r")\b")
+# Outputs that tools write but that are deliberately not committed (CI artifacts, smoke runs): a current
+# document may name them although they are absent from a clean checkout.
+UNTRACKED_OUTPUTS = {"hardware/kicad/ERC_REPORT.json", "hardware/kicad/ERC_REPORT.rpt",
+                     "docs/generated/csia_evaluation_smoke.md", "docs/generated/csia_evaluation_smoke.json"}
 ROOTS = ("docs/", "tools/", "host/", "firmware/", "hardware/", "config/", "protocol/", "tests/", "models/",
          ".github/", "README.md")
 
@@ -83,7 +91,7 @@ def check() -> list[str]:
         if rel in CURRENT:
             bare = re.sub(r"\[[^\]]*\]\([^)]*\)", "", text)
             for ref in set(TICK.findall(bare)) | set(PLAIN.findall(bare)):
-                if not ref.startswith(ROOTS) or "<" in ref or "*" in ref:
+                if not ref.startswith(ROOTS) or "<" in ref or "*" in ref or ref in UNTRACKED_OUTPUTS:
                     continue
                 if not (ROOT / ref).exists():
                     errors.append(f"{rel}: path `{ref}` does not exist")

@@ -1,5 +1,7 @@
 # Review package v0.3: vehicle interface and schematic foundation (2026-10-15)
 
+> **Historical record of v0.3, superseded.** Current state: [`STATUS.md`](STATUS.md) and the [README](../README.md); index of documents: [`README.md`](README.md). Statements below describe v0.3 and are not updated. In particular the KiCad ERC, listed here as not run, has run in CI since v0.4 with KiCad 8.0.9 (0 errors, 9 warnings; [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) 5).
+
 **NOT hardware-frozen · NOT fabrication-ready · NOT vehicle-validated · vehicle bus UNKNOWN · crystal UNSELECTED · KiCad ERC NOT RUN.**
 * Continues from `1c17145`. The v0.2 checkpoint is preserved with an errata banner; its unfavourable results stand.
 * The optimiser was not expanded. CSIA was not retuned or re-run.

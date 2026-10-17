@@ -69,9 +69,9 @@
   "relationship_failures_outside_fault_window": {
    "E6_power_balance": 507
   },
-  "tick_ms_max": 3.5245090002717916,
-  "tick_ms_mean": 1.3576801524959592,
-  "tick_ms_p99": 2.4689510000825976,
+  "tick_ms_max": 4.064109999490029,
+  "tick_ms_mean": 1.4447078441511014,
+  "tick_ms_p99": 2.7327759999025147,
   "ticks": 1200,
   "ticks_ambiguous": 530,
   "ticks_unobservable": 5,
@@ -105,12 +105,12 @@
   "stored": 228
  },
  "reimport_new_records": 0,
- "repo_commit": "4da4165f9c8485faba3506b99865f6fff2d7d2a0",
+ "repo_commit": "e1b59a60614ff7bdb766f05994655a0af804f4d3",
  "run_id": "HOSTSIM-0001",
  "storage": {
-  "bytes_per_s": 9573.35,
-  "log_bytes": 1148802,
-  "minutes_to_fill_8MB": 14.604097137713897
+  "bytes_per_s": 9573.541666666666,
+  "log_bytes": 1148825,
+  "minutes_to_fill_8MB": 14.603804757034363
  },
  "working_tree_dirty": true
 }

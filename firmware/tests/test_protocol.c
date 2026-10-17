@@ -72,7 +72,8 @@ static void test_ids_form_one_64_number_block(void)
                             SEMMC_ID_CTRL_STATUS, SEMMC_ID_CTRL_CMD_TRACE, SEMMC_ID_DRIVER_CONTROLS,
                             SEMMC_ID_CTRL_SESSION, SEMMC_ID_CTRL_MOTION, SEMMC_ID_CTRL_CURRENTS,
                             SEMMC_ID_CTRL_ENERGY, SEMMC_ID_CTRL_THERMAL, SEMMC_ID_CTRL_VALIDITY,
-                            SEMMC_ID_CSIA_ADVISORY, SEMMC_ID_CTRL_IDENTITY};
+                            SEMMC_ID_CTRL_ENERGY_QUALITY, SEMMC_ID_CSIA_ADVISORY, SEMMC_ID_CTRL_IDENTITY};
+    CHECK(sizeof ids / sizeof ids[0] == 16); /* every message of protocol 1.1 */
     for (size_t k = 0; k < sizeof ids / sizeof ids[0]; k++) {
         CHECK(ids[k] >= 0x300u && ids[k] <= 0x33Fu); /* one 64-number block; bus base = supervision.can_id_base */
         CHECK(semmc_msg_index(ids[k]) >= 0);

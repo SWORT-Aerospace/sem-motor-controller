@@ -104,6 +104,7 @@ Every row of this table is checked on the exported netlist by `tools/hw_consiste
 * header `STLG | version | metadata JSON | CRC-32`; metadata: `run_id`, `kind` (HOST SIMULATION or vehicle), format, clock domain, storage size, protocol major/minor/spec hash, calibration blob SHA-256 and provenance, vehicle configuration SHA-256, software commit and working-tree state, sensor configuration (wheel circumference, pulses per revolution, channel assignment) with its status;
 * 4 KiB blocks `BK | block_seq | base_us | n | CRC-32 | records`; a power loss loses at most the block being written;
 * records `type | len | dt_us | body`: CAN frame (every received and sent frame), PPS edge, GNSS fix, IMU sample, wheel window, counters, event.
+* No record type for the telematics unit's own temperature probes yet: it is not needed by the first telemetry milestones (`docs/IMPLEMENTATION_PLAN.md` stages 2 to 4, one wheel sensor). Effect: battery-surface and ambient temperatures are not logged, so loss models can use only the controller's FET and motor temperatures, which are logged as CAN frames (`ctrl_thermal`). A new type is added when probes are fitted; readers already keep unknown record types as raw bytes, so older readers do not break.
 The controller's calibration identity is logged twice: as the blob hash in the header and as `ctrl_identity` frames.
 
 ## 9. Storage, queues and drop reporting
@@ -119,7 +120,9 @@ The controller's calibration identity is logged twice: as the blob hash in the h
 
 ## 10. LTE / MQTT and offline import
 
-* Topic `sem/car/telemetry`, JSON schema `sem.telemetry.v1`, 2 Hz (the proposal allows 1–5 Hz): `run_id`, `seq`, `t_local_ms`, `utc` with `utc_q` and `utc_err_s`, controller state and summary values (speed, iq, vbus, mean battery power, energy, energy integrated/gap seconds, accepted torque, reason), supervisor torque and reason, GNSS, counters, `replayed`. Unknown values are JSON null.
+* Topic `sem/car/telemetry`, JSON, 2 Hz (the proposal allows 1-5 Hz). Schema `sem.telemetry.v2` (v0.5): `run_id`, `seq`, `t_local_ms`, `utc` with `utc_q` and `utc_err_s`, controller state and summary values (speed, iq, vbus, mean battery power, energy, energy integrated/gap seconds, accepted torque, reason), supervisor torque and reason, GNSS, `wheel.speed_mps` per channel, counters, `replayed`. Unknown values are JSON null.
+* `wheel.speed_mps` (new in v2): per channel, counts x circumference / (pulses per revolution x window), the formula of the offline import, from the latest window if it is at most 0.3 s old (PROV), else null. Null also when the circumference or pulses per revolution are not configured. Needed because rotor speed is not vehicle speed when the motor is decoupled (freewheel) and GNSS may have no fix.
+* **Compatibility.** The pit accepts `sem.telemetry.v1` (no wheel block) and `sem.telemetry.v2`, and stores the schema per row (`live.schema`; a database created before v2 gains the column on open, old rows read as v1). Any other schema value is rejected with its reason. A producer changes the schema name whenever a field changes meaning or a required field is added (`docs/INTEGRATION_GUIDE.md` 6).
 * While LTE is down the unit keeps the newest 30 messages (15 s), drops the oldest and counts them; on reconnection the backlog is sent oldest first with `replayed = true`.
 * Pit ingestion validates every message (schema, types, states, ranges) and stores rejections with their reason; keys are idempotent: `(run_id, seq)` for live messages, `(run_id, block, index)` for log records, so replays and re-imports add no rows.
 * Offline import reads the STLG file from flash, SD or USB into the same SQLite database, with telematics time and PPS-derived UTC and quality per record.
@@ -151,4 +154,4 @@ If any item fails, the supervisor moves to another computer or ECO is not offere
 
 ## 13. Host demonstration (HOST SIMULATION)
 
-`tools/run_host_demo.py` runs: synthetic driver and plant → controller core (C) → CAN → telematics node (timestamps, supervisor, bounded queue, STLG log, GNSS/PPS, IMU, halls) → controller arbitration → simulated motor → LTE/MQTT with outage → pit validation and SQLite → offline import → pit-side CSIA replay. Nine checks with their evidence: `docs/generated/host_demo/summary.md`. It validates no hardware.
+`tools/run_host_demo.py` runs: synthetic driver and plant → controller core (C) → CAN → telematics node (timestamps, supervisor, bounded queue, STLG log, GNSS/PPS, IMU, halls) → controller arbitration → simulated motor → LTE/MQTT with outage → pit validation and SQLite → offline import → pit-side CSIA replay and shadow replay. Ten checks with their evidence: `docs/generated/host_demo/summary.md`. It validates no hardware.

@@ -1,6 +1,6 @@
 # Host end-to-end demonstration (HOST SIMULATION)
 
-Run `HOSTSIM-0001`, 120 s, commit `4da4165f9c84` plus uncommitted changes (the commit that adds these outputs). Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, simulated LTE and MQTT; nothing here was measured on hardware.
+Run `HOSTSIM-0001`, 120 s, commit `e1b59a60614f` plus uncommitted changes (the commit that adds these outputs). Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, simulated LTE and MQTT; nothing here was measured on hardware.
 
 | Check | Result | Evidence |
 |---|---|---|
@@ -21,7 +21,7 @@ STLG log 1122 KiB for 120 s = 9.35 KiB/s; the 8 MB flash of the telematics propo
 
 ## Pit-side CSIA replay (shadow; not an evaluation)
 
-1200 ticks at 10 Hz; front-left wheel hall lost from 80 to 90 s: attributed to wheel_l 0.1 s after onset. Ticks naming any other suspect, or naming one outside the fault window: 65; ambiguous ticks: 530; unobservable ticks: 5. Host runtime per tick: mean 1.36 ms, p99 2.47 ms, max 3.52 ms; peak traced Python memory 1785 KiB (x86-64 CPython, not a target figure).
+1200 ticks at 10 Hz; front-left wheel hall lost from 80 to 90 s: attributed to wheel_l 0.1 s after onset. Ticks naming any other suspect, or naming one outside the fault window: 65; ambiguous ticks: 530; unobservable ticks: 5. Host runtime per tick: mean 1.44 ms, p99 2.73 ms, max 4.06 ms; peak traced Python memory 1785 KiB (x86-64 CPython, not a target figure).
 
 Relationship failures (lambda > lam_fail) outside the injected fault window: E6_power_balance 507 ticks.
 

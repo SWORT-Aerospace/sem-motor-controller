@@ -97,7 +97,7 @@ def main() -> int:
          "measurement. Other nodes' message sets do not exist yet, so their rates are assumed ranges.", "",
          "## 1. Frame rates", "",
          "| Source | Frames/s | Basis |", "|---|---|---|",
-         f"| semmc controller -> bus (11 messages) | {f_ctrl:.0f} | [P] periods in protocol.yaml |",
+         f"| semmc controller -> bus (12 messages) | {f_ctrl:.0f} | [P] periods in protocol.yaml |",
          f"| supervisor -> controller (hello, limits, torque request, CSIA advisory) | {f_sup:.0f} | [P]; sent by whichever computer runs the supervisor |"]
     for n, lo, hi in OTHER_NODES:
         L.append(f"| {n} | {lo}-{hi} | assumed |")

@@ -1,6 +1,6 @@
 # Pin-type rule check on the KiCad-exported netlist (generated; NOT a KiCad ERC)
 
-> `tools/pin_type_check.py` on `hardware/kicad/semmc.net` (exported by kicad-cli 7.0.11 from the draft). Connectivity and pin types are KiCad's. **This is not an ERC**: a real ERC (KiCad 8+, `tools/run_kicad_erc.sh`) was not possible in this environment and remains a blocker. Neither check shows that the circuit is electrically correct; that needs review and measurement.
+> `tools/pin_type_check.py` on `hardware/kicad/semmc.net` (exported by `kicad-cli` from the draft). Connectivity and pin types are KiCad's. **This is not an ERC**: the KiCad ERC runs separately with KiCad 8 or newer (`tools/run_kicad_erc.sh`, the CI `erc` job; results in `docs/VERIFICATION_REPORT.md`). Neither check shows that the circuit is electrically correct; that needs review and measurement.
 
 Nets checked: 173. Rails with a PWR_FLAG (read from the sheets): `+3V3A`, `+5V`, `GND`, `PGND`, `VBAT_PROT`, `VDC`. Findings: 0 (none).
 

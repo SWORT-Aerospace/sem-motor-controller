@@ -128,7 +128,7 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
         "calibration": {"blob": "build/cal/synthetic.bin", "sha256": sha256(cal), "provenance": "synthetic"},
         "vehicle_config": {"path": "config/vehicle.synthetic.yaml", "sha256": sha256(cfg_path)},
         "software": {"repo_commit": git, "working_tree_dirty": dirty, "telematics_firmware": "host-sim"},
-        "sensors": {"wheel_circumference_m": C, "wheel_ppr": scfg.wheel_ppr,
+        "sensors": {"wheel_circumference_m": C, "wheel_ppr": scfg.wheel_ppr, "wheel_window_s": scfg.wheel_window_s,
                     "wheel_channels": {str(k): v for k, v in WHEEL_CHANNELS.items()},
                     "status": "wheel_ppr PROVISIONAL; channel assignment PROVISIONAL"},
         # simulation only: the plant behind the data and the faults injected into the sensors (ground truth for

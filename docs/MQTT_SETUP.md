@@ -31,7 +31,7 @@ python3 -m host.pit.mqtt_ingest --port 1883 --db build/pit.sqlite     # Ctrl-C t
 
 ## 3. What the demonstration shows
 
-`tools/run_mqtt_demo.py` runs 120 s of controller time at twice wall-clock speed through the real broker. Ten checks; the latest summary is in `generated/mqtt_demo/summary.md`:
+`tools/run_mqtt_demo.py` runs 120 s of controller time at twice wall-clock speed through the real broker. Twelve checks; the latest summary is in `generated/mqtt_demo/summary.md`:
 
 | Check | What it shows |
 |---|---|
@@ -44,7 +44,9 @@ python3 -m host.pit.mqtt_ingest --port 1883 --db build/pit.sqlite     # Ctrl-C t
 | `invalid_messages_rejected_before_storage` | four malformed messages rejected with reasons; none stored |
 | `duplicates_ignored_and_ingest_idempotent` | a duplicate and re-ingestion add no rows |
 | `pit_restart_without_loss` | messages published while the pit was down are delivered after it reconnects |
+| `live_wheel_speed_v2_matches_log_and_v1_still_accepted` | the live wheel speed (`sem.telemetry.v2`) equals the speed from the logged wheel window; a v1 message is still stored |
 | `timestamps_and_missing_data_explicit` | car time, UTC quality, null GNSS fields in an outage, pit receive time |
+| `pit_shadow_replay_reports_missing_ground_truth` | R3v and CSIA2 replay over the imported log in shadow mode; with no injected faults the report lists attributions without scoring them |
 
 Delays and service times vary between runs; the checks test invariants, not those numbers.
 
@@ -52,4 +54,5 @@ Delays and service times vary between runs; the checks test invariants, not thos
 
 * The car side is the host model of the telematics unit, not its firmware. There is no LTE modem, SIM or radio link: the outage is a killed broker on loopback.
 * Loopback without authentication or TLS. A pit broker reachable over a network needs authentication and TLS; the A7672's MQTT client supports TLS up to 1.2 (`TELEMETRY_CANDIDATES.md`).
+* Where the broker runs at the event is not decided. The modem connects out from the operator's network, so the broker needs an address reachable from there: a hosted server, or a tunnel to the pit computer. A pit laptop on venue Wi-Fi normally sits behind address translation and cannot accept that connection directly. This is the "Internet-reachable MQTT broker" line in `PROCUREMENT.md`.
 * A broker acknowledgement is not delivery to the pit. A broker that loses its state can acknowledge messages that never reach the pit; the pit reports gaps by sequence number, and the local log is the complete record.

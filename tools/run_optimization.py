@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """SYNTHETIC energy-strategy study, v0.2 actuator model.
 
-    python3 tools/run_optimization.py [--quick]
+    python3 tools/run_optimization.py [--quick] [--out DIR]
 
 Coast, propulsion and DRIVER braking are separate actuators (models/optimization/dp.py).
 Every strategy runs on one forward simulator with identical route, start, terminal
 condition, finish-time target, actuator limits, driver model and auxiliary load
 (models/optimization/strategies.py). Writes docs/generated/optimization_synthetic.{md,json},
 docs/generated/dp_schedule_synthetic.csv, docs/generated/dp_driver_guidance_synthetic.csv
-and docs/figures/dp_plan_synthetic.png. Every number comes from synthetic vehicle,
+and docs/figures/dp_plan_synthetic.png. --quick (coarser grids, used by CI and
+verify_all) writes the same files into build/optimization_quick/ instead, so the
+committed full-resolution results are not overwritten. Every number comes from synthetic vehicle,
 motor, inverter and track models; none of them predicts real-vehicle energy.
 """
 from __future__ import annotations
@@ -34,6 +36,7 @@ from models.vehicle.powertrain import SyntheticPhysicsMap  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GEN = ROOT / "docs" / "generated"
+FIGDIR = ROOT / "docs" / "figures"
 T_MAX = 1000.0
 RESERVE = 30.0
 GUIDE = dp.GuidanceAssumptions(reaction_s=1.0, release_reaction_s=0.7, decel_tracking=0.20, speed_margin_mps=0.3)
@@ -194,8 +197,14 @@ def matched_comparison(track, veh, pmap, sim, ds, dv, quick):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--quick", action="store_true", help="coarser grids (CI)")
+    ap.add_argument("--quick", action="store_true", help="coarser grids (CI); writes to build/optimization_quick")
+    ap.add_argument("--out", type=pathlib.Path, help="output directory for every file (default: docs/generated and "
+                    "docs/figures; build/optimization_quick with --quick)")
     args = ap.parse_args()
+    global GEN, FIGDIR
+    if args.out or args.quick:
+        GEN = FIGDIR = args.out or ROOT / "build" / "optimization_quick"
+        GEN.mkdir(parents=True, exist_ok=True)
     veh = SYNTHETIC_VEHICLE
     pmap = SyntheticPhysicsMap(veh)
     sim = SimConfig(driver=DriverModel(GUIDE.reaction_s, GUIDE.release_reaction_s, 1.0))
@@ -380,7 +389,7 @@ def _plot(planA, planB, trackA, trackB):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    figdir = ROOT / "docs" / "figures"
+    figdir = FIGDIR
     figdir.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
     lap = trackA.lap_length_m

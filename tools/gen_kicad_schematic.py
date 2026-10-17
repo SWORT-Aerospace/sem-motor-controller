@@ -706,8 +706,8 @@ def check_netlist(expected: dict, design) -> int:
              f"* intended nets: {len(expected)}", f"* KiCad nets: {len(got)} (of which no-connect singletons: {len(unc)})",
              f"* problems: {len(problems)}", ""]
     lines += [f"- {p}" for p in problems] or ["No mismatches: KiCad connectivity equals the intended connectivity."]
-    lines += ["", "This checks connectivity only. It is not an electrical rules check (KiCad 7 has no CLI ERC) and "
-              "not a design review."]
+    lines += ["", "This checks connectivity only. It is not an electrical rules check (the KiCad ERC runs separately: "
+              "`tools/run_kicad_erc.sh` with KiCad 8 or newer, in the CI `erc` job) and not a design review."]
     rep.write_text("\n".join(lines) + "\n")
     print("\n".join(lines[4:8]))
     for p in problems[:30]:

@@ -52,7 +52,7 @@ Each record says which of these it rests on. Evidence levels:
 |---|---|---|---|
 | Connectivity: KiCad-exported netlist equals the intended netlist | `tools/gen_kicad_schematic.py --check` (kicad-cli 7.0.11) | 135 intended nets, **0 problems** | KiCad connects what the generator meant to connect. It does not show that the circuit is correct. |
 | Pin-type rules on the KiCad-exported netlist | `tools/pin_type_check.py` | v0.3 first run: **6 findings**, all R2 (power input with no power source: +3V3A, +5V, GND, PGND, VBAT_PROT, VDC, i.e. rails driven through a ferrite, an inductor, a switch or a connector). **Fixed** by adding PWR_FLAG markers; re-run: **0 findings** | A subset of ERC pin rules on KiCad's own pin types. **Not a KiCad ERC.** |
-| **KiCad ERC** | `tools/run_kicad_erc.sh` (KiCad 8+) or Eeschema GUI | **NOT RUN.** KiCad 7.0.11 has no CLI ERC. Installing KiCad 9 (Ubuntu 26.04 packages) in an isolated root was refused by this environment's permission policy. | Remains a blocker. Run it on a machine with KiCad 8 or newer and commit `hardware/kicad/ERC_REPORT.rpt`. |
+| **KiCad ERC** | `tools/run_kicad_erc.sh` (KiCad 8+) or Eeschema GUI | Not run in v0.3 (KiCad 7.0.11 has no CLI ERC). **Since v0.4 it runs on every push in the CI `erc` job** with KiCad 8.0.9: 0 errors, 9 warnings (library-version differences; run 38944073133, `docs/VERIFICATION_REPORT.md` 5). | The ERC checks schematic rules, not that the circuit works. The report is kept as a CI artifact (`erc-report`), not committed. |
 
 ## 5. Remaining schematic blockers
 1. **Primary datasheets**: DS12288 + RM0440 (ST), DRV8353 (TI SLVSDY6), INA228, TJA1051, LM5164, TLV755P, MAX6369. These can be attached to the session as PDFs, as the telematics diagrams were.

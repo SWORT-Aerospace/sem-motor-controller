@@ -102,4 +102,16 @@ Dimensions: (5.6) N·m/A · A · rad/s = W; Ω · A² = W; W/A · A = W.
 * Tyre slip beyond a start-slip ramp in the CSIA generator; lateral dynamics beyond the induced-drag term (1.1).
 * Battery dynamics beyond open-circuit voltage minus R_int I (host plant); no SOC, no temperature.
 * Motor saliency, saturation, trapezoidal back-EMF, dead-time voltage distortion in the current loop.
-* Event rules (time limit, laps, stops): the DP uses synthetic values because the rules were not readable (`docs/METHOD_SELECTION.md`, missing documents).
+* Event rules (time limit, laps, stops): the DP uses synthetic values. The 2026 Chapter I was read in v0.5 (`RULES_COMPLIANCE.md`), but the team's event, track, time limit and lap count are not entered (input sheet).
+
+## 8. Pit energy per distance (`host/pit/energy.py`, added in v0.5)
+
+| # | Equation | Implementation | Example | Verified by | Status |
+|---|---|---|---|---|---|
+| 8.1 | v = C f / N with f = counts / T_w (fixed counting window) | `wheel_speed_mps`; the same form in `node.py` `_message` and `ingest.py` `import_log` | 13 counts, C = 1.5 m, N = 32, T_w = 0.1 s: 6.09375 m/s; resolution C / (N T_w) = 0.469 m/s | `test_pit_energy.py::test_formulas`, `test_mqtt_pipeline.py` | C SYN, N PROV |
+| 8.2 | E_Wh = E_J / 3600, E_J the controller's `energy_J` (sum of V I dt over valid slow steps, 3.x) | `energy_wh`, `run_summary` | 7200 J = 2 Wh | `test_pit_energy.py` | – |
+| 8.3 | d = Σ v_k T_w over the windows between the first and last energy sample; Wh/km = E_Wh / (d / 1000); km/kWh = 1000 / (Wh/km) | `run_summary`, `wh_per_km` | 2 Wh over 100 m = 20 Wh/km; README worked example 4.762 Wh/km = 210 km/kWh | `test_pit_energy.py` | – |
+| 8.4 | Wheel cross-check: a channel whose distance is more than 2 % below the longest is flagged | `compare_channels` | host demonstration: `wheel_l` 635.0 m against 695.9 m (injected dropout) | `test_pit_energy.py` | tolerance PROV |
+| 8.5 | E_nom = V_nom Q_rated | `nominal_pack_wh` | 48 V x 10 Ah = 480 Wh (team-reported; not measured usable energy) | `test_pit_energy.py` | team-reported |
+
+Limits: the energy is the controller-input figure, not the joulemeter's (2026 Articles 56c, 56d: the joulemeter also counts the telemetry unit, sensors, display and wiring). A gap in the controller's integration makes the energy a lower bound; a wheel dropout reads as zero counts and makes the distance a lower bound, so Wh/km from a channel with a dropout is too high. The README worked example (section D) is recomputed by `test_pit_energy.py::test_readme_worked_example_matches_independent_arithmetic_and_the_model`.

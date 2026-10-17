@@ -1,5 +1,7 @@
 # Checkpoint v0.2: corrected control model and reviewable hardware draft (2026-10-15)
 
+> **Historical record of v0.2, superseded.** Current state: [`STATUS.md`](STATUS.md) and the [README](../README.md); index of documents: [`README.md`](README.md). Statements below describe v0.2 and are not updated; the KiCad ERC, listed here as not executed, has run in CI since v0.4 ([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) 5).
+
 **CONTROL CONTRACT CORRECTED (host-verified) · FUNCTIONAL HARDWARE ARCHITECTURE v0.2 DRAFT (reviewable) · COMPONENT SELECTION NOT FROZEN · NOT HARDWARE-FROZEN · NOT FABRICATION-READY · NOT VEHICLE-VALIDATED · BUDGET NOT SHOWN FEASIBLE**
 
 > **Errata (v0.3, 2026-10-15). The body below is preserved unchanged, including its unfavourable results.** Corrections:

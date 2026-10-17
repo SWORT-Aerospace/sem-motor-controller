@@ -55,9 +55,22 @@ def test_cli_reports_a_missing_run(tmp_path):
 
 def test_shadow_replay_has_no_command_path():
     """Shadow mode by construction: no CAN, MQTT, socket or controller imports in the replay modules."""
-    for rel in ("host/pit/shadow_replay.py", "host/pit/csia_replay.py", "tools/run_pit_replay.py"):
+    for rel in ("host/pit/shadow_replay.py", "host/pit/csia_replay.py", "host/pit/energy.py", "tools/run_pit_replay.py"):
         tree = ast.parse((ROOT / rel).read_text())
         mods = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
         mods |= {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
         assert not {m for m in mods if m.split(".")[0] in ("paho", "socket", "can", "serial")}, rel
         assert not {m for m in mods if m.startswith(("host.telematics", "host.vcu_bridge", "host.telemetry_adapter"))}, rel
+
+
+def test_cli_writes_configuration_notes_into_the_report(tmp_path):
+    meta = {"run_id": "CAR-2", "kind": "vehicle", "calibration": {"provenance": "bench_measured"},
+            "vehicle_config": {"path": "config/vehicle.synthetic.yaml", "sha256": "0" * 64},
+            "sensors": {"wheel_ppr": 32}}
+    _db(tmp_path, meta).close()
+    r = subprocess.run([sys.executable, "tools/run_pit_replay.py", "--db", str(tmp_path / "pit.sqlite"),
+                        "--run", "CAR-2", "--out", str(tmp_path / "o")], cwd=ROOT, capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    report = (tmp_path / "o" / "report.md").read_text()
+    assert "changed since the run" in report and "counting window not in the run metadata" in report
+    assert "changed since the run" in " ".join(json.loads((tmp_path / "o" / "report.json").read_text())["insufficient"])
