@@ -140,7 +140,9 @@ def compare_on_identical_records(ep, man: dict, rc: E.RunConfig) -> dict:
         d = D.diagnose_blocks(blocks, rc.engine, timing, source=source)
         out[f"reference/{source}"] = {"outcome": d.outcome, "hypotheses": d.hypotheses}
         out[f"MHT/{source}"] = {k: v for k, v in BL.mht(blocks, timing_s=timing, noise_scale=rc.engine.noise_scale,
-                                                         p_accept=man["compare"]["mht_p_accept"]).items() if k != "posterior"}
+                                                         p_accept=man["compare"]["mht_p_accept"],
+                                                         prior_h0=man["calibration"]["mht_prior_h0"][source]).items()
+                                if not k.startswith("posterior")}
         al = BL.aligned_residual(blocks, man["calibration"]["aligned_thresholds"][source], rc.engine.noise_scale)
         out[f"aligned/{source}"] = {"outcome": al["outcome"], "hypotheses": al["hypotheses"]}
     return out
@@ -256,12 +258,102 @@ def analyse(rows: list, comp: list, man: dict) -> dict:
     return stats
 
 
+# ----------------------------------------------------------------------------- pre-registered endpoints
+def wilson(k: int, n: int, z: float = 1.959964) -> tuple:
+    """Wilson score 95 % interval of a proportion k / n (episodes are independent draws)."""
+    if n == 0:
+        return math.nan, math.nan
+    p = k / n
+    c = (p + z * z / (2 * n)) / (1 + z * z / n)
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return max(0.0, c - h), min(1.0, c + h)
+
+
+def compare_category(c: dict, eng: str) -> str:
+    """Category of one engine's outcome on one episode's identical records (evaluator only)."""
+    t = {"none": "H0", "HB": "HB", "HT": "HT", "HL": "HL", "HL_grade": "HL", "HU_gain": "HU"}[c["kind"]]
+    o = c[eng]
+    hyps = tuple(o["hypotheses"])
+    if t == "H0":
+        return "clean" if o["outcome"] in ("consistent", "insufficient") else "false_alarm"
+    if t == "HU":
+        return "correct" if o["outcome"] == "no_fit" else "wrong" if o["outcome"] == "supported" else "other"
+    if o["outcome"] == "supported":
+        return "correct" if hyps[0] == t else "wrong"
+    if o["outcome"] == "unresolved":
+        return "unresolved_incl" if t in hyps else "unresolved_excl"
+    return {"consistent": "missed", "insufficient": "missed"}.get(o["outcome"], o["outcome"])
+
+
+def endpoints(rows: list, comp: list, man: dict) -> list:
+    """Every endpoint of the manifest, evaluated mechanically against its pre-registered criterion."""
+    n_boot, seed = man["analysis"]["bootstrap_resamples"], man["analysis"]["bootstrap_seed"]
+    truths = {"faults": ("HB", "HT", "HL"), "HT": ("HT",), "HU": ("HU",), "H0": ("H0",)}
+    by = {}
+    for r in rows:
+        by.setdefault(r["scheduler"], {})[r["seed"]] = r
+    out = []
+    for e in man["endpoints"]:
+        res = {"id": e["id"], "question": e["question"], "criterion": e["criterion"]}
+        if e["kind"] == "paired":
+            A, B = by[e["a"]], by[e["b"]]
+            ids = sorted(k for k in set(A) & set(B) if A[k]["truth"] in truths[e["episodes"]])
+            for metric in e["metrics"]:
+                f = (lambda r: float(r["bytes"])) if metric == "bytes" else (lambda r, m=metric: float(r["category"] == m))
+                d, lo, hi = bootstrap_diff(np.array([f(A[k]) for k in ids]), np.array([f(B[k]) for k in ids]), n_boot, seed)
+                res[metric] = {"diff": d, "lo": lo, "hi": hi, "n": len(ids)}
+        elif e["kind"] == "paired_engines":
+            ids = [c for c in comp if c["kind"] in e["kinds"]]
+            x = np.array([compare_category(c, e["a"]) == "correct" for c in ids], float)
+            y = np.array([compare_category(c, e["b"]) == "correct" for c in ids], float)
+            d, lo, hi = bootstrap_diff(x, y, n_boot, seed)
+            res["correct"] = {"diff": d, "lo": lo, "hi": hi, "n": len(ids)}
+        elif e["kind"] == "proportion":
+            R = [r for r in by[e["scheduler"]].values() if r["truth"] in truths[e["episodes"]]]
+            if e.get("among") == "supported":
+                R = [r for r in R if r["category"] in ("correct", "wrong")]
+            k = sum(r["category"] in e["categories"] for r in R)
+            lo, hi = wilson(k, len(R))
+            res["proportion"] = {"k": k, "n": len(R), "p": k / len(R) if R else math.nan, "lo": lo, "hi": hi}
+        res["met"] = _criterion(e["criterion"], res)
+        out.append(res)
+    return out
+
+
+def _criterion(c: dict, res: dict):
+    """A criterion is a list of tests on interval bounds, all of which must hold; None means descriptive."""
+    if not c:
+        return None
+    ok = True
+    for t in c:
+        v = res[t["of"]][t["bound"]]
+        ok &= bool(v > t["value"]) if t["op"] == ">" else bool(v < t["value"])
+    return ok
+
+
 def render(stats: dict, man: dict, meta: dict) -> str:
     L = ["# Final evaluation results", "",
          f"Generated by `research/run_final.py` from pre-registration commit `{meta['commit']}`; do not edit.",
          "Synthetic host simulation only: no result here is a vehicle or bench measurement.",
          f"Episodes: {meta['episodes']}; wall time {meta['seconds']} s.", "",
-         "## Schedulers (same diagnostic engine, paired episodes)", "",
+         "## Pre-registered endpoints", "",
+         "Each criterion was fixed in `research/PREREGISTRATION.md` before any final episode existed; "
+         "\"descriptive\" endpoints carry no criterion.", "",
+         "| Endpoint | question | estimate (95 % interval) | criterion | met |", "|---|---|---|---|---|"]
+    for e in stats["endpoints"]:
+        parts = []
+        for k in ("correct", "wrong", "bytes"):
+            if k in e:
+                v = e[k]
+                fmt = "{:+.0f}" if k == "bytes" else "{:+.3f}"
+                parts.append(f"{k} {fmt.format(v['diff'])} [{fmt.format(v['lo'])}, {fmt.format(v['hi'])}], n {v['n']}")
+        if "proportion" in e:
+            v = e["proportion"]
+            parts.append(f"{v['k']}/{v['n']} = {v['p']:.3f} [{v['lo']:.3f}, {v['hi']:.3f}]")
+        crit = "; ".join(f"{t['of']} {t['bound']} {t['op']} {t['value']:g}" for t in e["criterion"]) or "descriptive"
+        met = "descriptive" if e["met"] is None else ("yes" if e["met"] else "no")
+        L.append(f"| {e['id']} | {e['question']} | {'; '.join(parts)} | {crit} | {met} |")
+    L += ["", "## Schedulers (same diagnostic engine, paired episodes)", "",
          "| Scheduler | fault episodes | correct | wrong | unresolved (true in set) | unresolved (true not in set) | no fit | missed | undecided | coverage | risk | false alarms per clean hour | wrong cause on clean | unmodelled reported as no fit | mean bytes | median decision delay [s] |",
          "|---|" + "---|" * 15]
     for sch, s in stats["schedulers"].items():
@@ -316,6 +408,7 @@ def main() -> int:
     (OUT / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     (OUT / "compare.jsonl").write_text("".join(json.dumps(c) + "\n" for c in comp))
     stats = analyse(rows, comp, man)
+    stats["endpoints"] = endpoints(rows, comp, man)
     meta = {"commit": a.commit, "episodes": len(jobs), "seconds": round(time.time() - t0)}
     (OUT / "stats.json").write_text(json.dumps({"meta": meta, **stats}, indent=1, default=float) + "\n")
     (OUT / "summary.md").write_text(render(stats, man, meta))

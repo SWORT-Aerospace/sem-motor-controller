@@ -1,7 +1,9 @@
 """Development pilot: calibration on the calibration split, then every scheduler on the development split.
 
     python3 research/run_pilot.py calibrate --episodes 40     # fault-free calibration episodes
+    python3 research/run_pilot.py calibrate-baselines         # baseline thresholds, on the same split
     python3 research/run_pilot.py dev --per-kind 12           # all schedulers, paired, development episodes
+    python3 research/run_pilot.py dev-compare                 # the engine comparison alone, again
 
 Seeds: development 100000 + i, calibration 200000 + i. The final split is generated only from the
 pre-registration commit (research/run_final.py). Results go to research/generated/pilot/; they are
@@ -118,13 +120,22 @@ def _base_worker(i: int) -> dict:
     rc = load_config()
     clk = spec.link.clock
     blocks = {src: D.calibrate_blocks(window_blocks(ep, 45.0, 70.0, st, src), rc.engine, src) for src in ("frames", "summary")}
+    mht_post = {}
+    for src in ("frames", "summary"):           # three windows per episode for the multiple-hypothesis prior
+        mht_post[src] = []
+        for a, b in ((20.0, 45.0), (45.0, 70.0), (65.0, 90.0)):
+            bl = D.calibrate_blocks(window_blocks(ep, a, b, st, src), rc.engine, src)
+            if bl:
+                mht_post[src].append(BL.mht(bl, timing_s=0.005 if src == "frames" else None,
+                                            noise_scale=rc.engine.noise_scale)["posterior_equal"])
     return {"frames": BL.residual_statistics(blocks["frames"], rc.engine.noise_scale),
-            "summary": BL.residual_statistics(blocks["summary"], rc.engine.noise_scale),
+            "summary": BL.residual_statistics(blocks["summary"], rc.engine.noise_scale), "mht": mht_post,
             "stream": (spec.duration_s, BL.adapter_stream(ep.log, st.motor.kt, clk.local(spec.duration_s)))}
 
 
 def calibrate_baselines(n: int, procs: int) -> dict:
-    """Aligned-residual thresholds and the frozen monitors' calibration, on fault-free calibration episodes."""
+    """Aligned-residual thresholds, the multiple-hypothesis prior and the frozen monitors' calibration, on
+    fault-free calibration episodes."""
     from research.bea import baselines as BL
     t0 = time.time()
     with mp.Pool(procs) as pool:
@@ -134,6 +145,7 @@ def calibrate_baselines(n: int, procs: int) -> dict:
     fm = BL.FrozenMonitors.calibrate([o["stream"] for o in out[: min(n, 12)]])
     cal = json.loads(CAL_FILE.read_text())
     cal["aligned_thresholds"] = thr
+    cal["mht_prior_h0"] = {src: BL.calibrate_mht_prior([p for o in out for p in o["mht"][src]]) for src in ("frames", "summary")}
     cal["frozen_monitors"] = {"e6": dict(fm.e6.__dict__), "lam": fm.lam, "trust_thr": fm.trust_thr,
                               "report": {k: v for k, v in fm.report.items() if k != "e6"}, "e6_fit": fm.report["e6"]}
     cal["baseline_seconds"] = round(time.time() - t0)
@@ -150,7 +162,7 @@ PAIRED = [["F", "A"], ["F", "B"], ["F", "C"], ["F", "D"], ["F", "E"],
 def pilot_manifest(d_budget: int) -> dict:
     """The parts of a manifest that the final runner's functions read, from the calibration file."""
     cal = json.loads(CAL_FILE.read_text())
-    return {"calibration": {**cal["engine"], "aligned_thresholds": cal["aligned_thresholds"],
+    return {"calibration": {**cal["engine"], "aligned_thresholds": cal["aligned_thresholds"], "mht_prior_h0": cal["mht_prior_h0"],
                             "frozen_monitors": {k: cal["frozen_monitors"][k] for k in ("e6", "lam", "trust_thr")}},
             "budgets": {"byte_budget": 200000, "deadline_s": 40.0, "decide_after_s": 20.0, "d_budget_bytes": d_budget},
             "compare": {"window_s": [45.0, 70.0], "mht_p_accept": 0.95},
@@ -191,6 +203,30 @@ def dev(per_kind: int, procs: int) -> list:
     (OUT / "dev_stats.json").write_text(json.dumps(stats, indent=1, default=float) + "\n")
     (OUT / "dev_summary.md").write_text(summarise(rows, d_budget, stats))
     return rows
+
+
+def _compare_worker(args) -> dict:
+    from research import run_final as RF
+    i, kind, d_budget = args
+    ep = H.run_vehicle(H.draw_episode(SEED_BASE["dev"] + i, "dev", kind))
+    man = pilot_manifest(d_budget)
+    return {"seed": i, "kind": kind, **RF.compare_on_identical_records(ep, man, RF.config(man))}
+
+
+def dev_compare(procs: int) -> dict:
+    """The engine comparison alone, again, on the development episodes of dev_results.jsonl (after a
+    change of a baseline's calibration; the scheduler results are kept)."""
+    from research import run_final as RF
+    rows = [json.loads(line) for line in (OUT / "dev_results.jsonl").read_text().splitlines()]
+    d_budget = int(np.mean([r["bytes"] for r in rows if r["scheduler"] == "F"]))
+    eps = sorted({(r["i"], r["kind"]) for r in rows})
+    with mp.Pool(procs) as pool:
+        comp = pool.map(_compare_worker, [(i, k, d_budget) for i, k in eps], chunksize=1)
+    stats = RF.analyse(rows, comp, pilot_manifest(d_budget))
+    (OUT / "dev_compare.jsonl").write_text("".join(json.dumps(c) + "\n" for c in comp))
+    (OUT / "dev_stats.json").write_text(json.dumps(stats, indent=1, default=float) + "\n")
+    (OUT / "dev_summary.md").write_text(summarise(rows, d_budget, stats))
+    return stats
 
 
 def summarise(rows: list, d_budget: int, stats: dict) -> str:
@@ -235,7 +271,7 @@ def summarise(rows: list, d_budget: int, stats: dict) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("stage", choices=("calibrate", "calibrate-baselines", "dev"))
+    ap.add_argument("stage", choices=("calibrate", "calibrate-baselines", "dev", "dev-compare"))
     ap.add_argument("--episodes", type=int, default=40)
     ap.add_argument("--per-kind", type=int, default=12)
     ap.add_argument("--procs", type=int, default=4)
@@ -244,8 +280,11 @@ def main() -> int:
         print(json.dumps(calibrate(a.episodes, a.procs), indent=1))
     elif a.stage == "calibrate-baselines":
         print(json.dumps(calibrate_baselines(a.episodes, a.procs), indent=1, default=float))
+    elif a.stage == "dev-compare":
+        dev_compare(a.procs)
+        print((OUT / "dev_summary.md").read_text())
     else:
-        rows = dev(a.per_kind, a.procs)
+        dev(a.per_kind, a.procs)
         print((OUT / "dev_summary.md").read_text())
     return 0
 

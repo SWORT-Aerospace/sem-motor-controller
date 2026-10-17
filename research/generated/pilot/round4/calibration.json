@@ -1,0 +1,97 @@
+{
+ "episodes": 24,
+ "windows": 7818,
+ "windows_per_relationship": {
+  "frames/R1": 532,
+  "frames/R2": 533,
+  "frames/R3": 190,
+  "frames/R4": 122,
+  "summary/R1": 3916,
+  "summary/R2": 4274,
+  "summary/R3": 3493,
+  "summary/R4": 3493
+ },
+ "engine": {
+  "noise_scale": 1.0,
+  "rel_scale": {
+   "summary": {
+    "R1": 0.4453,
+    "R2": 0.9336,
+    "R3": 0.3874,
+    "R4": 0.9517
+   },
+   "frames": {
+    "R1": 1.0102,
+    "R2": 0.9683,
+    "R3": 1.0226,
+    "R4": 0.9777
+   }
+  },
+  "z_frames": 3.41,
+  "z_summary": 4.68,
+  "kappa_summary": {
+   "HB": 10.83,
+   "HT": 14.39,
+   "HL": 10.83,
+   "HL_grade": 10.83
+  },
+  "kappa_frames": {
+   "HB": 10.83,
+   "HT": 42.43,
+   "HL": 10.83,
+   "HL_grade": 10.83
+  }
+ },
+ "rule": "1. with unit scales: each relationship's factor, per evidence source, is sqrt(median of J / n) of its\n   share of the normal-operation fit over the windows it appears in (at least 5 samples);\n2. with those factors: kappa_h = max(10.83, 1.1 x largest per-episode maximum of J_H0 - J_h) and the\n   consistency threshold z = max(3, 1.1 x largest per-episode maximum z score of normal operation),\n   each per evidence source (10.83 is the chi-square(1) 0.999 point).",
+ "seconds": 197,
+ "aligned_thresholds": {
+  "frames": {
+   "R1": 142.22,
+   "R1dyn": 46.46,
+   "R2": 5.48,
+   "R3": 13.13,
+   "R4": 4.0
+  },
+  "summary": {
+   "R2": 11.34,
+   "R3": 5.2,
+   "R4": 4.0,
+   "R1": 25.14,
+   "R1dyn": 9.99
+  }
+ },
+ "frozen_monitors": {
+  "e6": {
+   "R_ohm": 0.060688441606363955,
+   "c_sw_W_per_A": 1.9094862232071153,
+   "p0_W": 2.239574998428603,
+   "s0_W": 3.8045504706687803,
+   "u_R": 0.15,
+   "u_rel": 0.03,
+   "align_max_gap_s": 0.03
+  },
+  "lam": 9.0,
+  "trust_thr": {
+   "rotor": 0.8099050388670934,
+   "wheel_drive": 0.8107252149251075,
+   "wheel_l": 0.78,
+   "wheel_r": 0.78,
+   "gnss": 0.8097416188532697,
+   "imu": 0.78,
+   "phase_current": 0.7637329416110352,
+   "dc_meter": 0.628724855153812
+  },
+  "report": {
+   "r3v_threshold": 9.0,
+   "dev_alarms_at_threshold": 0
+  },
+  "e6_fit": {
+   "samples": 53941,
+   "R_ohm": 0.060688441606363955,
+   "c_sw_W_per_A": 1.9094862232071153,
+   "p0_W": 2.239574998428603,
+   "residual_sd_W": 3.8045504706687803
+  }
+ },
+ "baseline_seconds": 38
+}

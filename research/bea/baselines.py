@@ -101,7 +101,12 @@ def _log_marginal(W: Whitened, y: np.ndarray, C: np.ndarray, prior_var: np.ndarr
 
 
 def mht(blocks: list, level: str = "known", timing_s: Optional[float] = None, noise_scale: float = 1.0,
-        p_accept: float = 0.95) -> dict:
+        p_accept: float = 0.95, prior_h0: float = 0.25) -> dict:
+    """Multiple-hypothesis baseline: Gaussian marginal likelihood of each hypothesis (nuisance and fault
+    parameters integrated, the timing offset averaged over a uniform prior), prior prior_h0 for normal
+    operation and the rest shared equally by the faults. Decision: normal operation if it has the
+    largest posterior; else the best fault if its posterior reaches p_accept; else unresolved, with the
+    faults of posterior at least 0.05. "posterior_equal" is the posterior under equal priors (calibration)."""
     if not blocks:
         return {"outcome": "insufficient", "hypotheses": (), "posterior": {}}
     W = whiten(blocks, noise_scale)
@@ -116,16 +121,28 @@ def mht(blocks: list, level: str = "known", timing_s: Optional[float] = None, no
         m = max(vals)
         logm[h] = m + math.log(np.mean(np.exp(np.array(vals) - m)))     # uniform prior on the offset
     m = max(logm.values())
-    post = {h: math.exp(v - m) for h, v in logm.items()}
+    lik = {h: math.exp(v - m) for h, v in logm.items()}
+    equal = {h: v / sum(lik.values()) for h, v in lik.items()}
+    nf = len(lik) - 1
+    post = {h: v * (prior_h0 if h == "H0" else (1.0 - prior_h0) / nf) for h, v in lik.items()}
     z = sum(post.values())
     post = {h: p / z for h, p in post.items()}
     best = max(post, key=post.get)
-    if post[best] < p_accept:
-        keep = tuple(h for h, p in sorted(post.items(), key=lambda kv: -kv[1]) if p >= 0.05 and h != "H0")
-        return {"outcome": "unresolved" if keep else "consistent", "hypotheses": keep or ("H0",), "posterior": post}
     if best == "H0":
-        return {"outcome": "consistent", "hypotheses": ("H0",), "posterior": post}
-    return {"outcome": "supported", "hypotheses": (best,), "posterior": post}
+        return {"outcome": "consistent", "hypotheses": ("H0",), "posterior": post, "posterior_equal": equal}
+    if post[best] >= p_accept:
+        return {"outcome": "supported", "hypotheses": (best,), "posterior": post, "posterior_equal": equal}
+    keep = tuple(h for h, p in sorted(post.items(), key=lambda kv: -kv[1]) if p >= 0.05 and h != "H0")
+    return {"outcome": "unresolved", "hypotheses": keep, "posterior": post, "posterior_equal": equal}
+
+
+def calibrate_mht_prior(equal_posteriors: list, n_faults: int = 3) -> float:
+    """Prior probability of normal operation: the smallest that makes normal operation the most probable
+    hypothesis on every fault-free calibration window, with the prior odds raised by 1.1 (the rule used
+    for the reference diagnosis's margins), and at least the equal share."""
+    need = max((max(v for h, v in p.items() if h != "H0") / max(p["H0"], 1e-300) for p in equal_posteriors), default=0.0)
+    odds = 1.1 * need / n_faults            # prior_h0 / ((1 - prior_h0) / n_faults) must exceed need
+    return round(max(1.0 / (n_faults + 1), odds / (1.0 + odds)), 6)
 
 
 # ----------------------------------------------------------------------------- frozen monitors
