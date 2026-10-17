@@ -6,17 +6,17 @@ Data class: **synthetic (host simulation)** (run kind: HOST SIMULATION - not a v
 
 | Signal | Samples | Ticks with a fresh sample |
 |---|---|---|
-| rotor | 11935 | 100% |
-| iq | 11935 | 100% |
+| rotor | 11934 | 100% |
+| iq | 11934 | 100% |
 | iq_ref | 5968 | 100% |
-| kcl | 11935 | 100% |
+| kcl | 11934 | 100% |
 | p_dc | 1194 | 100% |
 | wheel_l | 1193 | 99% |
 | wheel_r | 1193 | 99% |
 | wheel_drive | 1193 | 99% |
 | gnss | 1041 | 87% |
-| imu_ax | 11935 | 99% |
-| imu_gz | 11935 | 99% |
+| imu_ax | 11934 | 99% |
+| imu_gz | 11934 | 99% |
 | grade | 1041 | 100% |
 
 ## Relationships
@@ -50,6 +50,6 @@ Data class: **synthetic (host simulation)** (run kind: HOST SIMULATION - not a v
 
 * road grade is assumed flat (no route map): relationships using grade (E4) rest on that assumption
 * relationship P_phase_current never active: no evidence about its endpoints from it
-* sensor configuration provisional (wheel_ppr PROVISIONAL; channel assignment PROVISIONAL)
+* sensor configuration provisional (wheel_ppr PROVISIONAL; channel assignment PROVISIONAL; temperature probe part and placements PROPOSED)
 
 A synthetic run shows how the monitors behave on the host model; it is not evidence about real sensors. The frozen evaluation (`docs/csia/EVALUATION_RESULTS_v2.md`) found that CSIA2 did not meet its pre-registered criterion against R3v; this report does not change that.

@@ -42,7 +42,7 @@ Data class: **synthetic (host simulation)** (run kind: HOST SOFTWARE with a real
 
 * road grade is assumed flat (no route map): relationships using grade (E4) rest on that assumption
 * relationship P_phase_current never active: no evidence about its endpoints from it
-* sensor configuration provisional (wheel_ppr PROVISIONAL; channel assignment PROVISIONAL)
+* sensor configuration provisional (wheel_ppr PROVISIONAL; channel assignment PROVISIONAL; temperature probe part and placements PROPOSED)
 * no ground truth in the run metadata: detections are listed, not scored
 
 A synthetic run shows how the monitors behave on the host model; it is not evidence about real sensors. The frozen evaluation (`docs/csia/EVALUATION_RESULTS_v2.md`) found that CSIA2 did not meet its pre-registered criterion against R3v; this report does not change that.

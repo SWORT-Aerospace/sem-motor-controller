@@ -6,7 +6,7 @@
    "pass": true
   },
   {
-   "detail": "queue drops 396 (all during the flash stall), high water 512/512; records written 70506 = imported 70506; storage drops 0",
+   "detail": "queue drops 402 (all during the flash stall), high water 512/512; records written 70860 = imported 70860; storage drops 0",
    "id": "log_drops_counted_not_hidden",
    "pass": true
   },
@@ -21,7 +21,7 @@
    "pass": true
   },
   {
-   "detail": "blocks 282 ok / 0 corrupt, records 70506, bad-CRC frames 0; second import added 0 rows",
+   "detail": "blocks 285 ok / 0 corrupt, records 70860, bad-CRC frames 0; second import added 0 rows",
    "id": "offline_import_complete_and_idempotent",
    "pass": true
   },
@@ -31,7 +31,12 @@
    "pass": true
   },
   {
-   "detail": "largest UTC error 0.72 us with PPS (60535 records); 7.4 us in holdover (9971 records, GNSS outage 15 s, bound 50 ppm x age)",
+   "detail": "357 probe samples logged over 3 channels; injected motor_case CRC errors 20-26 s: 6 of 6 samples in the window NULL at the pit with status crc_error, none elsewhere; 12 live messages with motor_case null, all inside the fault window; controller FET temperature in 228 of 228 stored live messages",
+   "id": "temperatures_logged_with_status_null_when_invalid",
+   "pass": true
+  },
+  {
+   "detail": "largest UTC error 0.72 us with PPS (60841 records); 7.4 us in holdover (10019 records, GNSS outage 15 s, bound 50 ppm x age)",
    "id": "utc_alignment_with_quality",
    "pass": true
   },
@@ -53,9 +58,9 @@
  ],
  "controller_summary": "config_ok=1 events=18594 final_state=READY energy_ctrl_J=5805.352 energy_plant_J=5797.363 tx_frames=47292 rx_frames=6583 rx_crc_fail=0 rx_tag_mismatch=0",
  "counters": {
-  "log_dropped_queue": 396,
+  "log_dropped_queue": 402,
   "log_dropped_storage": 0,
-  "log_records": 70506,
+  "log_records": 70860,
   "queue_high_water": 512,
   "rx_frames": 47292,
   "supervisor_overruns": 30,
@@ -65,13 +70,13 @@
  "csia": {
   "csia_version": "0.8.0",
   "detect_latency_s": 0.09662725160191599,
-  "peak_traced_kib": 1785.0,
+  "peak_traced_kib": 1785.0439453125,
   "relationship_failures_outside_fault_window": {
    "E6_power_balance": 507
   },
-  "tick_ms_max": 4.064109999490029,
-  "tick_ms_mean": 1.4447078441511014,
-  "tick_ms_p99": 2.7327759999025147,
+  "tick_ms_max": 3.981978999945568,
+  "tick_ms_mean": 1.5138976616837378,
+  "tick_ms_p99": 2.3194819996206206,
   "ticks": 1200,
   "ticks_ambiguous": 530,
   "ticks_unobservable": 5,
@@ -81,15 +86,15 @@
  "import": {
   "block_seq_gaps": 0,
   "blocks_corrupt": 0,
-  "blocks_ok": 282,
+  "blocks_ok": 285,
   "frames_bad_crc": 0,
-  "new_records": 70506,
-  "records": 70506,
+  "new_records": 70860,
+  "records": 70860,
   "run_id": "HOSTSIM-0001",
   "truncated_tail_bytes": 0,
   "utc_quality": {
-   "holdover": 9971,
-   "pps": 60535
+   "holdover": 10019,
+   "pps": 60841
   }
  },
  "kind": "HOST SIMULATION",
@@ -105,12 +110,12 @@
   "stored": 228
  },
  "reimport_new_records": 0,
- "repo_commit": "e1b59a60614ff7bdb766f05994655a0af804f4d3",
+ "repo_commit": "229ec9cc93e6cabd200191ed885a8429a92fbf85",
  "run_id": "HOSTSIM-0001",
  "storage": {
-  "bytes_per_s": 9573.541666666666,
-  "log_bytes": 1148825,
-  "minutes_to_fill_8MB": 14.603804757034363
+  "bytes_per_s": 9605.8,
+  "log_bytes": 1152696,
+  "minutes_to_fill_8MB": 14.554762053481577
  },
- "working_tree_dirty": true
+ "working_tree_dirty": false
 }
