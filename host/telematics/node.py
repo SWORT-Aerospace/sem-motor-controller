@@ -11,8 +11,8 @@ Tasks, in priority order, as docs/ICD.md requires of the unit:
   3. Log writer: moves queued records into STLG blocks at a bounded rate; a
      flash stall (injected) stops it, the queue fills, and drops are counted
      and reported, never hidden.
-  4. Uplink, 2 Hz (the proposal says 1-5 Hz): a JSON summary to the MQTT topic
-     over LTE. During an outage messages wait in a bounded queue; overflow
+  4. Uplink, 2 Hz (the proposal says 1-5 Hz): a JSON summary (schema
+     sem.telemetry.v2: v1 plus wheel speed per channel) to the MQTT topic over LTE. During an outage messages wait in a bounded queue; overflow
      drops the oldest and is counted. Replayed messages are flagged.
 
 Nothing here runs on hardware. The rates and capacities are configuration,
@@ -32,7 +32,8 @@ from host.telemetry_adapter.supervisor import Supervisor
 from protocol.generated import semmc_protocol as proto
 
 STATES = ["BOOT", "SELF_TEST", "DISARMED", "READY", "MANUAL", "ECO_ASSIST", "DERATED", "FAULT_LATCHED"]
-SCHEMA = "sem.telemetry.v1"
+SCHEMA = "sem.telemetry.v2"          # live message produced by this node
+SCHEMAS_ACCEPTED = ("sem.telemetry.v1", "sem.telemetry.v2")   # what the pit accepts (v1: no wheel block)
 
 
 @dataclasses.dataclass
@@ -44,6 +45,11 @@ class NodeConfig:
     uplink_queue_capacity: int = 30      # messages held while LTE is down (15 s at 2 Hz)
     counters_period_s: float = 1.0
     topic: str = "sem/car/telemetry"
+    # wheel speed in the live message (v2): unknown circumference or pulses per revolution -> speeds are null
+    wheel_circumference_m: Optional[float] = None
+    wheel_ppr: Optional[int] = None
+    wheel_stale_s: float = 0.3           # a channel without a window this recent reports null
+    wheel_channels: tuple = ("wheel_l", "wheel_r", "wheel_drive")   # channel index -> name, as sensors.WHEEL_CHANNELS
 
 
 def _num(x) -> Optional[float]:
@@ -91,6 +97,7 @@ class TelematicsNode:
         self.latest: dict = {}
         self.p_acc = [0.0, 0]                 # p_batt samples since the last uplink (mean)
         self.gnss_latest = (math.nan, math.nan, 0, False)
+        self.wheel_latest: dict[int, tuple[float, int, int]] = {}   # channel -> (t_true, counts, window_ms)
         self.sup_rate: collections.Counter = collections.Counter()  # requests per whole second (control health)
         self.drop_log: list[tuple[float, str, int]] = []   # (time, reason, uplink seq dropped)
 
@@ -128,6 +135,8 @@ class TelematicsNode:
 
     def on_sensor(self, t_true: float, kind: str, args: tuple) -> None:
         if kind == "wheel":
+            ch, counts, window_ms = args
+            self.wheel_latest[ch] = (t_true, counts, window_ms)
             self._enqueue(t_true, stlg.WHEEL, stlg.body_wheel(*args))
         elif kind == "gnss":
             self.gnss_latest = args
@@ -180,6 +189,13 @@ class TelematicsNode:
         p_mean = self.p_acc[0] / self.p_acc[1] if self.p_acc[1] else None
         self.p_acc = [0.0, 0]
         g = self.gnss_latest
+        wheel = {}
+        C, ppr = self.cfg.wheel_circumference_m, self.cfg.wheel_ppr
+        for ch, name in enumerate(self.cfg.wheel_channels):
+            w = self.wheel_latest.get(ch)
+            fresh = w is not None and t_true - w[0] <= self.cfg.wheel_stale_s and w[2] > 0
+            # same formula as the pit's offline import (host/pit/ingest.py import_log): counts * C / (ppr * window)
+            wheel[name] = (w[1] * C / (ppr * w[2] / 1000.0)) if fresh and C and ppr else None
         return {
             "schema": SCHEMA, "run_id": self.run_id, "seq": self.up_seq, "t_local_ms": int(round(t_local * 1000)),
             "utc": _num(u), "utc_q": q, "utc_err_s": _num(err),
@@ -191,6 +207,7 @@ class TelematicsNode:
                      "reason": tr.get("reason")},
             "sup": {"torque_Nm": _num(last_req.get("torque_Nm")), "reason": last_req.get("reason")},
             "gnss": {"speed_mps": _num(g[0]), "sacc_mps": _num(g[1]), "num_sv": g[2], "fix": bool(g[3])},
+            "wheel": {"speed_mps": wheel},
             "counters": dict(self.c),
             "replayed": False,
         }

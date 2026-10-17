@@ -54,10 +54,11 @@ jobs:
         env:
           SEMMC_REQUIRE_MQTT: "1"
         run: python -m pytest -rs
-      - name: Host demonstrations (simulated uplink; real Mosquitto broker)
+      - name: Host demonstrations (simulated uplink; real Mosquitto broker; shadow replay)
         run: |
           python tools/run_host_demo.py --out build/host_demo
           python tools/run_mqtt_demo.py --out build/mqtt_demo
+          python tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay
       - name: Portable core cross-compile (Cortex-M4F, compile check only)
         run: |
           cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_PORTABLE_ONLY=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel

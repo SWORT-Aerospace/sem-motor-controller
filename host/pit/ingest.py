@@ -31,14 +31,15 @@ import pathlib
 import sqlite3
 
 from host.telematics import stlg
-from host.telematics.node import SCHEMA, STATES
+from host.telematics.node import SCHEMAS_ACCEPTED, STATES
 from protocol.generated import semmc_protocol as proto
 
 DDL = """
 CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, meta_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS live (
   run_id TEXT NOT NULL, seq INTEGER NOT NULL, t_local_ms INTEGER NOT NULL, utc REAL, utc_q TEXT,
-  payload TEXT NOT NULL, received_s REAL NOT NULL, replayed INTEGER NOT NULL, PRIMARY KEY (run_id, seq));
+  payload TEXT NOT NULL, received_s REAL NOT NULL, replayed INTEGER NOT NULL, schema TEXT,
+  PRIMARY KEY (run_id, seq));
 CREATE TABLE IF NOT EXISTS rejected (
   run_id TEXT, source TEXT NOT NULL, reason TEXT NOT NULL, detail TEXT);
 CREATE TABLE IF NOT EXISTS records (
@@ -70,9 +71,17 @@ RANGES = {"speed_mech_rad_s": (-1000.0, 1000.0), "iq_A": (-200.0, 200.0), "vbus_
           "p_batt_W_mean": (-5000.0, 5000.0), "energy_J": (-1e9, 1e9)}
 
 
+WHEEL_RANGE_MPS = (0.0, 60.0)
+
+
 def connect(path: pathlib.Path) -> sqlite3.Connection:
     db = sqlite3.connect(str(path))
     db.executescript(DDL)
+    # databases created before the v2 live message have no `schema` column: add it (old rows stay NULL = v1)
+    cols = {r[1] for r in db.execute("PRAGMA table_info(live)")}
+    if "schema" not in cols:
+        db.execute("ALTER TABLE live ADD COLUMN schema TEXT")
+        db.commit()
     return db
 
 
@@ -91,7 +100,7 @@ def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
         m = json.loads(payload)
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
         return None, f"not JSON ({type(e).__name__})"
-    if not isinstance(m, dict) or m.get("schema") != SCHEMA:
+    if not isinstance(m, dict) or m.get("schema") not in SCHEMAS_ACCEPTED:
         return None, "wrong or missing schema"
     for k, ok, what in (("run_id", lambda v: isinstance(v, str) and v != "", "a non-empty string"),
                         ("seq", _is_int, "an integer"), ("t_local_ms", _is_int, "an integer"),
@@ -123,6 +132,14 @@ def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
     c = m.get("counters")
     if c is not None and not (isinstance(c, dict) and all(_is_int(v) and v >= 0 for v in c.values())):
         return None, "counters not an object of non-negative integers"
+    if m["schema"] == "sem.telemetry.v2":
+        w = m.get("wheel")
+        if not isinstance(w, dict) or not isinstance(w.get("speed_mps"), dict):
+            return None, "v2 message without a wheel.speed_mps object"
+        lo, hi = WHEEL_RANGE_MPS
+        for ch, v in w["speed_mps"].items():
+            if v is not None and not (_is_num(v) and lo <= v <= hi):
+                return None, f"wheel.speed_mps.{ch}={v!r} outside [{lo}, {hi}]"
     return m, None
 
 
@@ -148,9 +165,10 @@ def ingest_payload(db: sqlite3.Connection, received_s: float, topic: str, payloa
                    (received_s, topic, None if dup_flag is None else int(dup_flag), "rejected", run_id, None, why))
         outcome = "rejected"
     else:
-        cur = db.execute("INSERT OR IGNORE INTO live VALUES (?,?,?,?,?,?,?,?)",
+        cur = db.execute("INSERT OR IGNORE INTO live (run_id, seq, t_local_ms, utc, utc_q, payload, received_s, "
+                         "replayed, schema) VALUES (?,?,?,?,?,?,?,?,?)",
                          (m["run_id"], m["seq"], m["t_local_ms"], m.get("utc"), m["utc_q"],
-                          json.dumps(m, sort_keys=True), received_s, int(m["replayed"])))
+                          json.dumps(m, sort_keys=True), received_s, int(m["replayed"]), m["schema"]))
         outcome = "stored" if cur.rowcount else "duplicate"
         db.execute("INSERT INTO rx (received_s, topic, dup_flag, outcome, run_id, seq, reason) VALUES (?,?,?,?,?,?,?)",
                    (received_s, topic, None if dup_flag is None else int(dup_flag), outcome, m["run_id"], m["seq"],

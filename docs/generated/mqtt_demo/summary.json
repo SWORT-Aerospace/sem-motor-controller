@@ -7,7 +7,7 @@
    "pass": true
   },
   {
-   "detail": "supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.28/1.27 ms, broker_down 0.06/0.83 ms, after_broker 0.30/1.33 ms, pit_down 0.29/0.36 ms, after_pit 0.30/0.46 ms (supervisor period 20 ms)",
+   "detail": "supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2191/2191 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.32/0.68 ms, broker_down 0.07/1.84 ms, after_broker 0.31/2.54 ms, pit_down 0.28/0.70 ms, after_pit 0.31/0.48 ms (supervisor period 20 ms)",
    "id": "control_and_uplink_unaffected_by_broker_outage",
    "pass": true
   },
@@ -47,8 +47,18 @@
    "pass": true
   },
   {
+   "detail": "678 live wheel speeds (schema sem.telemetry.v2) compared with the speed derived from the latest logged wheel window: 0 differ; 0 null (no fresh window); a valid sem.telemetry.v1 message from another producer was stored as v1: True",
+   "id": "live_wheel_speed_v2_matches_log_and_v1_still_accepted",
+   "pass": true
+  },
+  {
    "detail": "car time t_local_ms increases with seq: True; UTC quality {'none': 3, 'pps': 206, 'holdover': 17}; 15 messages in the GNSS outage carry utc_q=holdover, gnss speed null, fix false; pit receive time recorded for all; generation-to-storage delay (wall clock) live median 2 ms, max 5.09 s; replayed max 7.5 s",
    "id": "timestamps_and_missing_data_explicit",
+   "pass": true
+  },
+  {
+   "detail": "R3v and CSIA2 replayed in shadow mode over 1200 ticks of the imported log; no faults were injected, so the report lists attributions without scoring them (R3v 0, CSIA2 0 episodes); report pit_replay/report.md",
+   "id": "pit_shadow_replay_reports_missing_ground_truth",
    "pass": true
   }
  ],
@@ -87,7 +97,7 @@
  "kind": "HOST SOFTWARE with a real local MQTT broker (not vehicle firmware)",
  "link_events": [
   [
-   -0.521,
+   -0.522,
    "connect",
    "Success"
   ],
@@ -102,18 +112,18 @@
    "Success"
   ],
   [
-   60.043,
+   60.042,
    "disconnect",
    "Normal disconnection"
   ]
  ],
- "loop_late_s": 0.00959344799957762,
+ "loop_late_s": 0.009097990999180183,
  "pace": 2.0,
  "paho_mqtt": "2.1.0",
  "pit_events": [
   [
    "start",
-   "{\"host\": \"127.0.0.1\", \"port\": 45553, \"topic\": \"sem/car/telemetry\"}"
+   "{\"host\": \"127.0.0.1\", \"port\": 59989, \"topic\": \"sem/car/telemetry\"}"
   ],
   [
    "connect",
@@ -129,7 +139,7 @@
   ],
   [
    "start",
-   "{\"host\": \"127.0.0.1\", \"port\": 45553, \"topic\": \"sem/car/telemetry\"}"
+   "{\"host\": \"127.0.0.1\", \"port\": 59989, \"topic\": \"sem/car/telemetry\"}"
   ],
   [
    "connect",
@@ -146,7 +156,7 @@
  ],
  "pit_exit_code": 0,
  "published": 240,
- "repo_commit": "0b7255e20a012bd192f7a1fb1fddf902f7c8c4c0",
+ "repo_commit": "4da4165f9c8485faba3506b99865f6fff2d7d2a0",
  "run_id": "HOSTMQTT-0001",
  "scenario": {
   "broker_down": [
@@ -165,18 +175,18 @@
   ]
  },
  "service_ms_max": {
-  "after_broker": 1.3286170001265418,
-  "after_pit": 0.4640510001081566,
-  "broker_down": 0.8320770002683275,
-  "normal": 1.2660150000556314,
-  "pit_down": 0.35939899998993496
+  "after_broker": 2.5438220000069123,
+  "after_pit": 0.476784999591473,
+  "broker_down": 1.8422329994791653,
+  "normal": 0.6760140004189452,
+  "pit_down": 0.7024790002105874
  },
  "service_ms_p99": {
-  "after_broker": 0.29781900002490147,
-  "after_pit": 0.30447300014202483,
-  "broker_down": 0.06324099967969232,
-  "normal": 0.2841479999915464,
-  "pit_down": 0.2911480000875599
+  "after_broker": 0.3116170000794227,
+  "after_pit": 0.31443599982594606,
+  "broker_down": 0.06634799956373172,
+  "normal": 0.3192929998476757,
+  "pit_down": 0.2835650002452894
  },
  "working_tree_dirty": true
 }

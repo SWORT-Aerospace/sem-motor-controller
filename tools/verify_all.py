@@ -64,6 +64,8 @@ CHECKS = [
      r"contract violations.*", 600, False),
     ("host_demo", "host simulation", [PY, "tools/run_host_demo.py", "--out", "build/host_demo"], "zero",
      r"^DEMO .*", 1800, False),
+    ("pit_replay", "host simulation", [PY, "tools/run_pit_replay.py", "--db", "build/host_demo/pit.sqlite", "--run",
+                                       "HOSTSIM-0001", "--out", "build/pit_replay"], "zero", r"REPLAY .*", 600, False),
     ("mqtt_demo", "host simulation", [PY, "tools/run_mqtt_demo.py", "--out", "build/mqtt_demo"], "zero",
      r"MQTT (ALL PASS|FAILURES|NOT AVAILABLE).*|MQTT FAIL.*", 900, False),
     ("optimisation_quick", "studies", [PY, "tools/run_optimization.py", "--quick"], "zero", r".*kJ.*", 3600, False),

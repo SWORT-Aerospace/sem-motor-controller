@@ -48,6 +48,72 @@ def test_validation_rejects_boolean_and_inconsistent_fields():
     assert "run_id" in ingest.validate_live(_msg(1, run_id=""))[1]
 
 
+def _v2(seq, speeds, **kw):
+    m = json.loads(_msg(seq, **kw))
+    m.update(schema="sem.telemetry.v2", wheel={"speed_mps": speeds})
+    return json.dumps(m, sort_keys=True).encode()
+
+
+def test_v2_wheel_speed_validated_and_v1_still_accepted():
+    assert ingest.validate_live(_v2(1, {"wheel_l": 6.1, "wheel_r": None}))[1] is None
+    assert ingest.validate_live(_msg(1))[1] is None                                  # v1: no wheel block
+    assert "wheel" in ingest.validate_live(_v2(1, {"wheel_l": -0.5}))[1]
+    assert "wheel" in ingest.validate_live(_v2(1, {"wheel_l": float("nan")}))[1]
+    assert "wheel" in ingest.validate_live(_v2(1, {"wheel_l": True}))[1]
+    m = json.loads(_v2(1, {}))
+    del m["wheel"]
+    assert "wheel" in ingest.validate_live(json.dumps(m).encode())[1]                 # v2 must carry the block
+    assert "schema" in ingest.validate_live(_msg(1, schema="sem.telemetry.v3"))[1]
+
+
+def test_old_database_gains_schema_column_and_keeps_rows(tmp_path):
+    import sqlite3
+    p = tmp_path / "old.sqlite"
+    old = sqlite3.connect(p)
+    old.execute("CREATE TABLE live (run_id TEXT NOT NULL, seq INTEGER NOT NULL, t_local_ms INTEGER NOT NULL, "
+                "utc REAL, utc_q TEXT, payload TEXT NOT NULL, received_s REAL NOT NULL, replayed INTEGER NOT NULL, "
+                "PRIMARY KEY (run_id, seq))")
+    old.execute("INSERT INTO live VALUES ('R', 1, 500, NULL, 'none', '{}', 1.0, 0)")
+    old.commit()
+    old.close()
+    db = ingest.connect(p)
+    assert ingest.ingest_payload(db, 2.0, TOPIC, _v2(2, {"wheel_l": 5.0}))[0] == "stored"
+    rows = db.execute("SELECT seq, schema FROM live ORDER BY seq").fetchall()
+    assert rows == [(1, None), (2, "sem.telemetry.v2")]                               # old row kept, read as v1
+
+
+def test_node_wheel_speed_formula_staleness_and_unknown_configuration():
+    from host.telematics.clocks import LocalClock
+
+    class _Sup:
+        log = []
+
+    class _W:
+        dropped_storage = 0
+
+        def add(self, *a):
+            pass
+
+    class _L:
+        def up(self, t):
+            return True
+
+        def deliver(self, *a):
+            return True
+
+    cfg = NodeConfig(wheel_circumference_m=1.5, wheel_ppr=32)
+    node = TelematicsNode(cfg, LocalClock(), _W(), _L(), _Sup(), "R")
+    node.on_sensor(1.0, "wheel", (0, 13, 100))
+    m = node._message(1.05)
+    assert m["schema"] == "sem.telemetry.v2"
+    assert m["wheel"]["speed_mps"]["wheel_l"] == 13 * 1.5 / (32 * 0.1)           # 6.09375 m/s
+    assert m["wheel"]["speed_mps"]["wheel_r"] is None                              # never seen: null, not 0
+    assert node._message(1.5)["wheel"]["speed_mps"]["wheel_l"] is None             # older than 0.3 s: null
+    unknown = TelematicsNode(NodeConfig(), LocalClock(), _W(), _L(), _Sup(), "R")  # circumference/ppr unknown
+    unknown.on_sensor(1.0, "wheel", (0, 13, 100))
+    assert unknown._message(1.05)["wheel"]["speed_mps"]["wheel_l"] is None
+
+
 def test_every_receipt_is_recorded_with_its_outcome(tmp_path):
     db = ingest.connect(tmp_path / "p.sqlite")
     assert ingest.ingest_payload(db, 1.0, TOPIC, _msg(3))[0] == "stored"

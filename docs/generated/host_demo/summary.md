@@ -1,6 +1,6 @@
 # Host end-to-end demonstration (HOST SIMULATION)
 
-Run `HOSTSIM-0001`, 120 s, commit `0b7255e20a01` plus uncommitted changes (the commit that adds these outputs). Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, simulated LTE and MQTT; nothing here was measured on hardware.
+Run `HOSTSIM-0001`, 120 s, commit `4da4165f9c84` plus uncommitted changes (the commit that adds these outputs). Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, simulated LTE and MQTT; nothing here was measured on hardware.
 
 | Check | Result | Evidence |
 |---|---|---|
@@ -13,6 +13,7 @@ Run `HOSTSIM-0001`, 120 s, commit `0b7255e20a01` plus uncommitted changes (the c
 | `utc_alignment_with_quality` | PASS | largest UTC error 0.72 us with PPS (60535 records); 7.4 us in holdover (9971 records, GNSS outage 15 s, bound 50 ppm x age) |
 | `energy_boundary_and_gaps_reported` | PASS | controller input energy (bus shunt) 5.805 kJ vs simulated battery-terminal energy 5.797 kJ: 0.139 % apart; integrated 120.00 s, gap 0.00 s (last ctrl_energy_quality before the end of the run) |
 | `pit_csia_replay_runs` | PASS | 1200 ticks; wheel_l fault detected after 0.1 s |
+| `pit_shadow_replay_r3v_and_csia2_reported` | PASS | 1200 ticks, data class synthetic (host simulation); injected wheel_l dropout: R3v 0.3 s, CSIA2 0.3 s (first correct attribution after onset); wrong or unexplained suspect ticks R3v 0, CSIA2 0; report pit_replay/report.md with 3 insufficient-evidence notes |
 
 ## Storage
 
@@ -20,7 +21,7 @@ STLG log 1122 KiB for 120 s = 9.35 KiB/s; the 8 MB flash of the telematics propo
 
 ## Pit-side CSIA replay (shadow; not an evaluation)
 
-1200 ticks at 10 Hz; front-left wheel hall lost from 80 to 90 s: attributed to wheel_l 0.1 s after onset. Ticks naming any other suspect, or naming one outside the fault window: 65; ambiguous ticks: 530; unobservable ticks: 5. Host runtime per tick: mean 1.42 ms, p99 2.66 ms, max 3.14 ms; peak traced Python memory 1785 KiB (x86-64 CPython, not a target figure).
+1200 ticks at 10 Hz; front-left wheel hall lost from 80 to 90 s: attributed to wheel_l 0.1 s after onset. Ticks naming any other suspect, or naming one outside the fault window: 65; ambiguous ticks: 530; unobservable ticks: 5. Host runtime per tick: mean 1.36 ms, p99 2.47 ms, max 3.52 ms; peak traced Python memory 1785 KiB (x86-64 CPython, not a target figure).
 
 Relationship failures (lambda > lam_fail) outside the injected fault window: E6_power_balance 507 ticks.
 

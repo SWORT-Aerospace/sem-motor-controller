@@ -44,6 +44,11 @@
    "detail": "1200 ticks; wheel_l fault detected after 0.1 s",
    "id": "pit_csia_replay_runs",
    "pass": true
+  },
+  {
+   "detail": "1200 ticks, data class synthetic (host simulation); injected wheel_l dropout: R3v 0.3 s, CSIA2 0.3 s (first correct attribution after onset); wrong or unexplained suspect ticks R3v 0, CSIA2 0; report pit_replay/report.md with 3 insufficient-evidence notes",
+   "id": "pit_shadow_replay_r3v_and_csia2_reported",
+   "pass": true
   }
  ],
  "controller_summary": "config_ok=1 events=18594 final_state=READY energy_ctrl_J=5805.352 energy_plant_J=5797.363 tx_frames=47292 rx_frames=6583 rx_crc_fail=0 rx_tag_mismatch=0",
@@ -60,13 +65,13 @@
  "csia": {
   "csia_version": "0.8.0",
   "detect_latency_s": 0.09662725160191599,
-  "peak_traced_kib": 1784.8681640625,
+  "peak_traced_kib": 1785.0,
   "relationship_failures_outside_fault_window": {
    "E6_power_balance": 507
   },
-  "tick_ms_max": 3.1396330000461603,
-  "tick_ms_mean": 1.418704530845692,
-  "tick_ms_p99": 2.6606670003275212,
+  "tick_ms_max": 3.5245090002717916,
+  "tick_ms_mean": 1.3576801524959592,
+  "tick_ms_p99": 2.4689510000825976,
   "ticks": 1200,
   "ticks_ambiguous": 530,
   "ticks_unobservable": 5,
@@ -100,12 +105,12 @@
   "stored": 228
  },
  "reimport_new_records": 0,
- "repo_commit": "0b7255e20a012bd192f7a1fb1fddf902f7c8c4c0",
+ "repo_commit": "4da4165f9c8485faba3506b99865f6fff2d7d2a0",
  "run_id": "HOSTSIM-0001",
  "storage": {
-  "bytes_per_s": 9571.016666666666,
-  "log_bytes": 1148522,
-  "minutes_to_fill_8MB": 14.607657493718014
+  "bytes_per_s": 9573.35,
+  "log_bytes": 1148802,
+  "minutes_to_fill_8MB": 14.604097137713897
  },
  "working_tree_dirty": true
 }

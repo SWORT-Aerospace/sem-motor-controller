@@ -17,7 +17,7 @@ the pit service and the network threads run in real time against it.
 
 Scenario (controller time for the default 120 s; scaled for other durations):
   0.1 arm, 0.3 ECO; speed hold at 6 m/s by the supervisor (whole run)
-  15    four malformed messages published on the telemetry topic by another client
+  15    four malformed messages and one valid sem.telemetry.v1 message published by another client
   20    an exact copy of an earlier car message published again (duplicate)
   40-60 broker killed (SIGKILL) and restarted with its persistence files
   75-85 pit service killed (SIGKILL) and restarted (same client id, persistent session)
@@ -43,7 +43,8 @@ sys.path.insert(0, str(ROOT))
 import paho.mqtt.client as mqtt  # noqa: E402
 
 from host.logger.semmc_log import io_event  # noqa: E402
-from host.pit import ingest  # noqa: E402
+from host.csia_adapter.adapter import AdapterParams  # noqa: E402
+from host.pit import ingest, shadow_replay  # noqa: E402
 from host.telematics.mqtt_link import MqttLink  # noqa: E402
 from host.telematics.node import NodeConfig  # noqa: E402
 from tools import mqtt_broker  # noqa: E402
@@ -67,6 +68,11 @@ INVALID = [
     ("vbus out of range", lambda good: json.dumps(dict(json.loads(good), seq=10**6,
                                                        ctrl=dict(json.loads(good)["ctrl"], vbus_V=9999.0))).encode()),
 ]
+
+
+# a valid message in the previous schema version from another producer: the pit must still accept it
+LEGACY_V1 = json.dumps({"schema": "sem.telemetry.v1", "run_id": "LEGACY-V1", "seq": 0, "t_local_ms": 0, "utc": None,
+                        "utc_q": "none", "ctrl": {"state": "READY"}, "replayed": False}, sort_keys=True).encode()
 
 
 class RecordingLink(MqttLink):
@@ -167,7 +173,7 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
     def inject_invalid(t):
         good = next(iter(link.payloads.values()))
         good_example["payload"] = good
-        publish_raw(broker.port, ncfg.topic, [f(good) for _n, f in INVALID])
+        publish_raw(broker.port, ncfg.topic, [f(good) for _n, f in INVALID] + [LEGACY_V1])
 
     dup = {}
 
@@ -204,6 +210,11 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
     # ---------------------------------------------------------------- offline import + evidence
     db = ingest.connect(dbp)
     imp = ingest.import_log(db, out / "run.stlg")
+    # shadow replay of R3v and CSIA2 on the imported log (no injected faults here: nothing to score against)
+    kt = 1.5 * ch.cfg["motor"]["pole_pairs"] * ch.cfg["motor"]["flux_linkage_Wb"]
+    shadow = shadow_replay.run(db, RUN_ID, AdapterParams(wheel_radius_m=ch.C / (2 * math.pi), gear_ratio=ch.gear,
+                                                         freewheel=False, kt_Nm_per_A=kt),
+                               kt, ch.C / (ch.scfg.wheel_ppr * ch.scfg.wheel_window_s), out / "pit_replay")
     checks = []
 
     def check(cid, ok, detail):
@@ -315,6 +326,31 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
           f"({sc['pit_down'][0]:.0f}-{sc['pit_down'][1]:.0f} s): all stored after it reconnected "
           f"(session resumed {len(resumed)} time(s))")
 
+    # 9b. live wheel speed (v2) equals the speed the offline import derives from the logged windows
+    wheel_sig = {}
+    for name in ncfg.wheel_channels:
+        wheel_sig[name] = db.execute("SELECT t_local_us, value FROM signals WHERE run_id=? AND name=? "
+                                     "ORDER BY t_local_us", (RUN_ID, name)).fetchall()
+    compared, mismatched, null_live = 0, 0, 0
+    import bisect
+    for r in live.values():
+        m = json.loads(r["payload"])
+        for name, v_live in m["wheel"]["speed_mps"].items():
+            sig = wheel_sig.get(name, [])
+            k = bisect.bisect_right([x[0] for x in sig], r["t_local_ms"] * 1000 + 1000) - 1
+            if v_live is None:
+                null_live += 1
+                continue
+            compared += 1
+            if k < 0 or abs(sig[k][1] - v_live) > 1e-9:
+                mismatched += 1
+    legacy = db.execute("SELECT schema, payload FROM live WHERE run_id='LEGACY-V1'").fetchall()
+    check("live_wheel_speed_v2_matches_log_and_v1_still_accepted",
+          compared > 0 and mismatched == 0 and len(legacy) == 1 and legacy[0][0] == "sem.telemetry.v1",
+          f"{compared} live wheel speeds (schema sem.telemetry.v2) compared with the speed derived from the latest "
+          f"logged wheel window: {mismatched} differ; {null_live} null (no fresh window); a valid "
+          f"sem.telemetry.v1 message from another producer was stored as v1: {len(legacy) == 1}")
+
     # 10. timestamps and missing data
     rows = [live[s] for s in sorted(live)]
     mono = all(b["t_local_ms"] > a["t_local_ms"] for a, b in zip(rows, rows[1:]))
@@ -335,6 +371,13 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
           f"generation-to-storage delay (wall clock) live median {sorted(lat['live'])[len(lat['live']) // 2] * 1000:.0f} ms, "
           f"max {max(lat['live']):.2f} s; replayed max {max(lat['replayed']) if lat['replayed'] else float('nan'):.1f} s")
 
+    check("pit_shadow_replay_reports_missing_ground_truth",
+          shadow.get("ticks", 0) > 0 and shadow.get("scoring") is None and
+          any("no ground truth" in x for x in shadow.get("insufficient", [])),
+          f"R3v and CSIA2 replayed in shadow mode over {shadow.get('ticks', 0)} ticks of the imported log; no faults "
+          f"were injected, so the report lists attributions without scoring them (R3v "
+          f"{len(shadow['episodes'].get('R3v', []))}, CSIA2 {len(shadow['episodes'].get('CSIA2', []))} episodes); "
+          "report pit_replay/report.md")
     res = {"kind": "HOST SOFTWARE with a real local MQTT broker (not vehicle firmware)", "run_id": RUN_ID,
            "duration_s": duration, "pace": pace, "loop_late_s": late_s, "scenario": sc,
            "broker": mqtt_broker.version(broker.binary), "paho_mqtt": mqtt.__version__ if hasattr(mqtt, "__version__")
@@ -378,6 +421,7 @@ def main() -> int:
         s.mkdir(parents=True, exist_ok=True)
         for f in ("summary.md", "summary.json"):
             shutil.copy(out / f, s / f)
+        shutil.copy(out / "pit_replay" / "report.md", s / "pit_replay_report.md")
     ok = all(c["pass"] for c in res["checks"])
     print(f"MQTT {'ALL PASS' if ok else 'FAILURES'}: {sum(c['pass'] for c in res['checks'])}/{len(res['checks'])} "
           f"checks; outputs in {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")

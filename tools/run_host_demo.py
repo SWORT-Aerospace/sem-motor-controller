@@ -48,7 +48,7 @@ sys.path.insert(0, str(ROOT))
 
 from host.csia_adapter.adapter import AdapterParams  # noqa: E402
 from host.logger.semmc_log import can_event, io_event  # noqa: E402
-from host.pit import csia_replay, ingest  # noqa: E402
+from host.pit import csia_replay, ingest, shadow_replay  # noqa: E402
 from host.telematics import stlg  # noqa: E402
 from host.telematics.clocks import LocalClock, PpsModel  # noqa: E402
 from host.telematics.node import NodeConfig, SimLink, TelematicsNode  # noqa: E402
@@ -114,6 +114,11 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
     dirty = bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
                                 capture_output=True, text=True).stdout.strip())
     ncfg = ncfg or NodeConfig()
+    if ncfg.wheel_circumference_m is None:                 # the node reports live wheel speed with the same
+        ncfg.wheel_circumference_m = C                     # (synthetic) circumference and PROVISIONAL pulses per
+    if ncfg.wheel_ppr is None:                             # revolution that the run metadata records
+        ncfg.wheel_ppr = scfg.wheel_ppr
+    ncfg.wheel_channels = tuple(WHEEL_CHANNELS[k] for k in sorted(WHEEL_CHANNELS))
     meta = {
         "run_id": run_id, "kind": kind,
         "format": {"name": "STLG", "version": stlg.VERSION, "block_payload_bytes": stlg.BLOCK_BYTES},
@@ -126,6 +131,12 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
         "sensors": {"wheel_circumference_m": C, "wheel_ppr": scfg.wheel_ppr,
                     "wheel_channels": {str(k): v for k, v in WHEEL_CHANNELS.items()},
                     "status": "wheel_ppr PROVISIONAL; channel assignment PROVISIONAL"},
+        # simulation only: the plant behind the data and the faults injected into the sensors (ground truth for
+        # the pit replay report; telematics clock seconds)
+        "plant": {"model": "firmware/platform/host/sim_plant.c", "freewheel": False,
+                  "note": "motor rigidly coupled to the wheels; SYNTHETIC constants"},
+        "injected_faults": [{"kind": "wheel_dropout", "node": WHEEL_CHANNELS[0], "channel": 0,
+                             "t_local_s": [clock.local(a), clock.local(b)]} for (a, b) in wheel_faults],
     }
     writer = stlg.Writer(out / "run.stlg", meta, ncfg.storage_bytes)
     sup = Supervisor(SupervisorConfig(max_torque_Nm=t_max), speed_hold_policy(6.0, 1.5, C, gear, t_max))
@@ -204,6 +215,8 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
     imp2 = ingest.import_log(db, out / "run.stlg")
     params = AdapterParams(wheel_radius_m=C / (2 * math.pi), gear_ratio=gear, freewheel=False, kt_Nm_per_A=kt)
     cs = csia_replay.replay(db, RUN_ID, params, kt, C / (scfg.wheel_ppr * scfg.wheel_window_s))
+    # the selected monitor R3v and the experimental CSIA2, frozen v2 classes, shadow mode (host/pit/shadow_replay.py)
+    shadow = shadow_replay.run(db, RUN_ID, params, kt, C / (scfg.wheel_ppr * scfg.wheel_window_s), out / "pit_replay")
 
     # ---------------------------------------------------------------- checks
     checks = []
@@ -304,6 +317,21 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
           cs["ticks"] > 0,
           f"{cs['ticks']} ticks; wheel_l fault detected after {det - f0:.1f} s" if det else
           f"{cs['ticks']} ticks; wheel_l fault NOT attributed during its window")
+    sc = shadow.get("scoring") or {}
+
+    def _lat(mon):
+        f = (sc.get(mon) or {}).get("faults") or [{}]
+        v = f[0].get("first_correct_s_after_onset")
+        return "not attributed" if v is None else f"{v} s"
+    cov = shadow.get("signals", {})
+    check("pit_shadow_replay_r3v_and_csia2_reported",
+          shadow.get("ticks", 0) > 0 and shadow["provenance"]["synthetic"] and sc and
+          all(cov.get(x, {}).get("fresh_tick_share", 0) >= 0.5 for x in ("rotor", "wheel_l", "wheel_drive", "p_dc")),
+          f"{shadow.get('ticks', 0)} ticks, data class {shadow['provenance']['data_class']}; injected wheel_l dropout: "
+          f"R3v {_lat('R3v')}, CSIA2 {_lat('CSIA2')} (first correct attribution after onset); wrong or unexplained "
+          f"suspect ticks R3v {sc.get('R3v', {}).get('ticks_with_a_wrong_or_unexplained_suspect')}, CSIA2 "
+          f"{sc.get('CSIA2', {}).get('ticks_with_a_wrong_or_unexplained_suspect')}; report pit_replay/report.md "
+          f"with {len(shadow.get('insufficient', []))} insufficient-evidence notes")
     csia_rep = {"ticks": cs["ticks"], "detect_latency_s": (det - f0) if det else None,
                 "relationship_failures_outside_fault_window": fail_outside,
                 "ticks_with_other_suspects": wrong, "ticks_ambiguous": amb, "ticks_unobservable": unobs,
@@ -375,6 +403,7 @@ def main() -> int:
         s.mkdir(parents=True, exist_ok=True)
         for f in ("summary.md", "summary.json", "csia_timeline.csv"):
             shutil.copy(out / f, s / f)
+        shutil.copy(out / "pit_replay" / "report.md", s / "pit_replay_report.md")
     ok = all(c["pass"] for c in res["checks"])
     print(f"DEMO {'ALL PASS' if ok else 'FAILURES'}: {sum(c['pass'] for c in res['checks'])}/{len(res['checks'])} "
           f"checks; outputs in {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")
