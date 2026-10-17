@@ -189,7 +189,7 @@ Each row is backed by the generated full matrix ([`generated/identifiability.md`
 | HT against any | steady power (cruise, coast) | none: HT leaves no signature (P1) | wait for a power transient | not observable at any rate; harmless to energy totals | none |
 | HT against H0 and HB | torque step (onset, pulse edges) | R1 at 100 Hz across the edge | retrieve the buffered window around the edge, or capture a bounded future window at the next edge | separable at 0.025 s or less with the 5 ms timing bound | records stamped by one clock; the bound holds (section 4) |
 | HT against H0 | torque step, timing known only to 100 ms (records from different devices, or the summary) | as above, plus a smaller timing bound | retrieve clock-synchronisation metadata (stamp clock, UTC mapping and its error), which reduces the bound to 5 ms where it applies | separable from 0.2 s with the 100 ms bound; 0.025 s or less once the bound is 5 ms | metadata bounds the relative timing |
-| HT against any | any condition, live summary only | none: R1 on the summary is usable only on steady intervals | export the controller frames at full rate (less decimation) | not observable from the summary | the summary pairs a 0.5 s mean with an instantaneous iq [F] |
+| HT against any | any condition, live summary only | none: R1 on the summary is usable only on steady intervals | export the controller frames at full rate (less decimation) | not observable from the summary at 0.1 s; from about 0.4 s on slowly varying power (2 of 40 delays of 0.18 to 0.19 s were diagnosed from the summary in the final evaluation) | the summary pairs a 0.5 s mean with an instantaneous iq [F] |
 | HL against H0, HB and HT | cruise | R2; the summary suffices | none | 3 N known, 12 N uncertain | rolling resistance, drag area, torque constant and mass within bounds |
 | HL against H0 | coast | R4 from full-rate wheel counts | export the wheel-count records | 3 N with counts; 6 N on the summary (d = 2.25 at 3 N) | provisional 32 pulses per revolution and 1.5 m circumference |
 | HL against H0 | acceleration | R2 together with R1 (R1 constrains the torque constant shared with R2) | retrieve the buffered window at full rate | 3 N with frames; 6 N on the summary | torque constant shared between R1 and R2 |
@@ -219,7 +219,7 @@ Each hypothesis also has conditions under which it cannot be separated. The diag
 2. **No scheduler for drag against headwind.** No action separates them. HL is reported as one class, with "headwind not distinguishable" stated.
 3. **Drag against grade needs the IMU.** This is an exact remaining physical requirement: the IMU of the telemetry proposal, fitted with a calibrated mounting. Without its records, the diagnosis reports "extra opposing force; grade or drag not distinguishable".
 4. **Timing kind.** It is named only from full-rate records of a sharp edge. Otherwise the diagnosis reports HT with the kind unresolved.
-5. **The live summary alone cannot diagnose HT.** Exporting full-rate frames is the action for it.
+5. **The live summary alone rarely diagnoses HT.** At the nominal 0.1 s it shows no timing error; on slowly varying power the noise-free analysis separates one from 0.4 s (matrix row "sine"). The final evaluation found 2 of 40 timing errors, both delays of 0.18 to 0.19 s under speed hold, diagnosed correctly from the summary ([`RESULTS.md`](RESULTS.md) section 3.4): this item first read "cannot diagnose", which was too strong. Exporting full-rate frames is the action for HT.
 
 **Limits of this gate, and how it can fail later.**
 

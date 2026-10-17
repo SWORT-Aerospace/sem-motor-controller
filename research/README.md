@@ -2,6 +2,8 @@
 
 A research extension of the telemetry project, kept apart from the vehicle work. It asks whether a pit-side diagnostic can tell a battery-current measurement bias, a timing error between the electrical and motor records, and a larger opposing load apart, using the records the telemetry chain already keeps plus a few bounded requests for more. It must also say when it cannot.
 
+**Result in one paragraph** (pre-registered, run once; [`RESULTS.md`](RESULTS.md) section 3, [`CLAIMS.md`](CLAIMS.md)). Choosing which records to request by their predicted separating power diagnosed 16 percentage points more fault episodes correctly than random requests at the same budget, interval [+10, +23], with no wrong attribution of a modelled fault in 120 supported decisions. The particular ambiguity-directed rule did no better than information gain. The engine's ambiguity information saved about a third of the requested bytes, and the timing allowance was necessary to diagnose timing errors, which remain the hard case (22 of 40). Unmodelled faults were attributed to a modelled cause in 8 of 30 episodes, so abstention is not established. All of this is host simulation; the next step is a bench measurement of the timing assumption.
+
 **Status.** Host simulation only. Nothing here runs on the vehicle, sends anything to it, or changes propulsion, braking, protection thresholds or control-loop timing. No result comes from hardware. The CSIA core used for comparison is licensed for evaluation only ([`PROTOCOL.md`](PROTOCOL.md) section 3).
 
 ## Documents
@@ -17,6 +19,7 @@ A research extension of the telemetry project, kept apart from the vehicle work.
 | [`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md) | The experiments that would test the assumptions, the equipment, and the next physical action |
 | [`RESULTS.md`](RESULTS.md) | Every failure found in development and the change made, the development pilot, and the final results with their uncertainty |
 | [`PREREGISTRATION.md`](PREREGISTRATION.md) | The frozen protocol of the final evaluation (endpoints, criteria, sample size, analysis), with [`preregistration.json`](preregistration.json) |
+| [`CLAIMS.md`](CLAIMS.md) | Each claim of the study with the evidence that supports or limits it |
 
 ## Steps
 
@@ -27,8 +30,8 @@ A research extension of the telemetry project, kept apart from the vehicle work.
 | 3. Identifiability (gate 1) | [`IDENTIFIABILITY.md`](IDENTIFIABILITY.md) | done; passed conditionally |
 | 4. Causal evaluation harness | [`HARNESS.md`](HARNESS.md) | done |
 | 5. Diagnosis, actions, schedulers, baselines | [`DIAGNOSIS.md`](DIAGNOSIS.md) | done |
-| 6. Development pilot, pre-registration, final evaluation | [`RESULTS.md`](RESULTS.md), [`PREREGISTRATION.md`](PREREGISTRATION.md) | pre-registered; the final evaluation runs once, from the pre-registration commit |
-| 7. Recorder interface, demonstration, physical validation plan | [`RECORDER.md`](RECORDER.md), [`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md) | host work done; the physical experiments need equipment |
+| 6. Development pilot, pre-registration, final evaluation | [`RESULTS.md`](RESULTS.md), [`PREREGISTRATION.md`](PREREGISTRATION.md) | done; the final evaluation was run once, from the pre-registration commit |
+| 7. Recorder interface, demonstration, physical validation plan | [`RECORDER.md`](RECORDER.md), [`generated/demo/demo.md`](generated/demo/demo.md), [`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md) | host work done; the physical experiments need equipment |
 
 ## Layout and commands
 

@@ -39,7 +39,7 @@ Development data only (development and calibration splits). Each change below wa
 | Audits looked back 20 s, but pulse-and-coast cycles last 70 to 80 s (two power edges per cycle) | no edge was available to audit | look back 60 s; one window per untested hypothesis, at most two per audit |
 | The harness charged an STLG block framing | about 4 % fewer bytes than the recorder's chunk framing | costs follow the recorder's wire format |
 
-**A property of the problem, not a defect.** In pulse-and-coast driving a 90 s episode holds only two or three power edges, so a timing error can be seen only a few times a minute. The 2 Hz summary never shows one (P1 and P4 of [`IDENTIFIABILITY.md`](IDENTIFIABILITY.md)).
+**A property of the problem, not a defect.** In pulse-and-coast driving a 90 s episode holds only two or three power edges, so a timing error can be seen only a few times a minute. The 2 Hz summary shows one at most rarely (P1 and P4 of [`IDENTIFIABILITY.md`](IDENTIFIABILITY.md); this sentence first read "never", corrected after the final evaluation, section 3.4).
 
 **Found by pilot round 2** (the same 70 development episodes; raw results in [`generated/pilot/round2/`](generated/pilot/round2/)). Correct outcomes per scheduler:
 
@@ -133,4 +133,69 @@ The multiple-hypothesis baseline's prior for normal operation is calibrated on t
 
 ## 3. Final evaluation
 
-Pending: generated once, after the pre-registration commit.
+Run once, on 17 October 2026, by `python3 research/run_final.py --commit 9aefb9968d4a0a137569da2a569e7e173ac15db8`. The command checked that every frozen file matched the manifest, and derived the 230 seeds from that commit. Wall time: 1519 s on four cores. Generated files: [`generated/final/summary.md`](generated/final/summary.md), `stats.json`, `results.jsonl` (one row per episode and scheduler), `compare.jsonl` (the engines on identical records). Synthetic host simulation only.
+
+### 3.1 Pre-registered endpoints
+
+| Endpoint | Question | Estimate (95 % interval) | Criterion | Met |
+|---|---|---|---|---|
+| **P1** | F against random requests at F's mean budget (D), correct diagnoses on 140 fault episodes | **+0.164 [+0.100, +0.229]**; F used 7 224 B more [4 748, 9 595] | lower bound > 0 | **yes** |
+| S1 | F against the summary alone (A) | +0.186 [+0.121, +0.250]; +37 934 B | lower bound > 0 | yes |
+| S2 | F against information gain (E) | **0.000 [−0.021, +0.021]**; −1 539 B | lower bound > 0 | **no** |
+| S3 | F against fetching everything (B) | +0.157 [+0.093, +0.229]; −146 998 B | lower bound > −0.05 and fewer bytes | yes |
+| S4 | F against capture on detection (C) | +0.150 [+0.093, +0.214]; −50 897 B | lower bound > 0 | yes |
+| S5 | F against F without the engine's ambiguity information | +0.021 [−0.029, +0.071]; −20 847 B [−23 161, −18 608] | fewer bytes, lower bound > −0.05 | yes |
+| S6 | F against F without the timing allowance, timing-error episodes | +0.550 [+0.400, +0.700] (22 of 40 against 0 of 40) | lower bound > 0 | yes |
+| S7 | the same, all fault episodes | +0.164 [+0.107, +0.229] | descriptive | |
+| S8 | F against F counting summary and frames as independent | +0.029 [0.000, +0.064] (120 against 116) | descriptive | |
+| S9 | wrong cause among F's supported decisions | 0 of 120 [0, 0.031] | upper bound < 0.05 | yes |
+| S10 | fault episodes F diagnoses correctly | 120 of 140 = 0.857 [0.790, 0.906] | descriptive | |
+| S11 | unmodelled faults F reports as "no modelled cause fits" | 14 of 30 = 0.467 [0.302, 0.639] | descriptive | |
+| S12 | unmodelled faults F attributes to a modelled cause | **8 of 30 = 0.267 [0.142, 0.444]** | descriptive | |
+| S13 | clean episodes with an alarm | 3 of 60 = 0.050 [0.017, 0.137] (2.0 per clean hour) | descriptive | |
+| S14 | identical full-rate records: reference diagnosis against the calibrated multiple-hypothesis baseline | +0.021 [−0.007, +0.057] (130 against 127 of 140) | descriptive | |
+| S15 | identical full-rate records: reference diagnosis against the aligned residual monitor | +0.486 [+0.407, +0.571] | lower bound > 0 | yes |
+| S16 | identical records: reference diagnosis against the frozen R3v | +0.929 [+0.886, +0.964] | descriptive | |
+
+No scheduler made a wrong attribution on any fault episode, so risk at matched coverage is 0 in every pair and carries no information; coverage at a risk of 0.05 equals coverage.
+
+### 3.2 Per scheduler
+
+| Scheduler | bias correct (of 40) | timing correct (of 40) | force correct (of 60) | no fit on a fault | unmodelled: no fit / attributed (of 30) | clean with an alarm (of 60) | mean bytes | median decision delay [s] |
+|---|---|---|---|---|---|---|---|---|
+| A summary only | 40 | 0 | 54 | 0 | 4 / 4 | 2 | 0 | 24.0 |
+| B fixed high | 39 | 11 | 48 | 14 | 10 / 2 | 3 | 184 934 | 24.5 |
+| C capture on detection | 40 | 0 | 59 | 0 | 12 / 2 | 2 | 62 581 | 29.3 |
+| D random, F's budget | 40 | 4 | 53 | 3 | 8 / 5 | 2 | 31 466 | 24.7 |
+| E information gain | 40 | 23 | 57 | 2 | 13 / 9 | 3 | 39 886 | 12.8 |
+| F ambiguity-directed | 40 | 22 | 58 | 2 | 14 / 8 | 3 | 38 242 | 12.8 |
+| F without ambiguity information | 37 | 23 | 57 | 7 | 20 / 1 | 4 | 56 597 | 39.6 |
+| F without timing allowance | 40 | 0 | 57 | 24 | 15 / 6 | 2 | 39 164 | 12.8 |
+| F counting summary and frames twice | 39 | 18 | 59 | 7 | 14 / 8 | 3 | 38 136 | 12.8 |
+
+CPU time per episode (host, all diagnoses and choices): median 1.95 s for F, at most 11.6 s; 3.7 s and 12.4 s without the ambiguity information.
+
+### 3.3 What the final evaluation shows
+
+- **Choosing records helps, and the choice matters more than the volume.** At the same action set and nearly the same bytes, F was correct on 16.4 percentage points more fault episodes than random requests (P1). It also beat fetching every channel continuously while using about a fifth of the bytes (S3).
+- **The benefit comes from directed acquisition, not from the ambiguity-directed rule as such.** F and information gain (E) were each correct on 120 of 140 fault episodes and disagreed on 2, one each way (S2). The pre-registered expectation was that S2 would not be met, and it was not.
+- **The engine's ambiguity information saves bytes and time, and costs abstention.** Without it, F fetched 48 % more (S5) and decided 27 s later, with no loss of correct diagnoses on modelled faults. With it, F stops as soon as one cause remains: on unmodelled faults that early stop left 8 of 30 attributed to a modelled cause (mostly a bias), against 1 of 30 without the ambiguity information (S11, S12).
+- **The timing allowance is what makes timing errors diagnosable** (S6): without it no timing error was diagnosed and 24 fault episodes ended "no modelled cause fits".
+- **Timing errors are the hard case.** F diagnosed 22 of 40: 10 of 14 under pulse and coast, 7 of 12 under speed hold, 5 of 14 under the mixed cycle; 16 were missed and 2 ended "no modelled cause fits". The misses were not examined one by one. The one examined, the demonstration's episode A, had two power edges after the onset: the drive-on edge, slew-limited and too weak to test the hypothesis, was fetched; by the drive-off edge the audits had used their share of the budget.
+- **Dependency handling has a small effect**: counting the summary where frames cover the same time lost 4 correct diagnoses (S8, interval from 0.000).
+- **No wrong attribution of a modelled fault** in 120 supported decisions (S9).
+- **On identical records, the reference diagnosis and a calibrated multiple-hypothesis baseline do equally well on modelled faults** (S14). The reference adds the explicit "no modelled cause fits": on full-rate windows of unmodelled faults it said so 24 times in 30; the baseline has no such outcome. Both are far ahead of the aligned residual monitor (S15). The frozen R3v and CSIA2 flagged none of the study's faults (S16): they have no timing or force hypothesis, and they did not respond to biases of these sizes.
+
+### 3.4 Failures and contradictions found by the final evaluation
+
+- **Unmodelled faults were attributed to a modelled cause in 8 of 30 episodes by F**, and in 4 to 9 of 30 by A, D and E. A gain error looks like a bias when the records hold little variation of current.
+- **The 2 Hz summary did show two timing errors.** On identical summary records, the reference diagnosis supported the timing hypothesis correctly in 2 of 40 episodes, both under speed hold, with delays of 0.18 and 0.19 s. This contradicts the flat statement that the summary cannot diagnose a timing error ([`IDENTIFIABILITY.md`](IDENTIFIABILITY.md) gate decision, item 5; section 1 of this document). The identifiability matrix itself gave a separable size on the summary only for slowly varying power, from 0.4 s in the noise-free analysis. The statement is corrected in [`IDENTIFIABILITY.md`](IDENTIFIABILITY.md); the frozen evaluation is unchanged.
+- **B ended "no modelled cause fits" on 14 of 140 fault episodes** (8 force, 5 timing, 1 bias), every one detected 3 to 12 s after the onset; the cause was not examined.
+- **3 of 60 clean episodes raised an alarm** (2.0 per clean hour); each was cleared by the following decision ("consistent"), and none ended with a cause.
+
+### 3.5 What does not follow
+
+- Nothing about the vehicle, the bench or real sensor noise: every number above is host simulation with synthetic parameters, and the next step is the stand-in bench experiment E2 ([`PHYSICAL_VALIDATION.md`](PHYSICAL_VALIDATION.md)).
+- Nothing about lag or averaging timing errors, simultaneous faults, or the IMU.
+- No distribution-free guarantee: intervals are bootstrap and Wilson intervals over independent episodes.
+- No claim of method novelty: see [`PRIOR_ART.md`](PRIOR_ART.md) section 4 and [`CLAIMS.md`](CLAIMS.md).

@@ -32,7 +32,8 @@ CURRENT = {"README.md", "CONTRIBUTING.md", "docs/STATUS.md", "docs/ICD.md", "doc
            "research/README.md", "research/PROTOCOL.md", "research/PRIOR_ART.md", "research/IDENTIFIABILITY.md",
            "research/generated/identifiability.md", "research/HARNESS.md", "research/DIAGNOSIS.md", "research/RECORDER.md",
            "research/PHYSICAL_VALIDATION.md", "research/RESULTS.md", "research/PREREGISTRATION.md",
-           "research/generated/pilot/dev_summary.md"}
+           "research/generated/pilot/dev_summary.md", "research/CLAIMS.md", "research/generated/final/summary.md",
+           "research/generated/demo/demo.md"}
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)")
 EXT = r"(?:md|py|yaml|yml|json|csv|c|h|txt|sh|toml|cmake|kicad_sch|net)"
 TICK = re.compile(r"`([A-Za-z0-9_./-]+\." + EXT + r")`")
