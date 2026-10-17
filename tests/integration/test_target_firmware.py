@@ -192,5 +192,15 @@ def test_bench_reader_layout_matches_the_firmware():
     m = re.search(r"_Static_assert\(sizeof\(bench_view_t\) == (\d+)u", src)
     assert m and int(m.group(1)) == bench_read.struct.calcsize(bench_read.FORMAT)
     assert bench_read.FORMAT in src
-    d = bench_read.decode(bytes(84))
+    d = bench_read.decode(bytes(88))
     assert d["state_name"] == "BOOT" and d["platform_faults_named"] == []
+
+
+def test_bench_pwm_image_is_separate_and_marked(image):
+    """The stage-4 bench image switches the gate signals; it must never be mistaken for the controller image."""
+    def strings(p):
+        return subprocess.run(["arm-none-eabi-strings", str(p)], check=True, capture_output=True, text=True).stdout
+    bench = image.parent / "semmc_stm32g474_pwmtest.elf"
+    assert bench.exists()
+    assert "semmc stm32g474 BENCH PWM TEST " in strings(bench)
+    assert "BENCH PWM TEST" not in strings(image)

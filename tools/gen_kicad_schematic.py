@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
+import os
 import pathlib
 import re
 import subprocess
@@ -34,10 +35,14 @@ from kiutils.items.schitems import (GlobalLabel, HierarchicalLabel, Hierarchical
                                     SymbolInstance, Text)
 from kiutils.schematic import Schematic
 from kiutils.symbol import SymbolLib
+from kiutils.utils.sexpr import parse_sexp
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "hardware" / "kicad"
-LIBDIR = pathlib.Path("/usr/share/kicad/symbols")
+# KiCad symbol libraries at the project's KiCad release (8.0.9), fetched and SHA-256 checked by
+# tools/fetch_kicad_symbols.py. The ERC reads the same copy (tools/run_kicad_erc.sh), so the symbols embedded
+# in the schematic are the ones it compares them with. SEMMC_KICAD_SYMBOL_DIR overrides the location.
+LIBDIR = pathlib.Path(os.environ.get("SEMMC_KICAD_SYMBOL_DIR", ROOT / "build" / "kicad-symbols-8.0.9"))
 PROJECT = "semmc"
 REV = "D0.2-draft"
 # Date of revision REV, changed together with it. Not the generation date: regenerating the
@@ -113,6 +118,7 @@ def sheets(mcu_map: dict) -> list:
         P("Q", "Device", "Q_NMOS_GSD", f"{U} small-signal N-FET", {"1": "PRECHG_EN", "2": "GND", "3": "PRE_D"},
           status=U, rating="V_DS >= 1.25 x V_bat,max (drain sees the battery when off)"),
         R("100k", "PRECHG_EN", "GND", status="design value", rating="bypass OFF while the MCU is in reset"),
+        TP("PRECHG_EN"),
         # ERC markers: these rails are driven through a connector, inductor, ferrite bead or switch, which
         # KiCad cannot see as a power source. Not components (no BOM line, no footprint).
         *[P("#FLG", "power", "PWR_FLAG", "PWR_FLAG", {"1": n}, status="ERC marker")
@@ -132,14 +138,19 @@ def sheets(mcu_map: dict) -> list:
         R(f"{U} divider bottom", "VBUS_DIV", "GND", status=U, rating="see top"),
         C("10nF", "VBUS_DIV", "GND", status="design value"),
         R("1k", "VBUS_DIV", "VBUS_SENSE", status="design value", rating="ADC input isolation"),
-        P("U", "Comparator", "TLV7041DBV", "TLV7041DBV", {"1": "BRK2_N", "2": "GND", "3": "OV_REF", "4": "VBUS_DIV",
+        P("U", "Comparator", "TLV7041DBV", "TLV7041DBV", {"1": "BRK2_N", "2": "GND", "3": "OV_REF_IN", "4": "VBUS_DIV",
                                                          "5": "+3V3"},
           status="CANDIDATE", mpn="TLV7041DBVR", rating="open-drain: wired-OR into TIM1_BKIN2"),
-        R(f"{U} hysteresis", "BRK2_N", "OV_REF", status=U),
+        R("10k", "OV_REF", "OV_REF_IN", status="design value",
+          rating="isolates the comparator's + input from the TL431 so the hysteresis resistor sets a defined offset"),
+        R("390k", "BRK2_N", "OV_REF_IN", status="design value",
+          rating="hysteresis: + input 2.5 % below the reference when tripped, 0.8 % above when released"),
         R("10k", "BRK2_N", "+3V3", status="design value"),
         P("U", "Reference_Voltage", "TL431DBZ", "TL431 (2.495 V)", {"1": "OV_REF", "2": "OV_REF", "3": "GND"},
           status="CANDIDATE", mpn="TL431BIDBZR"),
-        R("1k", "+3V3", "OV_REF", status="design value", rating="TL431 cathode current ~0.8 mA"),
+        R("470R", "+3V3", "OV_REF", status="design value",
+          rating="TL431 cathode current (3.3 - 2.495) / 470 = 1.7 mA; the minimum cathode current is to be read from the TI datasheet"),
+        TP("VBUS_SENSE"), TP("BRK2_N"), TP("OV_REF"),
     ], ["Over-voltage trip is independent of firmware: comparator -> BRK2_N -> TIM1_BKIN2 (outputs off in hardware)."]))
     # 3 -------------------------------------------------------------- bridge
     br = []
@@ -179,8 +190,12 @@ def sheets(mcu_map: dict) -> list:
         R("100k", "MCU_DRV_EN", "GND", status="design value", rating="driver disabled while MCU pins are high-Z"),
         R("100k", "DRV_EN_GATED", "GND", status="design value", rating="driver disabled if the AND gate is unpowered"),
         R("10k", "DRV_SPI_NSS", "+3V3", status="design value", rating="SPI deselected at boot"),
-        *[R("100k", f"PWM_{x}_{s}", "GND", status="DNP if internal pull-downs verified", dnp=True)
+        *[R("100k", f"PWM_{x}_{s}", "GND", status="design value",
+            rating="holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the "
+                   "DRV8353 input pull-downs are read from the datasheet")
           for x in "ABC" for s in ("HI", "LO")],
+        *[TP(f"PWM_{x}_{s}") for x in "ABC" for s in ("HI", "LO")],
+        TP("MCU_DRV_EN"), TP("DRV_EN_GATED"), TP("VCP"), TP("DVDD"),
     ], ["DRV8353S pin NAMES and NUMBERS are PLACEHOLDERS (primary datasheet not readable here): renumber from TI SLVSDY6x before any footprint/layout.",
         "Gate-driver ENABLE = MCU_DRV_EN AND HW_PERMIT (safety loop + watchdog): firmware alone cannot enable the driver."]))
     # 5 -------------------------------------------------------------- current sense
@@ -219,6 +234,7 @@ def sheets(mcu_map: dict) -> list:
         R("10k", "+3V3A", "TFET_N", status="design value"),
         R("1k", "TFET_N", "TEMP_FET", status="design value"),
         C("100nF", "TEMP_FET", "GND", status="design value"),
+        TP("TEMP_FET"),
         P("J", "Connector_Generic", "Conn_01x02", "MOTOR_TEMP", {"1": "TMOT_IN", "2": "GND"}, status=U,
           rating="sensor type unknown (NTC/PTC/KTY/PT1000)"),
         R(f"{U} bias", "+3V3A", "TMOT_IN", status=U, rating="depends on the motor's sensor"),
@@ -265,7 +281,7 @@ def sheets(mcu_map: dict) -> list:
         R("0R", "WDG_RST_N", "NRST", status="design option", rating="watchdog resets the MCU"),
         P("D", "Device", "D_Schottky", "BAT54", {"1": "WDG_RST_N", "2": "HW_PERMIT"}, status="CANDIDATE",
           rating="watchdog timeout pulls HW_PERMIT low (driver disabled in hardware)"),
-        TP("+3V3"), TP("NRST"), TP("DRV_NFAULT"),
+        TP("+3V3"), TP("NRST"), TP("DRV_NFAULT"), TP("WDG_WDI"), TP("WDG_RST_N"),
     ], ["Unused MCU pins are no-connect in this draft; pin functions come from hardware/interfaces/pin_allocation_STM32G474VBCETx.csv."]))
     # 9 -------------------------------------------------------------- hall inputs
     hl = [P("J", "Connector_Generic", "Conn_01x05", "HALL", {"1": "HALL_PWR", "2": "GND", "3": "HA_IN", "4": "HB_IN",
@@ -300,10 +316,11 @@ def sheets(mcu_map: dict) -> list:
                                                                      "4": "+3V3"}, status="CANDIDATE"),
            R(f"{U} LED series", "LOOP_P", "LOOP_A", status=U, rating="safety-loop voltage unknown (I_F ~ 5 mA)"),
            R("10k", "HW_PERMIT", "GND", status="design value", rating="HW_PERMIT low unless the loop is energised"),
-           C("1nF", "HW_PERMIT", "GND", status="design value")]
+           C("1nF", "HW_PERMIT", "GND", status="design value"),
+           TP("HW_PERMIT"), TP("THROTTLE_A"), TP("THROTTLE_B")]
     S.append(("driver_controls", "Wired driver controls and safety-loop sense", dc,
               ["HW_PERMIT is high only while the vehicle safety loop (e-stop + dead-man) is energised and the watchdog is not asserting.",
-               "Brake switch: normally closed preferred (fails safe); the firmware polarity is configurable."]))
+               "Brake switch: normally closed preferred (an open wire then reads as braking); the switch type is the calibration value controls.brake_switch."]))
     # 11 ------------------------------------------------------------- CAN
     S.append(("can_phy", "CAN physical layer", [
         P("U", "Interface_CAN_LIN", "TJA1051T-3", "TJA1051T/3", {"1": "CAN_TX", "2": "GND", "3": "+5V", "4": "CAN_RX",
@@ -321,6 +338,7 @@ def sheets(mcu_map: dict) -> list:
         P("J", "Connector_Generic", "Conn_01x04", "CAN", {"1": "CAN_H", "2": "CAN_L", "3": "GND", "4": "CAN_SHLD"},
           status=U, rating="vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)"),
         C("1nF", "CAN_SHLD", "GND", status=U, rating="shield termination per harness"),
+        TP("CAN_TX"), TP("CAN_RX"),
     ], ["Classic CAN at 500 kbit/s assumed; protocol block 0x300-0x33F, base set by calibration (docs/ICD.md section 2). Bit timing and termination must match the vehicle bus."]))
     # 12 ------------------------------------------------------------- aux rails
     S.append(("aux_rails", "Auxiliary rails and ground star point", [
@@ -413,10 +431,25 @@ def write_custom_lib(path: pathlib.Path):
 _LIBS: dict = {}
 
 
+def kicad8_to_kiutils(text: str) -> str:
+    """KiCad 8 writes boolean flags as (hide yes), (italic yes), (bold yes); kiutils 1.4.8 reads the KiCad 7
+    form (bare hide, italic, bold) and would silently drop the KiCad 8 one, making hidden fields visible.
+    Only the spelling changes; the symbols' content is KiCad 8.0.9's."""
+    for flag in ("hide", "italic", "bold"):
+        text = text.replace(f"({flag} yes)", flag).replace(f"({flag} no)", "")
+    return text
+
+
 def lib_symbol(lib: str, name: str):
     if lib not in _LIBS:
-        p = OUT / f"{PROJECT}.kicad_sym" if lib == PROJECT else LIBDIR / f"{lib}.kicad_sym"
-        _LIBS[lib] = {s.entryName: s for s in SymbolLib.from_file(str(p)).symbols}
+        if lib == PROJECT:
+            parsed = SymbolLib.from_file(str(OUT / f"{PROJECT}.kicad_sym"))
+        else:
+            p = LIBDIR / f"{lib}.kicad_sym"
+            if not p.exists():
+                sys.exit(f"{p} missing: run python3 tools/fetch_kicad_symbols.py (KiCad 8.0.9 symbol libraries)")
+            parsed = SymbolLib.from_sexpr(parse_sexp(kicad8_to_kiutils(p.read_text())))
+        _LIBS[lib] = {s.entryName: s for s in parsed.symbols}
     d = _LIBS[lib]
     s = copy.deepcopy(d[name])
     if s.extends:                                    # flatten derived symbols

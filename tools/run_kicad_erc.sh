@@ -26,6 +26,16 @@ if [[ ! -f "$cfg_dir/sym-lib-table" && -f /usr/share/kicad/template/sym-lib-tabl
   cp /usr/share/kicad/template/sym-lib-table "$cfg_dir/sym-lib-table"
   echo "installed KiCad's default global sym-lib-table into $cfg_dir"
 fi
+# Compare the schematic's embedded symbols with the pinned KiCad 8.0.9 libraries it was generated from
+# (tools/fetch_kicad_symbols.py), not with whatever library version the installed package carries: the
+# default table resolves ${KICAD8_SYMBOL_DIR}/<lib>.kicad_sym.
+symdir="${SEMMC_KICAD_SYMBOL_DIR:-$PWD/build/kicad-symbols-8.0.9}"
+if [[ ! -f "$symdir/power.kicad_sym" ]]; then
+  echo "$symdir has no symbol libraries: run python3 tools/fetch_kicad_symbols.py" >&2
+  exit 2
+fi
+export KICAD8_SYMBOL_DIR="$symdir"
+echo "symbol libraries: $symdir"
 kicad-cli sch erc --severity-all --units mm --format report --output hardware/kicad/ERC_REPORT.rpt "$SCH" || true
 kicad-cli sch erc --severity-all --units mm --format json --output hardware/kicad/ERC_REPORT.json "$SCH" 2>/dev/null || true
 grep -E "^\*\* ERC messages|^ \*\* ERC messages|errors|warnings" hardware/kicad/ERC_REPORT.rpt | tail -3 || true

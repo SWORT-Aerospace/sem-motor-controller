@@ -2,7 +2,7 @@
 
 > `tools/pin_type_check.py` on `hardware/kicad/semmc.net` (exported by `kicad-cli` from the draft). Connectivity and pin types are KiCad's. **This is not an ERC**: the KiCad ERC runs separately with KiCad 8 or newer (`tools/run_kicad_erc.sh`, the CI `erc` job; results in `docs/VERIFICATION_REPORT.md`). Neither check shows that the circuit is electrically correct; that needs review and measurement.
 
-Nets checked: 173. Rails with a PWR_FLAG (read from the sheets): `+3V3A`, `+5V`, `GND`, `PGND`, `VBAT_PROT`, `VDC`. Findings: 0 (none).
+Nets checked: 174. Rails with a PWR_FLAG (read from the sheets): `+3V3A`, `+5V`, `GND`, `PGND`, `VBAT_PROT`, `VDC`. Findings: 0 (none).
 
 | Rule | Severity | Net | Pins |
 |---|---|---|---|

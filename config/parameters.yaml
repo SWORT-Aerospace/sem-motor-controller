@@ -35,6 +35,7 @@ enums:
   coast_mode:      {zero_current: 0, gate_off: 1}
   timing_status:   {provisional_simulation_only: 0, hazard_analysed: 1}
   current_polarity: {rises_with_current_into_terminal: 0, falls_with_current_into_terminal: 1}
+  switch_type:     {normally_open: 0, normally_closed: 1}
 
 params:
   # ---- calibration identity ------------------------------------------------
@@ -152,6 +153,9 @@ params:
   - {id: 184, path: controls.throttle_track_tolerance,       kind: real, min: 0.01, max: 0.5, req_sim: false, req_hw: true}
   # Divider from the connector to the ADC pin (sheet 10: 0 to 5 V pedal into a 3.3 V ADC).
   - {id: 185, path: controls.throttle_divider_ratio,         kind: real, min: 1.0, max: 10.0, req_sim: false, req_hw: true}
+  # Brake switch contact type. The input reads low when the contact is closed (pull-up, sheet 10). A normally
+  # closed switch opens when the brake is applied, so a broken wire reads as braking.
+  - {id: 186, path: controls.brake_switch,                   kind: enum, enum: switch_type, req_sim: false, req_hw: true}
 
   # ---- precharge (target firmware) --------------------------------------------------
   # The bypass closes only when the link voltage reaches this fraction of the battery voltage measured

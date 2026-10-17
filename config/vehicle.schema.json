@@ -933,6 +933,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "brake_switch",
         "throttle_a_full_V",
         "throttle_a_released_V",
         "throttle_b_full_V",
@@ -988,6 +989,13 @@
           ],
           "minimum": 1.0,
           "maximum": 10.0
+        },
+        "brake_switch": {
+          "enum": [
+            "normally_closed",
+            "normally_open",
+            null
+          ]
         },
         "notes": {
           "type": [

@@ -23,17 +23,20 @@ import subprocess
 import sys
 import time
 
-FORMAT = "<6I3f5H2x3f2f2f2I"
+FORMAT = "<6I3f5H2x3f2f2f3I"
 FIELDS = ["platform_faults", "can_status", "fast_count", "fast_max_cycles", "fast_overruns", "slow_max_cycles",
           "raw_current_avg_a", "raw_current_avg_b", "raw_current_avg_c",
           "raw_vbus", "raw_temp_fet", "raw_temp_motor", "raw_throttle_a", "raw_throttle_b",
           "offsets_measured_a", "offsets_measured_b", "offsets_measured_c",
-          "pedal_frac_a", "pedal_frac_b", "f_pwm_Hz", "deadtime_s", "state", "precharge_state"]
+          "pedal_frac_a", "pedal_frac_b", "f_pwm_Hz", "deadtime_s", "state", "precharge_state", "inputs"]
+INPUT_BITS = ["brake", "cancel", "mode_eco", "arm", "fault_reset", "driver_present", "hw_permit",
+              "drv_en_gated", "drv_nfault", "ext_wdg_reset", "ina_alert", "break_driver", "break_overvolt",
+              "break_system", "outputs_on"]
 PLATFORM_FAULTS = ["gate_driver_not_configured", "battery_meter_not_read", "pwm_not_configured", "can_off",
                    "adc_init", "offsets", "enable_path", "precharge", "adc_resolution"]
 STATES = ["BOOT", "SELF_TEST", "DISARMED", "READY", "MANUAL", "ECO_ASSIST", "DERATED", "FAULT_LATCHED"]
 PRECHARGE = ["DISABLED", "WAIT_BATTERY", "CHARGING", "CLOSED", "FAULT"]
-assert struct.calcsize(FORMAT) == 84 and len(FIELDS) == len(struct.unpack(FORMAT, bytes(84)))
+assert struct.calcsize(FORMAT) == 88 and len(FIELDS) == len(struct.unpack(FORMAT, bytes(88)))
 
 
 def symbol_address(elf: pathlib.Path, name: str) -> int:
@@ -85,6 +88,8 @@ def decode(raw: bytes) -> dict:
     d["platform_faults_named"] = [n for i, n in enumerate(PLATFORM_FAULTS) if d["platform_faults"] >> i & 1]
     d["state_name"] = STATES[d["state"]] if d["state"] < len(STATES) else str(d["state"])
     d["precharge_state_name"] = PRECHARGE[d["precharge_state"]] if d["precharge_state"] < len(PRECHARGE) else "?"
+    d["inputs_named"] = [n for i, n in enumerate(INPUT_BITS) if d["inputs"] >> i & 1]
+    d["hall_code"] = (d["inputs"] >> 16) & 7
     d["fast_max_us"] = d["fast_max_cycles"] / 160.0
     d["slow_max_us"] = d["slow_max_cycles"] / 160.0
     return d
@@ -103,11 +108,12 @@ def main() -> int:
     ocd = OpenOcd(a.host, a.port)
     readings = []
     for i in range(a.samples):
-        d = decode(ocd.read_words(addr, 21))
+        d = decode(ocd.read_words(addr, 22))
         d["host_time"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         readings.append(d)
         print(json.dumps({k: d[k] for k in ("host_time", "state_name", "precharge_state_name", "platform_faults_named",
-                                            "fast_count", "fast_max_us", "fast_overruns")}))
+                                            "inputs_named", "hall_code", "fast_count", "fast_max_us",
+                                            "fast_overruns")}))
         if i + 1 < a.samples:
             time.sleep(a.period)
     if a.json:

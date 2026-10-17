@@ -9,8 +9,9 @@ supply, no battery, no motor.
 ## Equipment
 
 - An ST-LINK (ST-LINK/V3, or the one on a Nucleo board with its jumpers set for an external target)
-  connected to the board's debug header J802: SWDIO (PA13), SWCLK (PA14), NRST, GND, and the 3V3 sense
-  line. A 3.3 V USB-serial adapter on J802's UART pins (PC4 TX, PC5 RX) for the boot report.
+  connected to the board's 10-pin SWD connector J801: SWDIO (PA13), SWCLK (PA14), SWO (PB3), NRST, GND and
+  the 3V3 sense line. A 3.3 V USB-serial adapter on the bench UART header J802 (PC4 TX, PC5 RX, GND) for the
+  boot report.
 - OpenOCD 0.12 or later (`interface/stlink.cfg`, `target/stm32g4x.cfg`), or STM32CubeProgrammer.
 
 ## 1. Build and record the image

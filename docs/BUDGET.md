@@ -8,10 +8,10 @@
 
 | evidence | BOM lines | parts cost per board |
 |---|---|---|
-| allowance | 84 | $24.07 – $123.80 |
+| allowance | 106 | $24.20 – $131.70 |
 | representative | 11 | $40.91 – $77.56 |
 | snippet | 5 | $24.20 – $29.66 |
-| **total** | 100 | **$89.18 – $231.02** |
+| **total** | 122 | **$89.31 – $238.92** |
 
 The rating-dependent lines (MOSFETs, shunts, bulk capacitors, fuse, TVS, P-FET, connectors) are priced as representatives. Their real cost moves with the motor and battery ratings.
 
@@ -19,10 +19,10 @@ The rating-dependent lines (MOSFETs, shunts, bulk capacitors, fuse, TVS, P-FET, 
 
 | scenario | A. controller only | B. A + vehicle integration | C. B + bring-up equipment if not owned | $500 − B (low / high end) | $1,000 − C (low / high end) |
 |---|---|---|---|---|---|
-| S1 one functional prototype | $246 – $650 | $311 – $825 | $415 – $1,189 | $189 / −$325 | $585 / −$189 |
-| S1R one prototype + one revision | $337 – $898 | $402 – $1,073 | $506 – $1,437 | $98 / −$573 | $494 / −$437 |
-| S2 two assembled boards | $353 – $953 | $428 – $1,158 | $532 – $1,522 | $72 / −$658 | $468 / −$522 |
-| S2R two boards + one revision | $443 – $1,201 | $518 – $1,406 | $622 – $1,770 | −$18 / −$906 | $378 / −$770 |
+| S1 one functional prototype | $247 – $659 | $312 – $834 | $416 – $1,198 | $188 / −$334 | $584 / −$198 |
+| S1R one prototype + one revision | $337 – $909 | $402 – $1,084 | $506 – $1,448 | $98 / −$584 | $494 / −$448 |
+| S2 two assembled boards | $353 – $972 | $428 – $1,177 | $532 – $1,541 | $72 / −$677 | $468 / −$541 |
+| S2R two boards + one revision | $443 – $1,221 | $518 – $1,426 | $622 – $1,790 | −$18 / −$926 | $378 / −$790 |
 
 A = board parts, spares, PCB, shipping, stencil, consumables, heatsink, tax/shipping on parts, and the revision allowance where named. B adds connectors, harness, enclosure and bench load. C adds the bring-up tools the team may not own; an oscilloscope and a differential probe are NOT included and must be borrowed. A negative remainder means over budget at that end of the range.
 
@@ -31,7 +31,7 @@ Contingency = budget minus the HIGH end of the range. The vs-$500 column assumes
 
 ## 3. Line items of scenario S1 (one prototype)
 
-* Parts for one board: $89 – $231; spares (6 MOSFETs, gate driver, 2 shunts, TVS, 2 fuses, CAN transceiver, MCU): $58 – $93; tax and shipping on parts: $12 – $77.
+* Parts for one board: $89 – $239; spares (6 MOSFETs, gate driver, 2 shunts, TVS, 2 fuses, CAN transceiver, MCU): $58 – $93; tax and shipping on parts: $12 – $78.
 * PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm: $40 – $120 (allowance)
 * PCB shipping (express): $20 – $45 (allowance)
 * Stencil (frameless) for hand assembly: $8 – $25 (allowance)
@@ -50,13 +50,13 @@ Contingency = budget minus the HIGH end of the range. The vs-$500 column assumes
 
 ## 4. Decision statement (computed, not asserted)
 
-* One prototype, controller only (A): STRADDLES $500 ($246 – $650): within only if prices land in the lower part of the range.
-* One prototype with vehicle integration, equipment owned (B): STRADDLES $500 ($311 – $825): within only if prices land in the lower part of the range.
-* One prototype + one revision + integration, equipment owned (B): STRADDLES $500 ($402 – $1,073): within only if prices land in the lower part of the range.
-* Two boards + integration, equipment owned (B): STRADDLES $1,000 ($428 – $1,158): within only if prices land in the lower part of the range.
-* Two boards + one revision + integration + equipment (C): STRADDLES $1,000 ($622 – $1,770): within only if prices land in the lower part of the range.
+* One prototype, controller only (A): STRADDLES $500 ($247 – $659): within only if prices land in the lower part of the range.
+* One prototype with vehicle integration, equipment owned (B): STRADDLES $500 ($312 – $834): within only if prices land in the lower part of the range.
+* One prototype + one revision + integration, equipment owned (B): STRADDLES $500 ($402 – $1,084): within only if prices land in the lower part of the range.
+* Two boards + integration, equipment owned (B): STRADDLES $1,000 ($428 – $1,177): within only if prices land in the lower part of the range.
+* Two boards + one revision + integration + equipment (C): STRADDLES $1,000 ($622 – $1,790): within only if prices land in the lower part of the range.
 
-Largest contributors to the low–high spread (scenario S1): board parts (allowance + representative + snippet) ($142); PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm ($80); tax and shipping on parts ($65); Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving ($35); spares ($35).
+Largest contributors to the low–high spread (scenario S1): board parts (allowance + representative + snippet) ($150); PCB fabrication, 5 boards, 4-layer, 2 oz outer copper, ~100x120 mm ($80); tax and shipping on parts ($66); Wire (10-12 AWG silicone, signal multicore, CAN twisted pair), heat-shrink, sleeving ($35); spares ($35).
 
 **Conclusion: the budget is not shown to be feasible.** At least one range reaches past its limit, so feasibility cannot be claimed until the spread is closed. Closing the spread takes: a live PCB quote for the actual board size and copper weight; live distributor quotes for the snippet lines; the motor and battery ratings (they fix the representative power-stage lines and the heatsink); and an inventory check of the passives and equipment the team already owns. Each of these narrows the range, and `tools/price_bom.py` recomputes the statement.
 

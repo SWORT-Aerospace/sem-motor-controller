@@ -3,6 +3,7 @@
 #include "stm32g4xx.h"
 
 static GPIO_TypeDef *const k_ports[7] = {GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF, GPIOG};
+static bool g_brake_nc;
 
 static bool is_gate_pin(uint8_t port, uint8_t pin)
 {
@@ -78,7 +79,8 @@ void board_pwm_pins_to_timer(void)
 
 void board_read_inputs(board_inputs_t *in)
 {
-    in->brake = !pin_read(BOARD_BRAKE_SWITCH_PORT, BOARD_BRAKE_SWITCH_PIN);
+    const bool brake_contact_closed = !pin_read(BOARD_BRAKE_SWITCH_PORT, BOARD_BRAKE_SWITCH_PIN);
+    in->brake = g_brake_nc ? !brake_contact_closed : brake_contact_closed;
     in->cancel = !pin_read(BOARD_ECO_CANCEL_PORT, BOARD_ECO_CANCEL_PIN);
     in->mode_eco = !pin_read(BOARD_MODE_SWITCH_PORT, BOARD_MODE_SWITCH_PIN);
     in->arm = !pin_read(BOARD_ARM_SWITCH_PORT, BOARD_ARM_SWITCH_PIN);
@@ -90,6 +92,8 @@ void board_read_inputs(board_inputs_t *in)
     in->ext_wdg_reset = !pin_read(BOARD_EXT_WDG_RST_SENSE_PORT, BOARD_EXT_WDG_RST_SENSE_PIN);
     in->ina_alert = !pin_read(BOARD_INA_ALERT_PORT, BOARD_INA_ALERT_PIN);
 }
+
+void board_set_brake_switch_nc(bool nc) { g_brake_nc = nc; }
 
 void board_set_drv_enable(bool on) { pin_write(BOARD_DRV_ENABLE_PORT, BOARD_DRV_ENABLE_PIN, on); }
 void board_set_precharge_bypass(bool on) { pin_write(BOARD_PRECHG_EN_PORT, BOARD_PRECHG_EN_PIN, on); }

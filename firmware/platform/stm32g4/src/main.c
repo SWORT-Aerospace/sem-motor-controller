@@ -17,7 +17,14 @@
  * and permits output (mc_config_permits_physical_output); a synthetic calibration never runs.
  *
  * Bench readout: g_bench (below) holds raw ADC averages, loop timings and status for a debugger
- * (FLASHING.md, "Reading the bench values"). */
+ * (FLASHING.md, "Reading the bench values").
+ *
+ * SEMMC_BENCH_PWM_TEST builds a separate image (semmc_stm32g474_pwmtest) for acceptance stage 4: TIM1
+ * switches its six outputs at fixed duties (A 25 %, B 50 %, C 75 %) at the sampling-only frequency and dead
+ * time, with the calibration ignored, the core never driving and DRV_ENABLE held low, so the gate signals can
+ * be measured at the MCU pins while the gate driver stays disabled. A break latches the outputs off until the
+ * fault-reset input is pressed with both break inputs inactive. Never load it on a board whose bridge is
+ * powered. */
 #include <math.h>
 #include <string.h>
 
@@ -54,6 +61,14 @@
 /* The DRV8353 is not configured by this revision (see the header). */
 #define GATE_DRIVER_CONFIGURED false
 
+#if defined(SEMMC_BENCH_PWM_TEST)
+#define BENCH_PWM_TEST true
+#define IMAGE_NAME "semmc stm32g474 BENCH PWM TEST "
+#else
+#define BENCH_PWM_TEST false
+#define IMAGE_NAME "semmc stm32g474 "
+#endif
+
 enum {
     PF_GATE_DRIVER_NOT_CONFIGURED = 1u << 0,
     PF_BATTERY_METER_NOT_READ = 1u << 1,
@@ -80,10 +95,20 @@ typedef struct {
     float f_pwm_Hz, deadtime_s;
     uint32_t state;                /* mc_state_t */
     uint32_t precharge_state;      /* mc_pc_state_t */
+    uint32_t inputs;               /* BENCH_IN_* bits, sampled by the slow step */
 } bench_view_t;
 
-/* tools/bench_read.py decodes this layout ("<6I3f5H2x3f2f2f2I", 84 bytes); keep both in step. */
-_Static_assert(sizeof(bench_view_t) == 84u, "bench_view_t layout changed: update tools/bench_read.py");
+enum {
+    BENCH_IN_BRAKE = 1u << 0, BENCH_IN_CANCEL = 1u << 1, BENCH_IN_MODE_ECO = 1u << 2, BENCH_IN_ARM = 1u << 3,
+    BENCH_IN_FAULT_RESET = 1u << 4, BENCH_IN_DRIVER_PRESENT = 1u << 5, BENCH_IN_HW_PERMIT = 1u << 6,
+    BENCH_IN_DRV_EN_GATED = 1u << 7, BENCH_IN_DRV_NFAULT = 1u << 8, BENCH_IN_EXT_WDG_RESET = 1u << 9,
+    BENCH_IN_INA_ALERT = 1u << 10, BENCH_IN_BREAK_DRIVER = 1u << 11, BENCH_IN_BREAK_OVERVOLT = 1u << 12,
+    BENCH_IN_BREAK_SYSTEM = 1u << 13, BENCH_IN_OUTPUTS_ON = 1u << 14
+    /* bits 16..18: hall code (A, B, C) */
+};
+
+/* tools/bench_read.py decodes this layout ("<6I3f5H2x3f2f2f3I", 88 bytes); keep both in step. */
+_Static_assert(sizeof(bench_view_t) == 88u, "bench_view_t layout changed: update tools/bench_read.py");
 volatile bench_view_t g_bench __attribute__((used));
 
 static mc_core_t g_core;
@@ -143,7 +168,7 @@ void ADC1_2_IRQHandler(void)
             for (int k = 0; k < 3; k++) g_cal_sum[k] += raw[k];
             g_cal_n++;
         }
-        pwm_outputs_off();
+        if (!BENCH_PWM_TEST) pwm_outputs_off();
         g_last_cyc = c0;
         g_bench.fast_count++;
         return;
@@ -290,6 +315,15 @@ void TIM6_DAC_IRQHandler(void)
     }
     g_bench.state = (uint32_t)st;
     g_bench.precharge_state = (uint32_t)g_pc.state;
+    g_bench.inputs = (bi.brake ? BENCH_IN_BRAKE : 0u) | (bi.cancel ? BENCH_IN_CANCEL : 0u) |
+                     (bi.mode_eco ? BENCH_IN_MODE_ECO : 0u) | (bi.arm ? BENCH_IN_ARM : 0u) |
+                     (bi.fault_reset ? BENCH_IN_FAULT_RESET : 0u) | (bi.driver_present ? BENCH_IN_DRIVER_PRESENT : 0u) |
+                     (bi.hw_permit ? BENCH_IN_HW_PERMIT : 0u) | (bi.drv_en_gated ? BENCH_IN_DRV_EN_GATED : 0u) |
+                     (bi.drv_nfault ? BENCH_IN_DRV_NFAULT : 0u) | (bi.ext_wdg_reset ? BENCH_IN_EXT_WDG_RESET : 0u) |
+                     (bi.ina_alert ? BENCH_IN_INA_ALERT : 0u) | ((brk & PWM_BREAK_DRIVER) ? BENCH_IN_BREAK_DRIVER : 0u) |
+                     ((brk & PWM_BREAK_OVERVOLT) ? BENCH_IN_BREAK_OVERVOLT : 0u) |
+                     ((brk & PWM_BREAK_SYSTEM) ? BENCH_IN_BREAK_SYSTEM : 0u) |
+                     (pwm_outputs_are_on() ? BENCH_IN_OUTPUTS_ON : 0u) | ((uint32_t)hall_code() << 16u);
     board_set_led_fault(st == MC_ST_FAULT_LATCHED);
     board_set_led_status(((g_ms / (st >= MC_ST_READY && st != MC_ST_FAULT_LATCHED ? 125u : 500u)) & 1u) != 0u);
 
@@ -332,11 +366,17 @@ static void init_converters(void)
     mc_precharge_init(&g_pc, cfg(MC_P_POWER_PRECHARGE_COMPLETE_FRACTION), cfg(MC_P_POWER_PRECHARGE_TIMEOUT_S),
                       cfg(MC_P_LIMITS_UNDERVOLTAGE_TRIP_V));
     g_settle_s = cfg(MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S);
+    /* Unknown switch type: normally open is assumed for the reading, and the calibration is invalid for
+     * hardware anyway (controls.brake_switch is required), so the core never drives on that assumption. */
+    board_set_brake_switch_nc(cfg(MC_P_CONTROLS_BRAKE_SWITCH) == (float)MC_SWITCH_TYPE_NORMALLY_CLOSED);
 }
 
 static void measure_offsets(void)
 {
-    /* Gate driver disabled (DRV_ENABLE low since reset), so the phase currents are zero. */
+    /* Gate driver disabled (DRV_ENABLE low since reset), so the phase currents are zero. OPEN: whether the
+     * DRV8353's current amplifiers run while ENABLE is low is in its datasheet; if they do not, these readings
+     * are not the zero-current offsets, the tolerance check fails and the core refuses to arm (a safe failure).
+     * Once the driver is configured, the measurement moves to "driver awake, all gates held off". */
     g_cal_n = 0u;
     g_cal_sum[0] = g_cal_sum[1] = g_cal_sum[2] = 0u;
     g_cal_active = true;
@@ -379,7 +419,7 @@ int main(void)
     }
     uart_init();
     timebase_init();
-    uart_puts("\r\nsemmc stm32g474 " SEMMC_GIT_REV "\r\n");
+    uart_puts("\r\n" IMAGE_NAME SEMMC_GIT_REV "\r\n");
     report("clock", clk.hse ? "160 MHz from 16 MHz crystal" : "160 MHz from HSI16 (no crystal: CAN off)");
     event_log_dump(uart_puts);
 
@@ -395,7 +435,7 @@ int main(void)
     watchdog_kick();
 
     const float fpwm = cfg(MC_P_INVERTER_PWM_FREQUENCY_HZ), dt = cfg(MC_P_INVERTER_DEADTIME_S);
-    const bool pwm_cfg = cfg_ok && pwm_init(fpwm, dt, PRIO_BREAK, &g_pwm);
+    const bool pwm_cfg = !BENCH_PWM_TEST && cfg_ok && pwm_init(fpwm, dt, PRIO_BREAK, &g_pwm);
     if (!pwm_cfg) {
         g_bench.platform_faults |= PF_PWM_NOT_CONFIGURED;
         (void)pwm_init(SAMPLING_ONLY_PWM_HZ, SAMPLING_ONLY_DEADTIME_S, PRIO_BREAK, &g_pwm);
@@ -419,5 +459,18 @@ int main(void)
     report("battery meter", "not read in this revision: precharge bypass stays open");
 
     timebase_start_slow_tick(PRIO_SLOW);
+    if (BENCH_PWM_TEST) {
+        report("BENCH PWM TEST", "gate signals switch at the MCU pins; DRV_ENABLE held low; not for a powered bridge");
+        const mc_duty_t d = {0.25f, 0.50f, 0.75f};
+        pwm_write_duty(&d);
+        const uint32_t t0 = timebase_us32();
+        while (timebase_us32() - t0 < 1000u) {
+            /* let the compare values load at an update event before the outputs come on */
+        }
+        for (;;) {
+            if (pwm_break_flags() == 0u && !pwm_outputs_are_on()) pwm_outputs_on();
+            __WFI();
+        }
+    }
     for (;;) __WFI();
 }

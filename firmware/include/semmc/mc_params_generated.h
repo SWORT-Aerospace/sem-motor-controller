@@ -104,6 +104,7 @@ typedef enum {
     MC_P_CONTROLS_THROTTLE_B_FULL_V = 183,
     MC_P_CONTROLS_THROTTLE_TRACK_TOLERANCE = 184,
     MC_P_CONTROLS_THROTTLE_DIVIDER_RATIO = 185,
+    MC_P_CONTROLS_BRAKE_SWITCH = 186,
     MC_P_POWER_PRECHARGE_COMPLETE_FRACTION = 190,
     MC_P_POWER_PRECHARGE_TIMEOUT_S = 191,
     MC_P_SENSING_FET_NTC_R25_OHM = 200,
@@ -152,6 +153,9 @@ typedef enum {
 #define MC_CURRENT_POLARITY_RISES_WITH_CURRENT_INTO_TERMINAL 0
 #define MC_CURRENT_POLARITY_FALLS_WITH_CURRENT_INTO_TERMINAL 1
 #define MC_CURRENT_POLARITY_COUNT 2
+#define MC_SWITCH_TYPE_NORMALLY_OPEN 0
+#define MC_SWITCH_TYPE_NORMALLY_CLOSED 1
+#define MC_SWITCH_TYPE_COUNT 2
 
 #define MC_PKIND_REAL 0
 #define MC_PKIND_INT  1
@@ -267,6 +271,7 @@ typedef struct {
     {183u, 0u, 0u, 1u, 0.0f, 5.5f, "controls.throttle_b_full_V"}, \
     {184u, 0u, 0u, 1u, 0.01f, 0.5f, "controls.throttle_track_tolerance"}, \
     {185u, 0u, 0u, 1u, 1.0f, 10.0f, "controls.throttle_divider_ratio"}, \
+    {186u, 3u, 0u, 1u, 0.0f, 1.0f, "controls.brake_switch"}, \
     {190u, 0u, 0u, 1u, 0.5f, 0.999f, "power.precharge_complete_fraction"}, \
     {191u, 0u, 0u, 1u, 0.01f, 30.0f, "power.precharge_timeout_s"}, \
     {200u, 0u, 0u, 1u, 100.0f, 1000000.0f, "sensing.fet_ntc_r25_ohm"}, \
@@ -279,6 +284,6 @@ typedef struct {
     {207u, 0u, 0u, 1u, 0.5f, 4096.0f, "sensing.current_offset_tolerance_counts"}, \
 }
 
-#define MC_PARAM_COUNT 108
+#define MC_PARAM_COUNT 109
 
 #endif /* SEMMC_MC_PARAMS_GENERATED_H */

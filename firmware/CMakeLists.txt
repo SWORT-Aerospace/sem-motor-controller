@@ -108,7 +108,7 @@ if(SEMMC_TARGET_STM32G474)
       set(SEMMC_GIT_REV "${SEMMC_GIT_REV}-modified")
     endif()
   endif()
-  add_executable(semmc_stm32g474
+  set(SEMMC_G4_SOURCES
     ${G4}/src/startup_stm32g474.c
     ${G4}/src/system_clock.c
     ${G4}/src/board.c
@@ -121,24 +121,29 @@ if(SEMMC_TARGET_STM32G474)
     ${G4}/src/can.c
     ${G4}/src/uart.c
     ${G4}/src/main.c)
-  set_target_properties(semmc_stm32g474 PROPERTIES SUFFIX ".elf")
-  target_include_directories(semmc_stm32g474 PRIVATE ${G4}/src)
-  target_include_directories(semmc_stm32g474 SYSTEM PRIVATE ${G4}/vendor/cmsis_device_g4/Include ${G4}/vendor/cmsis_core/Include)
-  target_compile_definitions(semmc_stm32g474 PRIVATE STM32G474xx SEMMC_GIT_REV="${SEMMC_GIT_REV}")
-  if(SEMMC_HSE_HZ)
-    target_compile_definitions(semmc_stm32g474 PRIVATE SEMMC_HSE_HZ=${SEMMC_HSE_HZ})
-  endif()
-  target_compile_options(semmc_stm32g474 PRIVATE -Wall -Wextra -Werror -Wdouble-promotion -Wshadow -Wstrict-prototypes)
-  target_link_libraries(semmc_stm32g474 PRIVATE semmc_core m)
-  target_link_options(semmc_stm32g474 PRIVATE
-    -T${G4}/stm32g474xe_flash.ld -nostartfiles --specs=nano.specs -Wl,--gc-sections
-    -Wl,-Map=${CMAKE_BINARY_DIR}/semmc_stm32g474.map -Wl,--print-memory-usage)
-  set_target_properties(semmc_stm32g474 PROPERTIES LINK_DEPENDS ${G4}/stm32g474xe_flash.ld)
-  add_custom_command(TARGET semmc_stm32g474 POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:semmc_stm32g474> ${CMAKE_BINARY_DIR}/semmc_stm32g474.bin
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:semmc_stm32g474> ${CMAKE_BINARY_DIR}/semmc_stm32g474.hex
-    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:semmc_stm32g474>
-    COMMENT "Target image: semmc_stm32g474.elf / .bin / .hex (revision ${SEMMC_GIT_REV})")
+  # semmc_stm32g474: the controller image. semmc_stm32g474_pwmtest: the stage-4 bench image (main.c header).
+  foreach(img semmc_stm32g474 semmc_stm32g474_pwmtest)
+    add_executable(${img} ${SEMMC_G4_SOURCES})
+    set_target_properties(${img} PROPERTIES SUFFIX ".elf")
+    target_include_directories(${img} PRIVATE ${G4}/src)
+    target_include_directories(${img} SYSTEM PRIVATE ${G4}/vendor/cmsis_device_g4/Include ${G4}/vendor/cmsis_core/Include)
+    target_compile_definitions(${img} PRIVATE STM32G474xx SEMMC_GIT_REV="${SEMMC_GIT_REV}")
+    if(SEMMC_HSE_HZ)
+      target_compile_definitions(${img} PRIVATE SEMMC_HSE_HZ=${SEMMC_HSE_HZ})
+    endif()
+    target_compile_options(${img} PRIVATE -Wall -Wextra -Werror -Wdouble-promotion -Wshadow -Wstrict-prototypes)
+    target_link_libraries(${img} PRIVATE semmc_core m)
+    target_link_options(${img} PRIVATE
+      -T${G4}/stm32g474xe_flash.ld -nostartfiles --specs=nano.specs -Wl,--gc-sections
+      -Wl,-Map=${CMAKE_BINARY_DIR}/${img}.map -Wl,--print-memory-usage)
+    set_target_properties(${img} PROPERTIES LINK_DEPENDS ${G4}/stm32g474xe_flash.ld)
+    add_custom_command(TARGET ${img} POST_BUILD
+      COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${img}> ${CMAKE_BINARY_DIR}/${img}.bin
+      COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${img}> ${CMAKE_BINARY_DIR}/${img}.hex
+      COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${img}>
+      COMMENT "Target image: ${img}.elf / .bin / .hex (revision ${SEMMC_GIT_REV})")
+  endforeach()
+  target_compile_definitions(semmc_stm32g474_pwmtest PRIVATE SEMMC_BENCH_PWM_TEST=1)
   # Emulation-only harness: the core and the host plant model with the target compiler and libraries,
   # for instruction counts (tools/emulate_core_timing.py). Not a flashable image.
   add_executable(semmc_core_timing ${G4}/timing/core_timing_harness.c platform/host/sim_plant.c)

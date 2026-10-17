@@ -27,6 +27,8 @@ jobs:
           /usr/sbin/mosquitto -h | head -1
       - name: Python deps (pinned)
         run: pip install -r requirements.txt
+      - name: KiCad symbol libraries 8.0.9 (pinned, SHA-256 checked; used by the generator and the ERC)
+        run: python tools/fetch_kicad_symbols.py
       - name: Generated files are current
         run: |
           python tools/gen_config.py --check
@@ -52,8 +54,16 @@ jobs:
         run: |
           python tools/gen_kicad_schematic.py --check
           # the committed schematic, symbols and draft BOM must equal the generator's output
-          # (semmc.net is excluded: it embeds an export date and an absolute path)
-          git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'
+          # (semmc.net and CONNECTIVITY_CHECK.md are excluded: kicad-cli writes them with its version, an
+          # export date and an absolute path; CI's copies are uploaded below)
+          git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net' ':!hardware/kicad/CONNECTIVITY_CHECK.md'
+      - name: Upload connectivity record (KiCad 8.0.9)
+        uses: actions/upload-artifact@v4
+        with:
+          name: connectivity-check
+          path: |
+            hardware/kicad/CONNECTIVITY_CHECK.md
+            hardware/kicad/semmc.net
       - name: Python tests
         # a missing MQTT broker or ARM toolchain is a failure here, not a skip
         env:
@@ -106,6 +116,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends kicad kicad-symbols
           kicad-cli version
+      - name: KiCad symbol libraries 8.0.9 (the copy the schematic was generated from)
+        run: python tools/fetch_kicad_symbols.py
       - name: ERC
         run: bash tools/run_kicad_erc.sh
       - name: Upload ERC report

@@ -279,16 +279,16 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 
 | Category | Lines | Estimated (USD) | Dated quotes | Unpriced (TBD) | Not counted |
 |---|---|---|---|---|---|
-| Motor controller | 10 | 256 to 680 (9 lines) | 0 | 0 | 1 |
+| Motor controller | 10 | 257 to 689 (9 lines) | 0 | 0 | 1 |
 | Telemetry and sensors | 14 | none priced (0 lines) | 0 | 13 | 1 |
 | Shared power, connectors and wiring | 5 | 40 to 105 (3 lines) | 0 | 2 | 0 |
 | Development equipment | 7 | 119 to 404 (5 lines) | 0 | 1 | 1 |
 | Recurring connectivity | 2 | none priced (0 lines) | 0 | 2 | 0 |
 | Contingency | 1 | none priced (0 lines) | 0 | 1 | 0 |
-| **All categories** | 39 | **415 to 1,189** (17 lines) | 0 | **19** | 3 |
+| **All categories** | 39 | **416 to 1,198** (17 lines) | 0 | **19** | 3 |
 
 * Priced subtotal from dated quotes: **none**: none of the 36 counted lines has a dated quote.
-* Estimated lines: **$415 to $1,189** over 17 lines ($296 to $785 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
+* Estimated lines: **$416 to $1,198** over 17 lines ($297 to $794 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
 * Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a subtotal by a few dollars.
 * Unpriced lines: **19** (TBD). They come on top of the estimated range, so the complete cost is not known.
 * Not counted: 3 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
@@ -301,16 +301,16 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 | Item | Purpose | Qty | Unit cost (USD) | Total (USD) | Status |
 |---|---|---|---|---|---|
 | **Motor controller** | | | | | |
-| Controller board parts, one board | Every component on the draft motor-controller schematic (100 BOM lines) | 1 set | est. 89 to 231 | est. 89 to 231 | Blocked |
+| Controller board parts, one board | Every component on the draft motor-controller schematic (100 BOM lines) | 1 set | est. 89 to 239 | est. 89 to 239 | Blocked |
 | Spare parts for bring-up | Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU) | 1 set | est. 58 to 93 | est. 58 to 93 | Blocked |
 | Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper) | Bare boards for the motor controller | 1 order | est. 40 to 120 | est. 40 to 120 | Blocked |
 | Controller PCB shipping | Delivery of the boards | 1 order | est. 20 to 45 | est. 20 to 45 | Blocked |
 | Solder-paste stencil | Hand assembly of the fine-pitch parts | 1 order | est. 8 to 25 | est. 8 to 25 | Blocked |
 | Assembly consumables (paste, flux, wick) | Board assembly | 1 set | est. 10 to 25 | est. 10 to 25 | Candidate |
 | Thermal interface, heatsink plate and fasteners | Carries the power-stage losses away from the MOSFETs | 1 set | est. 10 to 35 | est. 10 to 35 | Blocked |
-| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 77 | est. 12 to 77 | Blocked |
+| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 78 | est. 12 to 78 | Blocked |
 | Controller enclosure and mounting | Holds and protects the controller in the vehicle | 1 set | est. 10 to 30 | est. 10 to 30 | Blocked |
-| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 248 | est. 90 to 248 | Candidate |
+| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 250 | est. 90 to 250 | Candidate |
 | **Telemetry and sensors** | | | | | |
 | Telematics PCB fabrication and assembly | The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal) | TBD | TBD | TBD | Blocked |
 | Wheel-speed Hall sensor | Wheel pulses for vehicle speed and distance | TBD | TBD | TBD | Blocked |

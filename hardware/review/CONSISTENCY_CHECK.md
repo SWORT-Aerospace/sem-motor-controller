@@ -10,15 +10,15 @@ Totals: 14 PASS, 0 FAIL, 4 OPEN.
 | PR2 AND inputs are the MCU enable and HW_PERMIT | **PASS** | U402 inputs: pin 1 MCU_DRV_EN, pin 2 HW_PERMIT |
 | PR3 every enable defaults off (pull-down to GND) | **PASS** | MCU_DRV_EN: ['R402']; DRV_EN_GATED: ['R403']; HW_PERMIT: ['R1020']; PRECHG_EN: ['R105'] |
 | PR4 driver nFAULT reaches TIM1_BKIN, with a pull-up | **PASS** | U401.nFAULT on DRV_NFAULT; MCU pin 46 (PE15, TIM1_BKIN) on DRV_NFAULT; pull-up ['R401'] |
-| PR5 over-voltage comparator reaches TIM1_BKIN2, with a pull-up | **PASS** | U201 output on BRK2_N; MCU pin 18 (PC3) on BRK2_N; pull-up ['R206'] |
+| PR5 over-voltage comparator reaches TIM1_BKIN2, with a pull-up | **PASS** | U201 output on BRK2_N; MCU pin 18 (PC3) on BRK2_N; pull-up ['R207'] |
 | PR6 watchdog timeout pulls HW_PERMIT low and resets the MCU | **PASS** | U802 WDO on WDG_RST_N; diode(s) ['D803'] with cathode on WDO (wired pull-down of HW_PERMIT); to NRST via ['R805'] |
 | PR7 HW_PERMIT comes from the safety loop; the MCU only senses it | **PASS** | U1001 on HW_PERMIT pin ['3']; MCU on pin ['84'] (ESTOP_CHAIN_SENSE = pin 84) |
 | PR8 independent over-current comparator on BKIN2 | **OPEN** | none in the draft: hardware over-current shutdown is the gate driver's VDS monitoring through nFAULT -> BKIN (threshold depends on the MOSFET R_DS(on), i.e. on the motor current); BKIN2 carries the over-voltage trip only. Decide after the motor peak current is known. |
 | PN1 every allocated MCU pin carries the intended net | **PASS** | 45 allocated functions match the netlist |
 | PN2 target PWM driver (pwm.h) names the same break pins as the allocation | **PASS** | pwm.h BKIN/BKIN2 ('PE15', 'PC3'); pin allocation ('PE15', 'PC3') |
 | PN3 BKIN2 description matches the schematic (over-voltage) | **PASS** | hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option) |
-| BM1 BOM lines cover every schematic component exactly once | **PASS** | 206 components, 100 BOM lines; missing [], extra [], duplicated [], qty mismatches [], value mismatches [] |
-| BM2 motor/battery-dependent parts stay unresolved | **OPEN** | 42 BOM lines are UNRESOLVED (ratings depend on the motor, battery, harness or rules); no fabrication release while any remains |
+| BM1 BOM lines cover every schematic component exactly once | **PASS** | 229 components, 122 BOM lines; missing [], extra [], duplicated [], qty mismatches [], value mismatches [] |
+| BM2 motor/battery-dependent parts stay unresolved | **OPEN** | 41 BOM lines are UNRESOLVED (ratings depend on the motor, battery, harness or rules); no fabrication release while any remains |
 | TM1 configured current-sample settle equals the timing budget's assumption | **PASS** | config 1.50 us; timing budget ringing 0.50 + CSA settle 1.00 us (both ASSUMED, to measure at bench stage 3/4) |
 | TM2 timing budget inputs tagged [C] equal the configuration | **PASS** | pwm frequency, dead time, duty_max, voltage-limit fraction read from config |
 | TM3 dead time and PWM frequency | **OPEN** | synthetic 200 ns at 20 kHz; dead time depends on the selected MOSFETs' switching times, PWM frequency on the motor inductance |

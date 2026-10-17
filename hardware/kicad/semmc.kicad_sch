@@ -1222,6 +1222,9 @@
     (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/1eda820b-a9ac-5f05-a39f-738fe5ce0702"
       (reference "R105") (unit 1) (value "100k") (footprint "")
     )
+    (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/1255f56b-aae0-5a6d-b47a-32e3a2aca052"
+      (reference "TP101") (unit 1) (value "PRECHG_EN") (footprint "")
+    )
     (path "/5c755c1e-6995-5619-95e6-c88922e2c28c/084def5c-5958-5e8f-a3d0-37a89591a287"
       (reference "#FLG101") (unit 1) (value "PWR_FLAG") (footprint "")
     )
@@ -1277,16 +1280,28 @@
       (reference "U201") (unit 1) (value "TLV7041DBV") (footprint "")
     )
     (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/15ede5fe-c4cc-5067-9861-789c237b08ea"
-      (reference "R205") (unit 1) (value "UNRESOLVED hysteresis") (footprint "")
+      (reference "R205") (unit 1) (value "10k") (footprint "")
     )
     (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/5951f9af-d25b-54c6-b0bd-41709fafee0b"
-      (reference "R206") (unit 1) (value "10k") (footprint "")
+      (reference "R206") (unit 1) (value "390k") (footprint "")
+    )
+    (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/cc6b9a97-c4c6-5c9d-8ee7-14a540d7a87a"
+      (reference "R207") (unit 1) (value "10k") (footprint "")
     )
     (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/8f7969a3-1c9d-57e6-ab95-f4c6d5850ce8"
       (reference "U202") (unit 1) (value "TL431 (2.495 V)") (footprint "")
     )
-    (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/cc6b9a97-c4c6-5c9d-8ee7-14a540d7a87a"
-      (reference "R207") (unit 1) (value "1k") (footprint "")
+    (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/f402dd04-3905-502f-a22f-d785980f34fb"
+      (reference "R208") (unit 1) (value "470R") (footprint "")
+    )
+    (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/fadffb51-3633-51bb-813d-53e422dad50d"
+      (reference "TP201") (unit 1) (value "VBUS_SENSE") (footprint "")
+    )
+    (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/9c63b4e6-385e-5317-b13c-ee002d9f6aa3"
+      (reference "TP202") (unit 1) (value "BRK2_N") (footprint "")
+    )
+    (path "/75dcf77a-e875-59c8-89c3-0765faa6ad11/f5883d7d-0df6-598a-870f-63a872cb51ad"
+      (reference "TP203") (unit 1) (value "OV_REF") (footprint "")
     )
     (path "/bb8cbbe6-3d26-5c6e-829a-465e4c998239/92155d35-5302-5b82-a57a-482e1e0f4e71"
       (reference "Q301") (unit 1) (value "UNRESOLVED N-MOSFET HS-A") (footprint "")
@@ -1387,6 +1402,36 @@
     (path "/ddb1b12e-2360-5fce-9469-12694860bab5/36dbc573-64a5-549c-93c2-4640689dea99"
       (reference "R410") (unit 1) (value "100k") (footprint "")
     )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/e86a82f2-1f35-5723-9b02-8e6182a23ead"
+      (reference "TP401") (unit 1) (value "PWM_A_HI") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/1f471543-9904-520b-9342-9eb24eca1a94"
+      (reference "TP402") (unit 1) (value "PWM_A_LO") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/3bd9ac08-3fa5-559c-92f9-a66011485f6b"
+      (reference "TP403") (unit 1) (value "PWM_B_HI") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/fc9e9557-b9f9-5f52-9566-cfdc25dc141b"
+      (reference "TP404") (unit 1) (value "PWM_B_LO") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/39c68f3d-77bc-57e9-8f37-5203ab8c8703"
+      (reference "TP405") (unit 1) (value "PWM_C_HI") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/6ce1f577-9715-5a36-b74b-e78e29af5970"
+      (reference "TP406") (unit 1) (value "PWM_C_LO") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/7827a50d-72c6-5f61-9695-b8ff8f5c9922"
+      (reference "TP407") (unit 1) (value "MCU_DRV_EN") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/1e4ca204-02c9-5a03-ade4-41a3aa3ce65b"
+      (reference "TP408") (unit 1) (value "DRV_EN_GATED") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/c16ad902-db55-5da8-a954-032f7762ae0a"
+      (reference "TP409") (unit 1) (value "VCP") (footprint "")
+    )
+    (path "/ddb1b12e-2360-5fce-9469-12694860bab5/27491689-d4e5-57b3-af2a-83e3a63a5200"
+      (reference "TP410") (unit 1) (value "DVDD") (footprint "")
+    )
     (path "/0c63a025-041c-5c5c-aa30-f40ad028f846/0befa44a-ba97-542e-8898-e649cb4142c7"
       (reference "C501") (unit 1) (value "DNP (diff. filter option)") (footprint "")
     )
@@ -1458,6 +1503,9 @@
     )
     (path "/2a060500-7768-5549-b844-18ffaf3861ee/0e88432f-9a5d-578a-b270-8b738878681e"
       (reference "C701") (unit 1) (value "100nF") (footprint "")
+    )
+    (path "/2a060500-7768-5549-b844-18ffaf3861ee/b3dad31a-1ac8-5585-a82c-60d17dd8f409"
+      (reference "TP701") (unit 1) (value "TEMP_FET") (footprint "")
     )
     (path "/2a060500-7768-5549-b844-18ffaf3861ee/89590a13-bb12-5194-95e5-211ff7d24749"
       (reference "J701") (unit 1) (value "MOTOR_TEMP") (footprint "")
@@ -1563,6 +1611,12 @@
     )
     (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/dd8f8273-1e1c-5c22-897d-d47401b3fe47"
       (reference "TP803") (unit 1) (value "DRV_NFAULT") (footprint "")
+    )
+    (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/dfefcce4-c874-51dd-846f-0ed46c676e8c"
+      (reference "TP804") (unit 1) (value "WDG_WDI") (footprint "")
+    )
+    (path "/a98c448d-ac41-573e-b52a-3bd30d65afa0/aa6ccc38-18a8-5a0b-85b0-ed2e3691238a"
+      (reference "TP805") (unit 1) (value "WDG_RST_N") (footprint "")
     )
     (path "/574bf6ce-1934-556b-aee3-5d7c5f843518/2cbdd8d5-17bc-5058-a616-47a1743c71f3"
       (reference "J901") (unit 1) (value "HALL") (footprint "")
@@ -1723,6 +1777,15 @@
     (path "/3ebfec5b-c861-51b7-bbdd-5897f44e5bb5/b022c091-d278-52f9-b887-0e1d4b77b66c"
       (reference "C1009") (unit 1) (value "1nF") (footprint "")
     )
+    (path "/3ebfec5b-c861-51b7-bbdd-5897f44e5bb5/0b17fdb0-06cc-5515-bdc4-cfdf057b6df3"
+      (reference "TP1001") (unit 1) (value "HW_PERMIT") (footprint "")
+    )
+    (path "/3ebfec5b-c861-51b7-bbdd-5897f44e5bb5/e59dc22d-9f4f-5649-bbc5-164340aaa545"
+      (reference "TP1002") (unit 1) (value "THROTTLE_A") (footprint "")
+    )
+    (path "/3ebfec5b-c861-51b7-bbdd-5897f44e5bb5/b905d8fb-1ce3-55b5-a758-d41ad9fdd3da"
+      (reference "TP1003") (unit 1) (value "THROTTLE_B") (footprint "")
+    )
     (path "/355cff71-804d-52f9-9aea-c44d95833d46/44f479b6-6d79-5607-b6f6-987280a0cf92"
       (reference "U1101") (unit 1) (value "TJA1051T/3") (footprint "")
     )
@@ -1758,6 +1821,12 @@
     )
     (path "/355cff71-804d-52f9-9aea-c44d95833d46/bb5051fb-4f0a-5e7d-9b8c-ed15dffcd4db"
       (reference "C1104") (unit 1) (value "1nF") (footprint "")
+    )
+    (path "/355cff71-804d-52f9-9aea-c44d95833d46/605b0e51-e9d2-514a-b971-f9f1546259d7"
+      (reference "TP1101") (unit 1) (value "CAN_TX") (footprint "")
+    )
+    (path "/355cff71-804d-52f9-9aea-c44d95833d46/608efef0-6398-564f-8171-3b45b6ded522"
+      (reference "TP1102") (unit 1) (value "CAN_RX") (footprint "")
     )
     (path "/f5c415d1-d614-5ce7-8396-4a2ac4108f6e/ca583cf8-26c3-5533-a563-2835bc17c5ba"
       (reference "U1201") (unit 1) (value "LM5164 (candidate)") (footprint "")

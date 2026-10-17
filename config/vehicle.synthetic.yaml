@@ -142,6 +142,7 @@ controls:                            # wired pedal calibration, measured at the 
   throttle_b_full_V: null
   throttle_track_tolerance: null
   throttle_divider_ratio: null
+  brake_switch: null
 
 power:                               # precharge sequencing (not used by the host simulation)
   precharge_complete_fraction: null
