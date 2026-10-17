@@ -183,7 +183,7 @@ Inside the team (no outside input): [B-ASSY](#b-assy) Assembly process and coppe
 - **Missing:** Live distributor and fabricator quotes (the snapshots are dated web-search values and allowances).
 - **Affects:** docs/BUDGET.md ranges and the $500 and $1,000 scenarios.
 - **Why it matters:** The budget cannot be shown feasible while the ranges straddle the limits.
-- **Done now:** Priced ranges with evidence class and date per line; minimum build defined.
+- **Done now:** Priced ranges with evidence class and date per line; three builds (controller only, plus local logging, full scope) evaluated against $500 and $1,000 with and without the development equipment (docs/PROCUREMENT.md); the controller-only build is fully estimated (312 to 834 USD with the equipment owned) and the other two have 8 and 19 unpriced lines.
 - **Input required:** Quotes for the BOM and the PCB from the team's chosen suppliers (distributor sites are not reachable from this environment).
 - **Closure criterion:** pricing.yaml lines updated with quote references; tools/price_bom.py rerun.
 

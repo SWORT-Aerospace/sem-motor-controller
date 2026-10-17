@@ -21,6 +21,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BOM = ROOT / "hardware" / "bom" / "BOM_draft.csv"
 PRICING = ROOT / "hardware" / "bom" / "pricing.yaml"
+GEN = ROOT / "tools" / "gen_kicad_schematic.py"
 BUDGETS = (500.0, 1000.0)
 
 
@@ -33,9 +34,15 @@ def match(rule, row):
     return True
 
 
+def sheet_titles() -> dict:
+    """Sheet name -> functional block title, as the schematic generator names them."""
+    return dict(re.findall(r'S\.append\(\("(\w+)", "([^"]+)"', GEN.read_text()))
+
+
 def price_lines():
     P = yaml.safe_load(PRICING.read_text())
     rows = list(csv.DictReader(BOM.open()))
+    titles = sheet_titles()
     out = []
     for r in rows:
         rule = next((x for x in P["rules"] if match(x, r)), None)
@@ -50,7 +57,11 @@ def price_lines():
                     "supplier": rule.get("supplier", "-"), "unit_low": rule["low"], "unit_high": rule["high"],
                     "price_date": P["retrieved"] if rule["evidence"] != "allowance" else "-",
                     "ext_low": round(lo, 2), "ext_high": round(hi, 2), "availability": rule.get("availability", ""),
-                    "alternate": rule.get("alternate", ""), "evidence": rule["evidence"], "source": rule.get("source", "")})
+                    "manufacturer": rule.get("manufacturer", "-"), "datasheet": rule.get("datasheet", "-"),
+                    "function": "; ".join(titles.get(n, n) for n in r["sheets"].split()),
+                    # no substitute has been checked against a primary document: alternates are leads only
+                    "alternate_unchecked": rule.get("alternate", ""), "evidence": rule["evidence"],
+                    "source": rule.get("source", "")})
     return P, out
 
 
@@ -96,9 +107,9 @@ def scenario(P, lines, boards, revision):
 def main() -> int:
     P, lines = price_lines()
     out_csv = ROOT / "hardware" / "bom" / "BOM_priced.csv"
-    cols = ["line", "refs", "qty_per_board", "mpn", "value", "package", "footprint", "rating_basis", "supplier",
-            "unit_low", "unit_high", "price_date", "ext_low", "ext_high", "availability", "alternate",
-            "selection_status", "evidence", "source", "pin_check"]
+    cols = ["line", "refs", "qty_per_board", "manufacturer", "mpn", "value", "package", "footprint", "function",
+            "rating_basis", "datasheet", "supplier", "unit_low", "unit_high", "price_date", "ext_low", "ext_high",
+            "availability", "selection_status", "alternate_unchecked", "evidence", "source", "pin_check"]
     with out_csv.open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()

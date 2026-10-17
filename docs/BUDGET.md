@@ -44,7 +44,7 @@ Contingency = budget minus the HIGH end of the range. The vs-$500 column assumes
 * [integration] Bench dummy load / power resistors + bench harness: $15 – $40 (allowance)
 * [equipment, only if not owned] SWD programmer (STLINK-V3MINIE): $14 – $44 (snippet: Cytech ref $14.04; Farnell IE EUR 12.51 incl. VAT; Waveshare GBP 37.58 (snapshots))
 * [equipment, only if not owned] USB-CAN adapter (CANable-class, candleLight firmware): $30 – $60 (allowance: not quoted)
-* [equipment, only if not owned] Current-limited bench supply (>= 60 V or series-able, CC mode): $60 – $200 (allowance: not quoted)
+* [equipment, only if not owned] Current-limited bench supply (output above V_bat,max, unknown; or series-able; CC mode): $60 – $200 (allowance: not quoted)
 * [equipment, only if not owned] Oscilloscope >= 100 MHz, 4 ch (+ differential probe for the switch node): $0 – $0 (allowance: assumed borrowed from the lab: NOT in the budget; a differential probe can cost more than this whole budget)
 * [equipment, only if not owned] Bench DMM x2, clamp/current probe: $0 – $60 (allowance: assumed owned; clamp meter if not)
 

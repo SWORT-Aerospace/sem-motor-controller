@@ -8,40 +8,72 @@ Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (r
 
 | Category | Lines | Estimated (USD) | Dated quotes | Unpriced (TBD) | Not counted |
 |---|---|---|---|---|---|
-| Motor controller | 10 | 257 to 689 (9 lines) | 0 | 0 | 1 |
-| Telemetry and sensors | 14 | none priced (0 lines) | 0 | 13 | 1 |
+| Motor controller (board parts, heatsink, enclosure) | 3 | 109 to 304 (3 lines) | 0 | 0 | 0 |
+| Telemetry and sensors | 12 | none priced (0 lines) | 0 | 11 | 1 |
 | Shared power, connectors and wiring | 5 | 40 to 105 (3 lines) | 0 | 2 | 0 |
+| Fabrication and assembly | 5 | 58 to 170 (3 lines) | 0 | 1 | 1 |
+| Shipping and tax | 3 | 32 to 123 (2 lines) | 0 | 1 | 0 |
+| Spares and another board revision | 2 | 58 to 93 (1 lines) | 0 | 0 | 1 |
 | Development equipment | 7 | 119 to 404 (5 lines) | 0 | 1 | 1 |
 | Recurring connectivity | 2 | none priced (0 lines) | 0 | 2 | 0 |
 | Contingency | 1 | none priced (0 lines) | 0 | 1 | 0 |
-| **All categories** | 39 | **416 to 1,198** (17 lines) | 0 | **19** | 3 |
+| **All categories** | 40 | **416 to 1,198** (17 lines) | 0 | **19** | 4 |
 
 * Priced subtotal from dated quotes: **none**: none of the 36 counted lines has a dated quote.
-* Estimated lines: **$416 to $1,198** over 17 lines ($297 to $794 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](BUDGET.md)); they are estimates, not quotes.
+* Estimated lines: **$416 to $1,198** over 17 lines ($312 to $834 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](BUDGET.md)); they are estimates, not quotes.
 * Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a subtotal by a few dollars.
 * Unpriced lines: **19** (TBD). They come on top of the estimated range, so the complete cost is not known.
-* Not counted: 3 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
+* Not counted: 4 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
 * Budget: the project budget is about $500 to $1,000; which lines it must cover is **unconfirmed**. With 19 lines unpriced, a fit within $500 to $1,000 is **not established**.
-* Status: Candidate 9, Selected 0, Ordered 0, Received 0, Blocked 30. Nothing has been ordered.
+* Status: Candidate 9, Selected 0, Ordered 0, Received 0, Blocked 31. Nothing has been ordered.
 * A separate battery for the driver display is not an approved purchase: Article 57i allows built-in batteries only in unmodified, self-contained display or communication devices, and Article 57b allows no accessory battery on a Battery Electric vehicle.
+
+## Builds against the budget
+
+Every build contains every line of the controller category: features are deferred, protection is not. "Owned" assumes the team already has the development equipment; "bought" adds it (an oscilloscope and differential probe are not budgeted in either: they must be borrowed). A build with unpriced lines cannot be shown to fit.
+
+| Build | Development equipment | Estimated (USD) | Unpriced lines | Against $500 | Against $1,000 |
+|---|---|---|---|---|---|
+| Minimum working build (controller only) | owned | 312 to 834 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
+| Minimum working build (controller only) | bought | 416 to 1,198 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
+| Minimum build plus local logging (no live link) | owned | 312 to 834 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced |
+| Minimum build plus local logging (no live link) | bought | 416 to 1,198 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced; the priced lines alone straddle $1,000 |
+| Full scope | owned | 312 to 834 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
+| Full scope | bought | 416 to 1,198 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
+
+**Minimum working build (controller only).** One controller board assembled, bench-accepted and driven in the vehicle with the existing driver controls. The controller runs without telemetry, LTE, MQTT, the pit software and CSIA.
+
+* Lines: Controller board parts, one board; Thermal interface, heatsink plate and fasteners; Controller enclosure and mounting; Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper); Solder-paste stencil; Assembly consumables (paste, flux, wick); Controller PCB shipping; Tax and shipping on the controller parts; Spare parts for bring-up; Battery and motor mating connectors; Controller signal connectors and crimp terminals; Wire, heat-shrink and sleeving; Bench dummy load, power resistors and bench harness.
+* Deferred: Telematics PCB fabrication and assembly; NUCLEO-U575ZI-Q development board; Wheel-speed Hall sensor; Wheel magnets and mounting hardware; CAN transceiver/interface, if not included in the PCB assembly; Local log storage (microSD card and socket), if not included in the PCB assembly; Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly; Telemetry harness (sensor cables and connectors). Effect: no wheel-speed distance and no telematics log; energy per distance only from rotor speed, and only while the motor is rigidly coupled.
+* Deferred: GNSS receiver/module, if not included in the PCB assembly; Active GNSS antenna; 6-axis IMU; Temperature sensors/probes; Optional steering-angle sensor. Effect: no position, UTC alignment, grade or slow temperatures.
+* Deferred: LTE modem, if not included in the PCB assembly; LTE antenna; SIM card and data plan; Internet-reachable MQTT broker. Effect: no live data at the pit.
+* Deferred: Driver display. Effect: no driver display.
+* Deferred: Second controller board revision. Effect: a design error needs a new budget decision.
+
+**Minimum build plus local logging (no live link).** The minimum build plus a development-board telematics node on the vehicle CAN bus with one wheel sensor and local storage: the essential energy-accounting signals (docs/TELEMETRY_INTEGRATION.md 3), recorded offline.
+
+* Lines: Controller board parts, one board; Thermal interface, heatsink plate and fasteners; Controller enclosure and mounting; Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper); Solder-paste stencil; Assembly consumables (paste, flux, wick); Controller PCB shipping; Tax and shipping on the controller parts; Spare parts for bring-up; Battery and motor mating connectors; Controller signal connectors and crimp terminals; Wire, heat-shrink and sleeving; Bench dummy load, power resistors and bench harness; NUCLEO-U575ZI-Q development board; Wheel-speed Hall sensor; Wheel magnets and mounting hardware; CAN transceiver/interface, if not included in the PCB assembly; Local log storage (microSD card and socket), if not included in the PCB assembly; Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly; Telemetry harness (sensor cables and connectors); Shipping and tax on the telemetry lines.
+* Unpriced (TBD): NUCLEO-U575ZI-Q development board; Wheel-speed Hall sensor; Wheel magnets and mounting hardware; CAN transceiver/interface, if not included in the PCB assembly; Local log storage (microSD card and socket), if not included in the PCB assembly; Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly; Telemetry harness (sensor cables and connectors); Shipping and tax on the telemetry lines.
+* Deferred: Telematics PCB fabrication and assembly. Effect: the development board is mounted instead of the telematics PCB.
+* Deferred: GNSS receiver/module, if not included in the PCB assembly; Active GNSS antenna; 6-axis IMU; Temperature sensors/probes; Optional steering-angle sensor. Effect: no position, UTC alignment, grade or slow temperatures.
+* Deferred: LTE modem, if not included in the PCB assembly; LTE antenna; SIM card and data plan; Internet-reachable MQTT broker. Effect: no live data at the pit.
+* Deferred: Driver display. Effect: no driver display.
+* Deferred: Second controller board revision. Effect: a design error needs a new budget decision.
+
+**Full scope.** Every counted line of this file.
+
+* Lines: Controller board parts, one board; Spare parts for bring-up; Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper); Controller PCB shipping; Solder-paste stencil; Assembly consumables (paste, flux, wick); Thermal interface, heatsink plate and fasteners; Tax and shipping on the controller parts; Controller enclosure and mounting; Telematics PCB fabrication and assembly; Wheel-speed Hall sensor; Wheel magnets and mounting hardware; 6-axis IMU; Temperature sensors/probes; GNSS receiver/module, if not included in the PCB assembly; Active GNSS antenna; LTE modem, if not included in the PCB assembly; LTE antenna; Local log storage (microSD card and socket), if not included in the PCB assembly; CAN transceiver/interface, if not included in the PCB assembly; Driver display; Shipping and tax on the telemetry lines; Battery and motor mating connectors; Controller signal connectors and crimp terminals; Wire, heat-shrink and sleeving; Telemetry harness (sensor cables and connectors); Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly; NUCLEO-U575ZI-Q development board; Bench dummy load, power resistors and bench harness; SIM card and data plan; Internet-reachable MQTT broker; Contingency.
+* Unpriced (TBD): Telematics PCB fabrication and assembly; Wheel-speed Hall sensor; Wheel magnets and mounting hardware; 6-axis IMU; Temperature sensors/probes; GNSS receiver/module, if not included in the PCB assembly; Active GNSS antenna; LTE modem, if not included in the PCB assembly; LTE antenna; Local log storage (microSD card and socket), if not included in the PCB assembly; CAN transceiver/interface, if not included in the PCB assembly; Driver display; Shipping and tax on the telemetry lines; Telemetry harness (sensor cables and connectors); Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly; NUCLEO-U575ZI-Q development board; SIM card and data plan; Internet-reachable MQTT broker; Contingency.
 
 ## Lines
 
 | Item | Purpose | Qty | Unit cost (USD) | Total (USD) | Status |
 |---|---|---|---|---|---|
-| **Motor controller** | | | | | |
+| **Motor controller (board parts, heatsink, enclosure)** | | | | | |
 | Controller board parts, one board | Every component on the draft motor-controller schematic (100 BOM lines) | 1 set | est. 89 to 239 | est. 89 to 239 | Blocked |
-| Spare parts for bring-up | Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU) | 1 set | est. 58 to 93 | est. 58 to 93 | Blocked |
-| Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper) | Bare boards for the motor controller | 1 order | est. 40 to 120 | est. 40 to 120 | Blocked |
-| Controller PCB shipping | Delivery of the boards | 1 order | est. 20 to 45 | est. 20 to 45 | Blocked |
-| Solder-paste stencil | Hand assembly of the fine-pitch parts | 1 order | est. 8 to 25 | est. 8 to 25 | Blocked |
-| Assembly consumables (paste, flux, wick) | Board assembly | 1 set | est. 10 to 25 | est. 10 to 25 | Candidate |
 | Thermal interface, heatsink plate and fasteners | Carries the power-stage losses away from the MOSFETs | 1 set | est. 10 to 35 | est. 10 to 35 | Blocked |
-| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 78 | est. 12 to 78 | Blocked |
 | Controller enclosure and mounting | Holds and protects the controller in the vehicle | 1 set | est. 10 to 30 | est. 10 to 30 | Blocked |
-| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 250 | est. 90 to 250 | Candidate |
 | **Telemetry and sensors** | | | | | |
-| Telematics PCB fabrication and assembly | The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal) | TBD | TBD | TBD | Blocked |
 | Wheel-speed Hall sensor | Wheel pulses for vehicle speed and distance | TBD | TBD | TBD | Blocked |
 | Wheel magnets and mounting hardware | Targets for the wheel-speed sensor | TBD | TBD | TBD | Blocked |
 | 6-axis IMU | Longitudinal acceleration and yaw rate for analysis (not control) | 1 | TBD | TBD | Candidate |
@@ -54,13 +86,25 @@ Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (r
 | CAN transceiver/interface, if not included in the PCB assembly | Connects the telemetry unit to the vehicle CAN bus | 1 | TBD | TBD | Blocked |
 | Driver display | Shows the driver speed, mode and advisories | 1 | TBD | TBD | Blocked |
 | Optional steering-angle sensor | Steering angle for analysis | 1 | TBD | TBD | Blocked |
-| Shipping and tax on the telemetry lines | Delivery and import tax | TBD | TBD | TBD | Blocked |
 | **Shared power, connectors and wiring** | | | | | |
 | Battery and motor mating connectors | High-current connections between battery, controller and motor | 1 set | est. 5 to 15 | est. 5 to 15 | Blocked |
 | Controller signal connectors and crimp terminals | Driver controls, Hall, CAN and temperature connections at the controller | 1 set | est. 10 to 30 | est. 10 to 30 | Blocked |
 | Wire, heat-shrink and sleeving | Power wiring (10-12 AWG), signal multicore and CAN twisted pair | 1 set | est. 25 to 60 | est. 25 to 60 | Blocked |
 | Telemetry harness (sensor cables and connectors) | Wheel, temperature, GNSS and LTE antenna, display and CAN cables to the telemetry unit | TBD | TBD | TBD | Blocked |
 | Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly | Regulated low voltage from the propulsion battery for the telemetry unit, sensors and modem | 1 | TBD | TBD | Blocked |
+| **Fabrication and assembly** | | | | | |
+| Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper) | Bare boards for the motor controller | 1 order | est. 40 to 120 | est. 40 to 120 | Blocked |
+| Solder-paste stencil | Hand assembly of the fine-pitch parts | 1 order | est. 8 to 25 | est. 8 to 25 | Blocked |
+| Assembly consumables (paste, flux, wick) | Board assembly | 1 set | est. 10 to 25 | est. 10 to 25 | Candidate |
+| Controller PCB assembly service (alternative to hand assembly) (optional) | Machine placement and reflow of the controller board by the fabricator | 1 order | TBD | TBD | Blocked |
+| Telematics PCB fabrication and assembly | The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal) | TBD | TBD | TBD | Blocked |
+| **Shipping and tax** | | | | | |
+| Controller PCB shipping | Delivery of the boards | 1 order | est. 20 to 45 | est. 20 to 45 | Blocked |
+| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 78 | est. 12 to 78 | Blocked |
+| Shipping and tax on the telemetry lines | Delivery and import tax | TBD | TBD | TBD | Blocked |
+| **Spares and another board revision** | | | | | |
+| Spare parts for bring-up | Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU) | 1 set | est. 58 to 93 | est. 58 to 93 | Blocked |
+| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 250 | est. 90 to 250 | Candidate |
 | **Development equipment** | | | | | |
 | NUCLEO-U575ZI-Q development board | Bench development of the telemetry firmware before the telematics board exists | 1 | TBD | TBD | Candidate |
 | Bench dummy load, power resistors and bench harness | Loads the controller's supply stages on the bench before a motor is connected | 1 set | est. 15 to 40 | est. 15 to 40 | Blocked |
@@ -79,17 +123,18 @@ Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (r
 
 | Item | Category | Candidate | Requirement | Blocked by | Cost source | Evidence |
 |---|---|---|---|---|---|---|
-| Controller board parts, one board | Motor controller | hardware/bom/BOM_priced.csv (draft schematic; rating-dependent parts are representatives, not selections) | Ratings of the MOSFETs, shunts, bulk capacitors, fuse and TVS follow the battery and motor, not the 48 V nominal alone. | maximum and minimum pack voltage, discharge and regenerative current limits (battery and BMS datasheets); design review | estimate, BOM lines by evidence: 106 allowance, 11 representative, 5 snippet (docs/generated/budget.json, S1: parts) | [`docs/BUDGET.md`](BUDGET.md) |
-| Spare parts for bring-up | Motor controller | spares list in hardware/bom/pricing.yaml | Same part numbers as the board parts. | the board parts line | estimate, computed by tools/price_bom.py (docs/generated/budget.json, S1: spares) | [`docs/BUDGET.md`](BUDGET.md) |
-| Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper) | Motor controller | - | A reviewed layout. None exists; the schematic has no footprints. | footprints, layout and the stage-0 design review (hardware/review/REVIEW_CHECKLIST.md) | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
-| Controller PCB shipping | Motor controller | - | From the fabrication quote. | the PCB line | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
-| Solder-paste stencil | Motor controller | - | Matches the final layout. | the PCB line | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
-| Assembly consumables (paste, flux, wick) | Motor controller | - | Lead-free or leaded paste matched to the team's reflow method. | - | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
-| Thermal interface, heatsink plate and fasteners | Motor controller | - | Sized from the loss estimate at the real current and the mounting in the vehicle. | motor and battery current; mounting location | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
-| Tax and shipping on the controller parts | Motor controller | - | From the distributor quote and the delivery country. | quotes | estimate, computed by tools/price_bom.py (docs/generated/budget.json, S1: shipping_tax) | [`docs/BUDGET.md`](BUDGET.md) |
-| Controller enclosure and mounting | Motor controller | printed or folded aluminium | Fits the mounting location; connections visible and accessible (Article 57k). | mounting location in the vehicle | estimate, allowance (docs/generated/budget.json, S1: incremental_items) | [`docs/BUDGET.md`](BUDGET.md) |
-| Second controller board revision (optional) | Motor controller | revision allowance in hardware/bom/pricing.yaml (scenario S1R) | Only if bring-up of the first board finds a layout defect. | first-board bring-up | estimate, computed by tools/price_bom.py (docs/generated/budget.json, S1R: revision_allowance) | [`docs/BUDGET.md`](BUDGET.md) |
-| Telematics PCB fabrication and assembly | Telemetry and sensors | The team's telematics board (STM32U575, NEO-M9N, A7672, MC3419, NOR flash, BQ25622E per the proposal) | Board files are needed for a quote (bk4000tg_kicad.zip, telemetry.pdf: not received). The proposal's BQ25622E charger implies an on-board battery; Article 57b forbids an accessory battery on a Battery Electric vehicle. Enclosure transparent or with a transparent cover (Article 57j). | telematics board files; battery arrangement under Article 57b | none yet | [`docs/RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md) |
+| Controller board parts, one board | Motor controller (board parts, heatsink, enclosure) | hardware/bom/BOM_priced.csv (draft schematic; rating-dependent parts are representatives, not selections) | Ratings of the MOSFETs, shunts, bulk capacitors, fuse and TVS follow the battery and motor, not the 48 V nominal alone. | maximum and minimum pack voltage, discharge and regenerative current limits (battery and BMS datasheets); design review | estimate, BOM lines by evidence: 106 allowance, 11 representative, 5 snippet (docs/generated/budget.json, S1: parts) | [`docs/BUDGET.md`](BUDGET.md) |
+| Spare parts for bring-up | Spares and another board revision | spares list in hardware/bom/pricing.yaml | Same part numbers as the board parts. | the board parts line | estimate, computed by tools/price_bom.py (docs/generated/budget.json, S1: spares) | [`docs/BUDGET.md`](BUDGET.md) |
+| Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper) | Fabrication and assembly | - | A reviewed layout. None exists; the schematic has no footprints. | footprints, layout and the stage-0 design review (hardware/review/REVIEW_CHECKLIST.md) | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
+| Controller PCB shipping | Shipping and tax | - | From the fabrication quote. | the PCB line | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
+| Solder-paste stencil | Fabrication and assembly | - | Matches the final layout. | the PCB line | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
+| Assembly consumables (paste, flux, wick) | Fabrication and assembly | - | Lead-free or leaded paste matched to the team's reflow method. | - | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
+| Controller PCB assembly service (alternative to hand assembly) (optional) | Fabrication and assembly | - | Replaces the stencil and consumables lines, not added to them; if the assembler also sources the parts, its parts price replaces the board-parts line. Needs footprints, a layout and the assembler's part library. | hand assembly or an assembly service (team decision, input sheet Q9; register B-ASSY) | none yet | [`docs/BLOCKERS.md#b-assy`](BLOCKERS.md#b-assy) |
+| Thermal interface, heatsink plate and fasteners | Motor controller (board parts, heatsink, enclosure) | - | Sized from the loss estimate at the real current and the mounting in the vehicle. | motor and battery current; mounting location | estimate, allowance (docs/generated/budget.json, S1: controller_items) | [`docs/BUDGET.md`](BUDGET.md) |
+| Tax and shipping on the controller parts | Shipping and tax | - | From the distributor quote and the delivery country. | quotes | estimate, computed by tools/price_bom.py (docs/generated/budget.json, S1: shipping_tax) | [`docs/BUDGET.md`](BUDGET.md) |
+| Controller enclosure and mounting | Motor controller (board parts, heatsink, enclosure) | printed or folded aluminium | Fits the mounting location; connections visible and accessible (Article 57k). | mounting location in the vehicle | estimate, allowance (docs/generated/budget.json, S1: incremental_items) | [`docs/BUDGET.md`](BUDGET.md) |
+| Second controller board revision (optional) | Spares and another board revision | revision allowance in hardware/bom/pricing.yaml (scenario S1R) | Only if bring-up of the first board finds a layout defect. | first-board bring-up | estimate, computed by tools/price_bom.py (docs/generated/budget.json, S1R: revision_allowance) | [`docs/BUDGET.md`](BUDGET.md) |
+| Telematics PCB fabrication and assembly | Fabrication and assembly | The team's telematics board (STM32U575, NEO-M9N, A7672, MC3419, NOR flash, BQ25622E per the proposal) | Board files are needed for a quote (bk4000tg_kicad.zip, telemetry.pdf: not received). The proposal's BQ25622E charger implies an on-board battery; Article 57b forbids an accessory battery on a Battery Electric vehicle. Enclosure transparent or with a transparent cover (Article 57j). | telematics board files; battery arrangement under Article 57b | none yet | [`docs/RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md) |
 | Wheel-speed Hall sensor | Telemetry and sensors | Team reference DRV5032: rejected for wheel speed (sampled; misses magnet passes at speed). Comparison: DRV5023-Q1 (continuous), not selected | A continuous (non-sampled) Hall switch; quantity = instrumented wheels (the ICD has three provisional channels). | maximum vehicle speed, wheel circumference, magnet count and geometry, which wheels are instrumented | none yet | [`docs/generated/wheel_sensor_check.md`](generated/wheel_sensor_check.md) |
 | Wheel magnets and mounting hardware | Telemetry and sensors | - | Field above the switch operate point across the air gap; magnet count per wheel from the speed resolution needed. | wheel and hub geometry, sensor choice | none yet | [`docs/generated/wheel_sensor_check.md`](generated/wheel_sensor_check.md) |
 | 6-axis IMU | Telemetry and sensors | LSM6DSV or ISM330DHCX (team references); MC3419 from the board proposal has no gyroscope | Offset calibration at rest is required: a 12 mg offset equals a 1.2 % grade error. | mounting location, temperature range, whether the PCB assembly already carries an IMU | none yet | [`docs/TELEMETRY_CANDIDATES.md#imu`](TELEMETRY_CANDIDATES.md#imu) |
@@ -102,7 +147,7 @@ Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (r
 | CAN transceiver/interface, if not included in the PCB assembly | Telemetry and sensors | - | Classic CAN 2.0B or CAN FD per the vehicle bus; 3.3 V logic for the STM32U575 FDCAN1. The Nucleo needs one for bench work too. | vehicle bus type and bit rate (input sheet Q4); whether the PCB assembly includes it | none yet | [`docs/ICD.md`](ICD.md) |
 | Driver display | Telemetry and sensors | LED bar "burn / coast" (optional in the proposal), or an unmodified self-contained device | Power arrangement under Article 57i: a built-in battery only if the display is unmodified and self-contained; otherwise powered from the vehicle system through the joulemeter. A separate battery for a display is not an approved purchase. | display type decision | none yet | [`docs/RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md) |
 | Optional steering-angle sensor | Telemetry and sensors | AS5600 (team reference), single-turn, needs a diametric magnet on the axis | Measured angle range within one turn at the mounting point; magnet 0.5-3 mm air gap, axis displacement at most 0.25 mm (6 mm magnet). | steering geometry (lock-to-lock angle at the mounting point, mounting) | none yet | [`docs/TELEMETRY_CANDIDATES.md#as5600`](TELEMETRY_CANDIDATES.md#as5600) |
-| Shipping and tax on the telemetry lines | Telemetry and sensors | - | From the supplier quotes. | quotes | none yet | - |
+| Shipping and tax on the telemetry lines | Shipping and tax | - | From the supplier quotes. | quotes | none yet | - |
 | Battery and motor mating connectors | Shared power, connectors and wiring | XT90 pair, MR60 or bullets (representative) | Rated for the pack's maximum voltage and current; must match the battery's own connector. | battery connector type and current (battery datasheet, label photo) | estimate, snippet (docs/generated/budget.json, S1: incremental_items) | [`docs/BUDGET.md`](BUDGET.md) |
 | Controller signal connectors and crimp terminals | Shared power, connectors and wiring | - | No splices; connections visible and accessible (Article 57k). | connector pinouts (input sheet Q5) | estimate, allowance (docs/generated/budget.json, S1: incremental_items) | [`docs/BUDGET.md`](BUDGET.md) |
 | Wire, heat-shrink and sleeving | Shared power, connectors and wiring | - | Gauge from the fused current; lengths from the vehicle layout. | harness plan and fuse rating | estimate, allowance (docs/generated/budget.json, S1: incremental_items) | [`docs/BUDGET.md`](BUDGET.md) |

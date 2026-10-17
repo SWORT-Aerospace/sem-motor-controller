@@ -28,9 +28,12 @@ budget:
     The project budget is about $500 to $1,000. Which of the lines below it has to cover (controller only, or
     controller, telemetry, wiring and tools) is unconfirmed.
 categories:
-  motor_controller: Motor controller
+  controller: Motor controller (board parts, heatsink, enclosure)
   telemetry: Telemetry and sensors
   shared: Shared power, connectors and wiring
+  fabrication: Fabrication and assembly
+  shipping_tax: Shipping and tax
+  spares_revision: Spares and another board revision
   development: Development equipment
   recurring: Recurring connectivity
   contingency: Contingency
@@ -39,7 +42,7 @@ items:
   - id: mc_parts
     item: Controller board parts, one board
     purpose: Every component on the draft motor-controller schematic (100 BOM lines)
-    category: motor_controller
+    category: controller
     qty: 1
     unit: set
     estimate: {budget: parts}
@@ -51,7 +54,7 @@ items:
   - id: mc_spares
     item: Spare parts for bring-up
     purpose: Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU)
-    category: motor_controller
+    category: spares_revision
     qty: 1
     unit: set
     estimate: {budget: spares}
@@ -63,7 +66,7 @@ items:
   - id: mc_pcb
     item: Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper)
     purpose: Bare boards for the motor controller
-    category: motor_controller
+    category: fabrication
     qty: 1
     unit: order
     estimate: {budget: controller_items/PCB fabrication}
@@ -75,7 +78,7 @@ items:
   - id: mc_pcb_shipping
     item: Controller PCB shipping
     purpose: Delivery of the boards
-    category: motor_controller
+    category: shipping_tax
     qty: 1
     unit: order
     estimate: {budget: controller_items/PCB shipping}
@@ -87,7 +90,7 @@ items:
   - id: mc_stencil
     item: Solder-paste stencil
     purpose: Hand assembly of the fine-pitch parts
-    category: motor_controller
+    category: fabrication
     qty: 1
     unit: order
     estimate: {budget: controller_items/Stencil}
@@ -99,7 +102,7 @@ items:
   - id: mc_consumables
     item: Assembly consumables (paste, flux, wick)
     purpose: Board assembly
-    category: motor_controller
+    category: fabrication
     qty: 1
     unit: set
     estimate: {budget: controller_items/Assembly consumables}
@@ -108,10 +111,25 @@ items:
     requirement: Lead-free or leaded paste matched to the team's reflow method.
     blocked_by: null
     evidence: "docs/BUDGET.md"
+  - id: mc_assembly_service
+    item: Controller PCB assembly service (alternative to hand assembly)
+    purpose: Machine placement and reflow of the controller board by the fabricator
+    category: fabrication
+    qty: 1
+    unit: order
+    optional: true
+    unit_cost_usd: null
+    status: Blocked
+    candidate: null
+    requirement: >-
+      Replaces the stencil and consumables lines, not added to them; if the assembler also sources the parts, its
+      parts price replaces the board-parts line. Needs footprints, a layout and the assembler's part library.
+    blocked_by: hand assembly or an assembly service (team decision, input sheet Q9; register B-ASSY)
+    evidence: "docs/BLOCKERS.md#b-assy"
   - id: mc_thermal
     item: Thermal interface, heatsink plate and fasteners
     purpose: Carries the power-stage losses away from the MOSFETs
-    category: motor_controller
+    category: controller
     qty: 1
     unit: set
     estimate: {budget: controller_items/Thermal interface}
@@ -123,7 +141,7 @@ items:
   - id: mc_tax
     item: Tax and shipping on the controller parts
     purpose: Distributor shipping and import tax on the two parts lines above
-    category: motor_controller
+    category: shipping_tax
     qty: 1
     unit: order
     estimate: {budget: shipping_tax}
@@ -135,7 +153,7 @@ items:
   - id: mc_enclosure
     item: Controller enclosure and mounting
     purpose: Holds and protects the controller in the vehicle
-    category: motor_controller
+    category: controller
     qty: 1
     unit: set
     estimate: {budget: incremental_items/Enclosure}
@@ -147,7 +165,7 @@ items:
   - id: mc_revision
     item: Second controller board revision
     purpose: One more PCB order, shipping, stencil and changed parts if the first board needs a respin
-    category: motor_controller
+    category: spares_revision
     qty: 1
     unit: set
     optional: true
@@ -161,7 +179,7 @@ items:
   - id: telematics_pcb
     item: Telematics PCB fabrication and assembly
     purpose: The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal)
-    category: telemetry
+    category: fabrication
     qty: null
     unit_cost_usd: null
     status: Blocked
@@ -319,7 +337,7 @@ items:
   - id: shipping
     item: Shipping and tax on the telemetry lines
     purpose: Delivery and import tax
-    category: telemetry
+    category: shipping_tax
     qty: null
     unit_cost_usd: null
     status: Blocked
@@ -506,3 +524,47 @@ items:
     requirement: Not set; to be agreed with the team lead once lines are priced.
     blocked_by: priced lines and an agreed policy
     evidence: null
+
+# Build scenarios evaluated against the budget by tools/gen_procurement.py. Every build includes every line of the
+# controller category (the generator refuses a build that drops one), so protection is never traded for budget.
+# Equipment lines are reported separately: the team may already own them.
+builds:
+  - id: minimum
+    title: Minimum working build (controller only)
+    goal: >-
+      One controller board assembled, bench-accepted and driven in the vehicle with the existing driver controls.
+      The controller runs without telemetry, LTE, MQTT, the pit software and CSIA.
+    includes: [mc_parts, mc_thermal, mc_enclosure, mc_pcb, mc_stencil, mc_consumables, mc_pcb_shipping, mc_tax,
+               mc_spares, power_connectors, signal_connectors, wire, bench_load]
+    equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
+    deferred:
+      - {lines: [telematics_pcb, nucleo, wheel_hall, wheel_magnets, can_xcvr, local_storage, dcdc, harness],
+         effect: "no wheel-speed distance and no telematics log; energy per distance only from rotor speed, and only while the motor is rigidly coupled"}
+      - {lines: [gnss, gnss_antenna, imu, temperature, steering],
+         effect: "no position, UTC alignment, grade or slow temperatures"}
+      - {lines: [lte_modem, lte_antenna, sim, broker_hosting],
+         effect: "no live data at the pit"}
+      - {lines: [display], effect: "no driver display"}
+      - {lines: [mc_revision], effect: "a design error needs a new budget decision"}
+  - id: logging
+    title: Minimum build plus local logging (no live link)
+    goal: >-
+      The minimum build plus a development-board telematics node on the vehicle CAN bus with one wheel sensor and
+      local storage: the essential energy-accounting signals (docs/TELEMETRY_INTEGRATION.md 3), recorded offline.
+    includes: [mc_parts, mc_thermal, mc_enclosure, mc_pcb, mc_stencil, mc_consumables, mc_pcb_shipping, mc_tax,
+               mc_spares, power_connectors, signal_connectors, wire, bench_load, nucleo, wheel_hall, wheel_magnets,
+               can_xcvr, local_storage, dcdc, harness, shipping]
+    equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
+    deferred:
+      - {lines: [telematics_pcb], effect: "the development board is mounted instead of the telematics PCB"}
+      - {lines: [gnss, gnss_antenna, imu, temperature, steering],
+         effect: "no position, UTC alignment, grade or slow temperatures"}
+      - {lines: [lte_modem, lte_antenna, sim, broker_hosting], effect: "no live data at the pit"}
+      - {lines: [display], effect: "no driver display"}
+      - {lines: [mc_revision], effect: "a design error needs a new budget decision"}
+  - id: full
+    title: Full scope
+    goal: Every counted line of this file.
+    includes: all
+    equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
+    deferred: []

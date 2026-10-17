@@ -14,6 +14,11 @@ Selected / Ordered / Received / Blocked. Unknown quantities and costs print as
 TBD, never as zero. Subtotals leave out optional lines, lines marked not
 budgeted and lines inside the telematics PCB assembly; no total is printed while
 any counted line is unpriced.
+
+`builds` (minimum, logging, full scope) are evaluated against the $500 and
+$1,000 budget with and without the development equipment. Every build must
+contain every line of the controller category, so a build can defer features
+but never protection.
 """
 from __future__ import annotations
 
@@ -112,6 +117,17 @@ def validate(d: dict, budget: dict | None = None, pricing: dict | None = None) -
                 err.append(f"{i}: an estimate needs a quantity")
         if it.get("status") in ("Ordered", "Received") and not it.get("order_evidence"):
             err.append(f"{i}: status {it['status']} needs order_evidence")
+    ctrl = [it["id"] for it in d.get("items", []) if it.get("category") == "controller"]
+    for b in d.get("builds", []):
+        inc = b["includes"] if b["includes"] != "all" else []
+        dfr = [x for g in b.get("deferred", []) for x in g["lines"]]
+        for x in inc + b.get("equipment_if_not_owned", []) + dfr:
+            if x not in seen:
+                err.append(f"build {b['id']}: unknown line {x}")
+        if b["includes"] != "all":
+            err += [f"build {b['id']}: controller line {x} left out (protection is never deferred)"
+                    for x in ctrl if x not in inc]
+        err += [f"build {b['id']}: {x} both included and deferred" for x in set(inc) & set(dfr)]
     return err
 
 
@@ -235,11 +251,15 @@ def subtotal_table(d: dict, s: dict) -> list[str]:
     return L
 
 
-def totals_lines(d: dict, s: dict) -> list[str]:
+def totals_lines(d: dict, s: dict, budget: dict, pricing: dict) -> list[str]:
     t = s["total"]
-    dev = s["categories"].get("development", {"est": [0, 0]})
     lo, hi = d["budget"]["overall_usd"]
-    owned = (t["est"][0] - dev["est"][0], t["est"][1] - dev["est"][1])
+    # the equipment the team may already own: the builds' equipment lines (the bench load is built, not owned)
+    eq = {i for b in d.get("builds", []) for i in b.get("equipment_if_not_owned", [])}
+    ks = [cost(it, d, budget, pricing) for it in d["items"] if it["id"] in eq]
+    e_lo = sum(k["line"][0] for k in ks if k.get("line"))
+    e_hi = sum(k["line"][1] for k in ks if k.get("line"))
+    owned = (t["est"][0] - e_lo, t["est"][1] - e_hi)
     quotes = (f"**${money(t['quoted'])}** from {t['n_quoted']} of {t['counted']} counted lines"
               if t["n_quoted"] else f"**none**: none of the {t['counted']} counted lines has a dated quote")
     if t["est"][0] > hi:
@@ -266,6 +286,72 @@ def totals_lines(d: dict, s: dict) -> list[str]:
             "no accessory battery on a Battery Electric vehicle."]
 
 
+def build_sums(b: dict, d: dict, budget: dict, pricing: dict) -> dict:
+    """Estimated range and unpriced lines of a build, without and with the development equipment."""
+    items = {it["id"]: it for it in d["items"]}
+    eq = list(b.get("equipment_if_not_owned", []))
+    if b["includes"] == "all":
+        ids = [i for i, it in items.items() if counted(it, cost(it, d, budget, pricing)) and i not in eq]
+    else:
+        ids = list(b["includes"])
+
+    def acc(idlist):
+        lo = hi = 0.0
+        tbd = []
+        for i in idlist:
+            k = cost(items[i], d, budget, pricing)
+            if not counted(items[i], k):
+                continue
+            if k["kind"] in ("quote", "estimate") and k.get("line"):
+                lo, hi = lo + k["line"][0], hi + k["line"][1]
+            else:
+                tbd.append(i)
+        return lo, hi, tbd
+    lo, hi, tbd = acc(ids)
+    elo, ehi, etbd = acc(eq)
+    return {"ids": ids, "owned": (lo, hi, tbd), "bought": (lo + elo, hi + ehi, tbd + etbd)}
+
+
+def verdict(lo: float, hi: float, tbd: list, limit: float) -> str:
+    if lo > limit:
+        return f"over: above ${limit:,.0f} even at the low end"
+    if tbd:
+        return (f"not established: {len(tbd)} lines unpriced"
+                + (f"; the priced lines alone straddle ${limit:,.0f}" if hi > limit else ""))
+    if hi <= limit:
+        return f"high end of the estimate below ${limit:,.0f} (estimates, not quotes)"
+    return f"straddles ${limit:,.0f}: within only if prices land in the lower part of the range"
+
+
+def builds_table(d: dict, budget: dict, pricing: dict) -> list[str]:
+    lo_b, hi_b = d["budget"]["overall_usd"]
+    L = [f"| Build | Development equipment | Estimated (USD) | Unpriced lines | Against ${lo_b:,} | Against ${hi_b:,} |",
+         "|---|---|---|---|---|---|"]
+    for b in d.get("builds", []):
+        s = build_sums(b, d, budget, pricing)
+        for label, key in (("owned", "owned"), ("bought", "bought")):
+            lo, hi, tbd = s[key]
+            L.append(f"| {b['title']} | {label} | {range_text(lo, hi)} | {len(tbd)} | {verdict(lo, hi, tbd, lo_b)} | "
+                     f"{verdict(lo, hi, tbd, hi_b)} |")
+    return L
+
+
+def builds_detail(d: dict, budget: dict, pricing: dict) -> list[str]:
+    items = {it["id"]: it for it in d["items"]}
+    L = []
+    for b in d.get("builds", []):
+        s = build_sums(b, d, budget, pricing)
+        L += [f"**{b['title']}.** {' '.join(b['goal'].split())}", ""]
+        unp = s["bought"][2]
+        L.append("* Lines: " + "; ".join(items[i]["item"] for i in s["ids"]) + ".")
+        if unp:
+            L.append("* Unpriced (TBD): " + "; ".join(items[i]["item"] for i in unp) + ".")
+        for g in b.get("deferred", []):
+            L.append("* Deferred: " + "; ".join(items[i]["item"] for i in g["lines"]) + f". Effect: {g['effect']}.")
+        L.append("")
+    return L
+
+
 def readme_block(d: dict, budget: dict | None = None, pricing: dict | None = None) -> str:
     if budget is None or pricing is None:
         budget, pricing = load_refs()
@@ -274,7 +360,10 @@ def readme_block(d: dict, budget: dict | None = None, pricing: dict | None = Non
                       f"(updated {d['updated']}) by `tools/gen_procurement.py`; edit the YAML file, not this table. "
                       "Requirements, candidates, cost sources and what blocks each line: "
                       "[`docs/PROCUREMENT.md`](docs/PROCUREMENT.md).", "", "**Subtotals**", "",
-                      *subtotal_table(d, s), "", *totals_lines(d, s), "", "**Lines**", "", *table(d, budget, pricing),
+                      *subtotal_table(d, s), "", *totals_lines(d, s, budget, pricing), "",
+                      "**Builds against the budget** (every build keeps the whole controller, protection included; "
+                      "what each build defers: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md#builds-against-the-budget))",
+                      "", *builds_table(d, budget, pricing), "", "**Lines**", "", *table(d, budget, pricing),
                       END])
 
 
@@ -299,7 +388,12 @@ def doc(d: dict, budget: dict | None = None, pricing: dict | None = None) -> str
          "Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (requirements and "
          "compatibility checked), **Ordered** and **Received** (only with order evidence), **Blocked** (an input is "
          "missing; the detail table says which).", "", "## Subtotals", "", *subtotal_table(d, s), "",
-         *[to_docs(x) for x in totals_lines(d, s)], "", "## Lines", "", *table(d, budget, pricing), "",
+         *[to_docs(x) for x in totals_lines(d, s, budget, pricing)], "", "## Builds against the budget", "",
+         "Every build contains every line of the controller category: features are deferred, protection is not. "
+         "\"Owned\" assumes the team already has the development equipment; \"bought\" adds it (an oscilloscope "
+         "and differential probe are not budgeted in either: they must be borrowed). A build with unpriced lines "
+         "cannot be shown to fit.", "", *builds_table(d, budget, pricing), "", *builds_detail(d, budget, pricing),
+         "## Lines", "", *table(d, budget, pricing), "",
          "## Lines in detail", "",
          "| Item | Category | Candidate | Requirement | Blocked by | Cost source | Evidence |",
          "|---|---|---|---|---|---|---|"]

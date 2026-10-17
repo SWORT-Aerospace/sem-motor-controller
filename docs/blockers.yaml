@@ -221,7 +221,7 @@ blockers:
     missing: "Live distributor and fabricator quotes (the snapshots are dated web-search values and allowances)."
     affects: "docs/BUDGET.md ranges and the $500 and $1,000 scenarios."
     why: "The budget cannot be shown feasible while the ranges straddle the limits."
-    done_now: "Priced ranges with evidence class and date per line; minimum build defined."
+    done_now: "Priced ranges with evidence class and date per line; three builds (controller only, plus local logging, full scope) evaluated against $500 and $1,000 with and without the development equipment (docs/PROCUREMENT.md); the controller-only build is fully estimated (312 to 834 USD with the equipment owned) and the other two have 8 and 19 unpriced lines."
     input: "Quotes for the BOM and the PCB from the team's chosen suppliers (distributor sites are not reachable from this environment)."
     closure: "pricing.yaml lines updated with quote references; tools/price_bom.py rerun."
     unlocks: 3

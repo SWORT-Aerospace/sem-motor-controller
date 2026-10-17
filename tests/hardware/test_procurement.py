@@ -25,9 +25,8 @@ def test_committed_file_is_valid_and_tables_are_current():
 
 def test_requested_lines_and_categories_are_present():
     d = _data()
-    assert list(d["categories"].values())[:5] == ["Motor controller", "Telemetry and sensors",
-                                                  "Shared power, connectors and wiring", "Development equipment",
-                                                  "Recurring connectivity"]
+    assert list(d["categories"]) == ["controller", "telemetry", "shared", "fabrication", "shipping_tax",
+                                     "spares_revision", "development", "recurring", "contingency"]
     names = {it["item"] for it in d["items"]}
     for n in ("NUCLEO-U575ZI-Q development board", "Telematics PCB fabrication and assembly", "Wheel-speed Hall sensor",
               "Wheel magnets and mounting hardware", "6-axis IMU", "Temperature sensors/probes",
@@ -44,14 +43,16 @@ def test_requested_lines_and_categories_are_present():
 
 
 def test_controller_estimates_reproduce_the_priced_bom_without_double_counting():
-    """The motor-controller lines (less the enclosure, which budget.json counts under integration) add up to the
-    budget's controller-only figure; the shared, bench-load and equipment lines add up to its integration and
-    equipment figures. Every budget.json entry is therefore used once."""
+    """The motor-controller lines (less the enclosure, which budget.json counts under integration, the revision and
+    the assembly-service alternative) add up to the budget's controller-only figure; the shared, bench-load and
+    equipment lines add up to its integration and equipment figures. Every budget.json entry is therefore used
+    once."""
     d = _data()
     b, p = _refs()
     s1 = b["scenarios"][d["estimate_scenario"]]
     lines = {it["id"]: gp.cost(it, d, b, p) for it in d["items"]}
-    mc = [k for i, k in lines.items() if i.startswith("mc_") and i not in ("mc_enclosure", "mc_revision")]
+    mc = [k for i, k in lines.items() if i.startswith("mc_") and i not in ("mc_enclosure", "mc_revision",
+                                                                     "mc_assembly_service")]
     assert abs(sum(k["line"][0] for k in mc) - s1["controller_only"][0]) < 1e-6
     assert abs(sum(k["line"][1] for k in mc) - s1["controller_only"][1]) < 1e-6
     inc = [lines[i] for i in ("power_connectors", "signal_connectors", "wire", "mc_enclosure", "bench_load")]
@@ -142,6 +143,27 @@ def test_unknown_costs_print_tbd_never_zero_and_no_budget_fit_is_claimed():
     assert "TBD" in block and "unconfirmed" in block and "not established" in block
     assert "not budgeted" in block                      # the borrowed oscilloscope is shown, not priced at zero
     assert "fits" not in block.replace("a fit within", "")
+
+
+def test_builds_keep_the_whole_controller_and_match_the_priced_bom():
+    d = _data()
+    b, p = _refs()
+    s1 = b["scenarios"][d["estimate_scenario"]]
+    mini = next(x for x in d["builds"] if x["id"] == "minimum")
+    s = gp.build_sums(mini, d, b, p)
+    assert not s["owned"][2] and not s["bought"][2]                       # every line of the minimum build is priced
+    assert [round(v, 6) for v in s["owned"][:2]] == [round(v, 6) for v in s1["complete_owned_equipment"]]
+    assert [round(v, 6) for v in s["bought"][:2]] == [round(v, 6) for v in s1["complete_buying_equipment"]]
+    full = gp.build_sums(next(x for x in d["builds"] if x["id"] == "full"), d, b, p)
+    assert full["owned"][2] and "not established" in gp.verdict(*full["owned"], 1000)
+    bad = copy.deepcopy(d)
+    next(x for x in bad["builds"] if x["id"] == "minimum")["includes"].remove("mc_thermal")
+    assert any("protection is never deferred" in e for e in gp.validate(bad, b, p))
+    bad = copy.deepcopy(d)
+    next(x for x in bad["builds"] if x["id"] == "logging")["includes"].append("display")
+    next(x for x in bad["builds"] if x["id"] == "logging")["deferred"][-2]["lines"].append("display")
+    assert any("both included and deferred" in e for e in gp.validate(bad, b, p))
+    assert gp.verdict(100, 900, [], 500).startswith("straddles") and gp.verdict(600, 900, [], 500).startswith("over")
 
 
 def test_budget_json_is_the_file_price_bom_writes():

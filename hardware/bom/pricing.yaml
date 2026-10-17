@@ -17,6 +17,8 @@ rules:
   # ---------------------------------------------------------------- ICs with an exact candidate MPN
   - match: {symbol: "MCU_ST_STM32G4:STM32G474VETx"}
     mpn: STM32G474VET6
+    manufacturer: STMicroelectronics
+    datasheet: "ST DS12288 (register row open: not read)"
     package: LQFP-100 14x14
     low: 11.62
     high: 12.13
@@ -24,9 +26,11 @@ rules:
     evidence: snippet
     source: "Mouser 511-STM32G474VET6 cached $11.62@1; Digi-Key cached $12.13@1 (search 2026-10-15)"
     availability: "listed; DK TR variant showed backorder in one snapshot"
-    alternate: STM32G474VCT6 (256 kB flash, same pinout)
+    alternate: "STM32G474VCT6 (same package, 256 KB flash): NOT usable with the current image, whose linker script needs 512 KB (calibration page at 0x0807F000)"
   - match: {symbol: "semmc:DRV8353S"}
     mpn: DRV8353SRTAR
+    manufacturer: Texas Instruments
+    datasheet: "TI SLVSDY6 (register row open: not read)"
     package: WQFN-40 (RTA)
     low: 4.98
     high: 5.66
@@ -37,6 +41,8 @@ rules:
     alternate: DRV8353SRTAT (250-pc reel, DK stocked $5.00@1) or DRV8353RS (integrated buck, 48-pin)
   - match: {symbol: "semmc:INA228"}
     mpn: INA228AIDGSR
+    manufacturer: Texas Instruments
+    datasheet: "TI INA228 datasheet (register row open: not read)"
     package: VSSOP-10 (DGS)
     low: 4.21
     high: 6.05
@@ -47,6 +53,8 @@ rules:
     alternate: INA229 (SPI) or INA238 (16-bit) - verify footprint
   - match: {symbol: "Interface_CAN_LIN:TJA1051T-3"}
     mpn: TJA1051T/3/1J
+    manufacturer: NXP
+    datasheet: "NXP TJA1051 product data sheet (register row open: not read)"
     package: SO-8
     low: 1.43
     high: 1.63
@@ -57,6 +65,8 @@ rules:
     alternate: TCAN1042VDRQ1 (pin-compatible class - verify)
   - match: {symbol: "Regulator_Switching:LM5164DDA"}
     mpn: LM5164DDAR
+    manufacturer: Texas Instruments
+    datasheet: "TI SNVSAU4 (register row open: not read)"
     package: SO-8 PowerPAD (DDA)
     low: 1.96
     high: 4.19
@@ -67,6 +77,8 @@ rules:
     alternate: LM5164QDDARQ1 (automotive)
   - match: {symbol: "Power_Supervisor:MAX6369"}
     mpn: MAX6369KA+T
+    manufacturer: Analog Devices (Maxim)
+    datasheet: "MAX6369-MAX6374 datasheet (register row open: not read)"
     package: SOT-23-8
     low: 2.0
     high: 5.0
@@ -75,18 +87,20 @@ rules:
     source: "not quoted"
     availability: unknown
     alternate: TPS3431 / STWD100 (pin-incompatible)
-  - {match: {symbol: "Comparator:TLV7041DBV"}, mpn: "TLV7041DBVR", package: "SOT-23-5", low: 0.4, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV3691}
-  - {match: {symbol: "Reference_Voltage:TL431DBZ"}, mpn: TL431BIDBZR, package: SOT-23-3, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: LM4041}
-  - {match: {symbol: "74xGxx:74LVC1G08"}, mpn: SN74LVC1G08DBVR, package: SOT-23-5, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: 74AHC1G08}
-  - {match: {symbol: "Regulator_Linear:TLV75533PDBV"}, mpn: TLV75533PDBVR, package: SOT-23-5, low: 0.15, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV75733P}
+  - {match: {symbol: "Comparator:TLV7041DBV"}, mpn: "TLV7041DBVR", manufacturer: "Texas Instruments", datasheet: "TI TLV7041 datasheet (register row open: not read)", package: "SOT-23-5", low: 0.4, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV3691}
+  - {match: {symbol: "Reference_Voltage:TL431DBZ"}, mpn: TL431BIDBZR, manufacturer: "Texas Instruments", datasheet: "TI TL431 datasheet (register row open: not read)", package: SOT-23-3, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: LM4041}
+  - {match: {symbol: "74xGxx:74LVC1G08"}, mpn: SN74LVC1G08DBVR, manufacturer: "Texas Instruments", datasheet: "not in the register", package: SOT-23-5, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: 74AHC1G08}
+  - {match: {symbol: "Regulator_Linear:TLV75533PDBV"}, mpn: TLV75533PDBVR, manufacturer: "Texas Instruments", datasheet: "TI TLV755P datasheet (register row open: not read)", package: SOT-23-5, low: 0.15, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV75733P}
   - {match: {symbol: "Isolator:PC817"}, mpn: "PC817X2NSZ9F (or equivalent)", package: DIP-4/SMD-4, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: EL817}
-  - {match: {symbol: "Power_Protection:NUP2105L"}, mpn: NUP2105LT1G, package: SOT-23, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: PESD2CAN}
+  - {match: {symbol: "Power_Protection:NUP2105L"}, mpn: NUP2105LT1G, manufacturer: "onsemi", datasheet: "not in the register", package: SOT-23, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: PESD2CAN}
   - {match: {symbol: "Diode:ESD9B"}, mpn: "ESD9B5.0ST5G / ESD9B3.3ST5G", package: SOD-923, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TPD1E10B06}
   - {match: {symbol: "Device:D_Schottky"}, mpn: BAT54, package: SOT-23, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - {match: {symbol: "Device:Crystal_GND24"}, mpn: "HSE crystal, frequency UNSELECTED (8-40 MHz class, 3225; CL/tolerance to select)", package: 3225, low: 0.3, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   # ---------------------------------------------------------------- rating-dependent lines (representative pricing)
   - match: {symbol: "Device:Q_NMOS_GDS"}
     mpn: "UNRESOLVED (representative: CSD19536KTT 100 V D2PAK)"
+    manufacturer: Texas Instruments (representative)
+    datasheet: "TI CSD19536KTT datasheet (register row open: not read)"
     package: "D2PAK class (UNRESOLVED)"
     low: 5.27
     high: 7.85
@@ -99,6 +113,8 @@ rules:
   - {match: {symbol: "Device:Q_NMOS_GSD"}, mpn: "UNRESOLVED 100 V small-signal N-FET (e.g. BSS123 class)", package: SOT-23, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - match: {symbol: "Device:R_Shunt"}
     mpn: "UNRESOLVED (representative: WSK2512 1 mOhm 4-terminal)"
+    manufacturer: Vishay (representative)
+    datasheet: "Vishay WSK2512 datasheet (register row open: not read)"
     package: "2512 4-terminal (UNRESOLVED value)"
     low: 1.7
     high: 4.0
@@ -161,7 +177,7 @@ project_items:
 equipment:
   - {item: "SWD programmer (STLINK-V3MINIE)", low: 14, high: 44, evidence: snippet, source: "Cytech ref $14.04; Farnell IE EUR 12.51 incl. VAT; Waveshare GBP 37.58 (snapshots)"}
   - {item: "USB-CAN adapter (CANable-class, candleLight firmware)", low: 30, high: 60, evidence: allowance, source: "not quoted"}
-  - {item: "Current-limited bench supply (>= 60 V or series-able, CC mode)", low: 60, high: 200, evidence: allowance, source: "not quoted"}
+  - {item: "Current-limited bench supply (output above V_bat,max, unknown; or series-able; CC mode)", low: 60, high: 200, evidence: allowance, source: "not quoted"}
   - {item: "Oscilloscope >= 100 MHz, 4 ch (+ differential probe for the switch node)", low: 0, high: 0, evidence: allowance, source: "assumed borrowed from the lab: NOT in the budget; a differential probe can cost more than this whole budget"}
   - {item: "Bench DMM x2, clamp/current probe", low: 0, high: 60, evidence: allowance, source: "assumed owned; clamp meter if not"}
 
