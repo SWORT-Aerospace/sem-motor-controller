@@ -1,6 +1,6 @@
 # Interface control document v1.0
 
-**Authoritative** for every interface between the motor controller, the telematics unit, the driver controls, the pit and the vehicle. Supersedes `docs/INTERFACE_CONTROL.md` (v0.1, amended v0.3), which is kept as a record. Generated tables that this document points to are part of it: `docs/generated/can_messages.md` (message layouts), `protocol/generated/semmc_base0x300.dbc`, `docs/generated/bus_load.md`.
+**Authoritative** for every interface between the motor controller, the telematics unit, the driver controls, the pit and the vehicle. Supersedes `docs/archive/INTERFACE_CONTROL.md` (v0.1, amended v0.3), which is kept as a record. Generated tables that this document points to are part of it: `docs/generated/can_messages.md` (message layouts), `protocol/generated/semmc_base0x300.dbc`, `docs/generated/bus_load.md`.
 
 Owners: controls lead (protocol, controller behaviour, this document); telematics engineer (telematics firmware, log, uplink); vehicle team (harness, connectors, driver controls, bus allocation). A change to any **frozen** item needs a protocol version change and the owners' agreement. Values marked PROV are provisional and simulation-only; UNKNOWN values stay null until measured or decided (`docs/INPUT_SHEET.md`).
 

@@ -15,8 +15,7 @@
 #   * `in_assembly: true` marks a part inside the telematics PCB assembly line; it is not counted again;
 #   * `optional: true` lines and `not_budgeted` lines are listed but kept out of the subtotals;
 #   * unknown quantities and costs stay null and print as TBD, never as zero.
-# Nothing here has been ordered. Distributor sites were unreachable from the build environment (2026-10-16),
-# so no line has a dated price yet.
+# Nothing here has been ordered, and no line has a dated quote yet.
 schema: sem.procurement.v2
 updated: "2026-10-17"
 currency: USD

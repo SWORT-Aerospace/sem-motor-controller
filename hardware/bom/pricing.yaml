@@ -1,8 +1,7 @@
 # Pricing evidence for the draft BOM (consumed by tools/price_bom.py).
 #
 # NOTHING HERE IS A QUOTE AND NOTHING HAS BEEN PURCHASED.
-# Distributor and manufacturer sites were unreachable from the build
-# environment (proxy 403), so prices come from web-search result snapshots of
+# No supplier quote has been obtained yet, so prices come from web-search result snapshots of
 # distributor pages, retrieved 2026-10-15. Those snapshots are UNDATED caches:
 # re-check every line on the live page before any order.
 #

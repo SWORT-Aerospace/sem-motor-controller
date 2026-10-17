@@ -21,7 +21,7 @@ Our vehicle's telematics proposal (v0.1, 14/10/2026) shows a CAN 2.0B bus, an ST
    * a base mismatch shows up as foreign identifiers (supervisor timeout, then ECO → READY with zero torque), not as accepted frames;
    * a frame misplaced inside the block fails its CRC.
 4. **Bit rate, classic or FD mode, crystal and transceiver are per-vehicle selections**, made after the bus is confirmed (`hardware/timing/clock_tree_alternatives.md`).
-5. **CHUDS is an optional adapter** (`docs/CAN_INTEGRATION.md`, `host/vcu_bridge/`). It is kept for the case where the vehicle bus turns out to be CHUDS-like. It is not a design input.
+5. **CHUDS is an optional adapter** (`docs/archive/CAN_INTEGRATION.md`, `host/vcu_bridge/`). It is kept for the case where the vehicle bus turns out to be CHUDS-like. It is not a design input.
 6. **Manual driving never depends on any link.** Driver authority stays wired (ADR-0010). The pit/cloud link is never in the real-time chain (`docs/COMBINED_ARCHITECTURE.md`).
 
 ## Consequences

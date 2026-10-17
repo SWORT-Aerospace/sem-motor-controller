@@ -25,7 +25,7 @@ Raw CAN log record: 16 B [A] (u32 microsecond timestamp, u16 id + flags, u8 DLC,
 | all CAN at full rate + direct sensors, HIGH node rates | 14,176 | 8.9 min | **no** (53 %) | **no** (22 %) | 627 h |
 | semmc decimated to <= 10 Hz + others LOW + direct LOW | 3,328 | 37.8 min | yes | **no** (95 %) | 2,671 h |
 
-* **The proposed 8 MB QSPI flash cannot hold one 40-minute attempt of the controller's frames at full rate**, before any other node is added. Options, in order of simplicity: make the microSD (shown optional in the proposal) the raw log and keep the QSPI flash for a decimated summary; log the 50-100 Hz controller messages at a reduced rate (row 4); or a larger flash. The controller's own rates can also be reduced, but that changes supervisor freshness margins (`INTERFACE_CONTROL.md`) and needs the hazard analysis.
+* **The proposed 8 MB QSPI flash cannot hold one 40-minute attempt of the controller's frames at full rate**, before any other node is added. Options, in order of simplicity: make the microSD (shown optional in the proposal) the raw log and keep the QSPI flash for a decimated summary; log the 50-100 Hz controller messages at a reduced rate (row 4); or a larger flash. The controller's own rates can also be reduced, but that changes supervisor freshness margins (`docs/ICD.md` section 5) and needs the hazard analysis.
 * Flash write bandwidth and endurance are not limiting at a few kB/s (NOR page program and sector erase rates are orders of magnitude higher [R]); the binding constraint is capacity.
 
 ## 3. LTE / MQTT volume (live, downsampled) [T][A]

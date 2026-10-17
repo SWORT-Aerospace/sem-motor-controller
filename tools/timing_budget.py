@@ -5,8 +5,8 @@
 
 Every constant is tagged:
   [C]  from this project's configuration (config/vehicle.synthetic.yaml) - synthetic
-  [R]  recalled from STM32G4 / DRV835x documentation, NOT verified here (st.com and
-       ti.com unreachable from this environment) - check against RM0440 / DS12288 /
+  [R]  recalled from STM32G4 / DRV835x documentation, NOT yet verified against the
+       datasheets - check against RM0440 / DS12288 /
        SLVSDY6x before relying on it
   [A]  engineering assumption to be MEASURED at bench stage 3/4
   [D]  design value chosen in the schematic draft

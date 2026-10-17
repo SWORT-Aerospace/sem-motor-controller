@@ -97,4 +97,4 @@ It writes a record of every command, exit code, expected outcome, duration and s
 * Current documents contain no em dashes and no product or assistant branding (`tests/integration/test_docs.py`).
 * Unknown values are written as unknown or TBD, never as zero; synthetic, provisional and team-reported values are labelled as such.
 * "Host" means implemented and tested on a computer; "proposed" means not built; nothing is physically tested yet. A document that describes hardware behaviour says which.
-* Superseded documents are kept and labelled in [`README.md`](README.md); they are not rewritten.
+* Superseded documents are moved to [`archive/`](archive/) and listed in [`README.md`](README.md); they are not rewritten.

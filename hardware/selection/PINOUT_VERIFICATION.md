@@ -1,6 +1,6 @@
 # Pinout verification records and schematic checks (v0.3)
 
-**No primary datasheet could be opened from this environment.** st.com, ti.com, the distributors and the datasheet mirrors are all refused by the network policy (recorded in `DATASHEET_REGISTER.md`). What was reachable:
+**No primary datasheet has been read for these pinouts yet.** The manufacturers' sites, the distributors and the datasheet mirrors could not be accessed for this work (`DATASHEET_REGISTER.md`). What was available:
 * ST's machine-readable pin database (`STM32_open_pin_data`, ST-published);
 * ST's register headers and HAL/LL sources on GitHub;
 * the KiCad official symbol library on GitLab.

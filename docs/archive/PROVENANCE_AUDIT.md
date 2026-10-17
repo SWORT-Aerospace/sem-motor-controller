@@ -29,17 +29,17 @@ Labels: **[C]** confirmed for our vehicle · **[P-in]** proposed design input (t
 ## 2. Affected files and what changed
 | File | Change |
 |---|---|
-| `docs/CAN_INTEGRATION.md` | retitled as a reference-project analysis and optional adapter; status banner; 40 MHz row withdrawn |
-| `docs/INTERFACE_CONTROL.md` | amendment note; ID block configurable; CAN mode, bit rate and transceiver per bus (UNKNOWN); DBC row |
+| `docs/archive/CAN_INTEGRATION.md` | retitled as a reference-project analysis and optional adapter; status banner; 40 MHz row withdrawn |
+| `docs/archive/INTERFACE_CONTROL.md` | amendment note; ID block configurable; CAN mode, bit rate and transceiver per bus (UNKNOWN); DBC row |
 | `docs/ARCHITECTURE_FREEZE.md` | C6 (companion) revised; boundary C reworded (block base, bus unknown, transport-neutral core) |
 | `docs/REQUIREMENTS.md` | CO-6 no longer assumes CHUDS traffic |
 | `docs/OPEN_PARAMETERS.md` | crystal and FDCAN clock not selected; `can_id_base` added; category note |
 | `docs/HARDWARE_ARCHITECTURE.md` | bus node relabelled; simultaneous sampling marked proposed |
 | `docs/decisions/ADR-0005-can-contract.md` | amended by ADR-0012 (pointer) |
 | `docs/decisions/ADR-0012-transport-neutral-interface.md` | new |
-| `docs/SOURCE_AUDIT.md` | §2.2 labelled as reference projects |
-| `docs/VEHICLE_TEAM_INPUT_SHEET.md` | H2–H4 rewritten without CHUDS |
-| `docs/CHECKPOINT_v0.2.md` | errata banner; body unchanged |
+| `docs/archive/SOURCE_AUDIT.md` | §2.2 labelled as reference projects |
+| `docs/archive/VEHICLE_TEAM_INPUT_SHEET.md` | H2–H4 rewritten without CHUDS |
+| `docs/archive/CHECKPOINT_v0.2.md` | errata banner; body unchanged |
 | `firmware/platform/stm32g4/README.md` | clock not selected; FD settings conditional on an FD bus; sampling proposed |
 | `firmware/include/semmc/mc_core.h`, `firmware/src/core/mc_core.c`, `firmware/src/transport/mc_can_binding.c` | transport-neutral core API; CAN binding with a configurable block |
 | `config/parameters.yaml`, `config/vehicle.*.yaml`, generated schema/header, `mc_config.c`, `tools/config_tool.py` | parameter 164 `supervision.can_id_base`, rule 40 |

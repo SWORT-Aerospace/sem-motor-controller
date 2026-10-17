@@ -443,10 +443,10 @@
     )
   )
 
-  (text "500 kbit/s classic CAN, IDs 0x300-0x33F (docs/INTERFACE_CONTROL.md). Bit timing and termination must match the vehicle bus."
+  (text "Classic CAN at 500 kbit/s assumed; protocol block 0x300-0x33F, base set by calibration (docs/ICD.md section 2). Bit timing and termination must match the vehicle bus."
     (at 20.0 20.0 0)
     (effects (font (size 1.8 1.8)) (justify left))
-    (uuid 45402282-3716-53d7-bb2c-d119742d2f3d)
+    (uuid 23a94dd0-b36e-595a-96fe-c4f8f87621e2)
   )
 
   (label "CAN_L" (at 96.52 73.66 0)

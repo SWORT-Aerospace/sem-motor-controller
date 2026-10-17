@@ -44,6 +44,7 @@ def test_readme_keeps_the_scope_honest():
     assert "No board exists, nothing has been energised" in text
     assert "**Proposed**: designed or specified for the vehicle but not built" in text
     assert "**Host**: implemented and tested on a computer" in text
+    assert "CONTRIBUTING.md" in text
     assert "They are not wiring diagrams" in text                  # block diagrams, not construction-ready wiring
     assert "TELEMETRY_EMBEDDED_PORT.md" in text                     # embedded firmware is listed as remaining work
     assert "Estimates are not quotes" in text and "not established" in text

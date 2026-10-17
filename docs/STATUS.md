@@ -48,7 +48,7 @@ Draft only: no footprints, no layout, no fabrication outputs, no orders. Power-s
 | Decisions | [`docs/DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) (D1 to D10, v0.5); [`docs/decisions/`](decisions/) (ADR-0001 to ADR-0012) |
 | Integration and the staged plan | [`docs/INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md), [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) |
 | Every document with its status | [`docs/README.md`](README.md); every file: [`docs/FILE_INDEX.md`](FILE_INDEX.md) |
-| Earlier releases (records) | [`docs/REVIEW_v0.3.md`](REVIEW_v0.3.md), [`docs/CHECKPOINT_v0.2.md`](CHECKPOINT_v0.2.md), [`HANDOFF.md`](../HANDOFF.md) (v0.1) |
+| Earlier releases (records) | [`docs/archive/REVIEW_v0.3.md`](archive/REVIEW_v0.3.md), [`docs/archive/CHECKPOINT_v0.2.md`](archive/CHECKPOINT_v0.2.md), [`docs/archive/HANDOFF_v0.1.md`](archive/HANDOFF_v0.1.md) (v0.1) |
 
 ## 5. Repository layout
 ```

@@ -1,6 +1,6 @@
 # Energy-efficiency research and models
 
-**Evidence status: no paper could be read during the v0.2 research.** mdpi.com, mdpi-res.com, doi.org and every other scholarly host were blocked by the environment's network policy. The evidence matrix therefore records identification only. **No result from any paper is used** in this project. Every number below comes from SYNTHETIC models in this repository and is labelled as such.
+**Evidence status: no paper could be read during the v0.2 research.** The publishers' sites (MDPI, doi.org and the other scholarly hosts) could not be accessed for that research. The evidence matrix therefore records identification only. **No result from any paper is used** in this project. Every number below comes from SYNTHETIC models in this repository and is labelled as such.
 
 ## 1. Evidence matrix
 

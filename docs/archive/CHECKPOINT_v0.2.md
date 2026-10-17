@@ -1,6 +1,6 @@
 # Checkpoint v0.2: corrected control model and reviewable hardware draft (2026-10-15)
 
-> **Historical record of v0.2, superseded.** Current state: [`STATUS.md`](STATUS.md) and the [README](../README.md); index of documents: [`README.md`](README.md). Statements below describe v0.2 and are not updated; the KiCad ERC, listed here as not executed, has run in CI since v0.4 ([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) 5).
+> **Historical record of v0.2, superseded.** Current state: [`STATUS.md`](../STATUS.md) and the [README](../../README.md); index of documents: [`README.md`](../README.md). Statements below describe v0.2 and are not updated; the KiCad ERC, listed here as not executed, has run in CI since v0.4 ([`VERIFICATION_REPORT.md`](../VERIFICATION_REPORT.md) 5).
 
 **CONTROL CONTRACT CORRECTED (host-verified) · FUNCTIONAL HARDWARE ARCHITECTURE v0.2 DRAFT (reviewable) · COMPONENT SELECTION NOT FROZEN · NOT HARDWARE-FROZEN · NOT FABRICATION-READY · NOT VEHICLE-VALIDATED · BUDGET NOT SHOWN FEASIBLE**
 
@@ -19,7 +19,7 @@ Nothing was purchased, fabricated, published or energized. Every result below co
 |---|---|
 | Branch | `andrefp-co/swort` `claude/nice-bell-98hxr2` (no PR; not merged into the site's `main`) |
 | Commits | `064ac47` control contract · `46ef5d8` actuator model + CSIA freeze · `43bf666` optimisation + CSIA evaluation · `2c8e444` hardware package + budget · `a54112f` CAN/rules/input sheet · the checkpoint commit (`git log -1`) |
-| Changed files | 119 under `sem-motor-controller/` (71 added, 48 modified), including this checkpoint: [`generated/changed_files_v0.2.txt`](generated/changed_files_v0.2.txt). Nothing outside `sem-motor-controller/` changed. |
+| Changed files | 119 under `sem-motor-controller/` (71 added, 48 modified), including this checkpoint: [`generated/changed_files_v0.2.txt`](changed_files_v0.2.txt). Nothing outside `sem-motor-controller/` changed. |
 | Dedicated repository `SWORT-Aerospace/sem-motor-controller` | **NOT created.** The GitHub integration answered `403 Resource not accessible by integration` to repository creation in the organisation, and `add_repo` reports no such repository. A history-preserving export has been prepared (§9). |
 
 ## 2. Tests executed (v0.2, x86-64 host) and results
@@ -35,13 +35,13 @@ Nothing was purchased, fabricated, published or energized. Every result below co
 | **Not executed** | anything on hardware; KiCad ERC (KiCad 7 has no CLI ERC); the VCU bridge on a real socket (no AF_CAN in this container) |
 
 ## 3. Corrected control and simulation findings
-**Control contract** ([`CONTROL_CONTRACT.md`](CONTROL_CONTRACT.md), [before/after](generated/control_contract_before_after.md)):
+**Control contract** ([`CONTROL_CONTRACT.md`](../CONTROL_CONTRACT.md), [before/after](../generated/control_contract_before_after.md)):
 * Hard ceilings now clamp on the next update. A thermal step went from 9 violating updates (+0.9 N·m) to 0; with slow slew settings, from 500 to 0.
 * Supervisory envelopes ramp at no less than the fast rate, bounded by validator rule 38 (≤ supervision timeout). Settling went from 150 ms to 15 ms.
 * The envelope applied is min(newest, referenced). A tighter set used to be ignored for 190 ms; a delayed request referencing an older set ramped torque to 1.6 N·m against a newest bound of 0.5. Both now settle in 13 ms with 0 violations.
 * One v0.1 test that encoded the defect was corrected, which made it stricter.
 
-**Optimiser v0.2** ([`EFFICIENCY_RESEARCH.md` §4](EFFICIENCY_RESEARCH.md), [study](generated/optimization_synthetic.md), [accounting](ENERGY_ACCOUNTING.md)):
+**Optimiser v0.2** ([`EFFICIENCY_RESEARCH.md` §4](../EFFICIENCY_RESEARCH.md), [study](../generated/optimization_synthetic.md), [accounting](../ENERGY_ACCOUNTING.md)):
 * The actuators are now explicit: coast, propulsion, and driver braking issued as guidance. Nothing brakes implicitly. The motor friction power, previously missing, is now charged.
 * The acceleration limit now reduces the applied torque. The v0.1 clip left a 2.76 kJ residual whenever it bound.
 * Corner limits are now enforced on whole segments; v0.1 enforced them at nodes only.
@@ -52,7 +52,7 @@ Nothing was purchased, fabricated, published or energized. Every result below co
 * Without pace correction, the fixed plan exceeds the 1000 s limit under +20 % Crr, +5 % mass or a 2 m/s headwind.
 * **All v0.1 savings figures are withdrawn.**
 
-**CSIA** ([results](csia/EVALUATION_RESULTS.md); the harness was frozen before the run):
+**CSIA** ([results](../csia/EVALUATION_RESULTS.md); the harness was frozen before the run):
 * On 94 unseen synthetic scenarios (5.8 h), the frozen adapter raised 19.7 false-alarm episodes per hour and made 9 misattributions.
 * Gated, calibrated residuals with a majority vote: 0 false alarms per hour (95 % upper bound 0.52) and 0 misattributions, but fewer attributions (35 vs 48).
 * Post-hoc and exploratory: the false-alarm difference is entirely the 3-tick debounce.
@@ -60,7 +60,7 @@ Nothing was purchased, fabricated, published or energized. Every result below co
 * Rotor scale errors and dropped rotor samples are invisible to the relationships; dropped samples are caught only by the freshness checks.
 * CSIA stays in shadow mode. **No vehicle claim.**
 
-**Hardware timing and integration** ([timing](../hardware/timing/timing_budget.md), [CAN](CAN_INTEGRATION.md)):
+**Hardware timing and integration** ([timing](../../hardware/timing/timing_budget.md), [CAN](CAN_INTEGRATION.md)):
 * The three phase currents are now on three ADCs with the same trigger. v0.1 sampled phase C 0.35 µs after phase A.
 * At full linear modulation only one phase is sampleable at 60°. The voltage limit is now a calibrated parameter, bounded by validator rule 39, which takes the measured settling time as an input.
 * The CHUDS bus is CAN FD (500k/2M at 80 %/80 %), so the controller must run in FD mode. An 8 MHz crystal cannot reach the data-phase sample point, so the schematic now uses **40 MHz**.
@@ -69,7 +69,7 @@ Nothing was purchased, fabricated, published or energized. Every result below co
 
 ## 4. Schematic and BOM maturity
 * **Done (draft):**
-  * Functional architecture with block diagram ([`HARDWARE_ARCHITECTURE.md`](HARDWARE_ARCHITECTURE.md)).
+  * Functional architecture with block diagram ([`HARDWARE_ARCHITECTURE.md`](../HARDWARE_ARCHITECTURE.md)).
   * A 12-sheet hierarchical KiCad schematic: 206 parts, 135 nets, connectivity-checked, with a review PDF.
   * Protection/shutdown truth table, timing allocation, current-sense error budget, loss/thermal envelope, bring-up checklist.
   * A BOM derived from the schematic and priced with an evidence class on every line.
@@ -81,10 +81,10 @@ Nothing was purchased, fabricated, published or energized. Every result below co
   * DRV8353S and INA228 pin numbers (project-library placeholders);
   * every "TYPICAL – verify" value;
   * every [R] constant in the timing budget.
-  * No primary datasheet could be opened ([`DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md)).
+  * No primary datasheet could be opened ([`DATASHEET_REGISTER.md`](../../hardware/selection/DATASHEET_REGISTER.md)).
 * **Missing for selection freeze:** the motor and battery inputs, the datasheet register filled in, a design review, and a layout. **No footprints, layout or fabrication outputs exist, by design.**
 
-## 5. Cost range (evidence-classed, [`BUDGET.md`](BUDGET.md))
+## 5. Cost range (evidence-classed, [`BUDGET.md`](../BUDGET.md))
 | Scenario | Controller only | + vehicle integration | + bring-up equipment if not owned |
 |---|---|---|---|
 | one prototype | $246 – $650 | $311 – $825 | $415 – $1,189 |

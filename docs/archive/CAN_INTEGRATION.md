@@ -1,6 +1,6 @@
 # CAN integration: reference-project analysis (Cornell CHUDS): OPTIONAL ADAPTER
 
-> **v0.3 status: REFERENCE PROJECT, NOT OUR VEHICLE.** Everything below describes Cornell's CHUDS bus, observed in a reference repository. It was written in v0.2 as if it were our vehicle's bus; that was an unsupported assumption (`docs/PROVENANCE_AUDIT.md`). Our vehicle's telematics proposal (v0.1, 14/10/2026) shows a **CAN 2.0B** bus. The actual bus is **UNKNOWN** until the team confirms it (`docs/VEHICLE_INTERFACE_MATRIX.md`).
+> **v0.3 status: REFERENCE PROJECT, NOT OUR VEHICLE.** Everything below describes Cornell's CHUDS bus, observed in a reference repository. It was written in v0.2 as if it were our vehicle's bus; that was an unsupported assumption (`docs/archive/PROVENANCE_AUDIT.md`). Our vehicle's telematics proposal (v0.1, 14/10/2026) shows a **CAN 2.0B** bus. The actual bus is **UNKNOWN** until the team confirms it (`docs/archive/VEHICLE_INTERFACE_MATRIX.md`).
 > * CHUDS support stays an **optional adapter**: the core is transport-neutral and the identifier block is a calibration value (ADR-0012).
 > * "The controller must run in FD mode" applies **only if** our bus is CAN FD.
 > * "Schematic changed to a 40 MHz crystal" is **withdrawn** in any case: the crystal is unselected (`hardware/timing/clock_tree_alternatives.md`).

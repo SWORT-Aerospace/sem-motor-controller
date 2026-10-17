@@ -1,11 +1,13 @@
 # Shell Eco-marathon Vehicle Electronics
 
-Electronics and software for a Shell Eco-marathon battery-electric vehicle: a purpose-built motor controller, a telemetry unit with local logging, an LTE/MQTT link to the pit, and the analysis tools that turn the logs into energy per distance. The aim is lower energy per attempt within the event rules. The repository is `sem-motor-controller`; the motor controller is its core.
+Electronics and software for our Shell Eco-marathon battery-electric vehicle: a purpose-built motor controller, a telemetry unit with local logging, an LTE/MQTT link to the pit, and the pit tools that turn the logs into energy per distance. The goal is lower energy per attempt within the event rules. The motor controller is the core of this repository (`sem-motor-controller`).
 
-Three words are used with fixed meanings throughout this page:
+**New to the project?** Read section A, pick an open task in [H. Priorities](#h-priorities), and start from the folder guide named for it in [G. Where to work](#g-where-to-work). Team workflow and review rules: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-* **Host**: implemented and tested on a computer (C core with a simulated plant, Python models, real local MQTT broker). Checked on GitHub-hosted CI.
-* **Proposed**: designed or specified for the vehicle but not built. Embedded firmware for either microcontroller is not written; the controller schematic is a draft without layout.
+**Project status.** Each part of the system has one of three statuses:
+
+* **Host**: implemented and tested on a computer (the C controller core against a simulated motor and vehicle, the Python models, a real local MQTT broker), checked on every push by GitHub Actions.
+* **Proposed**: designed or specified for the vehicle but not built. The embedded firmware for both microcontrollers is not written; the controller schematic is a draft without layout.
 * **Physically tested**: nothing yet. No board exists, nothing has been energised, and no vehicle data has been recorded.
 
 Contents: [A. What we are building](#a-what-we-are-building) · [B. Diagrams](#b-diagrams) · [C. Operating sequence](#c-operating-sequence) · [D. Mathematics](#d-mathematics) · [E. Budget](#e-budget) · [F. Quick start](#f-quick-start) · [G. Where to work](#g-where-to-work) · [H. Priorities](#h-priorities) · [Documentation](#documentation)
@@ -35,7 +37,7 @@ The vehicle is driven by a person at all times. The electronics support four use
 
 The three diagrams below are block diagrams. They show which signals and supplies exist and where each one is defined. **They are not wiring diagrams**: no connector pinout, wire gauge, fuse rating or termination is decided yet, and none may be read from them. Every connection is numbered; the table after the diagrams gives its evidence.
 
-Edge styles: `-->` measurement or data, `==>` command, `-.->` optional, proposed only or unresolved. Evidence tags in the labels: **S** draft schematic, **C** host code, **P** team proposal or candidate research, **R** event rules, **U** unresolved.
+Line styles: `-->` measurement or data, `==>` command, `-.->` optional, proposed only or unresolved. The letters after each label give the source of the connection: **S** draft schematic, **C** host code, **P** team proposal or candidate parts, **R** event rules, **U** unresolved.
 
 ### B.1 System connections
 
@@ -397,7 +399,7 @@ Nobody is assigned yet; each row is open for a volunteer. The order follows what
 |---|---|---|---|---|
 | 1 | Battery and BMS documents | Unassigned | battery and BMS model numbers, label photos, datasheets: maximum and minimum voltage, discharge and regenerative current, BMS cut-off thresholds, BMS data interface | [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md) items filled with document references; [`docs/BATTERY.md`](docs/BATTERY.md) updated |
 | 2 | Motor data | Unassigned | motor model and datasheet: type and back-EMF shape, pole pairs, resistance, flux linkage or K_v, Hall placement and output type, temperature sensor type | input sheet items 1 to 3 with sources; `config/` values marked measured or datasheet |
-| 3 | Confirm the event and its rules | Unassigned | event name, season and country; the governing Chapter I edition (2026 read from a third-party copy; a 2027 edition is listed on the organisers' site but could not be opened here) | [`docs/RULES_COMPLIANCE.md`](docs/RULES_COMPLIANCE.md) updated against that edition |
+| 3 | Confirm the event and its rules | Unassigned | event name, season and country; the governing Chapter I edition (2026 read from a third-party copy; a 2027 edition is listed on the organisers' site but has not been read yet) | [`docs/RULES_COMPLIANCE.md`](docs/RULES_COMPLIANCE.md) updated against that edition |
 | 4 | Vehicle CAN bus | Unassigned | other nodes, classic CAN or CAN FD, bit rate, termination positions | input sheet item 5; [`docs/ICD.md`](docs/ICD.md) section 2 |
 | 5 | Connectors and harness | Unassigned | connector families and pinouts for J101, J301, J701, J901, J1001, J1101 and the telemetry unit | ICD section 11 completed; [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) rows moved to confirmed |
 | 6 | Telematics board files | Unassigned | `bk4000tg_kicad.zip`, `telemetry.pdf`; how the board is powered without an accessory battery (Article 57b) | files in the repository; procurement lines resolved |

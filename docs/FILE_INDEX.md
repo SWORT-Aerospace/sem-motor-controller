@@ -9,13 +9,13 @@ Contents: [Repository root](#repository-root) · [config/](#config) · [firmware
 | File | Role in the system |
 |---|---|
 | `README.md` | Front page: what is being built, diagrams, operating sequence, mathematics, budget (generated block), quick start, where to work, priorities |
-| `HANDOFF.md` | v0.1 handoff (2026-10-14); historical record |
+| `CONTRIBUTING.md` | Team workflow: picking up work, branches and pull requests, who reviews what, rules for engineering data, hardware safety, documentation |
 | `requirements.txt` | Pinned Python packages for every tool and test |
 | `.gitignore` | Keeps build outputs, the fetched CSIA core, Python caches and the `.venv/` of the quick start out of git |
 | `.github/workflows/ci.yml` | CI on GitHub-hosted runners: the `host` job (generators, C build and tests, pytest with a broker, demonstrations, cross-compile, studies) and the `erc` job (KiCad 8 ERC) |
 | `third_party/csia-trust-layer.lock` | Pinned commit and licence record of the CSIA core that `tools/fetch_csia.py` fetches into `.deps/`; frozen (listed in `docs/csia/V2_FREEZE.json`) |
 | `conftest.py`, `pytest.ini` | Test configuration; see the tests section |
-| `docs/` | Every document, with its status: [`docs/README.md`](README.md) |
+| `docs/` | Every document, with its status: [`docs/README.md`](README.md); records of earlier releases are in `docs/archive/` |
 
 
 ## config/

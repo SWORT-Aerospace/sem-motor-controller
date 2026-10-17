@@ -1,6 +1,6 @@
 # Physical-team questionnaire (short, v0.3)
 
-> **Superseded by [`INPUT_SHEET.md`](INPUT_SHEET.md)** (v0.5, prioritised). Kept as the v0.3 record.
+> **Superseded by [`INPUT_SHEET.md`](../INPUT_SHEET.md)** (v0.5, prioritised). Kept as the v0.3 record.
 
 Please answer what you can, with units and the source (datasheet with page, measurement, or team decision). **"Unknown" is a valid answer.** Priority 1 blocks the power stage and most of the budget; priority 2 fixes the bus and the crystal.
 

@@ -1,6 +1,6 @@
 # Phase-current sense error budget (generated)
 
-> `tools/hardware_calcs.py`. The full-scale current depends on the UNKNOWN motor peak current, so the budget is tabulated over plausible full-scale values and CSA gains. Component values: [S] = web-search snippet (the primary datasheet could not be opened), [R] = recalled, [A] = assumption to verify, [D] = design choice. **Not a measurement.**
+> `tools/hardware_calcs.py`. The full-scale current depends on the UNKNOWN motor peak current, so the budget is tabulated over plausible full-scale values and CSA gains. Component values: [S] = web-search snippet (the primary datasheet not yet read), [R] = recalled, [A] = assumption to verify, [D] = design choice. **Not a measurement.**
 
 Topology: three low-side shunts, gate-driver-integrated CSAs biased at VREF/2, ratiometric with the ADC reference (+3V3A). Full scale: G·R·I_fs = VREF/2 − headroom.
 

@@ -20,7 +20,7 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CURRENT = {"README.md", "docs/STATUS.md", "docs/ICD.md", "docs/INPUT_SHEET.md", "docs/TELEMETRY_INTEGRATION.md",
+CURRENT = {"README.md", "CONTRIBUTING.md", "docs/STATUS.md", "docs/ICD.md", "docs/INPUT_SHEET.md", "docs/TELEMETRY_INTEGRATION.md",
            "docs/TELEMETRY_CANDIDATES.md", "docs/TELEMETRY_EMBEDDED_PORT.md", "docs/PROCUREMENT.md", "docs/BATTERY.md",
            "docs/MQTT_SETUP.md", "docs/ENERGY_METHODS.md", "docs/VERIFICATION_REPORT.md", "docs/RULES_COMPLIANCE.md",
            "docs/generated/mqtt_demo/summary.md", "docs/generated/wheel_sensor_check.md",

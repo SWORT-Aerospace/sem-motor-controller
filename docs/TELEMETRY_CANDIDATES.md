@@ -4,7 +4,7 @@ The team named these parts as references: DRV5032, LSM6DSV, ISM330DHCX, DS18B20,
 
 ## Sources read
 
-Manufacturer and distributor sites were unreachable from the build environment (egress proxy refused ti.com, st.com, analog.com, ams-osram.com, u-blox.com, simcom.com, digikey.com, mouser.com, lcsc.com, octopart.com on 2026-10-16). Every document below is a **copy hosted in a third-party GitHub repository**, read through a normal git clone. Its own text names the manufacturer, document number and revision. None was compared byte-for-byte with the publisher's file. Page numbers are the documents' printed pages.
+The manufacturers' and distributors' own sites could not be accessed for this work (2026-10-16). Every document below is a **copy hosted in a third-party GitHub repository**, read through a normal git clone. Its own text names the manufacturer, document number and revision. None was compared byte-for-byte with the publisher's file. Page numbers are the documents' printed pages.
 
 | Ref | Document (as printed) | Revision, date | Pages | SHA-256 (first 16) | Copy read (repository @ commit, path) |
 |---|---|---|---|---|---|
@@ -131,7 +131,7 @@ Notes. N3 is ST's own repository; every other copy is third-party. Older revisio
 | Any DRV5032 variant added after Rev F | revisions G and H not readable here |
 | STM32U575 electrical and temperature limits | DS13737 not readable here |
 | AS5600 document number DS000365 | not printed in the revision read |
-| Prices, stock, lead times for every line | distributor sites unreachable |
+| Prices, stock, lead times for every line | no supplier quote yet |
 | Wheel field window and magnet geometry | bench measurement on the vehicle's wheel |
 | GNSS reception through the bodywork | test on the vehicle |
 | LTE coverage and bands at the event | event country, operator |

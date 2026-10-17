@@ -130,6 +130,6 @@ supervision:
   timeout_s: null                  # 100 ms is PROVISIONAL and simulation-only
   timing_status: provisional_simulation_only
   limits_timeout_s: null
-  can_id_base: null                # UNKNOWN: needs the vehicle team's CAN id allocation (docs/VEHICLE_INTERFACE_MATRIX.md)
+  can_id_base: null                # UNKNOWN: needs the vehicle team's CAN id allocation (docs/ICD.md section 2)
   hazard_analysis_ref: null        # required before any hardware build
   notes: "Pending vehicle hazard and latency analysis."

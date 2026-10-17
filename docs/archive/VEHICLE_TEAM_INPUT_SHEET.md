@@ -1,6 +1,6 @@
 # Vehicle-team input sheet (one page)
 
-> **Superseded by [`INPUT_SHEET.md`](INPUT_SHEET.md) (v0.4, prioritised).** Kept as the v0.3 record.
+> **Superseded by [`INPUT_SHEET.md`](../INPUT_SHEET.md) (v0.4, prioritised).** Kept as the v0.3 record.
 
 > v0.3: the short, prioritised version is [`PHYSICAL_TEAM_QUESTIONNAIRE.md`](PHYSICAL_TEAM_QUESTIONNAIRE.md). Rows H1–H4 below were corrected: they no longer assume Cornell's CHUDS bus.
 
@@ -23,11 +23,11 @@ Please fill in and return. Every item **blocks** something specific (right colum
 | C2 | Driver controls | Brake switch contact (NO/NC); dead-man switch: number of contacts; safety-loop voltage (V) | input polarity; opto LED resistor; HW_PERMIT |
 | C3 | Driver controls | Arm, eco/manual mode, cancel and fault-reset switches: available or to be added? | wired driver authority (ADR-0010) |
 | H1 | **Harness / CAN** | Bus topology: where the two 120 Ω terminations are; connector type; where the controller taps in, and its stub length; cable | termination jumpers; connector selection |
-| H2 | Harness / CAN | Which bus does the vehicle actually use: CAN 2.0B (telematics proposal) or CAN FD; bit rate and sample point; 11- or 29-bit identifiers; the identifier map; a 64-identifier block for the motor controller (`supervision.can_id_base`); is there any CAN stop message? | `docs/VEHICLE_INTERFACE_MATRIX.md`; crystal choice |
+| H2 | Harness / CAN | Which bus does the vehicle actually use: CAN 2.0B (telematics proposal) or CAN FD; bit rate and sample point; 11- or 29-bit identifiers; the identifier map; a 64-identifier block for the motor controller (`supervision.can_id_base`); is there any CAN stop message? | `docs/archive/VEHICLE_INTERFACE_MATRIX.md`; crystal choice |
 | H3 | Harness / CAN | Which computer runs the supervisor: the STM32U575 telematics unit (proposed), another onboard computer, or none (manual only)? | supervisor deployment; `docs/COMBINED_ARCHITECTURE.md` |
 | H4 | Harness / CAN | `bk4000tg_kicad.zip` and `telemetry.pdf` are referenced but were not received: add them under `docs/reference/vehicle/` or attach them to a GitHub issue. The telematics overview and data-flow PDFs (v0.1) did arrive and are used as design inputs. | prior-board review; telemetry proposal details |
 | R1 | **Event rules** | Event and year; 2027 Chapter I and the event's Chapter II (PDFs); attempt format (laps, time limit, stops) | rules map; optimiser constraints |
-| R2 | Event rules | Organiser answers to `docs/RULES_RECONCILIATION.md` §3 (kit components, HAL/LL, SDK, bench boards, precharge bypass) | platform-layer approach; compliance |
+| R2 | Event rules | Organiser answers to `docs/archive/RULES_RECONCILIATION.md` §3 (kit components, HAL/LL, SDK, bench boards, precharge bypass) | platform-layer approach; compliance |
 | T1 | **Test equipment** | Available: current-limited bench supply (V/A max), oscilloscope (BW, channels), **differential probe**, current probe, DMM, electronic load or power resistors, ST-LINK, USB-CAN adapter, reflow or hot plate, microscope | bring-up plan; the "equipment" line in the budget |
 | T2 | Test equipment | Who performs and signs bench measurements; the lab's safety procedure for energized tests | validation stages 2–7 |
 | T3 | Test equipment | A spare motor (or a small BLDC) for the first current-limited bench runs: yes / no | shortest path to the bench demo |

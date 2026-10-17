@@ -1,6 +1,6 @@
 # Review package v0.3: vehicle interface and schematic foundation (2026-10-15)
 
-> **Historical record of v0.3, superseded.** Current state: [`STATUS.md`](STATUS.md) and the [README](../README.md); index of documents: [`README.md`](README.md). Statements below describe v0.3 and are not updated. In particular the KiCad ERC, listed here as not run, has run in CI since v0.4 with KiCad 8.0.9 (0 errors, 9 warnings; [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) 5).
+> **Historical record of v0.3, superseded.** Current state: [`STATUS.md`](../STATUS.md) and the [README](../../README.md); index of documents: [`README.md`](../README.md). Statements below describe v0.3 and are not updated. In particular the KiCad ERC, listed here as not run, has run in CI since v0.4 with KiCad 8.0.9 (0 errors, 9 warnings; [`VERIFICATION_REPORT.md`](../VERIFICATION_REPORT.md) 5).
 
 **NOT hardware-frozen · NOT fabrication-ready · NOT vehicle-validated · vehicle bus UNKNOWN · crystal UNSELECTED · KiCad ERC NOT RUN.**
 * Continues from `1c17145`. The v0.2 checkpoint is preserved with an errata banner; its unfavourable results stand.
@@ -15,7 +15,7 @@ The Cornell repositories are reference projects; v0.1–v0.2 had treated them as
   * null until the vehicle team allocates the block;
   * a multiple of 0x40, enforced by validator rule 40.
 
-  See [ADR-0012](decisions/ADR-0012-transport-neutral-interface.md).
+  See [ADR-0012](../decisions/ADR-0012-transport-neutral-interface.md).
 * CHUDS stays an optional adapter.
 * Withdrawn: "the controller must run CAN FD", "CAN FD requires a 40 MHz crystal", "the three phase currents are sampled simultaneously" (now *proposed*), and "current limited to ≤ 2 A by the supply" as a phase-current statement.
 
@@ -31,7 +31,7 @@ The Cornell repositories are reference projects; v0.1–v0.2 had treated them as
   * the supervision computer.
 
 ## 3. Combined architecture with the telematics proposal
-[`COMBINED_ARCHITECTURE.md`](COMBINED_ARCHITECTURE.md), with an interface-difference table (§6).
+[`COMBINED_ARCHITECTURE.md`](../COMBINED_ARCHITECTURE.md), with an interface-difference table (§6).
 * **Supervisor:** on the STM32U575 telematics unit as a protected task (proposed).
 * **CSIA:** offline on the pit computer now. A shadow task on the telematics unit only after the next frozen evaluation. Never in the controller's control path, never in the cloud.
 * **Driver authorization:** wired to the controller. A driver-input node may mirror it on CAN for logging only.
@@ -41,7 +41,7 @@ The Cornell repositories are reference projects; v0.1–v0.2 had treated them as
 * **Auxiliary power** (recalled values, unverified): telematics unit 0.45–2.1 W, controller logic 0.15–0.9 W. Over a synthetic 1000 s attempt that is 1–5 % and 0.4–2 % of the synthetic energy, if it is metered.
 
 ## 4. Clock-tree alternatives (crystal not selected)
-[`../hardware/timing/clock_tree_alternatives.md`](../hardware/timing/clock_tree_alternatives.md); 28 complete trees × 4 bus cases.
+[`../hardware/timing/clock_tree_alternatives.md`](../../hardware/timing/clock_tree_alternatives.md); 28 complete trees × 4 bus cases.
 * Evidence: ST register widths and HAL ranges from GitHub. DS12288-only limits are tagged and use the narrower of conflicting values.
 
 | Bus case | Result |
@@ -59,7 +59,7 @@ Timing implications are tabulated per tree:
 The tolerance analysis computes ISO 11898-1 conditions I–III. The CAN FD switch conditions IV–V are not computed.
 
 ## 5. Pinout verification and electrical checks
-[`../hardware/selection/PINOUT_VERIFICATION.md`](../hardware/selection/PINOUT_VERIFICATION.md).
+[`../hardware/selection/PINOUT_VERIFICATION.md`](../../hardware/selection/PINOUT_VERIFICATION.md).
 
 **Pinouts**
 * **No primary datasheet was readable** (vendor hosts refused).
@@ -83,7 +83,7 @@ The tolerance analysis computes ISO 11898-1 conditions I–III. The CAN FD switc
 7. Bias values that depend on the motor, the driver controls and the safety loop.
 
 ## 7. Validation language
-[`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) §2 and the bring-up checklist now separate four quantities:
+[`VALIDATION_PLAN.md`](../VALIDATION_PLAN.md) §2 and the bring-up checklist now separate four quantities:
 * command-ceiling compliance;
 * supervisory envelope-ramp compliance (always quoted with its ramp, ≥ 100 N·m/s, and its deadline, 20 ms ≤ 100 ms timeout; synthetic);
 * physical phase current;
@@ -92,7 +92,7 @@ The tolerance analysis computes ISO 11898-1 conditions I–III. The CAN FD switc
 A bench-supply limit bounds only the battery-input current. The checklist adds DC-link stored energy (½CV², discharge before handling) and body-diode regeneration (rectification above ω = V_DC/(√3·p·λ); a source-only supply cannot absorb it).
 
 ## 8. CSIA
-[`csia/EVALUATION_RESULTS.md`](csia/EVALUATION_RESULTS.md) §5–6.
+[`csia/EVALUATION_RESULTS.md`](../csia/EVALUATION_RESULTS.md) §5–6.
 * The frozen held-out results are unchanged. The debounce finding is labelled post-hoc.
 * New table of which output comes from which component: residual design, validity gates, debounce, corroboration logic, TrustCore.
 * **No result is attributed to TrustCore**: no ablation shows a contribution, and its only detector was the worst.

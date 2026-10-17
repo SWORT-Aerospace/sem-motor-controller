@@ -56,7 +56,7 @@ The repository already fits a coast-down (`models/vehicle/longitudinal.py fit_co
 
 ## 4. Literature read for these methods
 
-Read in v0.5, in the document text itself (copies hosted on GitHub; identity from the title page and revision). Scholarly hosts (arXiv, IEEE, ScienceDirect, MDPI, SAE, UNECE, OSTI) were not reachable from the build environment. `METHOD_SELECTION.md` 0 lists the sources read in v0.4 (R1 to R13).
+Read in v0.5, in the document text itself (copies hosted on GitHub; identity from the title page and revision). The scholarly publishers' sites (arXiv, IEEE, ScienceDirect, MDPI, SAE, UNECE, OSTI) could not be accessed for this work. `METHOD_SELECTION.md` 0 lists the sources read in v0.4 (R1 to R13).
 
 | Source | What it supports here | What it does not support |
 |---|---|---|

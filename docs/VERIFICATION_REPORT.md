@@ -6,7 +6,7 @@ Environment of every result here: x86-64 Linux host (Python 3.13.16, gcc 13.3, c
 
 | Item | Value |
 |---|---|
-| Repository | `SWORT-Aerospace/sem-motor-controller` (moved from `andrefp-co/swort`, tree equality re-verified: `docs/MIGRATION.md`) |
+| Repository | `SWORT-Aerospace/sem-motor-controller` (moved from `andrefp-co/swort`, tree equality re-verified: `docs/archive/MIGRATION.md`) |
 | `main` | `19a327c` (v0.3) |
 | Open pull request | `SWORT-Aerospace/sem-motor-controller#1` (`ci/declare-deps-run-kicad-gate`, head `c46faa8`): CI could not run, no runner was ever assigned |
 | v0.4 work | branch `eng/v0.4-verification-integration`, based on `c46faa8` |
@@ -82,9 +82,9 @@ Later runs of this branch are listed on the pull request.
 
 ## 6. Full verification record
 
-`docs/generated/verification/verification.md` (and `.json`; logs not committed): every check of `tools/verify_all.py --full`, run in a fresh clone and a new virtual environment at `4c8b5bf`. The commit that adds the record changes only this report and the record itself.
+`docs/generated/verification/verification.md` (and `.json`; logs not committed): every check of `tools/verify_all.py --full`, run in a fresh clone and a new virtual environment at `75f1b24` (v0.5). The previous record (v0.4, `4c8b5bf`: 31 PASS, 0 FAIL, 1 NOT AVAILABLE) is replaced.
 
-Result: **31 PASS, 0 FAIL, 1 NOT AVAILABLE.** The NOT AVAILABLE check is `kicad_erc`, because this host has KiCad 7. ERC runs in CI on KiCad 8.0.9 instead (run 38944073133). The full studies regenerated five tracked files, and their numbers matched the committed results exactly. Only wall-clock fields differed:
+Result: **37 PASS, 0 FAIL, 1 NOT AVAILABLE.** The NOT AVAILABLE check is `kicad_erc`, because the verification host has KiCad 7; the ERC runs in CI on KiCad 8 instead (0 errors, 9 warnings). The full studies regenerated five tracked files, and their numbers matched the committed results exactly. Only wall-clock fields differed, so those files were not committed again:
 * the optimisation `solve_s` and the table's seconds column;
 * the CSIA v1 re-run's `runtime_s`;
 * the host tick-time line of the CSIA development study.
@@ -117,7 +117,7 @@ Branch `eng/v0.5-telemetry-integration`, based on `0b7255e` (the head of SWORT-A
 * The telematics proposal's BQ25622E charger implies an on-board battery; 2026 Article 57b allows no accessory battery on a Battery Electric vehicle.
 * Telemetry energy counts in the official result (Article 56d).
 * An unmodelled 0.1 % grade biases a one-direction coast-down by 40 % in rolling resistance (`generated/coastdown_sensitivity.md`).
-* **Rules edition.** A 2027 Chapter I is listed on the organisers' global-rules page (web search, 2026-10-17); the page and the PDF were refused by the proxy (HTTP 403) and were not read. Every 2026 finding is to be re-checked against the governing edition (`RULES_COMPLIANCE.md`).
+* **Rules edition.** A 2027 Chapter I is listed on the organisers' global-rules page (web search, 2026-10-17); neither the page nor the PDF could be accessed, so the 2027 text was not read. Every 2026 finding is to be re-checked against the governing edition (`RULES_COMPLIANCE.md`).
 * **Controller behaviours recorded for review, not changed** (`firmware/README.md` 9; `DESIGN_DECISIONS.md` D9): a `SELFTEST` fault is cleared by a fault reset without a new self-test before the next arming; a `HALL_INVALID` fault cannot be cleared by the fault-reset input; `sup_hello` freshness is tracked but nothing reads it, so the ICD's 3 s hello window has no effect; `ctrl_fault` is sent early only on entering or leaving `FAULT_LATCHED`; `rx_len_fail` is never incremented (length errors count as `rx_crc_fail`); `ctrl_identity` always sends hardware revision 0.
 * **Documentation and code disagreements recorded, not changed:**
   * the code numbers the arbiter layers L0 to L4, while the documents say four layers;

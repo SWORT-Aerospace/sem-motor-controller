@@ -10,7 +10,7 @@ Inputs and their status:
        STM32U575, QSPI flash 8 MB, optional microSD, CAN 2.0B, u-blox NEO-M9N class GNSS, 6-axis IMU,
        SIMCom A7672 LTE Cat-1, MQTT live 1-5 Hz downsampled. A design input, not built hardware.
   [A]  assumption of this analysis (stated; replace with the team's numbers).
-  [R]  typical value recalled from component documentation, NOT verified here (vendor sites unreachable).
+  [R]  typical value recalled from component documentation, NOT yet verified against the datasheets.
 Nothing here is a measurement. Battery voltage, BMS message set and node rates are UNKNOWN.
 """
 from __future__ import annotations
@@ -119,7 +119,7 @@ def main() -> int:
           "rate**, before any other node is added. Options, in order of simplicity: make the microSD (shown optional "
           "in the proposal) the raw log and keep the QSPI flash for a decimated summary; log the 50-100 Hz controller "
           "messages at a reduced rate (row 4); or a larger flash. The controller's own rates can also be reduced, but "
-          "that changes supervisor freshness margins (`INTERFACE_CONTROL.md`) and needs the hazard analysis.",
+          "that changes supervisor freshness margins (`docs/ICD.md` section 5) and needs the hazard analysis.",
           "* Flash write bandwidth and endurance are not limiting at a few kB/s (NOR page program and sector erase "
           "rates are orders of magnitude higher [R]); the binding constraint is capacity.", ""]
     # LTE

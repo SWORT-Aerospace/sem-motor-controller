@@ -7,7 +7,7 @@
 DRAFT - NOT FOR FABRICATION. The schematic captures the functional design
 (docs/HARDWARE_ARCHITECTURE.md). Every value that depends on the unknown motor,
 battery, harness or event rules is written as UNRESOLVED; every part whose
-pinout could not be checked against a primary datasheet in this environment
+pinout has not yet been checked against a primary datasheet
 carries Pin_check = UNVERIFIED. No PCB, footprint assignment, Gerber or
 fabrication BOM is produced from this.
 
@@ -321,7 +321,7 @@ def sheets(mcu_map: dict) -> list:
         P("J", "Connector_Generic", "Conn_01x04", "CAN", {"1": "CAN_H", "2": "CAN_L", "3": "GND", "4": "CAN_SHLD"},
           status=U, rating="vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)"),
         C("1nF", "CAN_SHLD", "GND", status=U, rating="shield termination per harness"),
-    ], ["500 kbit/s classic CAN, IDs 0x300-0x33F (docs/INTERFACE_CONTROL.md). Bit timing and termination must match the vehicle bus."]))
+    ], ["Classic CAN at 500 kbit/s assumed; protocol block 0x300-0x33F, base set by calibration (docs/ICD.md section 2). Bit timing and termination must match the vehicle bus."]))
     # 12 ------------------------------------------------------------- aux rails
     S.append(("aux_rails", "Auxiliary rails and ground star point", [
         P("U", "Regulator_Switching", "LM5164DDA", "LM5164 (candidate)", {"1": "GND", "2": "VBAT_PROT", "3": "BUCK_EN",

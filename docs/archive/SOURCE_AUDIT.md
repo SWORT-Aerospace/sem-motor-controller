@@ -36,7 +36,7 @@ Audit date 2026-10-14. Every material claim in this project is tagged:
 
 ### 2.2 Cornell repositories: recheck of reported findings
 
-> **v0.3 provenance label.** The Cornell repositories are **reference projects**. Nothing in them is a fact about our vehicle: not CHUDS, the VCU, the CAN bit timing, the emergency messages or the harness. `docs/PROVENANCE_AUDIT.md` lists where earlier versions of this project assumed otherwise and what was corrected.
+> **v0.3 provenance label.** The Cornell repositories are **reference projects**. Nothing in them is a fact about our vehicle: not CHUDS, the VCU, the CAN bit timing, the emergency messages or the harness. `docs/archive/PROVENANCE_AUDIT.md` lists where earlier versions of this project assumed otherwise and what was corrected.
 (Detailed file:line evidence was in the v0.1 research notes, which are not part of the repository; summary here.)
 
 | Reported finding | Verdict | Evidence |

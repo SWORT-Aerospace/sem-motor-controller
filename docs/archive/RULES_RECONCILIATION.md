@@ -1,6 +1,6 @@
 # Shell Eco-marathon rules vs the exact hardware and software (v0.2)
 
-> **Superseded by [`RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md)** (v0.5, checked against the 2026 Chapter I text). Kept as the v0.2 record; the statements below are not updated.
+> **Superseded by [`RULES_COMPLIANCE.md`](../RULES_COMPLIANCE.md)** (v0.5, checked against the 2026 Chapter I text). Kept as the v0.2 record; the statements below are not updated.
 
 **Evidence status: every rule text below is UNVERIFIED.** No official rule PDF could be opened from this environment. The quotes are web-search extracts:
 * 2025 Chapter I, Art. 66a;

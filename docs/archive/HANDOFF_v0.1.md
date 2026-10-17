@@ -1,6 +1,6 @@
 # Handoff: first milestone (2026-10-14)
 
-> **Current status is in the [README](README.md) and [`docs/STATUS.md`](docs/STATUS.md); every document is indexed in [`docs/README.md`](docs/README.md).** The later records [`docs/REVIEW_v0.3.md`](docs/REVIEW_v0.3.md) (v0.3) and [`docs/CHECKPOINT_v0.2.md`](docs/CHECKPOINT_v0.2.md) (v0.2, with errata) are historical too. This file is the v0.1 handoff and is kept as a historical record. Superseded by v0.2:
+> **Current status is in the [README](../../README.md) and [`docs/STATUS.md`](../STATUS.md); every document is indexed in [`docs/README.md`](../README.md).** The later records [`docs/archive/REVIEW_v0.3.md`](REVIEW_v0.3.md) (v0.3) and [`docs/archive/CHECKPOINT_v0.2.md`](CHECKPOINT_v0.2.md) (v0.2, with errata) are historical too. This file is the v0.1 handoff and is kept as a historical record. Superseded by v0.2:
 > * the optimiser energies in §2 (39.7 / 46.2 / 55.1 kJ) and every v0.1 savings figure, which are **withdrawn**. The v0.1 model let gate-off coast brake implicitly, left an acceleration-clip residual, and checked corner limits at nodes only (`docs/EFFICIENCY_RESEARCH.md` §4);
 > * the CSIA nuisance and attribution figures in §1, which came from the development scenarios. Held-out results are in `docs/csia/EVALUATION_RESULTS.md`;
 > * the arbiter behaviour, now governed by the four-layer contract (`docs/CONTROL_CONTRACT.md`, ADR-0011), and the test counts.
@@ -15,7 +15,7 @@ The controller is not complete and not safe to install. Every test below ran on 
 | Deliverable | Where | Verification run at v0.1 |
 |---|---|---|
 | Architecture freeze v0.1 + 10 ADRs | `docs/ARCHITECTURE_FREEZE.md`, `docs/decisions/` | review |
-| Source audit, requirements, open parameters, rules map | `docs/SOURCE_AUDIT.md`, `REQUIREMENTS.md`, `OPEN_PARAMETERS.md`, `RULES_COMPLIANCE.md` | review |
+| Source audit, requirements, open parameters, rules map | `docs/archive/SOURCE_AUDIT.md`, `REQUIREMENTS.md`, `OPEN_PARAMETERS.md`, `RULES_COMPLIANCE.md` | review |
 | C11 controller core: config blob + validator, state machine (8 states, 18 transitions), arbiter, freshness/session, protection/derating, PI/Clarke/Park/SVPWM/FOC, hall decoder, stall check, CSIA shadow interface | `firmware/` | `cmake -S firmware -B build -G Ninja && cmake --build build && ctest --test-dir build` → **6/6 suites, 1,293 checks, 0 failures, 0 compiler warnings** (`-Wall -Wextra -Wpedantic -Werror -Wdouble-promotion -Wfloat-conversion -Wsign-conversion`, ASan + UBSan) |
 | Cortex-M4F portability (core only, not a firmware image) | `firmware/cmake/arm-none-eabi-cortex-m4f.cmake` | arm-none-eabi-gcc 13.2.1, 0 warnings, 29,806 B text; `mc_core_fast_step` makes no soft-double calls (objdump) |
 | Versioned CAN contract v1.0 + generated C/Python codecs + 18 golden vectors | `protocol/` | C golden check 0 failures (incl. every single-bit flip caught); Python roundtrip + independent hand-calculated bytes + bitwise reference CRC |

@@ -7,7 +7,7 @@ The pit side of the telemetry chain runs on a computer with a Mosquitto broker. 
 | Option | Command | Status |
 |---|---|---|
 | Ubuntu 24.04 package (2.0.18) | `sudo apt-get install mosquitto` | used by CI (GitHub-hosted ubuntu-24.04) |
-| Container (2.0.18) | `docker compose -f tools/mqtt/compose.yaml up` (broker on 127.0.0.1:1883) | not run in the development environment (no container daemon there); image tag checked on Docker Hub |
+| Container (2.0.18) | `docker compose -f tools/mqtt/compose.yaml up` (broker on 127.0.0.1:1883) | not run yet (the tests and demonstrations use a local Mosquitto instead); image tag checked on Docker Hub |
 | Binary elsewhere | `export SEMMC_MOSQUITTO=/path/to/mosquitto` | how the development environment ran it (Ubuntu's 2.0.18 package extracted locally) |
 
 The tools find the broker from `$SEMMC_MOSQUITTO`, then `mosquitto` on `PATH`, then `/usr/sbin/mosquitto` (`tools/mqtt_broker.py`).

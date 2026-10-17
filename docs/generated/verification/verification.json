@@ -1,6 +1,6 @@
 {
- "commit": "4c8b5bf25882c188603642e84134fed653f1c1fe",
- "branch": "eng/v0.4-verification-integration",
+ "commit": "75f1b24ce5c710db6143ae83f118bc0f2cba06c7",
+ "branch": "eng/v0.5-telemetry-integration",
  "dirty_before": [],
  "tools": {
   "python": "3.13.16",
@@ -8,14 +8,15 @@
   "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
   "cmake": "cmake version 3.28.3",
   "arm-none-eabi-gcc": "arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009",
-  "kicad-cli": "7.0.11"
+  "kicad-cli": "7.0.11",
+  "mosquitto": "mosquitto version 2.0.18"
  },
  "mode": "full",
  "checks": [
   {
    "id": "gen_config",
    "group": "generation",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_config.py --check",
+   "command": "python3 tools/gen_config.py --check",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
@@ -25,7 +26,7 @@
   {
    "id": "gen_protocol",
    "group": "generation",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_protocol.py --check",
+   "command": "python3 tools/gen_protocol.py --check",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
@@ -35,7 +36,7 @@
   {
    "id": "gen_dbc",
    "group": "generation",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_dbc.py --check",
+   "command": "python3 tools/gen_dbc.py --check",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
@@ -47,19 +48,17 @@
   {
    "id": "fetch_csia",
    "group": "dependencies",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/fetch_csia.py",
+   "command": "python3 tools/fetch_csia.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 1.4,
-   "summary": [
-    "fetched CSIA 848f5563a528ae5ca3c2d3883c86d7287d6a4585 into .deps/csia-trust-layer"
-   ]
+   "seconds": 0.0,
+   "summary": []
   },
   {
    "id": "cfg_synthetic_sim",
    "group": "configuration",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/config_tool.py validate config/vehicle.synthetic.yaml --mode sim",
+   "command": "python3 tools/config_tool.py validate config/vehicle.synthetic.yaml --mode sim",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
@@ -71,11 +70,11 @@
   {
    "id": "cfg_unconfigured_hw",
    "group": "configuration",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/config_tool.py validate config/vehicle.unconfigured.yaml --mode hw",
+   "command": "python3 tools/config_tool.py validate config/vehicle.unconfigured.yaml --mode hw",
    "expected": "nonzero",
    "rc": 1,
    "status": "PASS",
-   "seconds": 0.3,
+   "seconds": 0.2,
    "summary": [
     "config/vehicle.unconfigured.yaml: INVALID (93 issue(s)) for mode=hw"
    ]
@@ -83,13 +82,13 @@
   {
    "id": "c_configure",
    "group": "firmware",
-   "command": "cmake -S firmware -B build -G Ninja -DPython3_EXECUTABLE=/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3",
+   "command": "cmake -S firmware -B build -G Ninja -DPython3_EXECUTABLE=python3",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.4,
+   "seconds": 0.1,
    "summary": [
-    "-- Build files have been written to: /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/build"
+    "-- Build files have been written to: <repo>/build"
    ]
   },
   {
@@ -99,7 +98,7 @@
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 2.1,
+   "seconds": 0.0,
    "summary": []
   },
   {
@@ -109,10 +108,10 @@
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 17.2,
+   "seconds": 13.1,
    "summary": [
     "4: 1966 checks, 0 failures",
-    "5: 46 checks, 0 failures",
+    "5: 49 checks, 0 failures",
     "6: 1043 checks, 0 failures",
     "7: 326246 checks, 0 failures",
     "8: 1237899 checks, 0 failures",
@@ -126,7 +125,7 @@
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 130.8,
+   "seconds": 101.9,
    "summary": [
     "100 seeds x 30 s from base seed 0x01234567",
     "slow steps 3000000, ECO steps 641109 (entries 1632), brake steps 321447, recovery checks 1257928",
@@ -140,9 +139,9 @@
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.4,
+   "seconds": 0.2,
    "summary": [
-    "-- Build files have been written to: /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/build-arm"
+    "-- Build files have been written to: <repo>/build-arm"
    ]
   },
   {
@@ -152,7 +151,7 @@
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.9,
+   "seconds": 0.7,
    "summary": []
   },
   {
@@ -171,21 +170,21 @@
   {
    "id": "pytest",
    "group": "python",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 -m pytest -rs -p no:cacheprovider",
+   "command": "python3 -m pytest -rs -p no:cacheprovider",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 84.1,
+   "seconds": 91.6,
    "summary": []
   },
   {
    "id": "replay",
    "group": "host simulation",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 host/replay/replay.py tests/simulation/replay_sample.semmc.log --out build/replay",
+   "command": "python3 host/replay/replay.py tests/simulation/replay_sample.semmc.log --out build/replay",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.6,
+   "seconds": 0.3,
    "summary": [
     "6.080 s  req   1.200  acc   0.404  CLAMP_DERATE|SLEW",
     "6.100 s  req   1.200  acc   0.504  CLAMP_DERATE|SLEW",
@@ -198,11 +197,11 @@
   {
    "id": "contract_report",
    "group": "host simulation",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/control_contract_report.py --build build",
+   "command": "python3 tools/control_contract_report.py --build build",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.4,
+   "seconds": 0.3,
    "summary": [
     "contract violations in 'after' run: none"
    ]
@@ -210,38 +209,67 @@
   {
    "id": "host_demo",
    "group": "host simulation",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_host_demo.py --out build/host_demo",
+   "command": "python3 tools/run_host_demo.py --out build/host_demo",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 24.5,
+   "seconds": 18.2,
    "summary": [
-    "DEMO PASS offline_import_complete_and_idempotent: blocks 282 ok / 0 corrupt, records 70506, bad-CRC frames 0; second import added 0 rows",
     "DEMO PASS live_path_validated_and_accounted: published 240, stored 228 (30 replayed after the outage), rejected 2 {'not JSON (JSONDecodeError)': 1, 'ctrl.vbus_V=9999.0 outside [0.0, 100.0]': 1}, dropped on the car 10 (expected 10); every sequence number accounted for: True",
     "DEMO PASS utc_alignment_with_quality: largest UTC error 0.72 us with PPS (60535 records); 7.4 us in holdover (9971 records, GNSS outage 15 s, bound 50 ppm x age)",
     "DEMO PASS energy_boundary_and_gaps_reported: controller input energy (bus shunt) 5.805 kJ vs simulated battery-terminal energy 5.797 kJ: 0.139 % apart; integrated 120.00 s, gap 0.00 s (last ctrl_energy_quality before the end of the run)",
     "DEMO PASS pit_csia_replay_runs: 1200 ticks; wheel_l fault detected after 0.1 s",
-    "DEMO ALL PASS: 9/9 checks; outputs in build/host_demo"
+    "DEMO PASS pit_shadow_replay_r3v_and_csia2_reported: 1200 ticks, data class synthetic (host simulation); injected wheel_l dropout: R3v 0.3 s, CSIA2 0.3 s (first correct attribution after onset); wrong or unexplained suspect ticks R3v 0, CSIA2 0; report pit_replay/report.md with 3 insufficient-evidence notes",
+    "DEMO ALL PASS: 10/10 checks; outputs in build/host_demo"
+   ]
+  },
+  {
+   "id": "pit_replay",
+   "group": "host simulation",
+   "command": "python3 tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 1.3,
+   "summary": [
+    "REPLAY ENERGY: 1.613 Wh over 635.0 m (wheel_l) = 2.54 Wh/km at the controller input",
+    "REPLAY ENERGY: 1.613 Wh over 695.9 m (wheel_r) = 2.32 Wh/km at the controller input",
+    "REPLAY ENERGY: 1.613 Wh over 695.9 m (wheel_drive) = 2.32 Wh/km at the controller input",
+    "REPLAY ENERGY NOTE: a wheel dropout reads as zero counts and shortens the distance; compare with rotor speed or GNSS",
+    "REPLAY ENERGY NOTE: energy at the controller input; the official joulemeter also counts the telemetry unit, sensors, display and wiring downstream of it",
+    "REPLAY ENERGY NOTE: wheel channel wheel_l covers 635.0 m, 8.8 % less than the longest (695.9 m): missed pulses or a dropout on that channel"
+   ]
+  },
+  {
+   "id": "mqtt_demo",
+   "group": "host simulation",
+   "command": "python3 tools/run_mqtt_demo.py --out build/mqtt_demo",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 64.2,
+   "summary": [
+    "MQTT ALL PASS: 12/12 checks; outputs in build/mqtt_demo"
    ]
   },
   {
    "id": "optimisation_full",
    "group": "studies",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_optimization.py",
+   "command": "python3 tools/run_optimization.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 577.3,
+   "seconds": 318.8,
    "summary": []
   },
   {
    "id": "electrical",
    "group": "studies",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_electrical_calcs.py",
+   "command": "python3 tools/run_electrical_calcs.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 1.6,
+   "seconds": 0.8,
    "summary": [
     "| 8 | 3.02 | 2.30 |",
     "| 10 | 2.23 | 1.47 |",
@@ -254,28 +282,28 @@
   {
    "id": "csia_dev_study",
    "group": "studies",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_csia_study.py",
+   "command": "python3 tools/run_csia_study.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 7.3,
+   "seconds": 4.5,
    "summary": [
     "Notes:",
     "- Rotor-speed and power-balance relationships exist only while the motor drives through the freewheel; in this scenario the car coasts ~18 s between pulses, so detection of those faults waits for the next pulse (latency is regime-bound, reported, not hidden).",
     "- B2 'first' times are NOT meaningful where B2 was already alarming on the fault-free run (e.g. rotor_vs_wheel_drive alarms during freewheel coasting): its detection is confounded by its nuisance rate.",
     "- B2 raises an alarm on a residual but cannot say which sensor is wrong; B1 only sees stale/NaN/out-of-range values, so stuck-in-range, bias and gain faults pass it.",
     "- Ambiguous ticks are periods where the evidence supports disagreement only; the adapter reports them instead of guessing.",
-    "Adapter + CSIA TrustCore tick time on this host (x86-64, CPython, HOST BENCHMARK - not a target measurement): mean 0.20 ms, max 2.65 ms at 10 Hz."
+    "Adapter + CSIA TrustCore tick time on this host (x86-64, CPython, HOST BENCHMARK - not a target measurement): mean 0.15 ms, max 0.73 ms at 10 Hz."
    ]
   },
   {
    "id": "policy_comparison",
    "group": "studies",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_policy_comparison.py --duration 300",
+   "command": "python3 tools/run_policy_comparison.py --duration 300",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 131.5,
+   "seconds": 85.7,
    "summary": [
     "speed hold 6.0 m/s                         3.996 J/m at 6.09 m/s, gates off 27 %, dKE -0.004 J/m, cu 0.090, mech 3.440, other 0.465, window 260 s",
     "pulse 1.0 N*m, coast 5.5-6.5 m/s           4.450 J/m at 5.99 m/s, gates off 91 %, dKE -0.006 J/m, cu 0.544, mech 3.373, other 0.533, window 223 s",
@@ -286,11 +314,11 @@
   {
    "id": "csia_eval_v1_rerun",
    "group": "studies",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/run_csia_evaluation.py",
+   "command": "python3 tools/run_csia_evaluation.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 203.0,
+   "seconds": 130.8,
    "summary": [
     "\"missed\": 11,",
     "\"attributed\": 53,",
@@ -301,13 +329,61 @@
    ]
   },
   {
-   "id": "kicad_connectivity",
+   "id": "wheel_sensor_check",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/gen_kicad_schematic.py --check",
+   "command": "python3 tools/wheel_sensor_check.py --check",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 15.1,
+   "seconds": 0.0,
+   "summary": [
+    "docs/generated/wheel_sensor_check.md: current"
+   ]
+  },
+  {
+   "id": "coastdown_sensitivity",
+   "group": "studies",
+   "command": "python3 tools/coastdown_sensitivity.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "docs/generated/coastdown_sensitivity.md: current"
+   ]
+  },
+  {
+   "id": "procurement_tables",
+   "group": "hardware",
+   "command": "python3 tools/gen_procurement.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "procurement tables current: 39 lines, 0 quoted, 17 estimated, 19 unpriced, 3 not counted"
+   ]
+  },
+  {
+   "id": "doc_links",
+   "group": "documentation",
+   "command": "python3 tools/check_links.py",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 0.1,
+   "summary": [
+    "links: 108 Markdown files checked, 0 broken"
+   ]
+  },
+  {
+   "id": "kicad_connectivity",
+   "group": "hardware",
+   "command": "python3 tools/gen_kicad_schematic.py --check",
+   "expected": "zero",
+   "rc": 0,
+   "status": "PASS",
+   "seconds": 9.2,
    "summary": [
     "* intended nets: 135",
     "* problems: 0"
@@ -326,11 +402,11 @@
   {
    "id": "pin_type_check",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/pin_type_check.py",
+   "command": "python3 tools/pin_type_check.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.1,
+   "seconds": 0.0,
    "summary": [
     "173 nets, 0 findings -> hardware/kicad/PIN_TYPE_CHECK.md"
    ]
@@ -338,7 +414,7 @@
   {
    "id": "hw_consistency",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/hw_consistency.py",
+   "command": "python3 tools/hw_consistency.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
@@ -366,11 +442,11 @@
   {
    "id": "timing_budget",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/timing_budget.py",
+   "command": "python3 tools/timing_budget.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.1,
+   "seconds": 0.0,
    "summary": [
     "\"t_needed_before_sample_s\": 1.6999999999999998e-06,",
     "\"d_max_sampleable\": 0.932,",
@@ -383,31 +459,31 @@
   {
    "id": "clock_tree",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/clock_tree.py",
+   "command": "python3 tools/clock_tree.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 1.3,
+   "seconds": 0.8,
    "summary": [
-    "wrote /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/hardware/timing/clock_tree_alternatives.md (28 clock trees x 4 bus cases)"
+    "wrote <repo>/hardware/timing/clock_tree_alternatives.md (28 clock trees x 4 bus cases)"
    ]
   },
   {
    "id": "hardware_calcs",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/hardware_calcs.py",
+   "command": "python3 tools/hardware_calcs.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.2,
+   "seconds": 0.1,
    "summary": [
-    "wrote /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/hardware/calculations/current_sense_error_budget.md /tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/repo/hardware/calculations/power_stage_envelope.md"
+    "wrote <repo>/hardware/calculations/current_sense_error_budget.md <repo>/hardware/calculations/power_stage_envelope.md"
    ]
   },
   {
    "id": "price_bom",
    "group": "hardware",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/price_bom.py",
+   "command": "python3 tools/price_bom.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
@@ -419,11 +495,11 @@
   {
    "id": "telematics_budget",
    "group": "integration",
-   "command": "/tmp/claude-0/-home-user/43ac6c92-6ed7-5c4a-aeaf-a4d9ad0cd833/scratchpad/final/venv/bin/python3 tools/telematics_budget.py",
+   "command": "python3 tools/telematics_budget.py",
    "expected": "zero",
    "rc": 0,
    "status": "PASS",
-   "seconds": 0.1,
+   "seconds": 0.0,
    "summary": [
     "controller 394 f/s, supervisor 72 f/s; flash lasts 16.9 min for semmc frames"
    ]
@@ -437,7 +513,7 @@
   " M docs/generated/optimization_synthetic.md"
  ],
  "counts": {
-  "PASS": 31,
+  "PASS": 37,
   "FAIL": 0,
   "NOT AVAILABLE": 1
  }

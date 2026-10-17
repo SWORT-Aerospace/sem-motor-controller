@@ -66,26 +66,25 @@ Start with the [README](../README.md), then this page. Files outside `docs/`: [`
 | [`csia/EVALUATION_PROTOCOL_v2.md`](csia/EVALUATION_PROTOCOL_v2.md), [`csia/V2_FREEZE.json`](csia/V2_FREEZE.json) | The frozen v2 protocol and the hashes of the frozen files (do not edit) |
 | [`generated/csia_v2_development_synthetic.md`](generated/csia_v2_development_synthetic.md), [`generated/csia_v2_evaluation_synthetic.md`](generated/csia_v2_evaluation_synthetic.md) (and `.json`) | `tools/run_csia_evaluation_v2.py`: v2 development and held-out results |
 
-## 4. Historical and superseded records
+## 4. Records of earlier releases (`archive/`)
+
+Kept unchanged as the record of how the design got here ([`archive/README.md`](archive/README.md)). They are not maintained; the replacement is named where there is one.
 
 | Document | Status |
 |---|---|
-| [`../HANDOFF.md`](../HANDOFF.md) | v0.1 handoff (2026-10-14), historical; withdrawn figures marked in its banner |
-| [`ARCHITECTURE_FREEZE.md`](ARCHITECTURE_FREEZE.md) | v0.1 architecture freeze, historical; the current state machine is described in [`../firmware/README.md`](../firmware/README.md) section 4 |
-| [`REQUIREMENTS.md`](REQUIREMENTS.md) | v0.1 requirements, historical; rule-derived rows are tagged unverified |
-| [`SOURCE_AUDIT.md`](SOURCE_AUDIT.md) | v0.1 source audit, historical |
-| [`CHECKPOINT_v0.2.md`](CHECKPOINT_v0.2.md) | v0.2 checkpoint, **superseded** by [`STATUS.md`](STATUS.md) |
-| [`RULES_RECONCILIATION.md`](RULES_RECONCILIATION.md) | v0.2 rules extracts, **superseded** by [`RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md) |
-| [`CAN_INTEGRATION.md`](CAN_INTEGRATION.md) | v0.2 analysis of a reference project's bus (Cornell CHUDS), not our vehicle; optional adapter only |
-| [`REVIEW_v0.3.md`](REVIEW_v0.3.md) | v0.3 review package, **superseded** by [`STATUS.md`](STATUS.md) |
-| [`INTERFACE_CONTROL.md`](INTERFACE_CONTROL.md) | v0.1 to v0.3 interface document, **superseded** by [`ICD.md`](ICD.md) |
-| [`VEHICLE_TEAM_INPUT_SHEET.md`](VEHICLE_TEAM_INPUT_SHEET.md) | v0.3 input sheet, **superseded** by [`INPUT_SHEET.md`](INPUT_SHEET.md) |
-| [`PHYSICAL_TEAM_QUESTIONNAIRE.md`](PHYSICAL_TEAM_QUESTIONNAIRE.md) | v0.3 questionnaire, **superseded** by [`INPUT_SHEET.md`](INPUT_SHEET.md) |
-| [`VEHICLE_INTERFACE_MATRIX.md`](VEHICLE_INTERFACE_MATRIX.md) | v0.3 comparison of our vehicle, the proposals and the reference project; current interfaces are in [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md) |
-| [`PROVENANCE_AUDIT.md`](PROVENANCE_AUDIT.md) | v0.3 finding that reference projects had been treated as our vehicle; kept as evidence |
-| [`MIGRATION.md`](MIGRATION.md) | v0.3 repository move, completed |
-| [`csia/EVALUATION_PROTOCOL.md`](csia/EVALUATION_PROTOCOL.md), [`csia/EVALUATION_RESULTS.md`](csia/EVALUATION_RESULTS.md), [`csia/DEV_SET_FREEZE.json`](csia/DEV_SET_FREEZE.json) | CSIA v1 protocol, results and freeze; superseded by v2, kept frozen |
-| [`generated/csia_comparison_synthetic.md`](generated/csia_comparison_synthetic.md), [`generated/csia_evaluation_synthetic.md`](generated/csia_evaluation_synthetic.md) (and `.json`), [`generated/csia_posthoc_synthetic.md`](generated/csia_posthoc_synthetic.md) (and `.json`) | CSIA v1 study outputs (`tools/run_csia_study.py`, `run_csia_evaluation.py`, `run_csia_posthoc.py`); the development-run figures are not evidence of generalisation |
-| `generated/changed_files_v0.2.txt`, `generated/changed_files_v0.3.txt` | Lists of files changed in those releases |
+| [`archive/HANDOFF_v0.1.md`](archive/HANDOFF_v0.1.md) | v0.1 handoff (2026-10-14); withdrawn figures marked in its banner |
+| [`archive/SOURCE_AUDIT.md`](archive/SOURCE_AUDIT.md) | v0.1 audit of the sources available at the start |
+| [`archive/CHECKPOINT_v0.2.md`](archive/CHECKPOINT_v0.2.md) | v0.2 checkpoint; **superseded** by [`STATUS.md`](STATUS.md) |
+| [`archive/RULES_RECONCILIATION.md`](archive/RULES_RECONCILIATION.md) | v0.2 rules extracts; **superseded** by [`RULES_COMPLIANCE.md`](RULES_COMPLIANCE.md) |
+| [`archive/CAN_INTEGRATION.md`](archive/CAN_INTEGRATION.md) | v0.2 analysis of a reference project's bus (Cornell CHUDS), not our vehicle |
+| [`archive/REVIEW_v0.3.md`](archive/REVIEW_v0.3.md) | v0.3 review package; **superseded** by [`STATUS.md`](STATUS.md) |
+| [`archive/INTERFACE_CONTROL.md`](archive/INTERFACE_CONTROL.md) | v0.1 to v0.3 interface document; **superseded** by [`ICD.md`](ICD.md) |
+| [`archive/VEHICLE_TEAM_INPUT_SHEET.md`](archive/VEHICLE_TEAM_INPUT_SHEET.md), [`archive/PHYSICAL_TEAM_QUESTIONNAIRE.md`](archive/PHYSICAL_TEAM_QUESTIONNAIRE.md) | v0.3 questionnaires; **superseded** by [`INPUT_SHEET.md`](INPUT_SHEET.md) |
+| [`archive/VEHICLE_INTERFACE_MATRIX.md`](archive/VEHICLE_INTERFACE_MATRIX.md) | v0.3 comparison of our vehicle, the proposals and the reference project; **superseded** by [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md) |
+| [`archive/PROVENANCE_AUDIT.md`](archive/PROVENANCE_AUDIT.md) | v0.3 finding that reference projects had been treated as our vehicle, and what was corrected |
+| [`archive/MIGRATION.md`](archive/MIGRATION.md) | v0.3 move of the project into this repository; completed |
+| `archive/changed_files_v0.2.txt`, `archive/changed_files_v0.3.txt` | files changed in those releases |
+
+Also historical, but kept in place because other files cite them: [`ARCHITECTURE_FREEZE.md`](ARCHITECTURE_FREEZE.md) (v0.1 architecture; the current state machine is in [`../firmware/README.md`](../firmware/README.md) section 4), [`REQUIREMENTS.md`](REQUIREMENTS.md) (v0.1; rule-derived rows tagged unverified), and the CSIA v1 records [`csia/EVALUATION_PROTOCOL.md`](csia/EVALUATION_PROTOCOL.md), [`csia/EVALUATION_RESULTS.md`](csia/EVALUATION_RESULTS.md), [`csia/DEV_SET_FREEZE.json`](csia/DEV_SET_FREEZE.json) and their outputs [`generated/csia_comparison_synthetic.md`](generated/csia_comparison_synthetic.md), [`generated/csia_evaluation_synthetic.md`](generated/csia_evaluation_synthetic.md) (and `.json`), [`generated/csia_posthoc_synthetic.md`](generated/csia_posthoc_synthetic.md) (and `.json`), frozen and superseded by v2.
 
 Earlier statements in historical records are not edited. Where one is now wrong (for example "KiCad ERC not run": the ERC has run in CI since v0.4, 0 errors and 9 warnings), the record carries a banner that says so.
