@@ -136,6 +136,38 @@ params:
   # CAN binding only (the core is transport-neutral): 11-bit id = base + (protocol message number - 0x300).
   # Multiple of 0x40 (rule 40). An ALLOCATION on the vehicle bus, so it comes from the vehicle team's id map.
   - {id: 164, path: supervision.can_id_base,                 kind: int,  min: 0, max: 1984, req_sim: true, req_hw: true}
+  # Bit rate of the vehicle bus (classic CAN). Unknown -> the target keeps its CAN controller off; manual
+  # driving never depends on the bus.
+  - {id: 165, path: supervision.can_bitrate_bps,             kind: int,  min: 10000, max: 1000000, req_sim: false, req_hw: false}
+
+  # ---- wired driver controls (target firmware) -----------------------------------
+  # Pedal track voltages at released and full travel, measured at the connector on the bench. A track
+  # outside [min - tolerance, max + tolerance] or two tracks that disagree by more than the tolerance
+  # (fraction of travel) make the throttle invalid, which the core treats as zero torque.
+  - {id: 180, path: controls.throttle_a_released_V,          kind: real, min: 0.0, max: 5.5, req_sim: false, req_hw: true}
+  - {id: 181, path: controls.throttle_a_full_V,              kind: real, min: 0.0, max: 5.5, req_sim: false, req_hw: true}
+  - {id: 182, path: controls.throttle_b_released_V,          kind: real, min: 0.0, max: 5.5, req_sim: false, req_hw: true}
+  - {id: 183, path: controls.throttle_b_full_V,              kind: real, min: 0.0, max: 5.5, req_sim: false, req_hw: true}
+  - {id: 184, path: controls.throttle_track_tolerance,       kind: real, min: 0.01, max: 0.5, req_sim: false, req_hw: true}
+  # Divider from the connector to the ADC pin (sheet 10: 0 to 5 V pedal into a 3.3 V ADC).
+  - {id: 185, path: controls.throttle_divider_ratio,         kind: real, min: 1.0, max: 10.0, req_sim: false, req_hw: true}
+
+  # ---- precharge (target firmware) --------------------------------------------------
+  # The bypass closes only when the link voltage reaches this fraction of the battery voltage measured
+  # before the precharge resistor, and only within the timeout; otherwise the precharge is a fault.
+  - {id: 190, path: power.precharge_complete_fraction,       kind: real, min: 0.5, max: 0.999, req_sim: false, req_hw: true}
+  - {id: 191, path: power.precharge_timeout_s,               kind: real, min: 0.01, max: 30.0, req_sim: false, req_hw: true}
+
+  # ---- temperature sensing (target firmware) ---------------------------------------
+  # NTC in a divider from the analog supply: R_ntc to ground, bias resistor to the supply (sheet 07).
+  - {id: 200, path: sensing.fet_ntc_r25_ohm,                 kind: real, min: 100.0, max: 1.0e+6, req_sim: false, req_hw: true}
+  - {id: 201, path: sensing.fet_ntc_beta_K,                  kind: real, min: 1000.0, max: 10000.0, req_sim: false, req_hw: true}
+  - {id: 202, path: sensing.fet_ntc_bias_ohm,                kind: real, min: 100.0, max: 1.0e+6, req_sim: false, req_hw: true}
+  # The motor's sensor type is unknown; without these values the motor temperature is reported invalid
+  # and the core applies its unknown-temperature derate.
+  - {id: 203, path: sensing.motor_ntc_r25_ohm,               kind: real, min: 100.0, max: 1.0e+6, req_sim: false, req_hw: false}
+  - {id: 204, path: sensing.motor_ntc_beta_K,                kind: real, min: 1000.0, max: 10000.0, req_sim: false, req_hw: false}
+  - {id: 205, path: sensing.motor_ntc_bias_ohm,              kind: real, min: 100.0, max: 1.0e+6, req_sim: false, req_hw: false}
 
 # String-valued fields (not in the binary blob; carried as metadata and hashed
 # into the calibration identity). null = unknown.

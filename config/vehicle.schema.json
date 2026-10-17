@@ -15,7 +15,10 @@
     "vehicle",
     "inverter",
     "limits",
-    "supervision"
+    "supervision",
+    "controls",
+    "power",
+    "sensing"
   ],
   "properties": {
     "calibration": {
@@ -856,6 +859,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "can_bitrate_bps",
         "can_id_base",
         "hazard_analysis_ref",
         "limits_timeout_s",
@@ -903,11 +907,187 @@
           "minimum": 0,
           "maximum": 1984
         },
+        "can_bitrate_bps": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 10000,
+          "maximum": 1000000
+        },
         "hazard_analysis_ref": {
           "type": [
             "string",
             "null"
           ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "throttle_a_full_V",
+        "throttle_a_released_V",
+        "throttle_b_full_V",
+        "throttle_b_released_V",
+        "throttle_divider_ratio",
+        "throttle_track_tolerance"
+      ],
+      "properties": {
+        "throttle_a_released_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 5.5
+        },
+        "throttle_a_full_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 5.5
+        },
+        "throttle_b_released_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 5.5
+        },
+        "throttle_b_full_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.0,
+          "maximum": 5.5
+        },
+        "throttle_track_tolerance": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 0.5
+        },
+        "throttle_divider_ratio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1.0,
+          "maximum": 10.0
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "power": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precharge_complete_fraction",
+        "precharge_timeout_s"
+      ],
+      "properties": {
+        "precharge_complete_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.5,
+          "maximum": 0.999
+        },
+        "precharge_timeout_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.01,
+          "maximum": 30.0
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "sensing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fet_ntc_beta_K",
+        "fet_ntc_bias_ohm",
+        "fet_ntc_r25_ohm",
+        "motor_ntc_beta_K",
+        "motor_ntc_bias_ohm",
+        "motor_ntc_r25_ohm"
+      ],
+      "properties": {
+        "fet_ntc_r25_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 100.0,
+          "maximum": 1000000.0
+        },
+        "fet_ntc_beta_K": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1000.0,
+          "maximum": 10000.0
+        },
+        "fet_ntc_bias_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 100.0,
+          "maximum": 1000000.0
+        },
+        "motor_ntc_r25_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 100.0,
+          "maximum": 1000000.0
+        },
+        "motor_ntc_beta_K": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1000.0,
+          "maximum": 10000.0
+        },
+        "motor_ntc_bias_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 100.0,
+          "maximum": 1000000.0
         },
         "notes": {
           "type": [

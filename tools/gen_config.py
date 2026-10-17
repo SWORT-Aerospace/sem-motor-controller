@@ -31,7 +31,7 @@ CONVENTIONS = {
     "angle": "rad_electrical_from_phase_a_axis",
 }
 
-SECTIONS = ["calibration", "motor", "battery", "vehicle", "inverter", "limits", "supervision"]
+SECTIONS = ["calibration", "motor", "battery", "vehicle", "inverter", "limits", "supervision", "controls", "power", "sensing"]
 
 
 def _param_schema(p, reg):

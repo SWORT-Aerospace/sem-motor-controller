@@ -131,5 +131,26 @@ supervision:
   timing_status: provisional_simulation_only
   limits_timeout_s: null
   can_id_base: null                # UNKNOWN: needs the vehicle team's CAN id allocation (docs/ICD.md section 2)
+  can_bitrate_bps: null                # UNKNOWN: the vehicle bus bit rate (input sheet)
   hazard_analysis_ref: null        # required before any hardware build
   notes: "Pending vehicle hazard and latency analysis."
+
+controls:                            # wired pedal calibration, measured at the connector (UNKNOWN)
+  throttle_a_released_V: null
+  throttle_a_full_V: null
+  throttle_b_released_V: null
+  throttle_b_full_V: null
+  throttle_track_tolerance: null
+  throttle_divider_ratio: null
+
+power:                               # precharge sequencing (UNKNOWN)
+  precharge_complete_fraction: null
+  precharge_timeout_s: null
+
+sensing:                             # temperature sensors (UNKNOWN)
+  fet_ntc_r25_ohm: null
+  fet_ntc_beta_K: null
+  fet_ntc_bias_ohm: null
+  motor_ntc_r25_ohm: null
+  motor_ntc_beta_K: null
+  motor_ntc_bias_ohm: null

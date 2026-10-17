@@ -97,7 +97,22 @@ typedef enum {
     MC_P_SUPERVISION_TIMING_STATUS = 162,
     MC_P_SUPERVISION_LIMITS_TIMEOUT_S = 163,
     MC_P_SUPERVISION_CAN_ID_BASE = 164,
-    MC_P_MAX_ID = 164
+    MC_P_SUPERVISION_CAN_BITRATE_BPS = 165,
+    MC_P_CONTROLS_THROTTLE_A_RELEASED_V = 180,
+    MC_P_CONTROLS_THROTTLE_A_FULL_V = 181,
+    MC_P_CONTROLS_THROTTLE_B_RELEASED_V = 182,
+    MC_P_CONTROLS_THROTTLE_B_FULL_V = 183,
+    MC_P_CONTROLS_THROTTLE_TRACK_TOLERANCE = 184,
+    MC_P_CONTROLS_THROTTLE_DIVIDER_RATIO = 185,
+    MC_P_POWER_PRECHARGE_COMPLETE_FRACTION = 190,
+    MC_P_POWER_PRECHARGE_TIMEOUT_S = 191,
+    MC_P_SENSING_FET_NTC_R25_OHM = 200,
+    MC_P_SENSING_FET_NTC_BETA_K = 201,
+    MC_P_SENSING_FET_NTC_BIAS_OHM = 202,
+    MC_P_SENSING_MOTOR_NTC_R25_OHM = 203,
+    MC_P_SENSING_MOTOR_NTC_BETA_K = 204,
+    MC_P_SENSING_MOTOR_NTC_BIAS_OHM = 205,
+    MC_P_MAX_ID = 205
 } mc_param_id_t;
 
 /* Enumerations (values stored as exact small floats in the blob). */
@@ -240,8 +255,23 @@ typedef struct {
     {162u, 3u, 1u, 1u, 0.0f, 1.0f, "supervision.timing_status"}, \
     {163u, 0u, 1u, 1u, 0.01f, 10.0f, "supervision.limits_timeout_s"}, \
     {164u, 1u, 1u, 1u, 0.0f, 1984.0f, "supervision.can_id_base"}, \
+    {165u, 1u, 0u, 0u, 10000.0f, 1000000.0f, "supervision.can_bitrate_bps"}, \
+    {180u, 0u, 0u, 1u, 0.0f, 5.5f, "controls.throttle_a_released_V"}, \
+    {181u, 0u, 0u, 1u, 0.0f, 5.5f, "controls.throttle_a_full_V"}, \
+    {182u, 0u, 0u, 1u, 0.0f, 5.5f, "controls.throttle_b_released_V"}, \
+    {183u, 0u, 0u, 1u, 0.0f, 5.5f, "controls.throttle_b_full_V"}, \
+    {184u, 0u, 0u, 1u, 0.01f, 0.5f, "controls.throttle_track_tolerance"}, \
+    {185u, 0u, 0u, 1u, 1.0f, 10.0f, "controls.throttle_divider_ratio"}, \
+    {190u, 0u, 0u, 1u, 0.5f, 0.999f, "power.precharge_complete_fraction"}, \
+    {191u, 0u, 0u, 1u, 0.01f, 30.0f, "power.precharge_timeout_s"}, \
+    {200u, 0u, 0u, 1u, 100.0f, 1000000.0f, "sensing.fet_ntc_r25_ohm"}, \
+    {201u, 0u, 0u, 1u, 1000.0f, 10000.0f, "sensing.fet_ntc_beta_K"}, \
+    {202u, 0u, 0u, 1u, 100.0f, 1000000.0f, "sensing.fet_ntc_bias_ohm"}, \
+    {203u, 0u, 0u, 0u, 100.0f, 1000000.0f, "sensing.motor_ntc_r25_ohm"}, \
+    {204u, 0u, 0u, 0u, 1000.0f, 10000.0f, "sensing.motor_ntc_beta_K"}, \
+    {205u, 0u, 0u, 0u, 100.0f, 1000000.0f, "sensing.motor_ntc_bias_ohm"}, \
 }
 
-#define MC_PARAM_COUNT 91
+#define MC_PARAM_COUNT 106
 
 #endif /* SEMMC_MC_PARAMS_GENERATED_H */
