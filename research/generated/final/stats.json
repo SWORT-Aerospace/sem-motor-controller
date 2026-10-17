@@ -1,0 +1,1243 @@
+{
+ "meta": {
+  "commit": "9aefb9968d4a0a137569da2a569e7e173ac15db8",
+  "episodes": 230,
+  "seconds": 1519
+ },
+ "schedulers": {
+  "A": {
+   "n_fault": 140,
+   "correct": 94,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 0,
+   "missed": 46,
+   "undecided": 0,
+   "coverage": 0.6714285714285714,
+   "risk": 0.0,
+   "true_in_set": 0.6714285714285714,
+   "mean_set_size": 0.6714285714285714,
+   "false_alarms_per_clean_hour": 1.3333333333333333,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 4,
+   "n_unmodelled": 30,
+   "mean_bytes": 0.0,
+   "median_decide_delay_s": 23.9958131234426,
+   "median_cpu_s": 3.1815596569999585,
+   "by_truth": {
+    "HB": {
+     "correct": 40,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 0,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 40,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 54,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 6,
+     "undecided": 0
+    }
+   }
+  },
+  "B": {
+   "n_fault": 140,
+   "correct": 98,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 14,
+   "missed": 28,
+   "undecided": 0,
+   "coverage": 0.7,
+   "risk": 0.0,
+   "true_in_set": 0.7,
+   "mean_set_size": 0.7,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 10,
+   "n_unmodelled": 30,
+   "mean_bytes": 184933.68695652173,
+   "median_decide_delay_s": 24.507906499351687,
+   "median_cpu_s": 2.3664946025003815,
+   "by_truth": {
+    "HB": {
+     "correct": 39,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 11,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 5,
+     "missed": 24,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 48,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 8,
+     "missed": 4,
+     "undecided": 0
+    }
+   }
+  },
+  "C": {
+   "n_fault": 140,
+   "correct": 99,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 0,
+   "missed": 41,
+   "undecided": 0,
+   "coverage": 0.7071428571428572,
+   "risk": 0.0,
+   "true_in_set": 0.7071428571428572,
+   "mean_set_size": 0.7071428571428572,
+   "false_alarms_per_clean_hour": 1.3333333333333333,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 12,
+   "n_unmodelled": 30,
+   "mean_bytes": 62581.45652173913,
+   "median_decide_delay_s": 29.348633967269002,
+   "median_cpu_s": 3.416421416499986,
+   "by_truth": {
+    "HB": {
+     "correct": 40,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 0,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 40,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 59,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "D": {
+   "n_fault": 140,
+   "correct": 97,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 3,
+   "missed": 40,
+   "undecided": 0,
+   "coverage": 0.6928571428571428,
+   "risk": 0.0,
+   "true_in_set": 0.6928571428571428,
+   "mean_set_size": 0.6928571428571428,
+   "false_alarms_per_clean_hour": 1.3333333333333333,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 8,
+   "n_unmodelled": 30,
+   "mean_bytes": 31466.38695652174,
+   "median_decide_delay_s": 24.67941095176042,
+   "median_cpu_s": 2.0636825880001375,
+   "by_truth": {
+    "HB": {
+     "correct": 40,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 4,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 2,
+     "missed": 34,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 53,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 6,
+     "undecided": 0
+    }
+   }
+  },
+  "E": {
+   "n_fault": 140,
+   "correct": 120,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 2,
+   "missed": 18,
+   "undecided": 0,
+   "coverage": 0.8571428571428571,
+   "risk": 0.0,
+   "true_in_set": 0.8571428571428571,
+   "mean_set_size": 0.8571428571428571,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 13,
+   "n_unmodelled": 30,
+   "mean_bytes": 39886.01739130435,
+   "median_decide_delay_s": 12.751275208591517,
+   "median_cpu_s": 1.9655709849999994,
+   "by_truth": {
+    "HB": {
+     "correct": 40,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 23,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 16,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 57,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 2,
+     "undecided": 0
+    }
+   }
+  },
+  "F": {
+   "n_fault": 140,
+   "correct": 120,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 2,
+   "missed": 18,
+   "undecided": 0,
+   "coverage": 0.8571428571428571,
+   "risk": 0.0,
+   "true_in_set": 0.8571428571428571,
+   "mean_set_size": 0.8571428571428571,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 14,
+   "n_unmodelled": 30,
+   "mean_bytes": 38241.59130434783,
+   "median_decide_delay_s": 12.751275208591517,
+   "median_cpu_s": 1.9500336749996734,
+   "by_truth": {
+    "HB": {
+     "correct": 40,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 22,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 2,
+     "missed": 16,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 58,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 2,
+     "undecided": 0
+    }
+   }
+  },
+  "F_doublecount": {
+   "n_fault": 140,
+   "correct": 116,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 7,
+   "missed": 17,
+   "undecided": 0,
+   "coverage": 0.8285714285714286,
+   "risk": 0.0,
+   "true_in_set": 0.8285714285714286,
+   "mean_set_size": 0.8285714285714286,
+   "false_alarms_per_clean_hour": 2.0,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 14,
+   "n_unmodelled": 30,
+   "mean_bytes": 38135.6652173913,
+   "median_decide_delay_s": 12.760607652157013,
+   "median_cpu_s": 2.0325063654994153,
+   "by_truth": {
+    "HB": {
+     "correct": 39,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 18,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 6,
+     "missed": 16,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 59,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 1,
+     "undecided": 0
+    }
+   }
+  },
+  "F_noamb": {
+   "n_fault": 140,
+   "correct": 117,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 7,
+   "missed": 16,
+   "undecided": 0,
+   "coverage": 0.8357142857142857,
+   "risk": 0.0,
+   "true_in_set": 0.8357142857142857,
+   "mean_set_size": 0.8357142857142857,
+   "false_alarms_per_clean_hour": 2.6666666666666665,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 20,
+   "n_unmodelled": 30,
+   "mean_bytes": 56597.413043478264,
+   "median_decide_delay_s": 39.63084392551396,
+   "median_cpu_s": 3.7055419774989815,
+   "by_truth": {
+    "HB": {
+     "correct": 37,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 3,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 23,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 3,
+     "missed": 14,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 57,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 2,
+     "undecided": 0
+    }
+   }
+  },
+  "F_notiming": {
+   "n_fault": 140,
+   "correct": 97,
+   "wrong": 0,
+   "unresolved_incl": 0,
+   "unresolved_excl": 0,
+   "no_fit": 24,
+   "missed": 19,
+   "undecided": 0,
+   "coverage": 0.6928571428571428,
+   "risk": 0.0,
+   "true_in_set": 0.6928571428571428,
+   "mean_set_size": 0.6928571428571428,
+   "false_alarms_per_clean_hour": 1.3333333333333333,
+   "wrong_cause_on_clean": 0,
+   "unmodelled_reported_no_fit": 15,
+   "n_unmodelled": 30,
+   "mean_bytes": 39164.28695652174,
+   "median_decide_delay_s": 12.760607652157013,
+   "median_cpu_s": 0.6573882145001235,
+   "by_truth": {
+    "HB": {
+     "correct": 40,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 0,
+     "missed": 0,
+     "undecided": 0
+    },
+    "HT": {
+     "correct": 0,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 23,
+     "missed": 17,
+     "undecided": 0
+    },
+    "HL": {
+     "correct": 57,
+     "wrong": 0,
+     "unresolved_incl": 0,
+     "unresolved_excl": 0,
+     "no_fit": 1,
+     "missed": 2,
+     "undecided": 0
+    }
+   }
+  }
+ },
+ "pairs": {
+  "F-A/correct": {
+   "diff": 0.18571428571428572,
+   "lo": 0.12142857142857143,
+   "hi": 0.25,
+   "n": 140
+  },
+  "F-A/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-A/bytes": {
+   "diff": 37934.485714285714,
+   "lo": 35798.115535714285,
+   "hi": 39952.68571428572,
+   "n": 140
+  },
+  "F-A/matched": {
+   "matched_coverage": 0.6714285714285714,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.18571428571428572,
+   "coverage_diff_ci": [
+    0.12142857142857144,
+    0.2571428571428571
+   ],
+   "n": 140
+  },
+  "F-B/correct": {
+   "diff": 0.15714285714285714,
+   "lo": 0.09285714285714286,
+   "hi": 0.22857142857142856,
+   "n": 140
+  },
+  "F-B/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-B/bytes": {
+   "diff": -146998.2214285714,
+   "lo": -149129.74410714288,
+   "hi": -144977.92035714287,
+   "n": 140
+  },
+  "F-B/matched": {
+   "matched_coverage": 0.7,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.15714285714285714,
+   "coverage_diff_ci": [
+    0.08571428571428574,
+    0.22857142857142865
+   ],
+   "n": 140
+  },
+  "F-C/correct": {
+   "diff": 0.15,
+   "lo": 0.09285714285714286,
+   "hi": 0.21428571428571427,
+   "n": 140
+  },
+  "F-C/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-C/bytes": {
+   "diff": -50896.857142857145,
+   "lo": -58700.412678571425,
+   "hi": -42476.29017857143,
+   "n": 140
+  },
+  "F-C/matched": {
+   "matched_coverage": 0.7071428571428572,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.1499999999999999,
+   "coverage_diff_ci": [
+    0.08571428571428574,
+    0.2142857142857143
+   ],
+   "n": 140
+  },
+  "F-D/correct": {
+   "diff": 0.16428571428571428,
+   "lo": 0.1,
+   "hi": 0.22857142857142856,
+   "n": 140
+  },
+  "F-D/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-D/bytes": {
+   "diff": 7223.842857142857,
+   "lo": 4748.048928571428,
+   "hi": 9594.510000000002,
+   "n": 140
+  },
+  "F-D/matched": {
+   "matched_coverage": 0.6928571428571428,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.16428571428571426,
+   "coverage_diff_ci": [
+    0.10000000000000009,
+    0.22857142857142865
+   ],
+   "n": 140
+  },
+  "F-E/correct": {
+   "diff": 0.0,
+   "lo": -0.02142857142857143,
+   "hi": 0.02142857142857143,
+   "n": 140
+  },
+  "F-E/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-E/bytes": {
+   "diff": -1539.25,
+   "lo": -2304.973214285714,
+   "hi": -890.9010714285711,
+   "n": 140
+  },
+  "F-E/matched": {
+   "matched_coverage": 0.8571428571428571,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.0,
+   "coverage_diff_ci": [
+    -0.021428571428571463,
+    0.021428571428571463
+   ],
+   "n": 140
+  },
+  "F-F_noamb/correct": {
+   "diff": 0.02142857142857143,
+   "lo": -0.02857142857142857,
+   "hi": 0.07142857142857142,
+   "n": 140
+  },
+  "F-F_noamb/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-F_noamb/bytes": {
+   "diff": -20846.914285714287,
+   "lo": -23160.778392857144,
+   "hi": -18607.850535714286,
+   "n": 140
+  },
+  "F-F_noamb/matched": {
+   "matched_coverage": 0.8357142857142857,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.021428571428571352,
+   "coverage_diff_ci": [
+    -0.02857142857142858,
+    0.0714285714285714
+   ],
+   "n": 140
+  },
+  "F-F_notiming/correct": {
+   "diff": 0.16428571428571428,
+   "lo": 0.10714285714285714,
+   "hi": 0.22857142857142856,
+   "n": 140
+  },
+  "F-F_notiming/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-F_notiming/bytes": {
+   "diff": -1793.1142857142856,
+   "lo": -2998.679642857143,
+   "hi": -806.8571428571429,
+   "n": 140
+  },
+  "F-F_notiming/matched": {
+   "matched_coverage": 0.6928571428571428,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.16428571428571426,
+   "coverage_diff_ci": [
+    0.1071428571428571,
+    0.22857142857142854
+   ],
+   "n": 140
+  },
+  "F-F_doublecount/correct": {
+   "diff": 0.02857142857142857,
+   "lo": 0.0,
+   "hi": 0.06428571428571428,
+   "n": 140
+  },
+  "F-F_doublecount/wrong": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 140
+  },
+  "F-F_doublecount/bytes": {
+   "diff": 174.02142857142857,
+   "lo": 28.928571428571427,
+   "hi": 370.53982142857143,
+   "n": 140
+  },
+  "F-F_doublecount/matched": {
+   "matched_coverage": 0.8285714285714286,
+   "risk_diff": 0.0,
+   "risk_diff_ci": [
+    0.0,
+    0.0
+   ],
+   "target_risk": 0.05,
+   "coverage_diff": 0.02857142857142847,
+   "coverage_diff_ci": [
+    0.0,
+    0.06428571428571428
+   ],
+   "n": 140
+  }
+ },
+ "compare": {
+  "CSIA2": {
+   "HB": {
+    "missed": 40
+   },
+   "HL": {
+    "missed": 60
+   },
+   "HT": {
+    "missed": 40
+   },
+   "HU": {
+    "other": 30
+   },
+   "H0": {
+    "clean": 60
+   }
+  },
+  "MHT/frames": {
+   "HB": {
+    "correct": 39,
+    "unresolved_incl": 1
+   },
+   "HL": {
+    "correct": 56,
+    "missed": 3,
+    "unresolved_incl": 1
+   },
+   "HT": {
+    "correct": 32,
+    "missed": 8
+   },
+   "HU": {
+    "other": 30
+   },
+   "H0": {
+    "clean": 60
+   }
+  },
+  "MHT/summary": {
+   "HB": {
+    "correct": 39,
+    "unresolved_incl": 1
+   },
+   "HL": {
+    "correct": 54,
+    "missed": 2,
+    "unresolved_incl": 4
+   },
+   "HT": {
+    "missed": 33,
+    "wrong": 4,
+    "correct": 2,
+    "unresolved_incl": 1
+   },
+   "HU": {
+    "other": 28,
+    "wrong": 2
+   },
+   "H0": {
+    "clean": 59,
+    "false_alarm": 1
+   }
+  },
+  "R3v": {
+   "HB": {
+    "missed": 40
+   },
+   "HL": {
+    "missed": 60
+   },
+   "HT": {
+    "missed": 40
+   },
+   "HU": {
+    "other": 30
+   },
+   "H0": {
+    "clean": 60
+   }
+  },
+  "aligned/frames": {
+   "HB": {
+    "no_fit": 11,
+    "wrong": 1,
+    "unresolved_incl": 15,
+    "correct": 13
+   },
+   "HL": {
+    "correct": 39,
+    "missed": 5,
+    "no_fit": 14,
+    "wrong": 2
+   },
+   "HT": {
+    "unresolved_incl": 11,
+    "correct": 10,
+    "missed": 14,
+    "no_fit": 4,
+    "wrong": 1
+   },
+   "HU": {
+    "correct": 16,
+    "other": 6,
+    "wrong": 8
+   },
+   "H0": {
+    "clean": 52,
+    "false_alarm": 8
+   }
+  },
+  "aligned/summary": {
+   "HB": {
+    "unresolved_incl": 27,
+    "no_fit": 13
+   },
+   "HL": {
+    "correct": 42,
+    "missed": 11,
+    "no_fit": 7
+   },
+   "HT": {
+    "missed": 32,
+    "correct": 1,
+    "unresolved_incl": 4,
+    "no_fit": 1,
+    "wrong": 2
+   },
+   "HU": {
+    "other": 21,
+    "correct": 6,
+    "wrong": 3
+   },
+   "H0": {
+    "clean": 54,
+    "false_alarm": 6
+   }
+  },
+  "reference/frames": {
+   "HB": {
+    "correct": 40
+   },
+   "HL": {
+    "correct": 59,
+    "missed": 1
+   },
+   "HT": {
+    "correct": 31,
+    "missed": 8,
+    "no_fit": 1
+   },
+   "HU": {
+    "correct": 24,
+    "other": 5,
+    "wrong": 1
+   },
+   "H0": {
+    "clean": 60
+   }
+  },
+  "reference/summary": {
+   "HB": {
+    "correct": 39,
+    "no_fit": 1
+   },
+   "HL": {
+    "correct": 52,
+    "missed": 8
+   },
+   "HT": {
+    "missed": 33,
+    "no_fit": 5,
+    "correct": 2
+   },
+   "HU": {
+    "other": 22,
+    "correct": 4,
+    "wrong": 4
+   },
+   "H0": {
+    "clean": 60
+   }
+  }
+ },
+ "endpoints": [
+  {
+   "id": "P1",
+   "question": "primary: does F diagnose more fault episodes correctly than random requests at F's mean budget?",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.16428571428571428,
+    "lo": 0.1,
+    "hi": 0.22857142857142856,
+    "n": 140
+   },
+   "bytes": {
+    "diff": 7223.842857142857,
+    "lo": 4748.048928571428,
+    "hi": 9594.510000000002,
+    "n": 140
+   },
+   "met": true
+  },
+  {
+   "id": "S1",
+   "question": "do F's requests add correct diagnoses to the summary alone?",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.18571428571428572,
+    "lo": 0.12142857142857143,
+    "hi": 0.25,
+    "n": 140
+   },
+   "bytes": {
+    "diff": 37934.485714285714,
+    "lo": 35798.115535714285,
+    "hi": 39952.68571428572,
+    "n": 140
+   },
+   "met": true
+  },
+  {
+   "id": "S2",
+   "question": "is the ambiguity-directed rule better than information gain?",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.0,
+    "lo": -0.02142857142857143,
+    "hi": 0.02142857142857143,
+    "n": 140
+   },
+   "bytes": {
+    "diff": -1539.25,
+    "lo": -2304.973214285714,
+    "hi": -890.9010714285711,
+    "n": 140
+   },
+   "met": false
+  },
+  {
+   "id": "S3",
+   "question": "does F match fetching everything at a fraction of the bytes?",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": -0.05
+    },
+    {
+     "bound": "hi",
+     "of": "bytes",
+     "op": "<",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.15714285714285714,
+    "lo": 0.09285714285714286,
+    "hi": 0.22857142857142856,
+    "n": 140
+   },
+   "bytes": {
+    "diff": -146998.2214285714,
+    "lo": -149129.74410714288,
+    "hi": -144977.92035714287,
+    "n": 140
+   },
+   "met": true
+  },
+  {
+   "id": "S4",
+   "question": "is F better than capturing on detection?",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.15,
+    "lo": 0.09285714285714286,
+    "hi": 0.21428571428571427,
+    "n": 140
+   },
+   "bytes": {
+    "diff": -50896.857142857145,
+    "lo": -58700.412678571425,
+    "hi": -42476.29017857143,
+    "n": 140
+   },
+   "met": true
+  },
+  {
+   "id": "S5",
+   "question": "ablation: does the engine's ambiguity information save bytes without losing correct diagnoses?",
+   "criterion": [
+    {
+     "bound": "hi",
+     "of": "bytes",
+     "op": "<",
+     "value": 0.0
+    },
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": -0.05
+    }
+   ],
+   "correct": {
+    "diff": 0.02142857142857143,
+    "lo": -0.02857142857142857,
+    "hi": 0.07142857142857142,
+    "n": 140
+   },
+   "bytes": {
+    "diff": -20846.914285714287,
+    "lo": -23160.778392857144,
+    "hi": -18607.850535714286,
+    "n": 140
+   },
+   "met": true
+  },
+  {
+   "id": "S6",
+   "question": "ablation: is the timing allowance needed to diagnose timing errors?",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.55,
+    "lo": 0.4,
+    "hi": 0.7,
+    "n": 40
+   },
+   "met": true
+  },
+  {
+   "id": "S7",
+   "question": "ablation: timing allowance, over all fault episodes",
+   "criterion": [],
+   "correct": {
+    "diff": 0.16428571428571428,
+    "lo": 0.10714285714285714,
+    "hi": 0.22857142857142856,
+    "n": 140
+   },
+   "wrong": {
+    "diff": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 140
+   },
+   "met": null
+  },
+  {
+   "id": "S8",
+   "question": "ablation: does treating the summary and the frames as independent change the result?",
+   "criterion": [],
+   "correct": {
+    "diff": 0.02857142857142857,
+    "lo": 0.0,
+    "hi": 0.06428571428571428,
+    "n": 140
+   },
+   "wrong": {
+    "diff": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 140
+   },
+   "met": null
+  },
+  {
+   "id": "S9",
+   "question": "risk: wrong cause among F's supported decisions on fault episodes",
+   "criterion": [
+    {
+     "bound": "hi",
+     "of": "proportion",
+     "op": "<",
+     "value": 0.05
+    }
+   ],
+   "proportion": {
+    "k": 0,
+    "n": 120,
+    "p": 0.0,
+    "lo": 0.0,
+    "hi": 0.03101916689287469
+   },
+   "met": true
+  },
+  {
+   "id": "S10",
+   "question": "coverage: fault episodes F diagnoses correctly",
+   "criterion": [],
+   "proportion": {
+    "k": 120,
+    "n": 140,
+    "p": 0.8571428571428571,
+    "lo": 0.7896297687765333,
+    "hi": 0.9055800878095585
+   },
+   "met": null
+  },
+  {
+   "id": "S11",
+   "question": "abstention: unmodelled faults F reports as \"no modelled cause fits\"",
+   "criterion": [],
+   "proportion": {
+    "k": 14,
+    "n": 30,
+    "p": 0.4666666666666667,
+    "lo": 0.30232388795369436,
+    "hi": 0.6385770050304025
+   },
+   "met": null
+  },
+  {
+   "id": "S12",
+   "question": "abstention failure: unmodelled faults F attributes to a modelled cause",
+   "criterion": [],
+   "proportion": {
+    "k": 8,
+    "n": 30,
+    "p": 0.26666666666666666,
+    "lo": 0.14182663247581012,
+    "hi": 0.4444796184128676
+   },
+   "met": null
+  },
+  {
+   "id": "S13",
+   "question": "clean episodes with an alarm (F; the summary monitor is shared by all)",
+   "criterion": [],
+   "proportion": {
+    "k": 3,
+    "n": 60,
+    "p": 0.05,
+    "lo": 0.01714950203090107,
+    "hi": 0.1370051656999034
+   },
+   "met": null
+  },
+  {
+   "id": "S14",
+   "question": "identical full-rate records: reference diagnosis against the calibrated multiple-hypothesis baseline",
+   "criterion": [],
+   "correct": {
+    "diff": 0.02142857142857143,
+    "lo": -0.007142857142857143,
+    "hi": 0.05714285714285714,
+    "n": 140
+   },
+   "met": null
+  },
+  {
+   "id": "S15",
+   "question": "identical full-rate records: reference diagnosis against the aligned residual monitor",
+   "criterion": [
+    {
+     "bound": "lo",
+     "of": "correct",
+     "op": ">",
+     "value": 0.0
+    }
+   ],
+   "correct": {
+    "diff": 0.4857142857142857,
+    "lo": 0.40714285714285714,
+    "hi": 0.5714285714285714,
+    "n": 140
+   },
+   "met": true
+  },
+  {
+   "id": "S16",
+   "question": "identical records: reference diagnosis against the frozen R3v",
+   "criterion": [],
+   "correct": {
+    "diff": 0.9285714285714286,
+    "lo": 0.8857142857142857,
+    "hi": 0.9642857142857143,
+    "n": 140
+   },
+   "met": null
+  }
+ ]
+}
