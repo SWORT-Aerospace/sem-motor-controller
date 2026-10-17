@@ -189,3 +189,32 @@ Open items, each with its missing input and closure criterion: [`BLOCKERS.md`](B
 | 39071741661 | `1b799bb` | failure: `test_file_index_covers_every_tracked_file` (vendored headers not yet in the file index); fixed in the next commits |
 | 39078886365 | `40b3dfa` | success: `host` (generated files, C tests with sanitizers, connectivity gate and drift check on KiCad 8.0.9, Python tests, both demonstrations, Cortex-M4F core, STM32G474 image) and `erc` (0 errors, 0 warnings) |
 
+### 8.4 Fresh-clone verification of `d7131d5`
+
+A fresh clone of `d7131d5`, x86-64 Linux host: Python 3.13.16, gcc 13.3.0, CMake 3.28.3, Ninja 1.11.1, arm-none-eabi-gcc 13.2.1, kicad-cli 7.0.11, Mosquitto 2.0.18 through `SEMMC_MOSQUITTO`. The `git status` was empty after every step.
+
+| Step | Command | Result |
+|---|---|---|
+| dependencies | `tools/fetch_csia.py`, `tools/fetch_kicad_symbols.py` | pinned commit and 17 libraries verified |
+| generated files | the `--check` forms of `gen_config`, `gen_protocol`, `gen_dbc`, `gen_procurement`, `gen_board_pins`, `blockers`, `acceptance render`, `wheel_sensor_check`, `coastdown_sensitivity`; `check_links.py` | all current; links 121 files, 0 broken |
+| configurations | `config_tool.py validate` | synthetic valid in sim mode; unconfigured refused in hw mode (107 issues) |
+| C tests | `ctest` (ASan/UBSan) | 10/10 passed |
+| schematic | `gen_kicad_schematic.py --check` | connectivity 0 problems; no drift |
+| Python tests | `pytest -rs` with `SEMMC_REQUIRE_MQTT=1`, `SEMMC_REQUIRE_ARM=1` | 290 passed, 0 skipped, 0 failed |
+| demonstrations | `run_host_demo.py`, `run_pit_replay.py`, `run_mqtt_demo.py` | 11/11; report written; 12/12 |
+| Cortex-M4F | portable core; `SEMMC_TARGET_STM32G474=ON` | both link. `semmc_stm32g474.elf`: text 49,400 B, data 96 B, bss 7,672 B. `semmc_stm32g474_pwmtest.elf`: text 49,648 B |
+| emulated core | `emulate_core_timing.py --ms 300` | fast step with current control: at most 1,039 instructions, so at least 6.5 µs at 160 MHz, against the 25 µs half-period. Slow step: at most 1,452 instructions. Instruction counts only, not timing on silicon |
+| hardware checks | `hw_consistency.py`, `pin_type_check.py` | 14 PASS, 0 FAIL, 4 OPEN; 174 nets, 0 findings |
+| release gate | `release_gate.py` | **FAIL**, G1 to G7 all failing (41 UNRESOLVED lines; no footprints; 12 register rows open; no PCB; no local ERC report; reviews unsigned; no hardware-valid configuration). No package built |
+
+Image checksums from this host (SHA-256; a CI build with another toolchain patch level may differ):
+
+| File | SHA-256 |
+|---|---|
+| `semmc_stm32g474.elf` | `84065aa759d984428578132889c7004233c191a65713daf2e42ff9e0cd909953` |
+| `semmc_stm32g474.bin` | `c18d880a19555d5543e18acc293adf92aa565a7b1d2fa3f158722b65534fe920` |
+| `semmc_stm32g474.hex` | `775eb89b38006a06da56425a19e9f791f7fca85e6bc4c32435c709788431aba9` |
+| `semmc_stm32g474_pwmtest.elf` | `a9a726b05eeab7416e34efdbe727e452da30a7ab9276ee2ae894e5f031f194ee` |
+
+Nothing was flashed, energised or measured.
+
