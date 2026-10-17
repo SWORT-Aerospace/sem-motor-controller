@@ -425,11 +425,36 @@ A separate research area: budgeted evidence acquisition for timing-aware diagnos
 | `research/IDENTIFIABILITY.md` | Identifiability analysis (gate 1): signature model, exact ambiguity conditions, cases A to E, identifiability matrix, gate decision |
 | `research/run_identifiability.py` | Runs the identifiability study and writes `research/generated/identifiability.*`; `--check` recomputes and compares |
 | `research/generated/identifiability.json`, `research/generated/identifiability.md` | Generated results of the identifiability study (do not edit) |
+| `research/HARNESS.md` | The causal evaluation harness: layers, every simulated quantity and assumption, costs, causality checks |
+| `research/DIAGNOSIS.md` | Specification of the reference diagnosis (signals from records, fit, decision, evidence assembly), the actions and schedulers A to F |
+| `research/RECORDER.md` | The proposed telemetry-unit recorder: what exists and what it adds, interface and wire format v1.0, counters, tests, host timing, sizing |
+| `research/PHYSICAL_VALIDATION.md` | Physical validation plan: blockers, minimum equipment (owned first), experiments E1 to E5, order and the next physical action |
+| `research/RESULTS.md` | Development failures and changes, the development pilot, the final evaluation results with their uncertainty |
+| `research/make_preregistration.py` | Writes the pre-registration manifest (`preregistration.json` in `research/`) from the calibration and the pilot |
+| `research/run_pilot.py` | Calibration on the calibration split (per-relationship noise factors, consistency thresholds, rejection margins, baseline thresholds) and the development pilot of every scheduler |
+| `research/run_final.py` | The pre-registered final evaluation: checks the freeze, derives seeds from the pre-registration commit, runs schedulers, engine comparison and ablations once, paired statistics |
+| `research/run_demo.py` | Three-episode demonstration of the frozen scheduler F (timing error, current bias, grade without IMU), with pit and evaluation views |
+| `research/generated/pilot/*` | Generated development pilot: calibration, per-episode results and summary (development evidence only); `round1/`, `round2/` keep the earlier rounds |
+| `research/generated/final/*` | Generated final evaluation: per-episode results, engine comparison on identical records, statistics, summary (run once) |
+| `research/generated/demo/*` | Generated demonstration timelines |
 | `research/bea/records.py` | Measurement record model: receipt and source time, clock domain and bounds, window, sequence, quality flags, calibration identity; loss, duplicate and stale checks |
-| `research/bea/identifiability.py` | Synthetic truth trajectories, relationships R1 to R5 with their signatures and noise, bounded least squares, separation distances, timing-kind comparison |
+| `research/bea/relations.py` | Relationships R1 to R5 on signals from truth or from records: residuals, signatures, timing term, covariances; hypotheses as bounds; bounded least squares; the fit |
+| `research/bea/identifiability.py` | Synthetic truth trajectories and separation distances for gate 1, collinearity test, timing-kind comparison |
+| `research/bea/harness.py` | Episode drawing, truth plant, sensors and faults, CAN transport and receipt clock, vehicle log and live summary, causal pit access with costed requests |
+| `research/bea/diagnosis.py` | Signals from full-rate records and from summaries, the reference set-valued diagnosis and its outcomes, calibration hook |
+| `research/bea/episode.py` | Episode runner: summary monitor, detection, scheduler steps, dependency-aware evidence assembly, final decision, timeline |
+| `research/bea/schedulers.py` | Candidate actions from the summary, predicted separations on proxy windows, schedulers A to F and the ablation of F |
+| `research/bea/baselines.py` | Aligned residual monitor, multiple-hypothesis baseline, stream conversion and calibration for the frozen R3v and CSIA2 |
+| `research/bea/scoring.py` | Evaluator-only scoring of an episode result against its label; risk against coverage when only the most confident decisions are kept |
+| `research/recorder/include/bea_recorder.h`, `research/recorder/src/bea_recorder.c` | Portable C11 evidence recorder: fixed rings, versioned requests, pinning, rate-limited chunks, counters |
+| `research/recorder/tests/test_bea_recorder.c` | Host tests of the recorder (72 checks) and a host timing report |
+| `tests/research/test_harness.py` | Causality of the pit access, labels kept out of the view, sequence gaps, edge refinement, diagnosis outcomes on simple episodes |
+| `tests/research/test_episode.py` | Episode runner and schedulers: no double counting of summary and frames, the ablation switches, the byte limit, one bias episode end to end |
+| `tests/research/test_recorder_c.py` | Builds and runs the recorder tests with sanitizers; compiles the recorder for the Cortex-M4F when the toolchain exists |
 | `tests/research/test_bvls.py` | The bounded least-squares solver against exhaustive enumeration, including collinear and badly scaled columns |
 | `tests/research/test_identifiability.py` | The exact claims of `research/IDENTIFIABILITY.md` on the study model |
 | `tests/research/test_records.py` | Acquisition intervals, sequence gaps across the wrap, duplicates, stale runs, alignment bounds |
+| `tests/research/test_scoring.py` | Scoring categories, the confidence of a decision, risk at a given coverage and coverage at a given risk |
 
 ## tests/
 

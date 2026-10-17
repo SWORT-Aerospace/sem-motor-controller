@@ -1,0 +1,77 @@
+{
+ "episodes": 24,
+ "windows": 7306,
+ "noise_scale": 1.003,
+ "median_J_over_n": {
+  "summary": 0.4446,
+  "frames": 1.0061
+ },
+ "engine": {
+  "noise_scale": 1.003,
+  "noise_scale_summary": 0.6668,
+  "kappa_summary": {
+   "HB": 10.83,
+   "HT": 10.83,
+   "HL": 10.83,
+   "HL_grade": 10.83
+  },
+  "kappa_frames": {
+   "HB": 10.83,
+   "HT": 37.96,
+   "HL": 10.83,
+   "HL_grade": 10.83
+  }
+ },
+ "rule": "kappa = max(10.83, 1.1 x largest per-episode maximum of J_H0 - J_h on fault-free calibration episodes, with each window's statistics rescaled by its source's noise scale); noise scale = sqrt(median J_H0 / n) over the windows of each source (full-rate frames, summary)",
+ "seconds": 88,
+ "aligned_thresholds": {
+  "frames": {
+   "R1": 143.24,
+   "R1dyn": 46.79,
+   "R2": 5.29,
+   "R3": 13.38,
+   "R4": 4.0
+  },
+  "summary": {
+   "R2": 15.88,
+   "R3": 4.0,
+   "R4": 4.0,
+   "R1": 16.79,
+   "R1dyn": 6.67
+  }
+ },
+ "frozen_monitors": {
+  "e6": {
+   "R_ohm": 0.060688441606363955,
+   "c_sw_W_per_A": 1.9094862232071153,
+   "p0_W": 2.239574998428603,
+   "s0_W": 3.8045504706687803,
+   "u_R": 0.15,
+   "u_rel": 0.03,
+   "align_max_gap_s": 0.03
+  },
+  "lam": 9.0,
+  "trust_thr": {
+   "rotor": 0.8099050388670934,
+   "wheel_drive": 0.8107252149251075,
+   "wheel_l": 0.78,
+   "wheel_r": 0.78,
+   "gnss": 0.8097416188532697,
+   "imu": 0.78,
+   "phase_current": 0.7637329416110352,
+   "dc_meter": 0.628724855153812
+  },
+  "report": {
+   "r3v_threshold": 9.0,
+   "dev_alarms_at_threshold": 0
+  },
+  "e6_fit": {
+   "samples": 53941,
+   "R_ohm": 0.060688441606363955,
+   "c_sw_W_per_A": 1.9094862232071153,
+   "p0_W": 2.239574998428603,
+   "residual_sd_W": 3.8045504706687803
+  }
+ },
+ "baseline_seconds": 38
+}
