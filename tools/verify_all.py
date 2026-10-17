@@ -157,13 +157,14 @@ def main() -> int:
             rc, text = 127, f"command not found: {e}"
         dt = time.time() - t0
         (out / "logs" / f"{cid}.log").write_text(f"$ {' '.join(map(str, cmd))}\n{text}")
-        lines = [ln.strip() for ln in text.splitlines() if re.search(rx, ln.strip())]
+        # the record is committed: the checkout's absolute path is replaced so it names no local directory
+        lines = [ln.strip().replace(str(ROOT), "<repo>") for ln in text.splitlines() if re.search(rx, ln.strip())]
         ok = (rc == 0) if expect == "zero" else (rc != 0 and rc not in (-9, 127))
         if cid in ("kicad_erc", "mqtt_demo") and rc == 2:
             status = "NOT AVAILABLE"
         else:
             status = "PASS" if ok else "FAIL"
-        item = {"id": cid, "group": group, "command": " ".join(map(str, cmd)).replace(str(ROOT) + "/", ""),
+        item = {"id": cid, "group": group, "command": " ".join(map(str, cmd)).replace(PY, "python3").replace(str(ROOT) + "/", ""),
                 "expected": expect, "rc": rc, "status": status, "seconds": round(dt, 1), "summary": lines[-6:]}
         if cid == "arm_size":
             item["soft_double_calls_in_fast_step"] = soft_double_calls(ROOT / "build-arm" / "libsemmc_core.a")
