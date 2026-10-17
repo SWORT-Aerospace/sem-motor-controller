@@ -114,6 +114,20 @@ def test_node_wheel_speed_formula_staleness_and_unknown_configuration():
     assert unknown._message(1.05)["wheel"]["speed_mps"]["wheel_l"] is None
 
 
+def test_step_timing_tolerates_one_scheduling_stall_but_not_a_blocking_uplink():
+    from tools.run_mqtt_demo import step_timing
+    fine = [0.3] * 2000
+    stall = {"normal": fine, "after_pit": [0.3] * 499 + [110.0]}            # one stall, as on a shared runner
+    assert step_timing(stall)[0]
+    blocking = {"normal": fine, "broker_down": [0.1] * 100 + [55.0] * 400}  # every attempt waits on the network
+    assert not step_timing(blocking)[0]
+    slow = {"normal": fine, "pit_down": [6.0] * 500}                        # no step over the period, but p99 high
+    assert not step_timing(slow)[0]
+    repeated = {"normal": fine, "after_broker": [0.3] * 497 + [25.0] * 3}   # 3 of 500 over: more than 1 in 200
+    assert not step_timing(repeated)[0]
+    assert "after_pit 0.30/110.00 ms, 1 of 500 steps over the period" in step_timing(stall)[1]
+
+
 def test_every_receipt_is_recorded_with_its_outcome(tmp_path):
     db = ingest.connect(tmp_path / "p.sqlite")
     assert ingest.ingest_payload(db, 1.0, TOPIC, _msg(3))[0] == "stored"

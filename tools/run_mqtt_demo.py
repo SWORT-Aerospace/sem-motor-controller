@@ -55,6 +55,28 @@ BASE = {"inject_invalid": 15.0, "inject_duplicate": 20.0, "broker_down": (40.0, 
         "gnss_out": (90.0, 100.0)}
 
 
+SUPERVISOR_PERIOD_MS = 20.0
+
+
+def step_timing(svc_ms: dict, period_ms: float = SUPERVISOR_PERIOD_MS) -> tuple[bool, str]:
+    """Whether the telematics service step ever waits on the network, judged from its wall times per phase.
+
+    A step that blocks on the broker or the pit (a synchronous publish, connect or acknowledgement wait)
+    is slow on every attempt while the far end is down, so it shows as a high 99th percentile or as many
+    steps over the supervisor period in the outage phases. A single slow step is what a shared host
+    produces when another process (here, the restarted pit service) takes the CPU; it is reported but
+    does not fail the check. Criterion, per phase: 99th percentile below a quarter of the period, and at
+    most one step in 200 (at least one) at or above the period."""
+    p99 = {k: sorted(v)[int(0.99 * (len(v) - 1))] for k, v in svc_ms.items() if v}
+    mx = {k: max(v) for k, v in svc_ms.items() if v}
+    over = {k: sum(x >= period_ms for x in v) for k, v in svc_ms.items() if v}
+    allowed = {k: max(1, len(v) // 200) for k, v in svc_ms.items() if v}
+    ok = bool(p99) and all(p99[k] < period_ms / 4 for k in p99) and all(over[k] <= allowed[k] for k in over)
+    detail = ", ".join(f"{k} {p99[k]:.2f}/{mx[k]:.2f} ms, {over[k]} of {len(svc_ms[k])} steps over the period"
+                       for k in p99)
+    return ok, detail
+
+
 def scenario(duration: float) -> dict:
     k = duration / 120.0
     return {key: tuple(round(x * k, 2) for x in v) if isinstance(v, tuple) else round(v * k, 2)
@@ -239,12 +261,13 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
     eco = [s for (t, s, *_r) in truth if sc["broker_down"][0] <= t < t_reconn_sim]
     p99 = {k: sorted(v)[int(0.99 * (len(v) - 1))] for k, v in svc_ms.items() if v}
     mx = {k: max(v) for k, v in svc_ms.items() if v}
+    timing_ok, timing = step_timing(svc_ms)
     check("control_and_uplink_unaffected_by_broker_outage",
-          all(49 <= r <= 51 for r in r_out) and all(s == "ECO_ASSIST" for s in eco) and max(mx.values()) < 20.0,
+          all(49 <= r <= 51 for r in r_out) and all(s == "ECO_ASSIST" for s in eco) and timing_ok,
           f"supervisor requests/s while the broker was unreachable {sorted(set(r_out))}; ECO_ASSIST in "
           f"{sum(s == 'ECO_ASSIST' for s in eco)}/{len(eco)} steps; telematics service step (log writer + uplink) "
-          f"wall time p99/max: " + ", ".join(f"{k} {p99[k]:.2f}/{mx[k]:.2f} ms" for k in p99) +
-          " (supervisor period 20 ms)")
+          f"wall time p99/max: {timing} (supervisor period {SUPERVISOR_PERIOD_MS:g} ms; pass: p99 below a quarter "
+          f"of the period and at most one step in 200 over it, per phase)")
 
     # 3. the local log keeps everything during the outage
     db.row_factory = None

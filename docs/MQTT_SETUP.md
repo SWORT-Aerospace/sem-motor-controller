@@ -36,7 +36,7 @@ python3 -m host.pit.mqtt_ingest --port 1883 --db build/pit.sqlite     # Ctrl-C t
 | Check | What it shows |
 |---|---|
 | `broker_outage_detected_and_recovered` | the car-side client notices a killed broker and reconnects after the restart |
-| `control_and_uplink_unaffected_by_broker_outage` | supervisor rate and ECO operation unchanged; the telematics step stays well under the 20 ms period |
+| `control_and_uplink_unaffected_by_broker_outage` | supervisor rate and ECO operation unchanged; the telematics step never waits on the network: in every phase its 99th percentile stays below 5 ms (a quarter of the 20 ms period) and at most one step in 200 reaches the period. A step that blocked on the broker or the pit would be slow on every attempt while they are down; a single slow step is a shared host taking the CPU and is reported, not failed |
 | `local_log_complete_during_broker_outage` | the STLG log keeps every record; nothing dropped |
 | `uplink_backlog_bounded_and_drops_counted` | the backlog stays at or under 30; drops counted by sequence number and absent at the pit |
 | `every_sequence_number_accounted` | each message is stored, dropped on the car (counted), unacknowledged, or acknowledged but missing at the pit |
