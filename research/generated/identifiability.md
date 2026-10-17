@@ -20,15 +20,15 @@ All values are synthetic: noise-free separations d in noise standard deviations,
 
 | Quantity | d or smallest separable size |
 |---|---|
-| HB->H0 | 413 |
-| HB->HT | 413 |
-| HB->HL | 413 |
-| HT->H0 | 2458 |
-| HT->HB | 2456 |
-| HT->HL | 2458 |
-| HL->H0 | 77 |
-| HL->HB | 77 |
-| HL->HT | 77 |
+| HB->H0 | 402 |
+| HB->HT | 402 |
+| HB->HL | 402 |
+| HT->H0 | 2382 |
+| HT->HB | 2380 |
+| HT->HL | 2382 |
+| HL->H0 | 76 |
+| HL->HB | 76 |
+| HL->HT | 76 |
 
 **Case B.**
 
@@ -37,8 +37,8 @@ All values are synthetic: noise-free separations d in noise standard deviations,
 | cruise HT->H0 R1 at 2 Hz, size 0.4 s | 0 (round-off) |
 | cruise HT->H0 R1 at 10 Hz, size 0.4 s | 0 (round-off) |
 | cruise HT->H0 R1 at 100 Hz, size 0.4 s | 0 (round-off) |
-| ramp HB->H0 frames, size 0.2 A | 0.0193 |
-| ramp HB->H0 frames, size 0.8 A | 458 |
+| ramp HB->H0 frames, size 0.2 A | 0.0168 |
+| ramp HB->H0 frames, size 0.8 A | 363 |
 | cruise HL->HL_wind frames+IMU, 3 N | 0 (round-off) |
 | cruise HL_wind->HL frames+IMU, 3 m/s | 0 (round-off) |
 
@@ -46,10 +46,10 @@ All values are synthetic: noise-free separations d in noise standard deviations,
 
 | Quantity | d or smallest separable size |
 |---|---|
-| onset (ramp plus 5 s of buffered cruise) HB->H0 frames, 0.2 A | 163 |
-| pulse_coast (coast segment) HB->H0 frames, 0.2 A | 413 |
-| coast HL->H0 summary_2Hz, 3 N | 2.33 |
-| coast HL->H0 frames_100Hz, 3 N | 188 |
+| onset (ramp plus 5 s of buffered cruise) HB->H0 frames, 0.2 A | 155 |
+| pulse_coast (coast segment) HB->H0 frames, 0.2 A | 402 |
+| coast HL->H0 summary_2Hz, 3 N | 2.25 |
+| coast HL->H0 frames_100Hz, 3 N | 186 |
 
 **Case D.**
 
@@ -80,54 +80,54 @@ All values are synthetic: noise-free separations d in noise standard deviations,
 | cruise HL->HL_grade frames+IMU (uncertain IMU bias) | smallest size 12; d at nominal 0 (round-off) |
 | cruise HL_grade->HL frames+IMU (uncertain IMU bias) | smallest size 0.02; d at nominal 0 (round-off) |
 | coast HL->HL_grade frames+IMU (known IMU bias) | smallest size 3; d at nominal 15 |
-| coast HL_grade->HL frames+IMU (known IMU bias) | smallest size <= 0.0025; d at nominal 74.4 |
+| coast HL_grade->HL frames+IMU (known IMU bias) | smallest size <= 0.0025; d at nominal 74.3 |
 | coast HL->HL_grade frames+IMU (uncertain IMU bias) | smallest size 12; d at nominal 0 (round-off) |
 | coast HL_grade->HL frames+IMU (uncertain IMU bias) | smallest size 0.02; d at nominal 0 (round-off) |
 | cruise HB->HL, torque from bus current (dependent) | 0 (round-off) |
-| cruise HB->HL, torque from phase currents (independent) | 242 |
-| pulse_coast HB->HL, torque from bus current (dependent) | 413 |
-| pulse_coast HB->HL, torque from phase currents (independent) | 413 |
+| cruise HB->HL, torque from phase currents (independent) | 243 |
+| pulse_coast HB->HL, torque from bus current (dependent) | 402 |
+| pulse_coast HB->HL, torque from phase currents (independent) | 402 |
 
 ## Timing kinds on the power balance (R1 alone)
 
 | Condition | Rate [Hz] | True | Alternative | d |
 |---|---|---|---|---|
-| onset | 100 | delay(0.04 s) | lag | 137 |
-| onset | 100 | delay(0.04 s) | boxcar | 76.1 |
-| onset | 100 | lag(0.04 s) | delay | 120 |
-| onset | 100 | lag(0.04 s) | boxcar | 70.2 |
-| onset | 100 | boxcar(0.08 s) | delay | 76.8 |
-| onset | 100 | boxcar(0.08 s) | lag | 75.5 |
-| onset | 10 | delay(0.04 s) | lag | 6.39 |
-| onset | 10 | delay(0.04 s) | boxcar | 0.647 |
-| onset | 10 | lag(0.04 s) | delay | 6.39 |
-| onset | 10 | lag(0.04 s) | boxcar | 6.43 |
-| onset | 10 | boxcar(0.08 s) | delay | 1.73 |
-| onset | 10 | boxcar(0.08 s) | lag | 9.16 |
-| pulse_coast | 100 | delay(0.04 s) | lag | 222 |
-| pulse_coast | 100 | delay(0.04 s) | boxcar | 122 |
-| pulse_coast | 100 | lag(0.04 s) | delay | 196 |
-| pulse_coast | 100 | lag(0.04 s) | boxcar | 113 |
-| pulse_coast | 100 | boxcar(0.08 s) | delay | 124 |
-| pulse_coast | 100 | boxcar(0.08 s) | lag | 122 |
+| onset | 100 | delay(0.04 s) | lag | 124 |
+| onset | 100 | delay(0.04 s) | boxcar | 70.5 |
+| onset | 100 | lag(0.04 s) | delay | 119 |
+| onset | 100 | lag(0.04 s) | boxcar | 65 |
+| onset | 100 | boxcar(0.08 s) | delay | 74.9 |
+| onset | 100 | boxcar(0.08 s) | lag | 66.5 |
+| onset | 10 | delay(0.04 s) | lag | 0.717 |
+| onset | 10 | delay(0.04 s) | boxcar | 0 (round-off) |
+| onset | 10 | lag(0.04 s) | delay | 4.96 |
+| onset | 10 | lag(0.04 s) | boxcar | 1.68 |
+| onset | 10 | boxcar(0.08 s) | delay | 0.0233 |
+| onset | 10 | boxcar(0.08 s) | lag | 0.841 |
+| pulse_coast | 100 | delay(0.04 s) | lag | 200 |
+| pulse_coast | 100 | delay(0.04 s) | boxcar | 114 |
+| pulse_coast | 100 | lag(0.04 s) | delay | 191 |
+| pulse_coast | 100 | lag(0.04 s) | boxcar | 102 |
+| pulse_coast | 100 | boxcar(0.08 s) | delay | 122 |
+| pulse_coast | 100 | boxcar(0.08 s) | lag | 105 |
 | pulse_coast | 10 | delay(0.04 s) | lag | 5.08 |
 | pulse_coast | 10 | delay(0.04 s) | boxcar | 1.45 |
 | pulse_coast | 10 | lag(0.04 s) | delay | 9.14 |
 | pulse_coast | 10 | lag(0.04 s) | boxcar | 8.46 |
 | pulse_coast | 10 | boxcar(0.08 s) | delay | 6.04 |
 | pulse_coast | 10 | boxcar(0.08 s) | lag | 8.46 |
-| sine | 100 | delay(0.04 s) | lag | 1.51 |
-| sine | 100 | delay(0.04 s) | boxcar | 1.29 |
-| sine | 100 | lag(0.04 s) | delay | 1.51 |
-| sine | 100 | lag(0.04 s) | boxcar | 0.741 |
-| sine | 100 | boxcar(0.08 s) | delay | 1.29 |
-| sine | 100 | boxcar(0.08 s) | lag | 0.741 |
-| sine | 10 | delay(0.04 s) | lag | 0.388 |
-| sine | 10 | delay(0.04 s) | boxcar | 0.135 |
-| sine | 10 | lag(0.04 s) | delay | 0.388 |
-| sine | 10 | lag(0.04 s) | boxcar | 0.209 |
-| sine | 10 | boxcar(0.08 s) | delay | 0.135 |
-| sine | 10 | boxcar(0.08 s) | lag | 0.209 |
+| sine | 100 | delay(0.04 s) | lag | 1.12 |
+| sine | 100 | delay(0.04 s) | boxcar | 0.449 |
+| sine | 100 | lag(0.04 s) | delay | 1.12 |
+| sine | 100 | lag(0.04 s) | boxcar | 0.533 |
+| sine | 100 | boxcar(0.08 s) | delay | 0.449 |
+| sine | 100 | boxcar(0.08 s) | lag | 0.533 |
+| sine | 10 | delay(0.04 s) | lag | 0.356 |
+| sine | 10 | delay(0.04 s) | boxcar | 0.143 |
+| sine | 10 | lag(0.04 s) | delay | 0.356 |
+| sine | 10 | lag(0.04 s) | boxcar | 0.169 |
+| sine | 10 | boxcar(0.08 s) | delay | 0.143 |
+| sine | 10 | boxcar(0.08 s) | lag | 0.169 |
 
 ## Full matrix
 
@@ -135,45 +135,45 @@ Smallest size of the first hypothesis at which d >= 4 against the second ("fwd")
 
 | Pair | Condition | summary_2Hz known | summary_2Hz uncertain | frames_100Hz known | frames_100Hz uncertain | frames_imu known | frames_imu uncertain |
 |---|---|---|---|---|---|---|---|
-| HB-H0 | cruise | fwd 0.2 | fwd 0.4 | fwd 0.1 | fwd 0.4 | fwd 0.1 | fwd 0.4 |
+| HB-H0 | cruise | fwd 0.1 | fwd 0.4 | fwd 0.1 | fwd 0.4 | fwd 0.1 | fwd 0.4 |
 | HT-H0 | cruise | fwd no signature | fwd no signature | fwd no signature | fwd no signature | fwd no signature | fwd no signature |
 | HL-H0 | cruise | fwd 3 | fwd 12 | fwd 3 | fwd 12 | fwd 3 | fwd 12 |
-| HB-HT | cruise | fwd 0.2; rev no signature | fwd 0.4; rev no signature | fwd 0.1; rev no signature | fwd 0.4; rev no signature | fwd 0.1; rev no signature | fwd 0.4; rev no signature |
-| HB-HL | cruise | fwd 0.2; rev 3 | fwd 0.4; rev 12 | fwd 0.1; rev 3 | fwd 0.4; rev 12 | fwd 0.1; rev 3 | fwd 0.4; rev 12 |
+| HB-HT | cruise | fwd 0.1; rev no signature | fwd 0.4; rev no signature | fwd 0.1; rev no signature | fwd 0.4; rev no signature | fwd 0.1; rev no signature | fwd 0.4; rev no signature |
+| HB-HL | cruise | fwd 0.1; rev 3 | fwd 0.4; rev 12 | fwd 0.1; rev 3 | fwd 0.4; rev 12 | fwd 0.1; rev 3 | fwd 0.4; rev 12 |
 | HT-HL | cruise | fwd no signature; rev 3 | fwd no signature; rev 12 | fwd no signature; rev 3 | fwd no signature; rev 12 | fwd no signature; rev 3 | fwd no signature; rev 12 |
 | HL-HL_grade | cruise | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
 | HB-H0 | ramp | fwd no signature | fwd no signature | fwd 0.4 | fwd > 0.8 | fwd 0.4 | fwd > 0.8 |
-| HT-H0 | ramp | fwd no signature | fwd no signature | fwd 0.1 | fwd 0.2 | fwd 0.1 | fwd 0.2 |
+| HT-H0 | ramp | fwd no signature | fwd no signature | fwd 0.4 | fwd collinear | fwd 0.4 | fwd collinear |
 | HL-H0 | ramp | fwd 6 | fwd 12 | fwd 3 | fwd 12 | fwd 3 | fwd 12 |
-| HB-HT | ramp | fwd no signature; rev no signature | fwd no signature; rev no signature | fwd 0.4; rev 0.1 | fwd > 0.8; rev 0.2 | fwd 0.4; rev 0.1 | fwd > 0.8; rev 0.2 |
+| HB-HT | ramp | fwd no signature; rev no signature | fwd no signature; rev no signature | fwd 0.8; rev > 0.4 | fwd > 0.8; rev collinear | fwd 0.8; rev > 0.4 | fwd > 0.8; rev collinear |
 | HB-HL | ramp | fwd no signature; rev 6 | fwd no signature; rev 12 | fwd 0.4; rev 3 | fwd > 0.8; rev 12 | fwd 0.4; rev 3 | fwd > 0.8; rev 12 |
-| HT-HL | ramp | fwd no signature; rev 6 | fwd no signature; rev 12 | fwd 0.1; rev 3 | fwd 0.2; rev 12 | fwd 0.1; rev 3 | fwd 0.2; rev 12 |
+| HT-HL | ramp | fwd no signature; rev 6 | fwd no signature; rev 12 | fwd 0.4; rev 3 | fwd collinear; rev 12 | fwd 0.4; rev 3 | fwd collinear; rev 12 |
 | HL-HL_grade | ramp | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
-| HB-H0 | onset | fwd 0.1 | fwd 0.2 | fwd 0.1 | fwd 0.2 | fwd 0.1 | fwd 0.2 |
+| HB-H0 | onset | fwd 0.1 | fwd 0.4 | fwd 0.1 | fwd 0.2 | fwd 0.1 | fwd 0.2 |
 | HT-H0 | onset | fwd no signature | fwd no signature | fwd <= 0.025 | fwd 0.2 | fwd <= 0.025 | fwd 0.2 |
 | HL-H0 | onset | fwd 3 | fwd 12 | fwd 1.5 | fwd 12 | fwd 1.5 | fwd 12 |
-| HB-HT | onset | fwd 0.1; rev no signature | fwd 0.2; rev no signature | fwd 0.1; rev <= 0.025 | fwd 0.2; rev 0.2 | fwd 0.1; rev <= 0.025 | fwd 0.2; rev 0.2 |
-| HB-HL | onset | fwd 0.1; rev 3 | fwd 0.2; rev 12 | fwd 0.1; rev 1.5 | fwd 0.2; rev 12 | fwd 0.1; rev 1.5 | fwd 0.2; rev 12 |
+| HB-HT | onset | fwd 0.1; rev no signature | fwd 0.4; rev no signature | fwd 0.1; rev <= 0.025 | fwd 0.2; rev 0.2 | fwd 0.1; rev <= 0.025 | fwd 0.2; rev 0.2 |
+| HB-HL | onset | fwd 0.1; rev 3 | fwd 0.4; rev 12 | fwd 0.1; rev 1.5 | fwd 0.2; rev 12 | fwd 0.1; rev 1.5 | fwd 0.2; rev 12 |
 | HT-HL | onset | fwd no signature; rev 3 | fwd no signature; rev 12 | fwd <= 0.025; rev 1.5 | fwd 0.2; rev 12 | fwd <= 0.025; rev 1.5 | fwd 0.2; rev 12 |
-| HL-HL_grade | onset | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev > 0.04 | fwd 1.5; rev <= 0.0025 | fwd 12; rev 0.02 |
+| HL-HL_grade | onset | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd 1.5; rev <= 0.0025 | fwd 12; rev 0.02 |
 | HB-H0 | pulse_coast | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 |
 | HT-H0 | pulse_coast | fwd no signature | fwd no signature | fwd <= 0.025 | fwd 0.2 | fwd <= 0.025 | fwd 0.2 |
 | HL-H0 | pulse_coast | fwd 6 | fwd 12 | fwd 3 | fwd 12 | fwd 3 | fwd 12 |
 | HB-HT | pulse_coast | fwd <= 0.05; rev no signature | fwd <= 0.05; rev no signature | fwd <= 0.05; rev <= 0.025 | fwd <= 0.05; rev 0.2 | fwd <= 0.05; rev <= 0.025 | fwd <= 0.05; rev 0.2 |
 | HB-HL | pulse_coast | fwd <= 0.05; rev 6 | fwd <= 0.05; rev 12 | fwd <= 0.05; rev 3 | fwd <= 0.05; rev 12 | fwd <= 0.05; rev 3 | fwd <= 0.05; rev 12 |
 | HT-HL | pulse_coast | fwd no signature; rev 6 | fwd no signature; rev 12 | fwd <= 0.025; rev 3 | fwd 0.2; rev 12 | fwd <= 0.025; rev 3 | fwd 0.2; rev 12 |
-| HL-HL_grade | pulse_coast | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev > 0.04 | fwd collinear; rev collinear | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
+| HL-HL_grade | pulse_coast | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
 | HB-H0 | coast | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 | fwd <= 0.05 |
 | HT-H0 | coast | fwd no signature | fwd no signature | fwd no signature | fwd no signature | fwd no signature | fwd no signature |
 | HL-H0 | coast | fwd 6 | fwd 12 | fwd 3 | fwd 12 | fwd 3 | fwd 12 |
 | HB-HT | coast | fwd <= 0.05; rev no signature | fwd <= 0.05; rev no signature | fwd <= 0.05; rev no signature | fwd <= 0.05; rev no signature | fwd <= 0.05; rev no signature | fwd <= 0.05; rev no signature |
 | HB-HL | coast | fwd <= 0.05; rev 6 | fwd <= 0.05; rev 12 | fwd <= 0.05; rev 3 | fwd <= 0.05; rev 12 | fwd <= 0.05; rev 3 | fwd <= 0.05; rev 12 |
 | HT-HL | coast | fwd no signature; rev 6 | fwd no signature; rev 12 | fwd no signature; rev 3 | fwd no signature; rev 12 | fwd no signature; rev 3 | fwd no signature; rev 12 |
-| HL-HL_grade | coast | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev > 0.04 | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
+| HL-HL_grade | coast | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
 | HB-H0 | sine | fwd 0.2 | fwd 0.4 | fwd 0.1 | fwd 0.4 | fwd 0.1 | fwd 0.4 |
-| HT-H0 | sine | fwd 0.4 | fwd 0.4 | fwd <= 0.025 | fwd 0.2 | fwd <= 0.025 | fwd 0.2 |
+| HT-H0 | sine | fwd 0.4 | fwd > 0.4 | fwd <= 0.025 | fwd 0.2 | fwd <= 0.025 | fwd 0.2 |
 | HL-H0 | sine | fwd no signature | fwd no signature | fwd 3 | fwd 12 | fwd 3 | fwd 12 |
-| HB-HT | sine | fwd 0.2; rev 0.4 | fwd 0.4; rev 0.4 | fwd 0.1; rev <= 0.025 | fwd 0.4; rev 0.2 | fwd 0.1; rev <= 0.025 | fwd 0.4; rev 0.2 |
+| HB-HT | sine | fwd 0.2; rev 0.4 | fwd 0.4; rev > 0.4 | fwd 0.1; rev <= 0.025 | fwd 0.4; rev 0.2 | fwd 0.1; rev <= 0.025 | fwd 0.4; rev 0.2 |
 | HB-HL | sine | fwd 0.2; rev no signature | fwd 0.4; rev no signature | fwd 0.1; rev 3 | fwd 0.4; rev 12 | fwd 0.1; rev 3 | fwd 0.4; rev 12 |
-| HT-HL | sine | fwd 0.4; rev no signature | fwd 0.4; rev no signature | fwd <= 0.025; rev 3 | fwd 0.2; rev 12 | fwd <= 0.025; rev 3 | fwd 0.2; rev 12 |
-| HL-HL_grade | sine | fwd no signature; rev no signature | fwd no signature; rev no signature | fwd collinear; rev collinear | fwd collinear; rev > 0.04 | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |
+| HT-HL | sine | fwd 0.4; rev no signature | fwd > 0.4; rev no signature | fwd <= 0.025; rev 3 | fwd 0.2; rev 12 | fwd <= 0.025; rev 3 | fwd 0.2; rev 12 |
+| HL-HL_grade | sine | fwd no signature; rev no signature | fwd no signature; rev no signature | fwd collinear; rev collinear | fwd collinear; rev collinear | fwd 3; rev <= 0.0025 | fwd 12; rev 0.02 |

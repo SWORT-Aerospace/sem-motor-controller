@@ -31,6 +31,7 @@ R1 to R4 use records the telemetry chain defines today [F]. R5 needs the IMU of 
 | winding resistance ΔRs [Ω] | 1.5·iq² | | | | |
 | iron-loss coefficient (relative) | k_Fe·ω^1.5 | | | | |
 | switching loss per ampere | \|iq\| | | | | |
+| bus-meter gain (relative) | P_model (the modelled V·I) | | | | |
 | motor friction ΔT_f [N m] | ω | −G·η/r | | | −G·η/r (drive) |
 | torque constant (relative) | Kt·iq·ω | F_trac | | | F_trac |
 | rolling resistance ΔCrr | | m·g | | m·g | m·g |
@@ -109,9 +110,9 @@ Numbers from [`generated/identifiability.md`](generated/identifiability.md), at 
 
 | True | d against H0 | against HB | against HT | against HL |
 |---|---|---|---|---|
-| HB, 0.2 A | 413 | | 413 | 413 |
-| HT, 0.1 s | 2458 | 2456 | | 2458 |
-| HL, 3 N | 77 | 77 | 77 | |
+| HB, 0.2 A | 402 | | 402 | 402 |
+| HT, 0.1 s | 2382 | 2380 | | 2382 |
+| HL, 3 N | 76 | 76 | 76 | |
 
 The three faults leave their marks in different places: HB in R3 during the coast, HT in R1 at the two power edges, and HL in R2 and R4.
 
@@ -126,15 +127,15 @@ The three faults leave their marks in different places: HB in R3 during the coas
 | Window | d(HB → H0), 0.2 A |
 |---|---|
 | ramp alone (case B) | 0.02 |
-| ramp plus the 5 s of cruise before it, from the buffered pre-event window ("onset") | 163 |
-| a window with a coast segment ("pulse_coast") | 413 |
+| ramp plus the 5 s of cruise before it, from the buffered pre-event window ("onset") | 155 |
+| a window with a coast segment ("pulse_coast") | 402 |
 
 The same holds for an extra force during a coast:
 
 | Records | d(HL → H0), 3 N |
 |---|---|
-| 2 Hz summary wheel speeds | 2.33 |
-| full-rate wheel counts | 188 |
+| 2 Hz summary wheel speeds | 2.25 |
+| full-rate wheel counts | 186 |
 
 **D. A higher rate cannot resolve** [M]. Drag (12 N) against grade (0.04 rad) with R1 to R4, at 2 and 10 Hz (R4 cannot go faster: the wheel counts come in 0.1 s windows), and at 100 Hz without the wheel counts. Under cruise, pulse-and-coast and coast, d is 0 to round-off in both directions at every rate (P6). HT at steady power is the second example (case B).
 
@@ -147,7 +148,7 @@ The same holds for an extra force during a coast:
 
 These sizes are the same in cruise and in coast. The IMU is in the telemetry proposal but not built [F].
 
-The second example is the source of the torque estimate (P8). In cruise, d(HB → HL) is 242 with torque from the phase currents, and 0 to round-off with torque from the bus current. On a window with a coast it is 413 either way, because R3 does not depend on the torque source.
+The second example is the source of the torque estimate (P8). In cruise, d(HB → HL) is 243 with torque from the phase currents, and 0 to round-off with torque from the bus current. On a window with a coast it is 402 either way, because R3 does not depend on the torque source.
 
 ## 4. Timing phenomena
 
@@ -168,9 +169,9 @@ A stale sample cannot be found reliably by spotting an exactly repeated value [D
 
 | Edge or signal | Records | Delay against lag | Delay against averaging window | Lag against averaging window |
 |---|---|---|---|---|
-| torque step (onset, pulse edges) | 100 Hz | separable (d 120 to 222) | separable (76 to 124) | separable (70 to 122) |
-| torque step | 10 Hz | separable (5 to 9) | **not separable** at the onset (0.6 and 1.7); at the pulse in one direction only (1.4 and 6.0) | separable (6 to 9) |
-| 0.25 Hz power modulation (sine) | 100 Hz | not separable (1.5) | not separable (1.3) | not separable (0.7) |
+| torque step (onset, pulse edges) | 100 Hz | separable (d 119 to 200) | separable (70 to 122) | separable (65 to 105) |
+| torque step | 10 Hz | at the onset in one direction only (0.7 and 5.0); separable at the pulse (5.1 and 9.1) | **not separable** at the onset (0 and 0.02); at the pulse in one direction only (1.4 and 6.0) | **not separable** at the onset (0.8 and 1.7); separable at the pulse (8.5) |
+| 0.25 Hz power modulation (sine) | 100 Hz | not separable (1.1) | not separable (0.45) | not separable (0.53) |
 
 Each cell gives the range of d over both directions of the pair. True values: 0.04 s delay, 0.04 s first-order time constant, 0.08 s averaging window. Full table in the generated file.
 
@@ -183,19 +184,19 @@ Each row is backed by the generated full matrix ([`generated/identifiability.md`
 | Hypothesis pair | Operating condition | Required evidence | Available action | Expected outcome | Assumptions |
 |---|---|---|---|---|---|
 | HB against H0, HT and HL | coast with the gates off | R3: bus current while the inverter draws nothing; the live summary's mean power suffices | if the buffer holds no coast: wait for an informative condition (the next coast) | separable at 0.05 A or less, at both nuisance levels | zero offset within 5 mA (known) or 30 mA (uncertain); true inverter input 0 with the gates off |
-| HB against H0 | steady low power (40 W cruise) | R1 | none beyond the summary | 0.2 A on the summary, 0.1 A with full-rate frames; 0.4 A with uncertain loss model | loss model within the stated bounds (P2) |
+| HB against H0 | steady low power (40 W cruise) | R1 | none beyond the summary | 0.1 A on the summary and with full-rate frames; 0.4 A with uncertain loss model | loss model within the stated bounds (P2) |
 | HB against H0 | acceleration at 300 to 750 W | R1 alone separates only 0.4 A or more (more than 0.8 A with uncertain nuisance); the summary has no usable sample | retrieve the buffered pre-event window that includes steady driving (0.1 A), or wait for a coast | unresolved on the acceleration window alone; resolved with the buffer or the coast | as above |
 | HT against any | steady power (cruise, coast) | none: HT leaves no signature (P1) | wait for a power transient | not observable at any rate; harmless to energy totals | none |
 | HT against H0 and HB | torque step (onset, pulse edges) | R1 at 100 Hz across the edge | retrieve the buffered window around the edge, or capture a bounded future window at the next edge | separable at 0.025 s or less with the 5 ms timing bound | records stamped by one clock; the bound holds (section 4) |
 | HT against H0 | torque step, timing known only to 100 ms (records from different devices, or the summary) | as above, plus a smaller timing bound | retrieve clock-synchronisation metadata (stamp clock, UTC mapping and its error), which reduces the bound to 5 ms where it applies | separable from 0.2 s with the 100 ms bound; 0.025 s or less once the bound is 5 ms | metadata bounds the relative timing |
 | HT against any | any condition, live summary only | none: R1 on the summary is usable only on steady intervals | export the controller frames at full rate (less decimation) | not observable from the summary | the summary pairs a 0.5 s mean with an instantaneous iq [F] |
 | HL against H0, HB and HT | cruise | R2; the summary suffices | none | 3 N known, 12 N uncertain | rolling resistance, drag area, torque constant and mass within bounds |
-| HL against H0 | coast | R4 from full-rate wheel counts | export the wheel-count records | 3 N with counts; 6 N on the summary (d = 2.3 at 3 N) | provisional 32 pulses per revolution and 1.5 m circumference |
+| HL against H0 | coast | R4 from full-rate wheel counts | export the wheel-count records | 3 N with counts; 6 N on the summary (d = 2.25 at 3 N) | provisional 32 pulses per revolution and 1.5 m circumference |
 | HL against H0 | acceleration | R2 together with R1 (R1 constrains the torque constant shared with R2) | retrieve the buffered window at full rate | 3 N with frames; 6 N on the summary | torque constant shared between R1 and R2 |
 | HL drag against HL grade | any | a measurement in which grade and drag enter differently: the IMU's specific force (R5) | export the IMU records (needs the IMU, not built) | without the IMU: collinear at every rate. With it: 3 N or 0.0025 rad (calibrated mounting); 12 N or 0.02 rad (uncalibrated) | IMU mounting calibrated; IMU on the telemetry unit's clock |
 | HL drag against HL headwind | any | an air-speed measurement; none in the design | none: report HL as one class | collinear at constant speed, IMU included | none |
 | HB against HL, torque computed from bus current | steady drive | a coast segment (R3), or torque from the phase currents | wait for a coast | collinear in steady drive; separable with a coast | the dependency of P8 |
-| Delay against lag against averaging window (kinds of HT) | sharp torque edge | R1 at 100 Hz | retrieve the buffered window at full rate | separable at 100 Hz; delay against averaging window not at 10 Hz; none on smooth signals | as section 4 |
+| Delay against lag against averaging window (kinds of HT) | sharp torque edge | R1 at 100 Hz | retrieve the buffered window at full rate | separable at 100 Hz; at 10 Hz not at the onset, and delay against averaging window in one direction only at the pulse; none on smooth signals | as section 4 |
 
 ## 6. Gate decision
 
