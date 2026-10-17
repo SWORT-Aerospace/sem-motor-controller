@@ -319,7 +319,7 @@ Paths are relative to the repository root. Every parameter set in this directory
 
 | File | Role in the system |
 |---|---|
-| `hardware/acceptance/procedures.yaml` | Hand-maintained source of the physical acceptance stages S0 to S9: steps, units, limits with their sources (or the reason a limit is pending), stop conditions, equipment and evidence; `tools/acceptance.py` renders `docs/BENCH_ACCEPTANCE.md` and checks returned records against it. |
+| `hardware/acceptance/procedures.yaml` | Hand-maintained source of the physical acceptance stages S0 to S10: steps, units, limits with their sources (or the reason a limit is pending), stop conditions, equipment and evidence; `tools/acceptance.py` renders `docs/BENCH_ACCEPTANCE.md` and checks returned records against it. |
 
 ### `hardware/calculations/`
 

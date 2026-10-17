@@ -4,11 +4,15 @@ Electronics and software for our Shell Eco-marathon battery-electric vehicle: a 
 
 **New to the project?** Read section A, pick an open task in [H. Priorities](#h-priorities), and start from the folder guide named for it in [G. Where to work](#g-where-to-work). Team workflow and review rules: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-**Project status.** Each part of the system has one of three statuses:
+**Project status (v0.6).** The vehicle package is tracked as three separate milestones; a reviewed design is not a tested board.
 
-* **Host**: implemented and tested on a computer (the C controller core against a simulated motor and vehicle, the Python models, a real local MQTT broker), checked on every push by GitHub Actions.
-* **Proposed**: designed or specified for the vehicle but not built. The embedded firmware for both microcontrollers is not written; the controller schematic is a draft without layout.
-* **Physically tested**: nothing yet. No board exists, nothing has been energised, and no vehicle data has been recorded.
+| Milestone | Status |
+|---|---|
+| 1. Engineering design ready for review | **Reviewable, with open items.** The schematic is reviewed topic by topic ([`hardware/review/DESIGN_REVIEW.md`](hardware/review/DESIGN_REVIEW.md)); KiCad ERC 0 errors, 0 warnings; the vehicle interfaces are specified as confirmed, proposed or unknown ([`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md)). Ratings that depend on the battery, motor and harness stay open ([`docs/BLOCKERS.md`](docs/BLOCKERS.md)). |
+| 2. Fabrication-ready hardware and buildable target firmware | **Firmware builds; hardware is not fabrication-ready.** The STM32G474 image links in every CI run with the power stage inhibited (the gate-driver and battery-meter drivers wait for their datasheets). No footprints or layout: the release gate fails ([`docs/generated/release_gate.md`](docs/generated/release_gate.md)). |
+| 3. Bench-validated integrated hardware | **Not started.** No board exists. The staged acceptance procedures and the result checker are ready ([`docs/BENCH_ACCEPTANCE.md`](docs/BENCH_ACCEPTANCE.md)). |
+
+Elsewhere in this README, **Host** means implemented and tested on a computer (the C core against a simulated motor and vehicle, the Python models, a real local MQTT broker) on every push; **Proposed** means designed or specified but not built; **Physically tested** is still nothing: nothing has been energised and no vehicle data has been recorded. What the team must send next: [`docs/BLOCKERS.md`](docs/BLOCKERS.md#what-the-team-must-send-next).
 
 Contents: [A. What we are building](#a-what-we-are-building) · [B. Diagrams](#b-diagrams) · [C. Operating sequence](#c-operating-sequence) · [D. Mathematics](#d-mathematics) · [E. Budget](#e-budget) · [F. Quick start](#f-quick-start) · [G. Where to work](#g-where-to-work) · [H. Priorities](#h-priorities) · [Documentation](#documentation)
 
@@ -23,11 +27,11 @@ The vehicle is driven by a person at all times. The electronics support four use
 
 | Part | What it does | Host | Proposed | Physically tested |
 |---|---|---|---|---|
-| Controller core | state machine, torque arbitration, FOC current loop, protection, energy integration, CAN | yes: [`firmware/`](firmware/README.md) against a simulated plant; also compiles for Cortex-M4F | STM32G474 platform layer (ADC, PWM, timers, CAN driver, precharge) not written | no |
-| Controller hardware | power input, precharge, DC link, bridge, gate driver, current and bus sensing, MCU, CAN | connectivity and consistency checks of the draft | draft schematic, 12 sheets, no footprints or layout ([`hardware/`](hardware/README.md)) | no |
+| Controller firmware | state machine, torque arbitration, FOC current loop, protection, energy integration, CAN; STM32G474 platform (clock, PWM and break inputs, ADC, hall capture, CAN, watchdogs, precharge sequencing) | yes: [`firmware/`](firmware/README.md) against a simulated plant; the target image links and is checked in CI ([`firmware/platform/stm32g4/README.md`](firmware/platform/stm32g4/README.md)) | gate-driver configuration and battery meter not written (datasheets); power stage inhibited | no |
+| Controller hardware | power input, precharge, DC link, bridge, gate driver, current and bus sensing, MCU, CAN | connectivity, pin-type and consistency checks; KiCad ERC 0 errors, 0 warnings | draft schematic, 12 sheets, design-reviewed; no footprints or layout ([`hardware/`](hardware/README.md), [`hardware/layout/PRE_LAYOUT.md`](hardware/layout/PRE_LAYOUT.md)) | no |
 | Driver inputs | throttle (two tracks), brake, ECO cancel, mode, arm, fault reset, dead-man, safety-loop sense | simulated in host runs | connector J1001 in the draft; pinout unresolved | no |
 | Telemetry unit | CAN receive, sensors, time alignment, log, uplink, ECO supervisor | node model ([`host/telematics/`](host/README.md)) | STM32U575 board from the team's proposal; firmware not written ([`docs/TELEMETRY_EMBEDDED_PORT.md`](docs/TELEMETRY_EMBEDDED_PORT.md)) | no |
-| Sensors | wheel pulses, GNSS with PPS, IMU; slow temperatures | wheel, GNSS, PPS and IMU models; temperatures not modelled (excluded for now) | candidate parts researched ([`docs/TELEMETRY_CANDIDATES.md`](docs/TELEMETRY_CANDIDATES.md)) | no |
+| Sensors | wheel pulses, GNSS with PPS, IMU; slow temperatures | wheel, GNSS, PPS, IMU and temperature-probe models; temperatures logged (STLG `TEMP`) and in the live summary | candidate parts researched ([`docs/TELEMETRY_CANDIDATES.md`](docs/TELEMETRY_CANDIDATES.md)) | no |
 | Local log | STLG block log with CRC and sequence numbers | writer, reader and import | 8 MB flash in the proposal, microSD recommended | no |
 | LTE/MQTT | QoS 1 summary, bounded backlog, counted drops | real Mosquitto broker on loopback, outage and restart tested ([`docs/MQTT_SETUP.md`](docs/MQTT_SETUP.md)) | A7672 modem, operator and broker hosting undecided | no |
 | Pit tools | validation, SQLite storage, log import, energy per distance, shadow replay | yes ([`host/pit/`](host/README.md), [`tools/run_pit_replay.py`](tools/run_pit_replay.py)) | runs on a pit laptop | no vehicle data yet |
@@ -62,7 +66,7 @@ flowchart LR
     WS["Wheel Hall sensors"]
     GNSS["GNSS + PPS"]
     IMU["IMU"]
-    TS["Temperature probes<br/>(excluded for now)"]
+    TS["Temperature probes<br/>(proposed placements)"]
     DISP["Driver display"]
     LTE["LTE modem"]
   end
@@ -177,7 +181,7 @@ flowchart TB
 |---|---|---|---|---|---|
 | 1 | driver controls → controller | command | throttle (2 tracks), brake, cancel, mode, arm, fault reset, dead-man | sheet 10 ([`hardware/README.md`](hardware/README.md#3-schematic-sheets)); `mc_driver_inputs_t` in [`firmware/README.md`](firmware/README.md#5-inputs-and-outputs-of-the-core) | in draft; J1001 pinout unresolved |
 | 2 | safety loop (emergency stop, dead-man contact) → independent protection | command | loop energised → `HW_PERMIT` via optocoupler | sheet 10, sheet 04 AND gate | in draft; loop voltage unresolved |
-| 3 | controller → power stage | command | 6 PWM, `MCU_DRV_EN` | sheets 04, 08 | in draft; gate-driver pins are placeholders |
+| 3 | controller → power stage | command | 6 PWM, `MCU_DRV_EN` | sheets 04, 08; `firmware/platform/stm32g4/src/pwm.c` | in draft and target firmware; gate-driver pins are placeholders until the DRV8353 datasheet is read |
 | 4 | independent protection → power stage | command | `BRK2_N` (bus over-voltage) to TIM1_BKIN2, nFAULT to TIM1_BKIN, watchdog and `HW_PERMIT` to driver ENABLE | sheets 02, 04, 08; [`hardware/protection/SHUTDOWN_TRUTH_TABLE.md`](hardware/protection/SHUTDOWN_TRUTH_TABLE.md) | in draft; no independent over-current comparator |
 | 5 | power stage → motor | power | three phases | sheet 03 (J301) | in draft; connector unresolved |
 | 6 | motor Halls → controller | measurement | 3 Hall lines, 5 V or 3.3 V supply | sheet 09 (J901); `mc_hall.c` | in draft; Hall output type unknown |
@@ -188,7 +192,7 @@ flowchart TB
 | 11 | wheel sensors → telemetry unit | measurement | pulses counted per 100 ms window | [`host/telematics/sensors.py`](host/telematics/sensors.py); [`docs/generated/wheel_sensor_check.md`](docs/generated/wheel_sensor_check.md) | host model; sensor and magnets not selected |
 | 12 | GNSS → telemetry unit | measurement | UART fix and speed, PPS edges | `sensors.py`, `clocks.py`; NEO-M9N candidate | host model; proposal |
 | 13 | IMU → telemetry unit | measurement | acceleration, yaw rate | `sensors.py`; LSM6DSV or ISM330DHCX candidates | host model; proposal |
-| 14 | temperature probes → telemetry unit | measurement | slow temperatures | DS18B20 candidate | proposal; no log record type, excluded from the first milestones |
+| 14 | temperature probes → telemetry unit | measurement | slow temperatures | DS18B20 candidate; STLG `TEMP` record ([`docs/ICD.md`](docs/ICD.md) 8) | host model; probe part and placements proposed |
 | 15 | telemetry MCU → local storage | data | STLG blocks | [`host/telematics/stlg.py`](host/telematics/stlg.py) | host code; storage hardware proposed |
 | 16 | telemetry MCU → display | data | speed, mode, advisories | none | unresolved: display not chosen |
 | 17 | telemetry MCU → LTE modem | data | 2 Hz summary | `node.py`, `mqtt_link.py`; A7672 UART at 1.8 V needs a level translator | host code; modem proposed |
@@ -204,9 +208,9 @@ The steps follow the controller's state machine (`firmware/src/state_machine/mc_
 
 | Step | What happens | State and transition | Status |
 |---|---|---|---|
-| 1. Power-up | Emergency isolation closed; the logic rails start from `VBAT_PROT` before the precharge, so the MCU runs while the DC link charges. The core parses and validates the calibration blob; a rejected blob latches `CONFIG_INVALID`, which no reset clears. | `BOOT` → `SELF_TEST` (T1) or `FAULT_LATCHED` (T2) | calibration check: host. Rails and precharge: proposed (schematic; precharge control not written) |
+| 1. Power-up | Emergency isolation closed; the logic rails start from `VBAT_PROT` before the precharge, so the MCU runs while the DC link charges. The core parses and validates the calibration blob; a rejected blob latches `CONFIG_INVALID`, which no reset clears. | `BOOT` → `SELF_TEST` (T1) or `FAULT_LATCHED` (T2) | calibration check: host and target image. Rails: proposed (schematic) |
 | 2. Self-test | At least 50 ms: gate driver ready, no gate-driver or watchdog fault, current offsets, bus voltage in range, Hall sector known, both temperatures usable. | `SELF_TEST` → `DISARMED` (T3) or `FAULT_LATCHED` (T4) | host |
-| 3. Precharge | The bypass FET closes only after the DC link reaches 0.95 x battery voltage. | (platform layer, below the state machine) | proposed: no code yet |
+| 3. Precharge | The bypass FET closes only after the link voltage reaches the calibrated fraction of the battery-side voltage, within a timeout; a link that falls back afterwards is a fault. | (platform layer, below the state machine; `firmware/include/semmc/mc_precharge.h`) | sequencing: host tests and target image. On the target it never closes yet: the battery side is read by the INA228, whose driver waits for its datasheet |
 | 4. Arming | Arm switch OFF to ON with the throttle released, safety loop closed, no fault, output permitted. A switch held ON through a reset gives no edge. | `DISARMED` → `READY` (T5) | host |
 | 5. Manual driving | Mode MANUAL and throttle pressed past the engage threshold. Torque = throttle x manual limit, inside the hard ceiling. Brake or driver absent gives zero torque in the same step. | `READY` → `MANUAL` (T6); `DERATED` while temperature or voltage derates (T12, T13) | host |
 | 6. Assisted operation | Driver selects ECO (a new switch edge is needed every time), with the throttle released and the supervisor session healthy. Supervisor requests are bounded by the hard ceiling and its own envelope. Brake, cancel, ECO deselect, supervisor timeout or driver input end it; resuming needs a new ECO edge. | `READY`/`MANUAL` → `ECO_ASSIST` (T7); exits T8 to T12, T18; driver takeover T11 | host; supervisor timing provisional |
@@ -310,59 +314,7 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 | Full scope | owned | 312 to 834 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
 | Full scope | bought | 416 to 1,198 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
 
-**Lines**
-
-| Item | Purpose | Qty | Unit cost (USD) | Total (USD) | Status |
-|---|---|---|---|---|---|
-| **Motor controller (board parts, heatsink, enclosure)** | | | | | |
-| Controller board parts, one board | Every component on the draft motor-controller schematic (100 BOM lines) | 1 set | est. 89 to 239 | est. 89 to 239 | Blocked |
-| Thermal interface, heatsink plate and fasteners | Carries the power-stage losses away from the MOSFETs | 1 set | est. 10 to 35 | est. 10 to 35 | Blocked |
-| Controller enclosure and mounting | Holds and protects the controller in the vehicle | 1 set | est. 10 to 30 | est. 10 to 30 | Blocked |
-| **Telemetry and sensors** | | | | | |
-| Wheel-speed Hall sensor | Wheel pulses for vehicle speed and distance | TBD | TBD | TBD | Blocked |
-| Wheel magnets and mounting hardware | Targets for the wheel-speed sensor | TBD | TBD | TBD | Blocked |
-| 6-axis IMU | Longitudinal acceleration and yaw rate for analysis (not control) | 1 | TBD | TBD | Candidate |
-| Temperature sensors/probes | Slow temperatures for logging (battery surface, motor case, ambient) | TBD | TBD | TBD | Candidate |
-| GNSS receiver/module, if not included in the PCB assembly | Position, speed and the PPS time reference | 1 | TBD | TBD | Blocked |
-| Active GNSS antenna | Sky view for the GNSS receiver | 1 | TBD | TBD | Blocked |
-| LTE modem, if not included in the PCB assembly | Live summary to the pit over MQTT | 1 | TBD | TBD | Blocked |
-| LTE antenna | Cellular link for the modem | 1 | TBD | TBD | Blocked |
-| Local log storage (microSD card and socket), if not included in the PCB assembly | The complete on-vehicle record (STLG log) | 1 | TBD | TBD | Candidate |
-| CAN transceiver/interface, if not included in the PCB assembly | Connects the telemetry unit to the vehicle CAN bus | 1 | TBD | TBD | Blocked |
-| Driver display | Shows the driver speed, mode and advisories | 1 | TBD | TBD | Blocked |
-| Optional steering-angle sensor | Steering angle for analysis | 1 | TBD | TBD | Blocked |
-| **Shared power, connectors and wiring** | | | | | |
-| Battery and motor mating connectors | High-current connections between battery, controller and motor | 1 set | est. 5 to 15 | est. 5 to 15 | Blocked |
-| Controller signal connectors and crimp terminals | Driver controls, Hall, CAN and temperature connections at the controller | 1 set | est. 10 to 30 | est. 10 to 30 | Blocked |
-| Wire, heat-shrink and sleeving | Power wiring (10-12 AWG), signal multicore and CAN twisted pair | 1 set | est. 25 to 60 | est. 25 to 60 | Blocked |
-| Telemetry harness (sensor cables and connectors) | Wheel, temperature, GNSS and LTE antenna, display and CAN cables to the telemetry unit | TBD | TBD | TBD | Blocked |
-| Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly | Regulated low voltage from the propulsion battery for the telemetry unit, sensors and modem | 1 | TBD | TBD | Blocked |
-| **Fabrication and assembly** | | | | | |
-| Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper) | Bare boards for the motor controller | 1 order | est. 40 to 120 | est. 40 to 120 | Blocked |
-| Solder-paste stencil | Hand assembly of the fine-pitch parts | 1 order | est. 8 to 25 | est. 8 to 25 | Blocked |
-| Assembly consumables (paste, flux, wick) | Board assembly | 1 set | est. 10 to 25 | est. 10 to 25 | Candidate |
-| Controller PCB assembly service (alternative to hand assembly) (optional) | Machine placement and reflow of the controller board by the fabricator | 1 order | TBD | TBD | Blocked |
-| Telematics PCB fabrication and assembly | The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal) | TBD | TBD | TBD | Blocked |
-| **Shipping and tax** | | | | | |
-| Controller PCB shipping | Delivery of the boards | 1 order | est. 20 to 45 | est. 20 to 45 | Blocked |
-| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 78 | est. 12 to 78 | Blocked |
-| Shipping and tax on the telemetry lines | Delivery and import tax | TBD | TBD | TBD | Blocked |
-| **Spares and another board revision** | | | | | |
-| Spare parts for bring-up | Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU) | 1 set | est. 58 to 93 | est. 58 to 93 | Blocked |
-| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 250 | est. 90 to 250 | Candidate |
-| **Development equipment** | | | | | |
-| NUCLEO-U575ZI-Q development board | Bench development of the telemetry firmware before the telematics board exists | 1 | TBD | TBD | Candidate |
-| Bench dummy load, power resistors and bench harness | Loads the controller's supply stages on the bench before a motor is connected | 1 set | est. 15 to 40 | est. 15 to 40 | Blocked |
-| SWD programmer, only if not owned | Flashing and debugging both MCUs | 1 | est. 14 to 44 | est. 14 to 44 | Candidate |
-| USB-CAN adapter, only if not owned | Bench CAN with a simulated controller or BMS (stage 3 of the implementation plan) | 1 | est. 30 to 60 | est. 30 to 60 | Candidate |
-| Current-limited bench supply, only if not owned | Powers the controller during staged bring-up with a current limit | 1 | est. 60 to 200 | est. 60 to 200 | Blocked |
-| Oscilloscope (100 MHz or more, 4 channels) and differential probe | Switch-node, gate and timing measurements during bring-up | 1 | not budgeted | not budgeted | Blocked |
-| Bench multimeters and clamp meter, only if not owned | Voltage, current and continuity checks | 1 | est. 0 to 60 | est. 0 to 60 | Candidate |
-| **Recurring connectivity** | | | | | |
-| SIM card and data plan | Mobile data for the live summary at the event and in testing | 1 | TBD | TBD | Blocked |
-| Internet-reachable MQTT broker | The point the modem publishes to and the pit subscribes from | 1 | TBD | TBD | Blocked |
-| **Contingency** | | | | | |
-| Contingency | Price changes, breakage and missed items | TBD | TBD | TBD | Blocked |
+Every line with its requirement, candidate, cost source and blocker: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md#lines).
 <!-- procurement-table:end -->
 
 ## F. Quick start
@@ -379,6 +331,14 @@ python3 tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-00
 python3 tools/run_mqtt_demo.py --out build/mqtt_demo
 ```
 
+The STM32G474 image (needs `arm-none-eabi-gcc`; flashing and the bench reader: [`firmware/platform/stm32g4/FLASHING.md`](firmware/platform/stm32g4/FLASHING.md)):
+
+```sh
+cmake -S firmware -B build-g4 -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake \
+      -DSEMMC_TARGET_STM32G474=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
+cmake --build build-g4
+```
+
 | Command | Writes | Demonstrates | Does not demonstrate |
 |---|---|---|---|
 | `pip install`, `fetch_csia.py` | `.venv/`, `.deps/` (pinned CSIA core, checked against its lock file) | pinned dependencies resolve | anything about the vehicle |
@@ -387,6 +347,7 @@ python3 tools/run_mqtt_demo.py --out build/mqtt_demo
 | `run_host_demo.py` | `build/host_demo/`: `summary.md`, controller trace, STLG log, `pit.sqlite` | the full chain on simulated data: controller core, telemetry node, local log, uplink, pit import, CSIA replay; 11 checks | real sensors, a real CAN bus or a real radio link |
 | `run_pit_replay.py` | `build/pit_replay/`: `report.md`, `report.json`, `timeline.csv`, `energy.json` | R3v and CSIA2 in shadow mode on a pit database, with the data class and the missing evidence listed; energy per distance per wheel channel | any accuracy on vehicle data: the parameters are the frozen synthetic ones |
 | `run_mqtt_demo.py` | `build/mqtt_demo/`: `summary.md`, broker and pit logs | a real Mosquitto broker: broker crash, pit restart, malformed and duplicate messages, GNSS outage; 12 checks | LTE coverage, the modem's MQTT client or a hosted broker |
+| target image build | `build-g4/`: `semmc_stm32g474.elf`, `.bin`, `.hex`, `.map`; `semmc_stm32g474_pwmtest.elf` (bench PWM image, gate driver held disabled) | the firmware compiles and links for the STM32G474 | anything on a board: not flashed or run |
 
 Every check in one command, with a written record: `python3 tools/verify_all.py --out build/verify`. Longer procedures (cross-compiling, KiCad checks, regenerating files, adding a check): [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
@@ -395,7 +356,10 @@ Every check in one command, with a written record: `python3 tools/verify_all.py 
 | Task | Start here | Expected output |
 |---|---|---|
 | Change controller behaviour (states, limits, protection) | [`firmware/README.md`](firmware/README.md), [`docs/CONTROL_CONTRACT.md`](docs/CONTROL_CONTRACT.md) | passing `ctest`; updated contract and tests |
-| Write the STM32G474 platform layer | [`firmware/platform/stm32g4/README.md`](firmware/platform/stm32g4/README.md) | platform code behind the five core entry points; bench evidence per [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) stage 5 |
+| STM32G474 firmware (gate driver and battery meter once their datasheets arrive; flashing a board) | [`firmware/platform/stm32g4/README.md`](firmware/platform/stm32g4/README.md), [`firmware/platform/stm32g4/FLASHING.md`](firmware/platform/stm32g4/FLASHING.md) | the DRV8353 and INA228 drivers with host tests; bench records per [`docs/BENCH_ACCEPTANCE.md`](docs/BENCH_ACCEPTANCE.md) |
+| Physical acceptance tests | [`docs/BENCH_ACCEPTANCE.md`](docs/BENCH_ACCEPTANCE.md), [`hardware/acceptance/procedures.yaml`](hardware/acceptance/procedures.yaml) | records written with `tools/acceptance.py template` and accepted by `tools/acceptance.py check` |
+| Blockers and team inputs | [`docs/BLOCKERS.md`](docs/BLOCKERS.md), [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md) | answers committed under `docs/reference/` or attached to an issue; the register entry closed with its evidence |
+| PCB layout (once the outline, connectors and ratings are known) | [`hardware/layout/PRE_LAYOUT.md`](hardware/layout/PRE_LAYOUT.md) | a layout that passes `tools/release_gate.py` |
 | Add or change a CAN message | [`protocol/README.md`](protocol/README.md), [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md#6-changing-an-interface) | edited `protocol.yaml`, regenerated codecs and golden vectors, updated ICD |
 | Enter vehicle, motor or battery data | [`config/README.md`](config/README.md), [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md) | a vehicle configuration that passes `tools/config_tool.py` validation, with sources |
 | Schematic and part selection | [`hardware/README.md`](hardware/README.md), [`hardware/selection/DATASHEET_REGISTER.md`](hardware/selection/DATASHEET_REGISTER.md) | regenerated schematic, connectivity and consistency checks, filled datasheet rows |
@@ -411,28 +375,33 @@ All files by folder: [`docs/FILE_INDEX.md`](docs/FILE_INDEX.md).
 
 ## H. Priorities
 
-Nobody is assigned yet; each row is open for a volunteer. The order follows what blocks the most work ([`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)).
+Nobody is assigned yet; each row is open for a volunteer. Rows 1 to 7 are the external inputs of the register, ordered by how much work each unlocks ([`docs/BLOCKERS.md`](docs/BLOCKERS.md), questionnaire [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md)); rows 8 to 12 can start now.
 
 | # | Task | Person responsible | Dependency / required input | Completion evidence |
 |---|---|---|---|---|
-| 1 | Battery and BMS documents | Unassigned | battery and BMS model numbers, label photos, datasheets: maximum and minimum voltage, discharge and regenerative current, BMS cut-off thresholds, BMS data interface | [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md) items filled with document references; [`docs/BATTERY.md`](docs/BATTERY.md) updated |
-| 2 | Motor data | Unassigned | motor model and datasheet: type and back-EMF shape, pole pairs, resistance, flux linkage or K_v, Hall placement and output type, temperature sensor type | input sheet items 1 to 3 with sources; `config/` values marked measured or datasheet |
-| 3 | Confirm the event and its rules | Unassigned | event name, season and country; the governing Chapter I edition (2026 read from a third-party copy; a 2027 edition is listed on the organisers' site but has not been read yet) | [`docs/RULES_COMPLIANCE.md`](docs/RULES_COMPLIANCE.md) updated against that edition |
-| 4 | Vehicle CAN bus | Unassigned | other nodes, classic CAN or CAN FD, bit rate, termination positions | input sheet item 5; [`docs/ICD.md`](docs/ICD.md) section 2 |
-| 5 | Connectors and harness | Unassigned | connector families and pinouts for J101, J301, J701, J901, J1001, J1101 and the telemetry unit | ICD section 11 completed; [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) rows moved to confirmed |
-| 6 | Telematics board files | Unassigned | `bk4000tg_kicad.zip`, `telemetry.pdf`; how the board is powered without an accessory battery (Article 57b) | files in the repository; procurement lines resolved |
-| 7 | Wheel geometry | Unassigned | maximum speed, wheel circumference, magnet count and air gap, instrumented wheels | a selected continuous Hall sensor; `wheel_sensor_check.md` regenerated with real values |
-| 8 | Primary datasheets | Unassigned | datasheet access for the parts in the register | rows of [`hardware/selection/DATASHEET_REGISTER.md`](hardware/selection/DATASHEET_REGISTER.md) filled |
-| 9 | Nucleo with one real sensor (stage 2) | Unassigned | NUCLEO-U575ZI-Q, one wheel sensor and magnet | bench log imported by the pit tools; counts against a reference speed and check E4 (implementation plan stage 2) |
-| 10 | Review the two state-machine behaviours (section C) | Unassigned | controls lead decision | a decision entry and a test |
-| 11 | Design review before any layout | Unassigned | items 1, 2, 4, 5, 8 | signed [`hardware/review/REVIEW_CHECKLIST.md`](hardware/review/REVIEW_CHECKLIST.md) |
-| 12 | Broker hosting and SIM | Unassigned | event country and operator; hosted server or tunnel | `docs/MQTT_SETUP.md` updated; a test over the real network |
+| 1 | Battery and BMS documents (Q1) | Unassigned | battery and BMS model numbers, label photo, datasheets: maximum and minimum voltage, current limits, chemistry, BMS thresholds and data interface | register entries B-BAT-V and B-BAT-I closed with document and page |
+| 2 | Motor documents (Q2) | Unassigned | model number, nameplate photo, datasheet, photos of the phase, hall and temperature connectors | B-MOTOR closed; `config/` motor values marked datasheet |
+| 3 | Datasheet PDFs or network access (Q3) | Unassigned | the PDFs of [`hardware/selection/DATASHEET_REGISTER.md`](hardware/selection/DATASHEET_REGISTER.md) in `docs/reference/datasheets/`, or the manufacturers' sites allowed in the cloud environment's network settings | register rows filled; B-DRV, B-INA, B-ST-DOCS, B-PART-DOCS closed |
+| 4 | Vehicle CAN bus (Q4) | Unassigned | nodes, bit rate, classic or FD, identifier block, termination | B-CAN closed; crystal selected; [`docs/ICD.md`](docs/ICD.md) 2 updated |
+| 5 | Connectors and mounting (Q5) | Unassigned | mating-connector photos and part numbers; mounting photos and dimensions; heatsink option | B-HARNESS and B-MECH closed; [`hardware/layout/PRE_LAYOUT.md`](hardware/layout/PRE_LAYOUT.md) 1 filled |
+| 6 | Driver controls and sensors (Q6) | Unassigned | pedal datasheet, switch types, safety-loop voltage and wiring, NTC choice | B-PEDAL, B-LOOP, B-NTC closed |
+| 7 | Event and rules (Q7) | Unassigned | event name and the official rule PDF of the governing edition | B-RULES closed; [`docs/RULES_COMPLIANCE.md`](docs/RULES_COMPLIANCE.md) re-checked |
+| 8 | Team decisions (Q9 to Q13) | Unassigned | assembly process and fabricator, ECO supervisor host and log storage, who signs energised tests and which equipment the team owns, display and operator, coasting hysteresis | B-ASSY and B-VEH closed; budget builds re-evaluated |
+| 9 | Live quotes | Unassigned | the team's suppliers | dated quotes in [`hardware/bom/pricing.yaml`](hardware/bom/pricing.yaml) and [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml); B-QUOTE closed |
+| 10 | Nucleo with one real wheel sensor (implementation plan stage 2) | Unassigned | NUCLEO-U575ZI-Q, one continuous Hall switch and a magnet | a bench log imported by the pit tools; counts against a reference speed |
+| 11 | Review the two state-machine behaviours (section C) | Unassigned | controls lead decision | a decision entry and a test |
+| 12 | Sign the design review | Unassigned | rows 1 to 6 for the rating-dependent items | signed [`hardware/review/REVIEW_CHECKLIST.md`](hardware/review/REVIEW_CHECKLIST.md) |
 
 ## Documentation
 
 * Index of every document, with current, historical and superseded ones labelled: [`docs/README.md`](docs/README.md).
-* Integration guide (all connections, confirmed, proposed and unknown): [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md).
+* Blocker-to-evidence register and what to send next: [`docs/BLOCKERS.md`](docs/BLOCKERS.md); the questionnaire: [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md).
+* Design review, pre-layout requirements and the release gate: [`hardware/review/DESIGN_REVIEW.md`](hardware/review/DESIGN_REVIEW.md), [`hardware/layout/PRE_LAYOUT.md`](hardware/layout/PRE_LAYOUT.md), [`docs/generated/release_gate.md`](docs/generated/release_gate.md).
+* Physical acceptance procedures: [`docs/BENCH_ACCEPTANCE.md`](docs/BENCH_ACCEPTANCE.md).
+* Branches, pull requests and CI per commit: [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md) section 8.
+* Research, kept apart from the vehicle delivery: the CSIA evaluations in [`docs/csia/`](docs/csia/) (frozen), and the evidence-acquisition study on branch `research/evidence-acquisition` ([SWORT-Aerospace/sem-motor-controller#4](https://github.com/SWORT-Aerospace/sem-motor-controller/pull/4)).
+* Vehicle interface specification (all connections, confirmed, proposed and unknown): [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md).
 * Staged implementation plan, stages 1 to 8: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 * Design decisions with their evidence: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md).
 * Status in detail and verification results: [`docs/STATUS.md`](docs/STATUS.md), [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md).
-* What the team needs to supply: [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md).
+

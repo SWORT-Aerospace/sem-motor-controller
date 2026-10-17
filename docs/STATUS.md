@@ -8,7 +8,7 @@ The README keeps a short status; this page holds the detail. "Works" always name
 |---|---|---|---|
 | 1. Engineering design ready for review | **reviewable, with open items**: schematic reviewed topic by topic against the documents available; interface specification, acceptance procedures and pre-layout requirements written | [`../hardware/review/DESIGN_REVIEW.md`](../hardware/review/DESIGN_REVIEW.md), [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md), [`BLOCKERS.md`](BLOCKERS.md) | the datasheets of the register and the vehicle inputs of [`INPUT_SHEET.md`](INPUT_SHEET.md); a signed design review |
 | 2. Fabrication-ready hardware and buildable target firmware | **firmware: builds and links** (image in every CI run); **hardware: not fabrication-ready** | `semmc_stm32g474.elf` (CI artifact `semmc-stm32g474-image`); release gate [`generated/release_gate.md`](generated/release_gate.md): FAIL | the release gate conditions ([`../hardware/layout/PRE_LAYOUT.md`](../hardware/layout/PRE_LAYOUT.md) 5) |
-| 3. Bench-validated integrated hardware | **not started**: no board exists | procedures and result checker ready ([`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md), `tools/acceptance.py`) | stages S0 to S9 passed with signed records |
+| 3. Bench-validated integrated hardware | **not started**: no board exists | procedures and result checker ready ([`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md), `tools/acceptance.py`) | stages S0 to S10 passed with signed records |
 
 **Target firmware: compiled, simulated, bench-tested, untested.**
 

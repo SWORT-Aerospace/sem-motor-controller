@@ -1,6 +1,6 @@
 # Motor-controller firmware (`firmware/`)
 
-Portable C11 core of the motor controller, its public headers, a host platform with a simulated plant, notes for the future STM32G4 platform layer, and the C unit and property tests. The core contains the operating state machine, torque arbitration, field-oriented control (FOC), protection, energy accounting and the binding to CAN (Controller Area Network).
+Portable C11 core of the motor controller, its public headers, a host platform with a simulated plant, the STM32G474 target platform, and the C unit and property tests. The core contains the operating state machine, torque arbitration, field-oriented control (FOC), protection, energy accounting and the binding to CAN (Controller Area Network).
 
 **Status:** the core runs in host builds and host simulations, and the STM32G474 target image links (`platform/stm32g4`, built in CI). Nothing has been flashed to or tested on hardware. The target image keeps the gate driver disabled in this revision (its SPI configuration and the battery meter driver need datasheets that have not been read); see [platform/stm32g4/README.md](platform/stm32g4/README.md) for what is compiled, checked, emulated and untested.
 
@@ -19,10 +19,13 @@ firmware/
     protection/             software fault detection, latching and derating
     calibration/            calibration blob parser and validator, CRC helpers
     transport/              CAN binding of the transport-neutral message interface
+    io/                     portable helpers for the platform, no register access: sensor scaling,
+                            pedal plausibility, precharge sequencing, enable-path check, timer and
+                            CAN bit-timing encodings
     csia_adapter/           tracking of CSIA advisories (experimental sensor-consistency
                             diagnostic, see the root README), shadow mode only
   platform/host/            host-only executables and the simulated plant
-  platform/stm32g4/         integration notes only (README.md); no code
+  platform/stm32g4/         STM32G474 target: startup, linker script, peripherals, main loop, vendored ST headers
   tests/                    C unit tests and the randomised property test
 ```
 
@@ -36,7 +39,7 @@ The core runs one motor. It is plain C11 with single-precision floating point in
 | `mc_core_on_can_rx()` / `mc_core_on_msg_rx()` | from the link receive task, not from the current interrupt | received protocol messages |
 | `mc_core_can_tx_poll()` / `mc_core_msg_tx_poll()` | from the link transmit task | at most one due controller message per call |
 
-The slow step hands its result to the fast step through one struct, `mc_fast_cmd_t` (PWM enable, `id_ref_A`, `iq_ref_A`). The host build is single-threaded; on the target this copy needs a sequence lock or a masked interrupt (`mc_core.h`, [platform/stm32g4/README.md](platform/stm32g4/README.md)).
+The slow step hands its result to the fast step through one struct, `mc_fast_cmd_t` (PWM enable, `id_ref_A`, `iq_ref_A`). The slow step writes the copy the fast step is not reading and then switches an index, so a fast step that preempts it always reads one complete command; fast-loop fault flags are cleared only after the slow step has observed them and published the reacting command (`mc_core.h`; `firmware/tests/test_core_preemption.c` raises a fast-loop overcurrent between the slow step's read of the flags and their clear, the case that erased it before, and fails on the earlier code).
 
 ### 1.1 Operating state machine
 
@@ -120,7 +123,7 @@ The core itself is transport-neutral: it exchanges 8-byte messages identified by
 
 ## 2. Who works here
 
-Motor-control firmware developers: anyone changing the control core, protection, state machine, arbitration, supervisor handling or CAN binding, writing the STM32G4 platform layer, or extending the C tests. The interface control document ([../docs/ICD.md](../docs/ICD.md)) names the controls lead as owner of controller behaviour and of the protocol. Protocol changes are made in `protocol/protocol.yaml` and calibration parameters in `config/parameters.yaml`, then regenerated (section 8); neither is edited in this directory.
+Motor-control firmware developers: anyone changing the control core, protection, state machine, arbitration, supervisor handling or CAN binding, working on the STM32G474 platform, or extending the C tests. The interface control document ([../docs/ICD.md](../docs/ICD.md)) names the controls lead as owner of controller behaviour and of the protocol. Protocol changes are made in `protocol/protocol.yaml` and calibration parameters in `config/parameters.yaml`, then regenerated (section 8); neither is edited in this directory.
 
 ## 3. Important files
 
@@ -148,7 +151,7 @@ Other files:
 * `include/semmc/`: one public header per module. `mc_core.h` (entry points, input and output structs, CAN binding API), `mc_types.h` (validity flags and sign conventions), `mc_state_machine.h` (states, transitions, reason bits, invariants I1 to I9), `mc_control.h` (transform conventions, PI, FOC, Hall), `mc_freshness.h` (freshness rules in full), `mc_protection.h` (fault list, derate constants), `mc_config.h` (blob format v1, rule codes, `mc_params_t`), `mc_crc.h`, `mc_csia_shadow.h`.
 * `src/control/mc_pi.c` (PI controller, `mc_slew`, `mc_wrap_2pi`), `src/control/mc_transforms.c` (Clarke, Park, current resolution, voltage and current limits, SVPWM), `src/calibration/mc_crc.c` (CRC-8/SAE-J1850 and CRC-32), `platform/host/sim_plant.h`.
 * `cmake/arm-none-eabi-cortex-m4f.cmake`: toolchain file for the portability compile (section 7.3).
-* `tests/`: `test_control.c` (transforms, PI, limits, SVPWM, Hall), `test_freshness.c`, `test_config.c` (blob parsing, CRC check values, rule violations), `test_state_machine.c` (state machine invariants and arbiter contract), `test_protocol.c` (golden vectors, malformed frames), `test_core.c` (core with codec and simulated plant), `test_core_properties.c` (randomised property test), `mc_test.h` (minimal check harness), `test_support.h` (blob loading).
+* `tests/`: `test_control.c` (transforms, PI, limits, SVPWM, Hall), `test_freshness.c`, `test_config.c` (blob parsing, CRC check values, rule violations), `test_state_machine.c` (state machine invariants and arbiter contract), `test_protocol.c` (golden vectors, malformed frames), `test_core.c` (core with codec and simulated plant), `test_core_properties.c` (randomised property test), `test_io.c` (the `src/io` helpers: sensor scaling, pedal plausibility, precharge sequencing, enable-path check, timer and CAN bit-timing encodings), `test_core_preemption.c` (a fast-loop overcurrent raised inside the slow step, between its read and clear of the flags, using the linker's `--wrap`), `mc_test.h` (minimal check harness), `test_support.h` (blob loading).
 
 ## 4. State machine
 
@@ -279,7 +282,7 @@ Every message is also sent once in the first polls after `mc_core_init()`. Measu
 | [`../tools/config_tool.py`](../tools/config_tool.py) | encodes the calibration blobs at build time (`blob ... --mode sim`) and validates `SEMMC_VEHICLE_CONFIG` in hardware mode when `SEMMC_HARDWARE_BUILD=ON`. Its rule codes must match `mc_config.c`; `tests/integration/test_config_parity.py` compares the two through `semmc_cfgcheck` |
 | [`../config/`](../config/) | `parameters.yaml` (registry behind `mc_params_generated.h` and both validators), `vehicle.synthetic.yaml` (test blob), `vehicle.unconfigured.yaml` (blob that must be rejected; default hardware config) |
 | [`../tools/gen_config.py`](../tools/gen_config.py), [`../tools/gen_protocol.py`](../tools/gen_protocol.py) | generators of `mc_params_generated.h` and of the protocol codec (section 8) |
-| [`platform/stm32g4/README.md`](platform/stm32g4/README.md) | integration plan for the target platform layer (timers, ADC trigger, CAN, watchdog, calibration flash page); no code |
+| [`platform/stm32g4/README.md`](platform/stm32g4/README.md) | the STM32G474 target platform: build, status (compiled, checked without hardware, bench-tested), structure, interrupts, safety behaviour; flashing in [`platform/stm32g4/FLASHING.md`](platform/stm32g4/FLASHING.md) |
 | Python 3 with the packages in [`../requirements.txt`](../requirements.txt) | needed by CMake for the blob step (`config_tool.py` imports PyYAML and jsonschema); not needed for the portable-only build |
 
 Users of the firmware build outside this directory: `conftest.py` builds `build/` (or `$SEMMC_BUILD_DIR`) on demand for pytest and uses `semmc_host`, `semmc_cfgcheck` and `cal/synthetic.bin`; `host/telemetry_adapter/cosim.py` drives `semmc_host --interactive`; `host/replay/replay.py`, `tools/run_host_demo.py` and `tools/make_replay_sample.py` run `semmc_host`; `tools/control_contract_report.py` runs `semmc_contract_report`. Continuous integration (CI) runs the commands of section 7 ([`../.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
@@ -298,7 +301,7 @@ ctest --test-dir build --output-on-failure
 
 Host tests are built with AddressSanitizer and UndefinedBehaviorSanitizer by default (`-DSEMMC_SANITIZE=OFF` disables them). The build writes the calibration blobs to `build/cal/synthetic.bin` and `build/cal/unconfigured.bin`.
 
-ctest has 8 entries: the 7 test programs, plus `test_core_properties_24x12`, the property test run again with arguments `24 12`. Result observed on 2026-10-17 on this tree (gcc 13.3.0, CMake 3.28.3, Ninja 1.11.1, separate build directory): **8/8 passed, 0 failed, about 13 s in total**. Check counts printed by each program in that run:
+ctest has 10 entries: the 9 test programs, plus `test_core_properties_24x12`, the property test run again with arguments `24 12`. Result observed on 2026-10-17 on this tree (gcc 13.3.0, CMake 3.28.3, Ninja 1.11.1): **10/10 passed, 0 failed, about 15 s in total**. Check counts printed by each program in that run:
 
 | ctest entry | Test functions | Checks | Failures |
 |---|---|---|---|
@@ -306,8 +309,10 @@ ctest has 8 entries: the 7 test programs, plus `test_core_properties_24x12`, the
 | `test_freshness` | 15 | 99 | 0 |
 | `test_config` | 7 | 290 | 0 |
 | `test_state_machine` | 24 | 1966 | 0 |
-| `test_protocol` | 5 | 46 | 0 |
-| `test_core` | 21 | 1043 | 0 |
+| `test_protocol` | 5 | 49 | 0 |
+| `test_core` | 22 | 1054 | 0 |
+| `test_io` | 9 | 109 | 0 |
+| `test_core_preemption` | 1 | 8 | 0 |
 | `test_core_properties` (6 seeds x 12 s) | | 326 246 (72 000 slow steps) | 0 |
 | `test_core_properties_24x12` | | 1 237 899 (288 000 slow steps) | 0 |
 
@@ -364,8 +369,8 @@ The protocol codec is not copied into `firmware/`; CMake compiles it from `proto
 
 ## 9. Current limitations
 
-* **No target platform layer.** The STM32G4 layer is not implemented: no timer and PWM driver, ADC sampling and conversion to engineering units, CAN driver (STM32 FDCAN peripheral) and acceptance filter, precharge bypass closing logic (the ICD gives its rule; the closing logic belongs to this layer), watchdog servicing, reset-reason readout, calibration flash storage, startup code or linker script. The calibration's ADC and shunt parameters (`shunt_ohm`, `amp_gain_V_per_V`, `adc_vref_V`, offsets, divider ratio) are validated and derived but not used by the core. The plan is in [platform/stm32g4/README.md](platform/stm32g4/README.md).
-* **Host platform and simulated plant are for testing only.** `sim_plant.c` uses synthetic constants and is "NOT a validated model of any real motor, inverter, battery or vehicle" (averaged inverter without dead time, rigid drivetrain, first-order thermal models). The synthetic calibration is not a real motor or battery and can never permit physical output. The host build is single-threaded, so the slow-to-fast handoff is not protected there.
+* **Target platform compiled, not run on a board.** The STM32G474 platform (timers and PWM, break inputs, ADC with conversion to engineering units from the calibration's `shunt_ohm`, `amp_gain_V_per_V`, `adc_vref_V`, offsets and divider ratios, hall capture, FDCAN with acceptance filter and bus-off recovery, precharge sequencing, watchdogs, reset-reason readout, calibration flash area, startup code and linker script) links, but has not been flashed. The gate-driver SPI configuration and the INA228 battery meter are not written, so the power stage stays inhibited and the precharge never closes ([platform/stm32g4/README.md](platform/stm32g4/README.md)).
+* **Host platform and simulated plant are for testing only.** `sim_plant.c` uses synthetic constants and is "NOT a validated model of any real motor, inverter, battery or vehicle" (averaged inverter without dead time, rigid drivetrain, first-order thermal models). The synthetic calibration is not a real motor or battery and can never permit physical output. The host build is single-threaded; the slow-to-fast handoff is double-buffered for the target and its preemption case is tested on the host (section 1).
 * **Provisional timing.** Supervision period and timeout are provisional and simulation-only (section 4); the CAN identifier base 0x300 is "PROPOSED, NOT allocated on any real bus" (synthetic configuration); bus bit rate and classic CAN or CAN FD (flexible data rate) mode are unknown. The fast-step execution time on the target is not measured (the STM32G4 notes give a budget of 50 µs at 20 kHz minus ADC conversion time and claim no figure).
 * **Control scope.** Hall-sensored sinusoidal PMSM only (validator rules 30 and 31); `id_ref = 0`, MTPA deferred; regeneration deferred (rule 18 rejects `regen_enabled`, ADR-0007, and the arbiter never outputs negative torque). The closed-loop battery-trim gain still has to be checked against the BMS (battery management system) and fuse data ([../docs/CONTROL_CONTRACT.md](../docs/CONTROL_CONTRACT.md) section 2).
 * **CSIA is shadow only.** Advisory content is tracked but used by nothing; the controller does not re-transmit it on CAN (only `semmc_host` writes it to its CSV).

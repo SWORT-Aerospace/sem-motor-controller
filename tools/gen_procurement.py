@@ -363,8 +363,9 @@ def readme_block(d: dict, budget: dict | None = None, pricing: dict | None = Non
                       *subtotal_table(d, s), "", *totals_lines(d, s, budget, pricing), "",
                       "**Builds against the budget** (every build keeps the whole controller, protection included; "
                       "what each build defers: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md#builds-against-the-budget))",
-                      "", *builds_table(d, budget, pricing), "", "**Lines**", "", *table(d, budget, pricing),
-                      END])
+                      "", *builds_table(d, budget, pricing), "",
+                      "Every line with its requirement, candidate, cost source and blocker: "
+                      "[`docs/PROCUREMENT.md`](docs/PROCUREMENT.md#lines).", END])
 
 
 def to_docs(line: str) -> str:

@@ -12,7 +12,7 @@ The controller stages map onto the hardware validation stages of [`VALIDATION_PL
 | 2 | Development board with one real sensor | not started: telemetry firmware not written |
 | 3 | Bench CAN with a simulated controller and BMS | not started |
 | 4 | Logging and a broker outage with the real modem | not started |
-| 5 | Reviewed controller hardware and staged bring-up | blocked: battery, motor and datasheet inputs; no layout |
+| 5 | Reviewed controller hardware and staged bring-up | blocked: battery, motor and datasheet inputs; no layout. Target image builds; acceptance procedures ready |
 | 6 | Controller and telemetry integration | not started |
 | 7 | Controlled vehicle measurements | not started |
 | 8 | Fair strategy comparison | not started |
@@ -61,10 +61,10 @@ The controller stages map onto the hardware validation stages of [`VALIDATION_PL
 
 ## Stage 5. Reviewed controller hardware and staged bring-up
 
-* **Prerequisites:** battery and BMS datasheets (maximum and minimum voltage, currents), motor data, the primary datasheets in [`../hardware/selection/DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md), footprints and a layout, the signed design review ([`../hardware/review/REVIEW_CHECKLIST.md`](../hardware/review/REVIEW_CHECKLIST.md)), and the STM32G4 platform layer (ADC, PWM, timers, CAN driver, precharge closing logic, watchdog servicing).
+* **Prerequisites:** battery and BMS datasheets (maximum and minimum voltage, currents), motor data, the primary datasheets in [`../hardware/selection/DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md), footprints and a layout, the signed design review ([`../hardware/review/REVIEW_CHECKLIST.md`](../hardware/review/REVIEW_CHECKLIST.md)), and the gate-driver and battery-meter drivers of the STM32G474 platform (the rest of the platform builds and links since v0.6; `firmware/platform/stm32g4/README.md`).
 * **Files:** `hardware/`, `firmware/platform/stm32g4/README.md`, [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md).
 * **Equipment:** current-limited bench supply above the maximum pack voltage, oscilloscope with a differential probe (borrowed; not in the budget), multimeters, dummy load, SWD programmer.
-* **Test procedure:** the bring-up checklist stages 1 to 5: unpowered inspection, logic only, gates with the power stage disabled, first energised switching at low voltage with both current limits set and probed, motor on a stand with the wheel free.
+* **Test procedure:** acceptance stages S0 to S8 of [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md): preconditions, unpowered inspection, current-limited logic power, rails and clock, PWM and break behaviour with the power stage disabled, sensor calibration, precharge and faults, low-energy motor test, controlled load; records checked with `tools/acceptance.py check`.
 * **Completion evidence:** the signed review; measurement tables and scope captures for each stage; a vehicle configuration with `provenance: bench_measured` that passes hardware-mode validation.
 * **Blockers:** every hardware input above. The board does not exist.
 

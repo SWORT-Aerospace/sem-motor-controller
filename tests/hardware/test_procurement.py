@@ -72,10 +72,11 @@ def test_readme_numbers_follow_budget_json():
     lo, hi = s1["complete_buying_equipment"]
     assert f"**${lo:,.0f} to ${hi:,.0f}**" in block
     plo, phi = s1["parts"]
-    assert f"| Controller board parts, one board | " in block and f"est. {plo:,.0f} to {phi:,.0f}" in block
+    page = gp.doc(d, b, p)
+    assert f"| Controller board parts, one board | " in page and f"est. {plo:,.0f} to {phi:,.0f}" in page
     changed = copy.deepcopy(b)
     changed["scenarios"][d["estimate_scenario"]]["parts"] = [100.0, 300.0]
-    assert "est. 100 to 300" in gp.readme_block(d, changed, p)
+    assert "est. 100 to 300" in gp.doc(d, changed, p)
 
 
 def test_no_line_is_selected_ordered_or_received_without_evidence():
@@ -138,11 +139,12 @@ def test_totals_count_priced_lines_only_and_never_assembly_or_optional_parts():
 
 
 def test_unknown_costs_print_tbd_never_zero_and_no_budget_fit_is_claimed():
-    block = gp.readme_block(_data())
-    assert "$0 " not in block and "| 0.00 |" not in block and "est. 0 to 0" not in block
-    assert "TBD" in block and "unconfirmed" in block and "not established" in block
-    assert "not budgeted" in block                      # the borrowed oscilloscope is shown, not priced at zero
-    assert "fits" not in block.replace("a fit within", "")
+    d = _data()
+    for block in (gp.readme_block(d), gp.doc(d)):
+        assert "$0 " not in block and "| 0.00 |" not in block and "est. 0 to 0" not in block
+        assert "TBD" in block and "unconfirmed" in block and "not established" in block
+        assert "fits" not in block.replace("a fit within", "")
+    assert "not budgeted" in gp.doc(d)                 # the borrowed oscilloscope is shown, not priced at zero
 
 
 def test_builds_keep_the_whole_controller_and_match_the_priced_bom():

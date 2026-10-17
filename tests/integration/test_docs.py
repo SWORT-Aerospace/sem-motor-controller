@@ -40,10 +40,12 @@ def test_current_documents_have_no_em_dash_or_assistant_branding():
 
 def test_readme_keeps_the_scope_honest():
     text = (ROOT / "README.md").read_text()
-    assert "**Physically tested**: nothing yet" in text
-    assert "No board exists, nothing has been energised" in text
-    assert "**Proposed**: designed or specified for the vehicle but not built" in text
-    assert "**Host**: implemented and tested on a computer" in text
+    assert "**Physically tested** is still nothing: nothing has been energised" in text
+    assert "**Not started.** No board exists." in text                 # milestone 3 is not claimed
+    assert "hardware is not fabrication-ready" in text and "the release gate fails" in text
+    assert "a reviewed design is not a tested board" in text
+    assert "**Proposed** means designed or specified but not built" in text
+    assert "**Host** means implemented and tested on a computer" in text
     assert "CONTRIBUTING.md" in text
     assert "They are not wiring diagrams" in text                  # block diagrams, not construction-ready wiring
     assert "TELEMETRY_EMBEDDED_PORT.md" in text                     # embedded firmware is listed as remaining work
