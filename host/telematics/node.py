@@ -12,8 +12,9 @@ Tasks, in priority order, as docs/ICD.md requires of the unit:
      flash stall (injected) stops it, the queue fills, and drops are counted
      and reported, never hidden.
   4. Uplink, 2 Hz (the proposal says 1-5 Hz): a JSON summary (schema
-     sem.telemetry.v2: v1 plus wheel speed per channel) to the MQTT topic over LTE. During an outage messages wait in a bounded queue; overflow
-     drops the oldest and is counted. Replayed messages are flagged.
+     sem.telemetry.v3: v1 plus wheel speed per channel (v2) plus temperatures (v3)) to the MQTT topic over
+     LTE. During an outage messages wait in a bounded queue; overflow drops the oldest and is counted.
+     Replayed messages are flagged.
 
 Nothing here runs on hardware. The rates and capacities are configuration,
 chosen to exercise the behaviour, not measured.
@@ -32,8 +33,9 @@ from host.telemetry_adapter.supervisor import Supervisor
 from protocol.generated import semmc_protocol as proto
 
 STATES = ["BOOT", "SELF_TEST", "DISARMED", "READY", "MANUAL", "ECO_ASSIST", "DERATED", "FAULT_LATCHED"]
-SCHEMA = "sem.telemetry.v2"          # live message produced by this node
-SCHEMAS_ACCEPTED = ("sem.telemetry.v1", "sem.telemetry.v2")   # what the pit accepts (v1: no wheel block)
+SCHEMA = "sem.telemetry.v3"          # live message produced by this node
+# what the pit accepts: v1 has no wheel block, v2 no temp block
+SCHEMAS_ACCEPTED = ("sem.telemetry.v1", "sem.telemetry.v2", "sem.telemetry.v3")
 
 
 @dataclasses.dataclass
@@ -50,6 +52,10 @@ class NodeConfig:
     wheel_ppr: Optional[int] = None
     wheel_stale_s: float = 0.3           # a channel without a window this recent reports null
     wheel_channels: tuple = ("wheel_l", "wheel_r", "wheel_drive")   # channel index -> name, as sensors.WHEEL_CHANNELS
+    # temperatures in the live message (v3): probe channel index -> name, as sensors.TEMP_CHANNELS
+    temp_channels: tuple = ("battery_surface", "motor_case", "ambient")
+    temp_stale_s: float = 3.0            # PROVISIONAL: a probe without a valid sample this recent reports null
+    ctrl_thermal_stale_s: float = 0.3    # ctrl_thermal is sent every 0.1 s; older than three periods -> null
 
 
 def _num(x) -> Optional[float]:
@@ -98,6 +104,8 @@ class TelematicsNode:
         self.p_acc = [0.0, 0]                 # p_batt samples since the last uplink (mean)
         self.gnss_latest = (math.nan, math.nan, 0, False)
         self.wheel_latest: dict[int, tuple[float, int, int]] = {}   # channel -> (t_true, counts, window_ms)
+        self.temp_latest: dict[int, tuple[float, Optional[float]]] = {}   # channel -> (t_true, degC or None)
+        self.latest_t: dict[str, float] = {}  # message name -> receive time of its latest valid frame
         self.sup_rate: collections.Counter = collections.Counter()  # requests per whole second (control health)
         self.drop_log: list[tuple[float, str, int]] = []   # (time, reason, uplink seq dropped)
 
@@ -129,6 +137,7 @@ class TelematicsNode:
         if info["status"] != "ok":
             return
         self.latest[m["name"]] = values
+        self.latest_t[m["name"]] = t_true
         if m["name"] == "ctrl_energy" and math.isfinite(values["p_batt_W"]):
             self.p_acc[0] += values["p_batt_W"]
             self.p_acc[1] += 1
@@ -143,6 +152,11 @@ class TelematicsNode:
             self._enqueue(t_true, stlg.GNSS, stlg.body_gnss(*args))
         elif kind == "imu":
             self._enqueue(t_true, stlg.IMU, stlg.body_imu(*args))
+        elif kind == "temp":
+            body = stlg.body_temp(*args)
+            # the live value is the logged value (centi-degC, invalid -> None), so live and log agree exactly
+            self.temp_latest[args[0]] = (t_true, stlg.parse_body(stlg.TEMP, body)["deg_c"])
+            self._enqueue(t_true, stlg.TEMP, body)
 
     def on_pps(self, t_true: float, utc_s: int) -> None:
         self.utc.add_edge(self.t_us(t_true) / 1e6, utc_s)   # timer capture: 1 us resolution
@@ -196,6 +210,12 @@ class TelematicsNode:
             fresh = w is not None and t_true - w[0] <= self.cfg.wheel_stale_s and w[2] > 0
             # same formula as the pit's offline import (host/pit/ingest.py import_log): counts * C / (ppr * window)
             wheel[name] = (w[1] * C / (ppr * w[2] / 1000.0)) if fresh and C and ppr else None
+        probe = {}
+        for ch, name in enumerate(self.cfg.temp_channels):
+            p = self.temp_latest.get(ch)
+            probe[name] = p[1] if p is not None and t_true - p[0] <= self.cfg.temp_stale_s else None
+        th = self.latest.get("ctrl_thermal", {}) if (
+            t_true - self.latest_t.get("ctrl_thermal", -math.inf) <= self.cfg.ctrl_thermal_stale_s) else {}
         return {
             "schema": SCHEMA, "run_id": self.run_id, "seq": self.up_seq, "t_local_ms": int(round(t_local * 1000)),
             "utc": _num(u), "utc_q": q, "utc_err_s": _num(err),
@@ -208,6 +228,8 @@ class TelematicsNode:
             "sup": {"torque_Nm": _num(last_req.get("torque_Nm")), "reason": last_req.get("reason")},
             "gnss": {"speed_mps": _num(g[0]), "sacc_mps": _num(g[1]), "num_sv": g[2], "fix": bool(g[3])},
             "wheel": {"speed_mps": wheel},
+            "temp": {"ctrl_fet_degC": _num(th.get("t_fet_degC")), "ctrl_motor_degC": _num(th.get("t_motor_degC")),
+                     "probe_degC": probe},
             "counters": dict(self.c),
             "replayed": False,
         }

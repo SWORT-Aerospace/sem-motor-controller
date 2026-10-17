@@ -142,7 +142,7 @@ flowchart TB
     NODE["node.py: CAN receive,<br/>sensor records, PPS time"]
     STLG["stlg.py: block log"]
     SUP["supervisor.py: ECO policy,<br/>sup_hello, sup_limits, sup_torque_req"]
-    UP["2 Hz summary sem.telemetry.v2,<br/>backlog 30, counted drops"]
+    UP["2 Hz summary sem.telemetry.v3,<br/>backlog 30, counted drops"]
     ML["mqtt_link.py: paho, QoS 1"]
   end
   subgraph PITF["Pit: host/pit (host Python)"]
@@ -366,7 +366,7 @@ python3 tools/run_mqtt_demo.py --out build/mqtt_demo
 | `pip install`, `fetch_csia.py` | `.venv/`, `.deps/` (pinned CSIA core, checked against its lock file) | pinned dependencies resolve | anything about the vehicle |
 | `cmake`, `ctest` | `build/`: core library, `semmc_host`, test programs, calibration blobs | the C core's unit and property tests pass on the host (10 test programs) | timing or behaviour on an STM32 (the target image is a separate build: `firmware/platform/stm32g4`) |
 | `pytest` | temporary files only | Python models, protocol codecs, configuration validation, pit ingestion, procurement and documentation checks (MQTT tests skip without Mosquitto) | hardware, sensors or the vehicle |
-| `run_host_demo.py` | `build/host_demo/`: `summary.md`, controller trace, STLG log, `pit.sqlite` | the full chain on simulated data: controller core, telemetry node, local log, uplink, pit import, CSIA replay; 10 checks | real sensors, a real CAN bus or a real radio link |
+| `run_host_demo.py` | `build/host_demo/`: `summary.md`, controller trace, STLG log, `pit.sqlite` | the full chain on simulated data: controller core, telemetry node, local log, uplink, pit import, CSIA replay; 11 checks | real sensors, a real CAN bus or a real radio link |
 | `run_pit_replay.py` | `build/pit_replay/`: `report.md`, `report.json`, `timeline.csv`, `energy.json` | R3v and CSIA2 in shadow mode on a pit database, with the data class and the missing evidence listed; energy per distance per wheel channel | any accuracy on vehicle data: the parameters are the frozen synthetic ones |
 | `run_mqtt_demo.py` | `build/mqtt_demo/`: `summary.md`, broker and pit logs | a real Mosquitto broker: broker crash, pit restart, malformed and duplicate messages, GNSS outage; 12 checks | LTE coverage, the modem's MQTT client or a hosted broker |
 

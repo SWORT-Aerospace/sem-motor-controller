@@ -37,7 +37,7 @@ Start with the [README](../README.md), then this page. Files outside `docs/`: [`
 |---|---|
 | [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) | Defects found and fixed, CI runs on GitHub-hosted runners, the full verification record, v0.5 results |
 | [`generated/verification/verification.md`](generated/verification/verification.md) (and `.json`) | Written by `tools/verify_all.py --full` in a fresh clone: every check with its command, exit code and summary |
-| [`generated/host_demo/summary.md`](generated/host_demo/summary.md) (and `generated/host_demo/summary.json`, `generated/host_demo/csia_timeline.csv`, `generated/host_demo/pit_replay_report.md`) | Written by `tools/run_host_demo.py --samples`: 10 checks of the host chain on synthetic data |
+| [`generated/host_demo/summary.md`](generated/host_demo/summary.md) (and `generated/host_demo/summary.json`, `generated/host_demo/csia_timeline.csv`, `generated/host_demo/pit_replay_report.md`) | Written by `tools/run_host_demo.py --samples`: 11 checks of the host chain on synthetic data |
 | [`generated/mqtt_demo/summary.md`](generated/mqtt_demo/summary.md) (and `generated/mqtt_demo/summary.json`, `generated/mqtt_demo/pit_replay_report.md`) | Written by `tools/run_mqtt_demo.py --samples`: 12 checks with a real Mosquitto broker |
 | [`generated/pin_af_verification.md`](generated/pin_af_verification.md) | `tools/gen_board_pins.py`: every MCU pin and alternate function checked against ST's pin database |
 | [`generated/core_timing_emulated.md`](generated/core_timing_emulated.md) | `tools/emulate_core_timing.py`: instruction counts of the core on Cortex-M4F in an emulator (not a hardware measurement) |

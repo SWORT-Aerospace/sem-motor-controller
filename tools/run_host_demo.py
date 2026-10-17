@@ -52,7 +52,7 @@ from host.pit import csia_replay, ingest, shadow_replay  # noqa: E402
 from host.telematics import stlg  # noqa: E402
 from host.telematics.clocks import LocalClock, PpsModel  # noqa: E402
 from host.telematics.node import NodeConfig, SimLink, TelematicsNode  # noqa: E402
-from host.telematics.sensors import WHEEL_CHANNELS, SensorConfig, Sensors  # noqa: E402
+from host.telematics.sensors import TEMP_CHANNELS, WHEEL_CHANNELS, SensorConfig, Sensors  # noqa: E402
 from host.telemetry_adapter.cosim import HostController  # noqa: E402
 from host.telemetry_adapter.supervisor import Supervisor, SupervisorConfig, speed_hold_policy  # noqa: E402
 from protocol.generated import semmc_protocol as proto  # noqa: E402
@@ -65,6 +65,7 @@ SUP_STALL = (45.0, 45.3)
 LTE_DOWN = (50.0, 70.0)
 GNSS_OUT = (60.0, 75.0)
 WHEEL_FAULT = (80.0, 90.0)
+TEMP_FAULT = (20.0, 26.0)       # motor_case probe: CRC errors
 BRAKE = (95.0, 97.0)
 SUP_OFF = 110.0
 
@@ -93,6 +94,7 @@ def default_io(us) -> list:
 
 def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_ID, flash_stalls=(FLASH_STALL,),
                 supervisor_stalls=(SUP_STALL,), gnss_outages=(GNSS_OUT,), wheel_faults=(WHEEL_FAULT,),
+                temp_faults=(TEMP_FAULT,),
                 io_schedule=None, sup_off: float | None = SUP_OFF, ncfg: NodeConfig | None = None,
                 kind: str = "HOST SIMULATION - not a vehicle run") -> SimpleNamespace:
     """Everything one co-simulation run needs: configuration, controller process,
@@ -107,7 +109,9 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
     cal = build / "cal" / "synthetic.bin"
     clock = LocalClock()
     pps = PpsModel(outages=tuple(gnss_outages))
-    scfg = SensorConfig(wheel_circumference_m=C, faults=tuple(("wheel_dropout", 0, *w) for w in wheel_faults))
+    scfg = SensorConfig(wheel_circumference_m=C, temp_period_s=1.0,
+                        faults=tuple(("wheel_dropout", 0, *w) for w in wheel_faults)
+                        + tuple(("temp_crc", 1, *w) for w in temp_faults))
     sensors = Sensors(scfg)
     git = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     # modified or untracked files outside build/ (ignored) mean the outputs are not from `git` alone
@@ -119,6 +123,7 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
     if ncfg.wheel_ppr is None:                             # revolution that the run metadata records
         ncfg.wheel_ppr = scfg.wheel_ppr
     ncfg.wheel_channels = tuple(WHEEL_CHANNELS[k] for k in sorted(WHEEL_CHANNELS))
+    ncfg.temp_channels = tuple(TEMP_CHANNELS[k] for k in sorted(TEMP_CHANNELS))
     meta = {
         "run_id": run_id, "kind": kind,
         "format": {"name": "STLG", "version": stlg.VERSION, "block_payload_bytes": stlg.BLOCK_BYTES},
@@ -130,13 +135,19 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
         "software": {"repo_commit": git, "working_tree_dirty": dirty, "telematics_firmware": "host-sim"},
         "sensors": {"wheel_circumference_m": C, "wheel_ppr": scfg.wheel_ppr, "wheel_window_s": scfg.wheel_window_s,
                     "wheel_channels": {str(k): v for k, v in WHEEL_CHANNELS.items()},
-                    "status": "wheel_ppr PROVISIONAL; channel assignment PROVISIONAL"},
+                    "temp_period_s": scfg.temp_period_s,
+                    "temp_channels": {str(k): v for k, v in TEMP_CHANNELS.items()},
+                    "status": "wheel_ppr PROVISIONAL; channel assignment PROVISIONAL; "
+                              "temperature probe part and placements PROPOSED"},
         # simulation only: the plant behind the data and the faults injected into the sensors (ground truth for
         # the pit replay report; telematics clock seconds)
         "plant": {"model": "firmware/platform/host/sim_plant.c", "freewheel": False,
                   "note": "motor rigidly coupled to the wheels; SYNTHETIC constants"},
         "injected_faults": [{"kind": "wheel_dropout", "node": WHEEL_CHANNELS[0], "channel": 0,
                              "t_local_s": [clock.local(a), clock.local(b)]} for (a, b) in wheel_faults],
+        # kept apart from injected_faults, which the pit replay scores as wheel-relationship ground truth
+        "injected_probe_faults": [{"kind": "temp_crc", "node": TEMP_CHANNELS[1], "channel": 1,
+                                   "t_local_s": [clock.local(a), clock.local(b)]} for (a, b) in temp_faults],
     }
     writer = stlg.Writer(out / "run.stlg", meta, ncfg.storage_bytes)
     sup = Supervisor(SupervisorConfig(max_torque_Nm=t_max), speed_hold_policy(6.0, 1.5, C, gear, t_max))
@@ -274,6 +285,26 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
           f"published {node.up_seq}, stored {len(seqs)} ({live['replayed_stored']} replayed after the outage), "
           f"rejected {live['rejected']} {live['reasons']}, dropped on the car {node.c['uplink_dropped']} "
           f"(expected {expected_drop}); every sequence number accounted for: {accounted == node.up_seq}")
+    # temperatures: every probe sample logged with its status; an invalid one is NULL at the pit and null live
+    t0, t1 = TEMP_FAULT
+    trows = db.execute("SELECT s.name, s.t_local_us, s.value, r.status FROM signals s JOIN records r USING "
+                       "(run_id, block, idx) WHERE s.run_id=? AND r.rtype=?", (RUN_ID, stlg.TEMP)).fetchall()
+    in_win = lambda t_us: t0 - 1e-3 <= clock.true(t_us / 1e6) < t1 - 1e-3  # noqa: E731  (1 us record resolution)
+    bad = [r for r in trows if r[2] is None]
+    bad_ok = bool(bad) and all(r[0] == "temp_motor_case" and r[3] == "crc_error" and in_win(r[1]) for r in bad)
+    n_win = sum(1 for r in trows if r[0] == "temp_motor_case" and in_win(r[1]))
+    lmsgs = [(clock.true(tl / 1000.0), json.loads(pl)) for tl, pl in
+             db.execute("SELECT t_local_ms, payload FROM live WHERE run_id=?", (RUN_ID,))]
+    live_null = [tt for tt, m in lmsgs if m["temp"]["probe_degC"]["motor_case"] is None and tt >= 1.0]
+    ctrl_t = sum(1 for _tt, m in lmsgs if m["temp"]["ctrl_fet_degC"] is not None)
+    check("temperatures_logged_with_status_null_when_invalid",
+          bad_ok and len(bad) == n_win and live_null and all(t0 <= tt < t1 + 1.0 for tt in live_null)
+          and ctrl_t > 0,
+          f"{len(trows)} probe samples logged over {len(ncfg.temp_channels)} channels; injected motor_case CRC "
+          f"errors {t0:.0f}-{t1:.0f} s: {len(bad)} of {n_win} samples in the window NULL at the pit with status crc_error"
+          f"{', none elsewhere' if bad_ok else ', or a NULL elsewhere'}; "
+          f"{len(live_null)} live messages with motor_case null, all inside the fault window; controller FET "
+          f"temperature in {ctrl_t} of {len(lmsgs)} stored live messages")
     # UTC: compare the pit's PPS-derived UTC with the simulation's truth
     errs = {"pps": [], "holdover": []}
     for t_us, u, q in db.execute("SELECT t_local_us, utc, utc_q FROM records WHERE run_id=? AND utc IS NOT NULL",

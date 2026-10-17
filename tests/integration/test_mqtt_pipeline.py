@@ -63,7 +63,28 @@ def test_v2_wheel_speed_validated_and_v1_still_accepted():
     m = json.loads(_v2(1, {}))
     del m["wheel"]
     assert "wheel" in ingest.validate_live(json.dumps(m).encode())[1]                 # v2 must carry the block
-    assert "schema" in ingest.validate_live(_msg(1, schema="sem.telemetry.v3"))[1]
+    assert "schema" in ingest.validate_live(_msg(1, schema="sem.telemetry.v4"))[1]
+
+
+def _v3(seq, probes, fet=None, motor=None, **kw):
+    m = json.loads(_v2(seq, {"wheel_l": 6.0}, **kw))
+    m.update(schema="sem.telemetry.v3", temp={"ctrl_fet_degC": fet, "ctrl_motor_degC": motor, "probe_degC": probes})
+    return json.dumps(m, sort_keys=True).encode()
+
+
+def test_v3_temperatures_validated_and_older_schemas_still_accepted():
+    assert ingest.validate_live(_v3(1, {"motor_case": 41.25, "ambient": None}, fet=55.1))[1] is None
+    assert ingest.validate_live(_v2(1, {"wheel_l": 6.1}))[1] is None                 # v2: no temp block
+    assert ingest.validate_live(_msg(1))[1] is None
+    assert "temp.probe_degC.motor_case" in ingest.validate_live(_v3(1, {"motor_case": 400.0}))[1]
+    assert "temp.ctrl_fet_degC" in ingest.validate_live(_v3(1, {}, fet=float("nan")))[1]
+    assert "temp.ctrl_motor_degC" in ingest.validate_live(_v3(1, {}, motor=False))[1]
+    m = json.loads(_v3(1, {}))
+    del m["temp"]
+    assert "temp" in ingest.validate_live(json.dumps(m).encode())[1]                  # v3 must carry the block
+    m = json.loads(_v3(1, {}))
+    del m["wheel"]
+    assert "wheel" in ingest.validate_live(json.dumps(m).encode())[1]                 # and keeps the v2 block
 
 
 def test_old_database_gains_schema_column_and_keeps_rows(tmp_path):
@@ -105,13 +126,52 @@ def test_node_wheel_speed_formula_staleness_and_unknown_configuration():
     node = TelematicsNode(cfg, LocalClock(), _W(), _L(), _Sup(), "R")
     node.on_sensor(1.0, "wheel", (0, 13, 100))
     m = node._message(1.05)
-    assert m["schema"] == "sem.telemetry.v2"
+    assert m["schema"] == "sem.telemetry.v3"
     assert m["wheel"]["speed_mps"]["wheel_l"] == 13 * 1.5 / (32 * 0.1)           # 6.09375 m/s
     assert m["wheel"]["speed_mps"]["wheel_r"] is None                              # never seen: null, not 0
     assert node._message(1.5)["wheel"]["speed_mps"]["wheel_l"] is None             # older than 0.3 s: null
     unknown = TelematicsNode(NodeConfig(), LocalClock(), _W(), _L(), _Sup(), "R")  # circumference/ppr unknown
     unknown.on_sensor(1.0, "wheel", (0, 13, 100))
     assert unknown._message(1.05)["wheel"]["speed_mps"]["wheel_l"] is None
+
+
+def test_node_temperatures_staleness_invalid_and_controller_values():
+    from host.telematics.clocks import LocalClock
+    from protocol.generated import semmc_protocol as proto
+
+    class _Sup:
+        log = []
+
+        def on_frame(self, *a):
+            pass
+
+    class _W:
+        dropped_storage = 0
+
+        def add(self, *a):
+            pass
+
+    node = TelematicsNode(NodeConfig(), LocalClock(), _W(), _L_up(), _Sup(), "R")
+    node.on_sensor(1.0, "temp", (1, 0, 41.237))
+    node.on_sensor(1.0, "temp", (2, 1, None))                                      # CRC error
+    t = node._message(1.2)["temp"]
+    assert t["probe_degC"] == {"battery_surface": None, "motor_case": 41.24, "ambient": None}   # log resolution
+    assert node._message(4.5)["temp"]["probe_degC"]["motor_case"] is None          # older than 3 s: null
+    assert t["ctrl_fet_degC"] is None and t["ctrl_motor_degC"] is None              # no ctrl_thermal frame yet
+    frame = proto.encode("ctrl_thermal", {"t_fet_degC": 61.3, "t_motor_degC": float("nan"), "derate": 1.0,
+                                          "derate_reasons": 0}, seq=0)[0]
+    node.on_can(5.0, proto.MESSAGES["ctrl_thermal"]["id"], frame)
+    t = node._message(5.1)["temp"]
+    assert abs(t["ctrl_fet_degC"] - 61.3) < 0.05 and t["ctrl_motor_degC"] is None    # 0.1 degC steps; NaN -> null
+    assert node._message(5.5)["temp"]["ctrl_fet_degC"] is None                      # older than 0.3 s: null
+
+
+class _L_up:
+    def up(self, t):
+        return True
+
+    def deliver(self, *a):
+        return True
 
 
 def test_step_timing_tolerates_one_scheduling_stall_but_not_a_blocking_uplink():

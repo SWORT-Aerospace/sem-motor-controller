@@ -8,14 +8,14 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 |---|---|---|
 | D1 | Wheel-pulse capture instead of a sampled switch | chosen (sensor part blocked) |
 | D2 | Battery power accuracy and time alignment | chosen for the design; accuracy unverified |
-| D3 | Temperature measurement for protection and for logging | chosen; telemetry probes excluded for now |
+| D3 | Temperature measurement for protection and for logging | chosen; probe logging implemented (host), probe part open |
 | D4 | Sensor and CAN electrical compatibility | partly chosen; blocked on the board files and the motor |
 | D5 | Modem supply peaks | requirement set; blocked on the board files and the battery |
 | D6 | Storage capacity and write behaviour | format chosen; medium open |
 | D7 | Energy-strategy selection | blocked: needs vehicle measurements |
 | D8 | Current sensing and over-current protection | open item: independent over-current comparator |
 | D9 | Fault-reset behaviour of `SELFTEST` and `HALL_INVALID` | open: needs a controls decision |
-| D10 | Live summary versioning (`sem.telemetry.v2`) | chosen and implemented |
+| D10 | Live summary versioning (`sem.telemetry.v2`, `v3`) | chosen and implemented |
 
 ## D1. Wheel-pulse capture instead of a sampled switch
 
@@ -38,9 +38,9 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 
 * **Requirement.** Protection temperatures fast and local to the controller; slow temperatures for loss models at the pit.
 * **Evidence.** DS18B20: up to 750 ms per 12-bit conversion, ±0.5 °C from -10 to +85 °C, no thermal time constant in the datasheet (Maxim 19-7487 Rev 5). The controller draft reads a 10 kΩ NTC at the low-side MOSFETs and a motor-temperature input; an unknown temperature derates instead of faulting.
-* **Choice.** Protection uses only the controller's NTC and motor sensor. DS18B20-class probes are for logging only, and are **excluded from the first milestones**: there is no log record type for them yet ([`ICD.md`](ICD.md) 8). Effect: battery-surface and ambient temperatures are not logged; loss models can use the controller's FET and motor temperatures, which are logged as CAN frames.
-* **Implementation.** `firmware/src/protection/mc_protection.c` (trip and derating); sheet 07 of the schematic.
-* **Test.** `firmware/tests/test_state_machine.c` and `test_core.c` (derating and trips); when probes are added, a record-type test in `tests/` and a step test of each probe's time constant.
+* **Choice.** Protection uses only the controller's NTC and motor sensor. DS18B20-class probes are for logging only. Since v0.6 they have a log record (STLG `TEMP`, [`ICD.md`](ICD.md) 8) with a per-sample status, and the live summary carries them (`sem.telemetry.v3`). **Open:** the probe part and its placements (proposed: battery surface, motor case, ambient), and each probe's time constant on its mounting.
+* **Implementation.** `firmware/src/protection/mc_protection.c` (trip and derating); sheet 07 of the schematic; `host/telematics/stlg.py` (record), `host/telematics/sensors.py` (synthetic probes), `host/telematics/node.py` (live block), `host/pit/ingest.py` (import and validation).
+* **Test.** `firmware/tests/test_state_machine.c` and `test_core.c` (derating and trips); `tests/integration/test_host_demo.py` (`test_stlg_temperature_record_roundtrip_and_pit_import`), `tests/integration/test_mqtt_pipeline.py` (v3 validation, node staleness and invalid readings); MQTT demonstration check `live_wheel_and_temperature_match_log_and_v1_still_accepted`. Still to do once probes are fitted: a step test of each probe's time constant.
 
 ## D4. Sensor and CAN electrical compatibility
 
@@ -90,10 +90,10 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 * **Implementation.** `firmware/src/state_machine/mc_state_machine.c`, `firmware/src/control/mc_hall.c`.
 * **Test.** To be added with the decision: a test that fails on the current behaviour if it is changed.
 
-## D10. Live summary versioning (`sem.telemetry.v2`)
+## D10. Live summary versioning (`sem.telemetry.v2`, `v3`)
 
-* **Requirement.** Vehicle speed in the live summary when the motor is decoupled or GNSS has no fix, without breaking a pit that still receives version 1.
-* **Evidence.** Rotor speed is not vehicle speed with a freewheel; GNSS speed is null without a fix.
-* **Choice.** A new schema name for the added field; the pit accepts v1 and v2 and stores the schema per row; wheel speed is null when older than 0.3 s or when the circumference or pulses per revolution are not configured.
+* **Requirement.** Vehicle speed in the live summary when the motor is decoupled or GNSS has no fix (v2), and temperatures (v3), without breaking a pit that still receives an older version.
+* **Evidence.** Rotor speed is not vehicle speed with a freewheel; GNSS speed is null without a fix. The controller's temperatures were only in the log as CAN frames, and the probes had no record at all.
+* **Choice.** A new schema name for each added required block; the pit accepts v1, v2 and v3 and stores the schema per row. Wheel speed is null when older than 0.3 s or when the circumference or pulses per revolution are not configured; controller temperatures are null when the `ctrl_thermal` frame is older than 0.3 s or invalid; probe temperatures are null when the latest sample is older than 3 s (PROV) or invalid, and the live value is the logged value, so live and log agree exactly.
 * **Implementation.** `host/telematics/node.py`, `host/pit/ingest.py`; [`ICD.md`](ICD.md) 10.
-* **Test.** `tests/integration/test_mqtt_pipeline.py` (`test_v2_wheel_speed_validated_and_v1_still_accepted`, migration of an old database); MQTT demonstration check `live_wheel_speed_v2_matches_log_and_v1_still_accepted`.
+* **Test.** `tests/integration/test_mqtt_pipeline.py` (`test_v2_wheel_speed_validated_and_v1_still_accepted`, `test_v3_temperatures_validated_and_older_schemas_still_accepted`, migration of an old database); MQTT demonstration check `live_wheel_and_temperature_match_log_and_v1_still_accepted`.

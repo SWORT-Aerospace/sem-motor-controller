@@ -66,12 +66,16 @@ CTRL_SIGNALS = {
     "energy_gap_s": ("ctrl_energy_quality", "gap_s"), "requested_Nm": ("ctrl_cmd_trace", "requested_Nm"),
     "accepted_Nm": ("ctrl_cmd_trace", "accepted_Nm"), "reason": ("ctrl_cmd_trace", "reason"),
     "state": ("ctrl_status", "state"), "sup_torque_Nm": ("sup_torque_req", "torque_Nm"),
+    "t_fet": ("ctrl_thermal", "t_fet_degC"), "t_motor": ("ctrl_thermal", "t_motor_degC"),
 }
 RANGES = {"speed_mech_rad_s": (-1000.0, 1000.0), "iq_A": (-200.0, 200.0), "vbus_V": (0.0, 100.0),
           "p_batt_W_mean": (-5000.0, 5000.0), "energy_J": (-1e9, 1e9)}
 
 
 WHEEL_RANGE_MPS = (0.0, 60.0)
+# plausibility bounds of a live temperature, wider than the -55..125 degC of common digital probes and NTCs;
+# PROVISIONAL until the probe part is selected. A value outside them is rejected as corrupted.
+TEMP_RANGE_DEGC = (-55.0, 200.0)
 
 
 def connect(path: pathlib.Path) -> sqlite3.Connection:
@@ -132,14 +136,24 @@ def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
     c = m.get("counters")
     if c is not None and not (isinstance(c, dict) and all(_is_int(v) and v >= 0 for v in c.values())):
         return None, "counters not an object of non-negative integers"
-    if m["schema"] == "sem.telemetry.v2":
+    if m["schema"] in ("sem.telemetry.v2", "sem.telemetry.v3"):
         w = m.get("wheel")
         if not isinstance(w, dict) or not isinstance(w.get("speed_mps"), dict):
-            return None, "v2 message without a wheel.speed_mps object"
+            return None, f"{m['schema'][-2:]} message without a wheel.speed_mps object"
         lo, hi = WHEEL_RANGE_MPS
         for ch, v in w["speed_mps"].items():
             if v is not None and not (_is_num(v) and lo <= v <= hi):
                 return None, f"wheel.speed_mps.{ch}={v!r} outside [{lo}, {hi}]"
+    if m["schema"] == "sem.telemetry.v3":
+        tp = m.get("temp")
+        if not isinstance(tp, dict) or not isinstance(tp.get("probe_degC"), dict):
+            return None, "v3 message without a temp.probe_degC object"
+        lo, hi = TEMP_RANGE_DEGC
+        vals = [(k, tp.get(k)) for k in ("ctrl_fet_degC", "ctrl_motor_degC")]
+        vals += [(f"probe_degC.{ch}", v) for ch, v in tp["probe_degC"].items()]
+        for k, v in vals:
+            if v is not None and not (_is_num(v) and lo <= v <= hi):
+                return None, f"temp.{k}={v!r} outside [{lo}, {hi}]"
     return m, None
 
 
@@ -239,6 +253,7 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path) -> dict:
     C = sens.get("wheel_circumference_m")
     ppr = sens.get("wheel_ppr")
     chan = {int(k): v for k, v in sens.get("wheel_channels", {}).items()}
+    tchan = {int(k): v for k, v in sens.get("temp_channels", {}).items()}
     rep = {"run_id": run_id, "blocks_ok": rr.blocks_ok, "blocks_corrupt": rr.blocks_corrupt,
            "block_seq_gaps": rr.block_seq_gaps, "truncated_tail_bytes": rr.truncated_tail_bytes,
            "records": rr.records, "new_records": 0, "frames_bad_crc": 0, "utc_quality": {}}
@@ -267,6 +282,11 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path) -> dict:
         elif rtype == stlg.WHEEL and C and ppr:
             v = f["counts"] * C / (ppr * f["window_ms"] / 1000.0)
             sig.append((run_id, blk, idx, chan.get(f["channel"], f"wheel_{f['channel']}"), t, u, v, None, "telematics"))
+        elif rtype == stlg.TEMP:
+            # an invalid reading is stored as NULL with the record kept, so a missing value is visible
+            sig.append((run_id, blk, idx, "temp_" + tchan.get(f["channel"], str(f["channel"])), t, u, f["deg_c"],
+                        None, "telematics"))
+            status = f["status"]
         elif rtype == stlg.GNSS:
             v = f["speed_mps"] if f["fix"] and math.isfinite(f["speed_mps"]) else None
             sig.append((run_id, blk, idx, "gnss", t, u, v, None, "gnss"))

@@ -23,7 +23,7 @@ The controller stages map onto the hardware validation stages of [`VALIDATION_PL
 * **Files:** `firmware/` (core, host platform, simulated plant), `host/` (telemetry node, supervisor, pit), `tools/run_host_demo.py`, `tools/run_mqtt_demo.py`, `tools/run_pit_replay.py`, `tools/verify_all.py`.
 * **Equipment:** a Linux computer; Mosquitto for the MQTT demonstration.
 * **Test procedure:** README section F; then `python3 tools/verify_all.py --out build/verify`.
-* **Completion evidence:** GitHub-hosted CI green on the commit; [`generated/host_demo/summary.md`](generated/host_demo/summary.md) (10 checks), [`generated/mqtt_demo/summary.md`](generated/mqtt_demo/summary.md) (12 checks), [`generated/host_demo/pit_replay_report.md`](generated/host_demo/pit_replay_report.md); the verification record ([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md)).
+* **Completion evidence:** GitHub-hosted CI green on the commit; [`generated/host_demo/summary.md`](generated/host_demo/summary.md) (11 checks), [`generated/mqtt_demo/summary.md`](generated/mqtt_demo/summary.md) (12 checks), [`generated/host_demo/pit_replay_report.md`](generated/host_demo/pit_replay_report.md); the verification record ([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md)).
 * **Blockers:** none. **Limits:** every vehicle parameter is synthetic; the simulated plant has the motor rigidly coupled; nothing here says how the vehicle behaves.
 
 ## Stage 2. Development board with one real sensor

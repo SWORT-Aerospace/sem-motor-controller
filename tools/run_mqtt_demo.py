@@ -46,7 +46,7 @@ from host.logger.semmc_log import io_event  # noqa: E402
 from host.csia_adapter.adapter import AdapterParams  # noqa: E402
 from host.pit import ingest, shadow_replay  # noqa: E402
 from host.telematics.mqtt_link import MqttLink  # noqa: E402
-from host.telematics.node import NodeConfig  # noqa: E402
+from host.telematics.node import SCHEMA, NodeConfig  # noqa: E402
 from tools import mqtt_broker  # noqa: E402
 from tools.run_host_demo import build_chain, simulate  # noqa: E402
 
@@ -145,7 +145,7 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
         return [io_event(0, arm=False, throttle=0.0, eco=False), io_event(us(0.1), arm=True), io_event(us(0.3), eco=True)]
 
     ch = build_chain(out, build, link, run_id=RUN_ID, flash_stalls=(), supervisor_stalls=(),
-                     gnss_outages=(sc["gnss_out"],), wheel_faults=(), io_schedule=io_schedule, sup_off=None,
+                     gnss_outages=(sc["gnss_out"],), wheel_faults=(), temp_faults=(), io_schedule=io_schedule, sup_off=None,
                      ncfg=ncfg, kind="HOST SOFTWARE with a real local MQTT broker - not a vehicle run")
     node = ch.node
     wall = {}                                               # event -> monotonic seconds
@@ -349,30 +349,36 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
           f"({sc['pit_down'][0]:.0f}-{sc['pit_down'][1]:.0f} s): all stored after it reconnected "
           f"(session resumed {len(resumed)} time(s))")
 
-    # 9b. live wheel speed (v2) equals the speed the offline import derives from the logged windows
-    wheel_sig = {}
-    for name in ncfg.wheel_channels:
-        wheel_sig[name] = db.execute("SELECT t_local_us, value FROM signals WHERE run_id=? AND name=? "
-                                     "ORDER BY t_local_us", (RUN_ID, name)).fetchall()
-    compared, mismatched, null_live = 0, 0, 0
+    # 9b. live wheel speed (v2) and probe temperatures (v3) equal the values the offline import derives from the
+    # logged records: the latest logged wheel window or probe sample at the message time
     import bisect
+    log_sig = {}
+    for kind, names, prefix in (("wheel", ncfg.wheel_channels, ""), ("temp", ncfg.temp_channels, "temp_")):
+        for name in names:
+            log_sig[kind, name] = db.execute("SELECT t_local_us, value FROM signals WHERE run_id=? AND name=? "
+                                             "ORDER BY t_local_us", (RUN_ID, prefix + name)).fetchall()
+    cmp = {k: collections.Counter() for k in ("wheel", "temp")}
     for r in live.values():
         m = json.loads(r["payload"])
-        for name, v_live in m["wheel"]["speed_mps"].items():
-            sig = wheel_sig.get(name, [])
-            k = bisect.bisect_right([x[0] for x in sig], r["t_local_ms"] * 1000 + 1000) - 1
-            if v_live is None:
-                null_live += 1
-                continue
-            compared += 1
-            if k < 0 or abs(sig[k][1] - v_live) > 1e-9:
-                mismatched += 1
+        for kind, block in (("wheel", m["wheel"]["speed_mps"]), ("temp", m["temp"]["probe_degC"])):
+            for name, v_live in block.items():
+                sig = log_sig.get((kind, name), [])
+                k = bisect.bisect_right([x[0] for x in sig], r["t_local_ms"] * 1000 + 1000) - 1
+                if v_live is None:
+                    cmp[kind]["null"] += 1
+                    continue
+                cmp[kind]["compared"] += 1
+                if k < 0 or sig[k][1] is None or abs(sig[k][1] - v_live) > 1e-9:
+                    cmp[kind]["mismatched"] += 1
     legacy = db.execute("SELECT schema, payload FROM live WHERE run_id='LEGACY-V1'").fetchall()
-    check("live_wheel_speed_v2_matches_log_and_v1_still_accepted",
-          compared > 0 and mismatched == 0 and len(legacy) == 1 and legacy[0][0] == "sem.telemetry.v1",
-          f"{compared} live wheel speeds (schema sem.telemetry.v2) compared with the speed derived from the latest "
-          f"logged wheel window: {mismatched} differ; {null_live} null (no fresh window); a valid "
-          f"sem.telemetry.v1 message from another producer was stored as v1: {len(legacy) == 1}")
+    w, tp = cmp["wheel"], cmp["temp"]
+    check("live_wheel_and_temperature_match_log_and_v1_still_accepted",
+          w["compared"] > 0 and tp["compared"] > 0 and w["mismatched"] == 0 and tp["mismatched"] == 0
+          and len(legacy) == 1 and legacy[0][0] == "sem.telemetry.v1",
+          f"live values (schema {SCHEMA}) compared with the latest logged record: {w['compared']} wheel speeds, "
+          f"{w['mismatched']} differ, {w['null']} null (no fresh window); {tp['compared']} probe temperatures, "
+          f"{tp['mismatched']} differ, {tp['null']} null (no fresh valid sample); a valid sem.telemetry.v1 message "
+          f"from another producer was stored as v1: {len(legacy) == 1}")
 
     # 10. timestamps and missing data
     rows = [live[s] for s in sorted(live)]

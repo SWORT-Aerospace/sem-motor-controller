@@ -112,7 +112,7 @@ Full layouts: [`generated/can_messages.md`](generated/can_messages.md). Load at 
 
 | Item | Value | Source | Verification |
 |---|---|---|---|
-| Topic, encoding | `sem/car/telemetry`, JSON, schema `sem.telemetry.v2` (v1 still accepted) | `host/telematics/node.py`; [`ICD.md`](ICD.md) 10 | `tests/integration/test_mqtt_pipeline.py` |
+| Topic, encoding | `sem/car/telemetry`, JSON, schema `sem.telemetry.v3` (v1 and v2 still accepted) | `host/telematics/node.py`; [`ICD.md`](ICD.md) 10 | `tests/integration/test_mqtt_pipeline.py` |
 | Rate | 2 Hz (proposal allows 1 to 5 Hz) | `node.py` | demonstration |
 | Quality of service | QoS 1; at most 10 unacknowledged; backlog of 30 messages, oldest dropped and counted | `host/telematics/mqtt_link.py` | check `uplink_backlog_bounded_and_drops_counted` |
 | Pit subscriber | persistent session, fixed client id, commit before acknowledgement | `host/pit/mqtt_ingest.py` | check `pit_restart_without_loss` |

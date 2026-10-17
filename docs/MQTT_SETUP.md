@@ -44,7 +44,7 @@ python3 -m host.pit.mqtt_ingest --port 1883 --db build/pit.sqlite     # Ctrl-C t
 | `invalid_messages_rejected_before_storage` | four malformed messages rejected with reasons; none stored |
 | `duplicates_ignored_and_ingest_idempotent` | a duplicate and re-ingestion add no rows |
 | `pit_restart_without_loss` | messages published while the pit was down are delivered after it reconnects |
-| `live_wheel_speed_v2_matches_log_and_v1_still_accepted` | the live wheel speed (`sem.telemetry.v2`) equals the speed from the logged wheel window; a v1 message is still stored |
+| `live_wheel_and_temperature_match_log_and_v1_still_accepted` | the live wheel speeds and probe temperatures (`sem.telemetry.v3`) equal the values from the latest logged wheel window and probe sample; a v1 message is still stored |
 | `timestamps_and_missing_data_explicit` | car time, UTC quality, null GNSS fields in an outage, pit receive time |
 | `pit_shadow_replay_reports_missing_ground_truth` | R3v and CSIA2 replay over the imported log in shadow mode; with no injected faults the report lists attributions without scoring them |
 

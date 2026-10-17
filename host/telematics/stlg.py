@@ -19,11 +19,16 @@ Record types and bodies:
   6 COUNTERS  u32 x 8: rx_frames, log_records, log_dropped_queue, log_dropped_storage,
               uplink_sent, uplink_dropped, queue_high_water, supervisor_overruns
   7 EVENT     u8 code | text (ASCII)
+  8 TEMP      u8 channel | u8 status | i16 centi_degC      one temperature-probe sample (added in v0.6;
+              status 0 ok, 1 CRC error, 2 conversion timeout, 3 out of range; the value is -32768 unless ok;
+              the record time is the end of the conversion). Channel names are in the metadata
+              `sensors.temp_channels`. Readers older than v0.6 keep the record as raw bytes.
 """
 from __future__ import annotations
 
 import dataclasses
 import json
+import math
 import pathlib
 import struct
 import zlib
@@ -35,7 +40,9 @@ BLOCK_BYTES = 4096 - 20          # payload per block; the 20-byte block header f
 REC_HDR = struct.Struct("<BBI")
 BLK_HDR = struct.Struct("<2sIQHI")
 
-CAN, PPS, GNSS, IMU, WHEEL, COUNTERS, EVENT = 1, 2, 3, 4, 5, 6, 7
+CAN, PPS, GNSS, IMU, WHEEL, COUNTERS, EVENT, TEMP = 1, 2, 3, 4, 5, 6, 7, 8
+TEMP_STATUS = ("ok", "crc_error", "timeout", "out_of_range")
+TEMP_INVALID = -32768
 COUNTER_NAMES = ("rx_frames", "log_records", "log_dropped_queue", "log_dropped_storage", "uplink_sent",
                  "uplink_dropped", "queue_high_water", "supervisor_overruns")
 
@@ -58,6 +65,13 @@ def body_imu(ax: float, gz: float) -> bytes:
 
 def body_wheel(channel: int, counts: int, window_ms: int) -> bytes:
     return struct.pack("<BHH", channel, counts, window_ms)
+
+
+def body_temp(channel: int, status: int, deg_c) -> bytes:
+    ok = status == 0 and deg_c is not None and math.isfinite(deg_c) and -327.67 <= deg_c <= 327.67
+    if status == 0 and not ok:
+        status = 3                       # a reading without a usable value is out of range, never ok
+    return struct.pack("<BBh", channel, status, int(round(deg_c * 100)) if ok else TEMP_INVALID)
 
 
 def body_counters(c: dict) -> bytes:
@@ -87,6 +101,10 @@ def parse_body(rtype: int, body: bytes) -> dict:
         return dict(zip(COUNTER_NAMES, struct.unpack("<8I", body)))
     if rtype == EVENT:
         return {"code": body[0], "text": body[1:].decode("ascii", "replace")}
+    if rtype == TEMP:
+        ch, st, v = struct.unpack("<BBh", body)
+        return {"channel": ch, "status": TEMP_STATUS[st] if st < len(TEMP_STATUS) else f"status_{st}",
+                "deg_c": v / 100.0 if st == 0 and v != TEMP_INVALID else None}
     return {"raw": body}
 
 

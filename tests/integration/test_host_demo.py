@@ -48,6 +48,27 @@ def test_stlg_roundtrip(tmp_path):
     assert recs[5][4]["data"] == bytes([5] * 8)
 
 
+def test_stlg_temperature_record_roundtrip_and_pit_import(tmp_path):
+    assert stlg.parse_body(stlg.TEMP, stlg.body_temp(1, 0, 41.237)) == {"channel": 1, "status": "ok", "deg_c": 41.24}
+    assert stlg.parse_body(stlg.TEMP, stlg.body_temp(2, 1, None))["status"] == "crc_error"
+    nan = stlg.parse_body(stlg.TEMP, stlg.body_temp(0, 0, float("nan")))           # "ok" without a value
+    assert nan == {"channel": 0, "status": "out_of_range", "deg_c": None}
+    assert stlg.parse_body(stlg.TEMP, stlg.body_temp(0, 0, 400.0))["deg_c"] is None   # beyond i16 centi-degC
+    w = stlg.Writer(tmp_path / "t.stlg", {"run_id": "T2", "sensors": {"temp_channels": {"0": "battery_surface",
+                                                                                      "1": "motor_case"}}}, 1 << 20)
+    w.add(1_000_000, stlg.TEMP, stlg.body_temp(1, 0, 41.237))
+    w.add(2_000_000, stlg.TEMP, stlg.body_temp(1, 2, None))                        # conversion timeout
+    w.add(2_000_000, stlg.TEMP, stlg.body_temp(5, 0, 20.0))                        # channel without a name
+    w.close()
+    db = ingest.connect(tmp_path / "p.sqlite")
+    ingest.import_log(db, tmp_path / "t.stlg")
+    rows = db.execute("SELECT name, t_local_us, value FROM signals ORDER BY t_local_us, name").fetchall()
+    assert rows == [("temp_motor_case", 1_000_000, 41.24), ("temp_5", 2_000_000, 20.0),
+                    ("temp_motor_case", 2_000_000, None)]                          # invalid kept as NULL
+    st = db.execute("SELECT status FROM records WHERE rtype=? ORDER BY idx", (stlg.TEMP,)).fetchall()
+    assert [r[0] for r in st] == ["ok", "timeout", "ok"]
+
+
 def test_stlg_corrupt_block_is_counted_and_skipped(tmp_path):
     _write(tmp_path / "b.stlg")
     raw = bytearray((tmp_path / "b.stlg").read_bytes())
