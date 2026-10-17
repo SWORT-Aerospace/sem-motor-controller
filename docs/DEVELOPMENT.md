@@ -27,7 +27,7 @@ The host build uses AddressSanitizer and UndefinedBehaviorSanitizer by default; 
 
 Longer property soak: `./build/test_core_properties 300 30 0x5EED2026` (arguments: seeds, seconds per seed, base seed).
 
-Cortex-M4F compile of the portable core (compile check only; no firmware image):
+Cortex-M4F compile of the portable core (size per module; the linked target image is built as in `firmware/platform/stm32g4/README.md`):
 
 ```sh
 cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake \

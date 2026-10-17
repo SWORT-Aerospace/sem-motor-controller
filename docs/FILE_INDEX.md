@@ -59,6 +59,9 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 | `firmware/include/semmc/mc_control.h` | Motor-control primitives and their conventions: PI controller, Clarke/Park transforms, measured versus reconstructed phase currents, voltage and current limits, SVPWM, FOC loop and Hall decoder interfaces. |
 | `firmware/include/semmc/mc_freshness.h` | Freshness, sequencing and time-domain rules for received data (new-sample definition, ordering floor, lag tolerance with re-anchoring, wraparound), result codes and the 32-to-64-bit time extension. |
 | `firmware/include/semmc/mc_protection.h` | Software fault list (`mc_fault_t`), derate reasons, protection inputs and state, and timing constants (undervoltage debounce, derate recovery and hold, stall detection). |
+| `firmware/include/semmc/mc_io.h` | Measurement scaling and plausibility for the board's inputs: NTC conversion with open/short detection, two-track pedal with range and agreement checks, phase-current and bus-voltage scaling, boot offset self-test, low-side sampling window, driver-enable path check. |
+| `firmware/include/semmc/mc_precharge.h` | Precharge sequencing: states, completion and timeout rules, failure detection after the bypass closes, what is not detected. |
+| `firmware/include/semmc/mc_periph_timing.h` | Register timing values computed from clock frequencies: FDCAN nominal bit timing, TIM1 centre-aligned ARR, dead-time generator encoding. |
 | `firmware/include/semmc/mc_config.h` | Calibration blob format v1, validator rule codes shared with `tools/config_tool.py`, raw configuration and typed parameter structs (`mc_params_t`), and the physical-output gate. |
 | `firmware/include/semmc/mc_crc.h` | CRC-8/SAE-J1850 (with data-ID seeding) and CRC-32 interfaces; CRC-32 protects the calibration blob. |
 | `firmware/include/semmc/mc_csia_shadow.h` | Controller-side CSIA advisory tracker interface, shadow mode only; `mc_csia_may_restrict()` is the single future gate and returns false in v0.1. |
@@ -111,6 +114,14 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 |---|---|
 | `firmware/src/transport/mc_can_binding.c` | CAN binding of the transport-neutral core: maps protocol numbers 0x300 to 0x33F onto the calibrated 11-bit identifier block (`supervision.can_id_base`), counts foreign identifiers and forwards bus-off reports. |
 
+### firmware/src/io/
+
+| File | Role in the system |
+|---|---|
+| `firmware/src/io/mc_io.c` | Implementation of `mc_io.h` (portable; host-tested by `firmware/tests/test_io.c`). |
+| `firmware/src/io/mc_precharge.c` | Implementation of `mc_precharge.h`. |
+| `firmware/src/io/mc_periph_timing.c` | Implementation of `mc_periph_timing.h`. |
+
 ### firmware/src/csia_adapter/
 
 | File | Role in the system |
@@ -131,7 +142,12 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 
 | File | Role in the system |
 |---|---|
-| `firmware/platform/stm32g4/README.md` | States that the STM32G4 platform layer is not implemented and gives the integration plan (timers, ADC trigger, CAN, time base, calibration flash, watchdog), vendor-tooling decision, timing budget and platform requirements. |
+| `firmware/platform/stm32g4/README.md` | The STM32G474 target firmware: build, status table (compiled / checked / emulated / bench-tested), structure, interrupts, safety behaviour, open items. |
+| `firmware/platform/stm32g4/FLASHING.md` | Writing the image and the calibration blob, boot report, reading `g_bench` with `tools/bench_read.py`. |
+| `firmware/platform/stm32g4/stm32g474xe_flash.ld` | Linker script: flash, SRAM and CCM regions from ST's template; last 4 KB of flash reserved for the calibration blob; reset-surviving `.noinit`. |
+| `firmware/platform/stm32g4/src/*.c`, `firmware/platform/stm32g4/src/*.h` | Target drivers and start-up, one pair per function (listed in the platform README's structure table); `board_pins_generated.h` is written by `tools/gen_board_pins.py`. |
+| `firmware/platform/stm32g4/timing/*` | Emulation-only harness and its memory layout for `tools/emulate_core_timing.py`; not a flashable image. |
+| `firmware/platform/stm32g4/vendor/*` | ST's CMSIS device header for the STM32G474 and the CMSIS-Core headers, copied unchanged with their licences; sources and commits in `vendor/PROVENANCE.md`. |
 
 ### firmware/tests/
 
@@ -143,6 +159,8 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 | `firmware/tests/test_state_machine.c` | Tests of state machine invariants and arbiter behaviour, including the control-contract cases (hard ceiling clamps on the same update, bounded envelope ramp). |
 | `firmware/tests/test_protocol.c` | Tests of the generated codec: golden vectors, malformed and wrong-ID frames, NaN and saturation handling, and the 64-number identifier block. |
 | `firmware/tests/test_core.c` | Closed-loop tests of the core with the generated codec and simulated plant: FOC tracking, ECO handshake and loss, bus-off, reboot, limits sets, reconstructed phase, overcurrent, telemetry validity, energy gaps and CAN block relocation. |
+| `firmware/tests/test_core_preemption.c` | The current interrupt preempting the slow step, emulated with `ld --wrap`: an overcurrent raised between the slow step's read and clear is kept and latches. |
+| `firmware/tests/test_io.c` | `src/io`: NTC, pedal, ADC scaling and offsets, sampling window, enable path, precharge sequences, CAN bit timing, TIM1 ARR and dead time. |
 | `firmware/tests/test_core_properties.c` | Randomised property test (P1 to P8) with an adversarial supervisor, random driver and reboots through the real CAN binding; arguments `[n_seeds [seconds [base_seed]]]`, run by ctest at 6 x 12 s and 24 x 12 s. |
 | `firmware/tests/mc_test.h` | Minimal dependency-free test harness (`CHECK`, `CHECK_NEAR`, `CHECK_EQ_INT`, `RUN`, summary line). |
 | `firmware/tests/test_support.h` | Shared test helpers that load the build-time calibration blobs and derive the synthetic parameters. |
@@ -316,6 +334,7 @@ Paths are relative to the repository root. Every parameter set in this directory
 |---|---|
 | `hardware/interfaces/README.md` | Points to the candidate pin maps, the electrical I/O list and the CAN message table. |
 | `hardware/interfaces/pin_allocation_STM32G474VBCETx.csv`, `hardware/interfaces/pin_allocation_STM32G474MBCETx.csv`, `hardware/interfaces/pin_allocation_STM32G474RBCETx.csv` | Candidate MCU pin allocations for LQFP100 (used by the schematic and the consistency check), LQFP80 and LQFP64 (incomplete). Generated by `tools/pin_allocation.py` from ST's open pin database; do not edit. |
+| `hardware/interfaces/st_open_pin_data/*` | Two files of ST's `STM32_open_pin_data` (pins and signals of the STM32G474V, alternate-function numbers of the G47x GPIO) with ST's BSD-3 licence; read by `tools/gen_board_pins.py`. |
 
 ### `hardware/kicad/`
 
@@ -405,6 +424,9 @@ Paths are relative to the repository root. Every parameter set in this directory
 | `tools/clock_tree.py` | Enumerates STM32G474 clock trees and CAN bit timings for candidate crystals and buses, citing ST source limits. |
 | `tools/hardware_calcs.py` | Computes the current-sense error budget and the power-stage loss and thermal envelope for the draft hardware. |
 | `tools/pin_allocation.py` | Allocates the controller's functions to STM32G474 pins from ST's open pin database and writes the candidate pin maps. |
+| `tools/gen_board_pins.py` | Writes `firmware/platform/stm32g4/src/board_pins_generated.h` and `docs/generated/pin_af_verification.md` from the pin map, checking every pin, position and alternate function against ST's pin database; `--check` in CI. |
+| `tools/emulate_core_timing.py` | Runs the core's ARM build in an instruction-level emulator and reports instruction counts of the fast and slow steps (`docs/generated/core_timing_emulated.md`). |
+| `tools/bench_read.py` | Reads `g_bench` from a running board through OpenOCD and writes a JSON record for the acceptance procedures. |
 
 ### `tools/mqtt/`
 
@@ -444,6 +466,7 @@ Paths are relative to the repository root. Every test runs on a host against syn
 | `tests/integration/test_pit_energy.py` | Pit energy per distance: formulas, the root README worked example against independent arithmetic and the vehicle model, run summaries that report missing data, wheel-channel cross-check and the replay tool's energy output. |
 | `tests/integration/test_supervisor.py` | The supervisor gives zero torque on stale, duplicated or invalid controller speed and bounded torque on fresh speed; pulse-and-coast hysteresis. |
 | `tests/integration/test_vcu_bridge.py` | The proposed SocketCAN bridge: identifier filter, classic-frame packing and decoding, rejection of CAN FD, extended and corrupted frames, relocated identifier block. |
+| `tests/integration/test_target_firmware.py` | Builds the STM32G474 image and checks the vector table against ST's interrupt list, the memory layout, no double precision on the current-interrupt path, fault handlers reaching the safe state, the emulated fast-step bound and the bench-reader layout. |
 | `tests/integration/test_math_spec.py` | Recomputes every numerical example of `docs/MATH_SPEC.md` with the implementing code. |
 | `tests/integration/test_docs.py` | Documentation links and backtick paths resolve, generated check documents are current, no em dash or assistant branding in current documents, root README scope statements. |
 

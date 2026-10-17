@@ -112,7 +112,9 @@ typedef enum {
     MC_P_SENSING_MOTOR_NTC_R25_OHM = 203,
     MC_P_SENSING_MOTOR_NTC_BETA_K = 204,
     MC_P_SENSING_MOTOR_NTC_BIAS_OHM = 205,
-    MC_P_MAX_ID = 205
+    MC_P_SENSING_PHASE_CURRENT_POLARITY = 206,
+    MC_P_SENSING_CURRENT_OFFSET_TOLERANCE_COUNTS = 207,
+    MC_P_MAX_ID = 207
 } mc_param_id_t;
 
 /* Enumerations (values stored as exact small floats in the blob). */
@@ -147,6 +149,9 @@ typedef enum {
 #define MC_TIMING_STATUS_PROVISIONAL_SIMULATION_ONLY 0
 #define MC_TIMING_STATUS_HAZARD_ANALYSED 1
 #define MC_TIMING_STATUS_COUNT 2
+#define MC_CURRENT_POLARITY_RISES_WITH_CURRENT_INTO_TERMINAL 0
+#define MC_CURRENT_POLARITY_FALLS_WITH_CURRENT_INTO_TERMINAL 1
+#define MC_CURRENT_POLARITY_COUNT 2
 
 #define MC_PKIND_REAL 0
 #define MC_PKIND_INT  1
@@ -270,8 +275,10 @@ typedef struct {
     {203u, 0u, 0u, 0u, 100.0f, 1000000.0f, "sensing.motor_ntc_r25_ohm"}, \
     {204u, 0u, 0u, 0u, 1000.0f, 10000.0f, "sensing.motor_ntc_beta_K"}, \
     {205u, 0u, 0u, 0u, 100.0f, 1000000.0f, "sensing.motor_ntc_bias_ohm"}, \
+    {206u, 3u, 0u, 1u, 0.0f, 1.0f, "sensing.phase_current_polarity"}, \
+    {207u, 0u, 0u, 1u, 0.5f, 4096.0f, "sensing.current_offset_tolerance_counts"}, \
 }
 
-#define MC_PARAM_COUNT 106
+#define MC_PARAM_COUNT 108
 
 #endif /* SEMMC_MC_PARAMS_GENERATED_H */

@@ -154,3 +154,5 @@ sensing:                             # temperature sensors (UNKNOWN)
   motor_ntc_r25_ohm: null
   motor_ntc_beta_K: null
   motor_ntc_bias_ohm: null
+  phase_current_polarity: null
+  current_offset_tolerance_counts: null

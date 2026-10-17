@@ -34,6 +34,7 @@ enums:
   category:        {unknown: 0, prototype: 1, urban_concept: 2}
   coast_mode:      {zero_current: 0, gate_off: 1}
   timing_status:   {provisional_simulation_only: 0, hazard_analysed: 1}
+  current_polarity: {rises_with_current_into_terminal: 0, falls_with_current_into_terminal: 1}
 
 params:
   # ---- calibration identity ------------------------------------------------
@@ -168,6 +169,12 @@ params:
   - {id: 203, path: sensing.motor_ntc_r25_ohm,               kind: real, min: 100.0, max: 1.0e+6, req_sim: false, req_hw: false}
   - {id: 204, path: sensing.motor_ntc_beta_K,                kind: real, min: 1000.0, max: 10000.0, req_sim: false, req_hw: false}
   - {id: 205, path: sensing.motor_ntc_bias_ohm,              kind: real, min: 100.0, max: 1.0e+6, req_sim: false, req_hw: false}
+  # Phase-current amplifier output direction for current flowing into the motor terminal (sign convention
+  # in conventions.phase_current_positive). Measured on the bench with a known DC current through one phase.
+  - {id: 206, path: sensing.phase_current_polarity,          kind: enum, enum: current_polarity, req_sim: false, req_hw: true}
+  # At boot, with the gate driver disabled, the zero-current ADC readings must lie within this many counts
+  # of inverter.current_offset_counts; otherwise the current self-test fails and the controller does not arm.
+  - {id: 207, path: sensing.current_offset_tolerance_counts, kind: real, min: 0.5, max: 4096.0, req_sim: false, req_hw: true}
 
 # String-valued fields (not in the binary blob; carried as metadata and hashed
 # into the calibration identity). null = unknown.

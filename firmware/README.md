@@ -2,7 +2,7 @@
 
 Portable C11 core of the motor controller, its public headers, a host platform with a simulated plant, notes for the future STM32G4 platform layer, and the C unit and property tests. The core contains the operating state machine, torque arbitration, field-oriented control (FOC), protection, energy accounting and the binding to CAN (Controller Area Network).
 
-**Status:** only host builds and host simulations exist. Nothing in this directory has been built for, flashed to or tested on hardware. The STM32G4 platform layer is not implemented, so no embedded firmware image can be produced from this tree.
+**Status:** the core runs in host builds and host simulations, and the STM32G474 target image links (`platform/stm32g4`, built in CI). Nothing has been flashed to or tested on hardware. The target image keeps the gate driver disabled in this revision (its SPI configuration and the battery meter driver need datasheets that have not been read); see [platform/stm32g4/README.md](platform/stm32g4/README.md) for what is compiled, checked, emulated and untested.
 
 ## 1. What the directory contains and what the core does
 
@@ -348,7 +348,7 @@ This compiles only `semmc_core` (core plus generated codec) for `-mcpu=cortex-m4
 
 ### 7.5 Hardware build option
 
-`-DSEMMC_HARDWARE_BUILD=ON` validates `SEMMC_VEHICLE_CONFIG` (default `config/vehicle.unconfigured.yaml`) with `tools/config_tool.py validate ... --mode hw` at configure time and fails if it is invalid. If it is valid, configuration still stops with an error because the STM32G4 platform layer is not implemented. With the default configuration it fails at the validation step.
+`-DSEMMC_HARDWARE_BUILD=ON` validates `SEMMC_VEHICLE_CONFIG` (default `config/vehicle.unconfigured.yaml`) with `tools/config_tool.py validate ... --mode hw` at configure time and fails if it is invalid; if it is valid it encodes `cal_hw.bin` for the board's calibration area. With the default configuration it fails at the validation step. `-DSEMMC_TARGET_STM32G474=ON` with the arm-none-eabi toolchain file links the target image (platform/stm32g4/README.md).
 
 ## 8. Generated files
 

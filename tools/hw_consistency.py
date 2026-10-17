@@ -26,7 +26,7 @@ NET = ROOT / "hardware" / "kicad" / "semmc.net"
 PINS = ROOT / "hardware" / "interfaces" / "pin_allocation_STM32G474VBCETx.csv"   # LQFP100, as in the schematic
 BOM = ROOT / "hardware" / "bom" / "BOM_draft.csv"
 GEN = ROOT / "tools" / "gen_kicad_schematic.py"
-PLATFORM = ROOT / "firmware" / "platform" / "stm32g4" / "README.md"
+PLATFORM = ROOT / "firmware" / "platform" / "stm32g4" / "src" / "pwm.h"
 OUT = ROOT / "hardware" / "review" / "CONSISTENCY_CHECK.md"
 
 
@@ -150,12 +150,12 @@ def run():
     rec("PN1 every allocated MCU pin carries the intended net", "FAIL" if bad else "PASS",
         "; ".join(bad) or f"{len(pins)} allocated functions match the netlist")
     txt = PLATFORM.read_text()
-    m1 = re.search(r"BKIN \((P[A-G]\d+)", txt)
-    m2 = re.search(r"BKIN2 \((P[A-G]\d+)", txt)
+    m1 = re.search(r"\bBKIN\s+\((P[A-G]\d+)", txt)
+    m2 = re.search(r"\bBKIN2\s+\((P[A-G]\d+)", txt)
     plat = (m1.group(1) if m1 else None, m2.group(1) if m2 else None)
     want = (pins["PWM_BREAK"]["pin"], pins["PWM_BREAK2"]["pin"])
-    rec("PN2 platform notes name the same break pins as the allocation", "PASS" if plat == want else "FAIL",
-        f"platform README BKIN/BKIN2 {plat}; pin allocation {want}")
+    rec("PN2 target PWM driver (pwm.h) names the same break pins as the allocation", "PASS" if plat == want else "FAIL",
+        f"pwm.h BKIN/BKIN2 {plat}; pin allocation {want}")
     desc = pins["PWM_BREAK2"]["note"]
     rec("PN3 BKIN2 description matches the schematic (over-voltage)",
         "PASS" if "over-voltage" in desc and "over-current comparator\"" not in desc else "FAIL", desc)

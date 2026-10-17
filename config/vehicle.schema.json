@@ -1033,12 +1033,14 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "current_offset_tolerance_counts",
         "fet_ntc_beta_K",
         "fet_ntc_bias_ohm",
         "fet_ntc_r25_ohm",
         "motor_ntc_beta_K",
         "motor_ntc_bias_ohm",
-        "motor_ntc_r25_ohm"
+        "motor_ntc_r25_ohm",
+        "phase_current_polarity"
       ],
       "properties": {
         "fet_ntc_r25_ohm": {
@@ -1088,6 +1090,21 @@
           ],
           "minimum": 100.0,
           "maximum": 1000000.0
+        },
+        "phase_current_polarity": {
+          "enum": [
+            "falls_with_current_into_terminal",
+            "rises_with_current_into_terminal",
+            null
+          ]
+        },
+        "current_offset_tolerance_counts": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.5,
+          "maximum": 4096.0
         },
         "notes": {
           "type": [

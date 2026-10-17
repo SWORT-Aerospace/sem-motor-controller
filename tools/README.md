@@ -108,7 +108,7 @@ The procurement generator `gen_procurement.py` (section 1.1) also belongs to the
 5. Schematic connectivity gate: `gen_kicad_schematic.py --check`, then `git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'`, so committed schematic files and the draft BOM must equal the generator's output.
 6. `python -m pytest -rs` with `SEMMC_REQUIRE_MQTT=1` (a missing broker is a failure). Through the tests this also runs `gen_kicad_schematic.py --check`, `timing_budget.py`, `price_bom.py`, `run_pit_replay.py` (on an empty database), the checks of `hw_consistency.py` (in memory, without writing its report), and functions of `run_host_demo.py`, `run_mqtt_demo.py`, `mqtt_broker.py`, `config_tool.py`, `bus_load.py`, `clock_tree.py`, `telematics_budget.py`, `wheel_sensor_check.py`, `gen_procurement.py` and `check_links.py`.
 7. Host demonstrations: `run_host_demo.py --out build/host_demo`, `run_mqtt_demo.py --out build/mqtt_demo`, then `run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay`.
-8. Cortex-M4F cross-compile of the portable core (compile check only).
+8. Cortex-M4F cross-compile of the portable core (size per module), the linked STM32G474 target image, and the emulated instruction counts (`emulate_core_timing.py`).
 9. Quick synthetic studies: `run_optimization.py --quick`, `run_electrical_calcs.py`, `run_csia_study.py`.
 
 **`erc` job** (KiCad 8 from `ppa:kicad/kicad-8.0-releases`; the recorded runs used KiCad 8.0.9): `bash tools/run_kicad_erc.sh`, upload of `hardware/kicad/ERC_REPORT.*` as the `erc-report` artifact (whatever the result), then `erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors`.

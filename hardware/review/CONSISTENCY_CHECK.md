@@ -15,7 +15,7 @@ Totals: 14 PASS, 0 FAIL, 4 OPEN.
 | PR7 HW_PERMIT comes from the safety loop; the MCU only senses it | **PASS** | U1001 on HW_PERMIT pin ['3']; MCU on pin ['84'] (ESTOP_CHAIN_SENSE = pin 84) |
 | PR8 independent over-current comparator on BKIN2 | **OPEN** | none in the draft: hardware over-current shutdown is the gate driver's VDS monitoring through nFAULT -> BKIN (threshold depends on the MOSFET R_DS(on), i.e. on the motor current); BKIN2 carries the over-voltage trip only. Decide after the motor peak current is known. |
 | PN1 every allocated MCU pin carries the intended net | **PASS** | 45 allocated functions match the netlist |
-| PN2 platform notes name the same break pins as the allocation | **PASS** | platform README BKIN/BKIN2 ('PE15', 'PC3'); pin allocation ('PE15', 'PC3') |
+| PN2 target PWM driver (pwm.h) names the same break pins as the allocation | **PASS** | pwm.h BKIN/BKIN2 ('PE15', 'PC3'); pin allocation ('PE15', 'PC3') |
 | PN3 BKIN2 description matches the schematic (over-voltage) | **PASS** | hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option) |
 | BM1 BOM lines cover every schematic component exactly once | **PASS** | 206 components, 100 BOM lines; missing [], extra [], duplicated [], qty mismatches [], value mismatches [] |
 | BM2 motor/battery-dependent parts stay unresolved | **OPEN** | 42 BOM lines are UNRESOLVED (ratings depend on the motor, battery, harness or rules); no fabrication release while any remains |
