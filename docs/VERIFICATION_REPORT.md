@@ -218,3 +218,14 @@ Image checksums from this host (SHA-256; a CI build with another toolchain patch
 
 Nothing was flashed, energised or measured.
 
+### 8.5 Baseline for the continued v0.6 work (2026-10-18)
+
+| Item | Value |
+|---|---|
+| Pull request | SWORT-Aerospace/sem-motor-controller#5, `eng/v0.6-vehicle-package` into `main`, open, no review threads |
+| Head | `ed05e72` |
+| Push run on the head | 39080454276: attempt 1 failed in the toolchain step before any test (Launchpad HTTP 500 while adding the KiCad PPA); attempt 2 succeeded (`host`, `erc`) |
+| Pull-request run on the head | 39081023928: succeeded (`host`, `erc`) |
+| Ancestry | `main` (`3a80039`, including the team's questionnaire edit), v0.4 (`0b7255e`) and v0.5 (`76f4cfc`) are ancestors of the head |
+| Manufacturer documents | none in the repository; the manufacturers' sites are refused by the build environment's network policy (CONNECT 403, checked once). The download list: [`reference/datasheets/README.md`](reference/datasheets/README.md) |
+

@@ -436,6 +436,7 @@ Paths are relative to the repository root. Every parameter set in this directory
 | `tools/bench_read.py` | Reads `g_bench` from a running board through OpenOCD and writes a JSON record for the acceptance procedures. |
 | `tools/fetch_kicad_symbols.py` | Downloads the 17 KiCad 8.0.9 symbol libraries the schematic uses into `build/kicad-symbols-8.0.9/`, checking each file's SHA-256. |
 | `tools/acceptance.py` | Renders `docs/BENCH_ACCEPTANCE.md` from `hardware/acceptance/procedures.yaml`, writes blank result records for a stage and checks returned records (limits, stop conditions, blocked steps, evidence files, signatures). |
+| `tools/check_datasheets.py` | Renders `docs/reference/datasheets/README.md` from `manifest.yaml`, records the SHA-256 and size of received PDFs, and fails `--check` when the page is stale or a recorded file changed. |
 | `tools/blockers.py` | Renders `docs/BLOCKERS.md` from `docs/blockers.yaml` and refuses an incomplete entry; `--check` reports a stale document. |
 | `tools/release_gate.py` | Evaluates the fabrication release gate and writes `docs/generated/release_gate.md`; builds the release package only when every condition passes. |
 
@@ -508,4 +509,5 @@ Paths are relative to the repository root. Every test runs on a host against syn
 | `tests/hardware/test_clock_and_telematics.py` | Clock-tree feasibility and PLL ranges, dead-time code, controller and supervisor frame rates and log flash fill time. |
 | `tests/hardware/test_procurement.py` | Project procurement file: validation, generated tables current, estimates reproduce the priced BOM without double counting, no unsupported status, no zero totals for unknown costs. |
 | `tests/hardware/test_wheel_sensor_check.py` | Wheel-magnet detection arithmetic against hand calculations and the quoted datasheet sampling periods. |
+| `tests/hardware/test_datasheets.py` | The document manifest is current and ordered, a received file is pinned by its hash, and no revision is guessed. |
 | `tests/hardware/test_release_gate.py` | The committed release-gate report is current and names every condition, and a failing gate builds no package. |
