@@ -41,7 +41,7 @@ items:
   # ---------------------------------------------------------------- motor controller (from the priced draft BOM)
   - id: mc_parts
     item: Controller board parts, one board
-    purpose: Every component on the draft motor-controller schematic (100 BOM lines)
+    purpose: Every component on the draft motor-controller schematic (122 BOM lines)
     category: controller
     qty: 1
     unit: set

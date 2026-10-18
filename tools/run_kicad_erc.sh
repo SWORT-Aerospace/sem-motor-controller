@@ -36,6 +36,15 @@ if [[ ! -f "$symdir/power.kicad_sym" ]]; then
 fi
 export KICAD8_SYMBOL_DIR="$symdir"
 echo "symbol libraries: $symdir"
+# The project's fp-lib-table (written by tools/check_footprints.py) resolves ${KICAD8_FOOTPRINT_DIR}/<lib>.pretty;
+# point it at the pinned copy of the footprints the assignment uses (tools/check_footprints.py --fetch).
+fpdir="${SEMMC_KICAD_FOOTPRINT_DIR:-$PWD/build/kicad-footprints-8.0.9}"
+if [[ ! -d "$fpdir/Resistor_SMD.pretty" ]]; then
+  echo "$fpdir has no footprints: run python3 tools/check_footprints.py --fetch" >&2
+  exit 2
+fi
+export KICAD8_FOOTPRINT_DIR="$fpdir"
+echo "footprint libraries: $fpdir"
 kicad-cli sch erc --severity-all --units mm --format report --output hardware/kicad/ERC_REPORT.rpt "$SCH" || true
 kicad-cli sch erc --severity-all --units mm --format json --output hardware/kicad/ERC_REPORT.json "$SCH" 2>/dev/null || true
 grep -E "^\*\* ERC messages|^ \*\* ERC messages|errors|warnings" hardware/kicad/ERC_REPORT.rpt | tail -3 || true

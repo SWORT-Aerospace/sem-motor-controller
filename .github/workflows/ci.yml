@@ -29,6 +29,8 @@ jobs:
         run: pip install -r requirements.txt
       - name: KiCad symbol libraries 8.0.9 (pinned, SHA-256 checked; used by the generator and the ERC)
         run: python tools/fetch_kicad_symbols.py
+      - name: KiCad footprints 8.0.9 used by the assignment (pinned, SHA-256 checked)
+        run: python tools/check_footprints.py --fetch
       - name: Generated files are current
         run: |
           python tools/gen_config.py --check
@@ -39,6 +41,7 @@ jobs:
           python tools/blockers.py --check
           python tools/check_datasheets.py --check
           python tools/ov_trip_worst_case.py --check
+          python tools/check_footprints.py --check
           python tools/acceptance.py render --check
           python tools/wheel_sensor_check.py --check
           python tools/coastdown_sensitivity.py --check
@@ -122,6 +125,10 @@ jobs:
           kicad-cli version
       - name: KiCad symbol libraries 8.0.9 (the copy the schematic was generated from)
         run: python tools/fetch_kicad_symbols.py
+      - name: KiCad footprints 8.0.9 used by the assignment (the ERC resolves each symbol's footprint)
+        run: |
+          pip install -r requirements.txt
+          python tools/check_footprints.py --fetch
       - name: ERC
         run: bash tools/run_kicad_erc.sh
       - name: Upload ERC report

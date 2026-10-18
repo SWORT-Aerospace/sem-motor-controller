@@ -1,0 +1,857 @@
+# Footprint assignment for every BOM line (hardware/bom/BOM_draft.csv), hand-maintained.
+# Read by tools/gen_kicad_schematic.py (Footprint field of each symbol, BOM footprint column), by
+# tools/price_bom.py (footprint and package columns) and checked by tools/check_footprints.py, which writes
+# FOOTPRINT_CHECK.md.
+#
+# disposition:
+#   verified                  footprint assigned and checked (pin-to-pad, pads, courtyard, fabrication outline,
+#                             orientation convention, pinned library file); the package is the selection for a
+#                             generic part (value + package), so no manufacturer drawing is needed beyond the
+#                             library's land pattern
+#   assigned_drawing_pending  footprint assigned and checked the same way, but the part is a specific device:
+#                             its manufacturer's package drawing has not been read, so the land pattern is not
+#                             confirmed
+#   rating_dependent          no footprint: the package follows from a rating that waits for the battery or motor
+#   datasheet_dependent       no footprint: the value or pin voltage comes from an unread data sheet
+#   connector_dependent       no footprint: the connector family waits for the harness
+#   pinout_blocked            no footprint: the symbol's pins are placeholders
+# Library: KiCad footprints 8.0.9 (the project's KiCad release), pinned by SHA-256 in library_pins.yaml.
+library:
+  source: https://gitlab.com/kicad/libraries/kicad-footprints
+  tag: 8.0.9
+lines:
+- refs:
+  - C101
+  disposition: rating_dependent
+  basis: 100 V class MLCC; voltage rating from V_bat,max decides 1206 or 1210
+  blocker: B-BAT-V
+- refs:
+  - C1103
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: CAN split-termination capacitor to GND; voltage across the part bounded by the 3.3 V or 5 V rails; 0603
+    is the package
+- refs:
+  - C1201
+  - C1202
+  disposition: rating_dependent
+  basis: buck input capacitors on VBAT_PROT; voltage rating from V_bat,max
+  blocker: B-BAT-V
+- refs:
+  - C1203
+  disposition: datasheet_dependent
+  basis: 'LM5164 bootstrap capacitor between BST and SW: value and voltage from the LM5164 data sheet'
+  blocker: B-PART-DOCS
+- refs:
+  - C1204
+  - C1205
+  disposition: verified
+  footprint: Capacitor_SMD:C_1206_3216Metric
+  package: '1206'
+  basis: 22 uF on +5V; 1206 so that the capacitance left at 5 V DC bias stays usable (0603 loses most of it)
+- refs:
+  - C201
+  - C202
+  - C203
+  disposition: rating_dependent
+  basis: 'bulk capacitors: ripple current and voltage from the motor and battery'
+  blocker: B-MOTOR
+- refs:
+  - C204
+  - C205
+  - C206
+  disposition: rating_dependent
+  basis: 'link MLCCs on VDC: voltage rating from V_bat,max'
+  blocker: B-BAT-V
+- refs:
+  - C1003
+  - C1004
+  - C1005
+  - C1006
+  - C1007
+  - C1008
+  - C207
+  - C808
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: input filter capacitors on 3.3 V inputs; voltage across the part bounded by the 3.3 V or 5 V rails; 0603
+    is the package
+- refs:
+  - C401
+  disposition: datasheet_dependent
+  basis: 'DRV8353 charge-pump flying capacitor: value and voltage (>= V_bat,max + 16 V in the draft) from the DRV8353
+    data sheet and V_bat,max'
+  blocker: B-DRV
+- refs:
+  - C402
+  - C403
+  - C404
+  disposition: datasheet_dependent
+  basis: 'DRV8353 VCP, VGLS and DVDD capacitors: values and pin voltages from the DRV8353 data sheet'
+  blocker: B-DRV
+- refs:
+  - C405
+  disposition: rating_dependent
+  basis: 'VM decoupling on VDC: voltage rating from V_bat,max'
+  blocker: B-BAT-V
+- refs:
+  - C501
+  - C503
+  - C505
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: differential filter option across the CSA inputs (DNP); 0603 footprint so it can be fitted
+- refs:
+  - C502
+  - C504
+  - C506
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: CSA output filter capacitors to GND; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is
+    the package
+- refs:
+  - C1001
+  - C1002
+  - C1101
+  - C1102
+  - C601
+  - C602
+  - C701
+  - C702
+  - C801
+  - C802
+  - C803
+  - C804
+  - C805
+  - C810
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: decoupling and filter capacitors on +3V3, +5V and 3.3 V signals; voltage across the part bounded by the
+    3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - C806
+  disposition: verified
+  footprint: Capacitor_SMD:C_0805_2012Metric
+  package: 0805
+  basis: 4.7 uF bulk on +3V3; 0805 for DC-bias margin
+- refs:
+  - C1206
+  - C1207
+  - C807
+  - C809
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: 1 uF on +5V, +3V3, +3V3A; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - C811
+  - C812
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: 'crystal load capacitors (C0G): the value waits for the crystal, the package does not'
+- refs:
+  - C1009
+  - C1104
+  - C901
+  - C902
+  - C903
+  disposition: verified
+  footprint: Capacitor_SMD:C_0603_1608Metric
+  package: '0603'
+  basis: 1 nF input filters on 3.3 V and 5 V signals and the CAN shield; voltage across the part bounded by the
+    3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - D101
+  disposition: rating_dependent
+  basis: 'TVS: stand-off and clamp from V_bat,max and the surge current'
+  blocker: B-BAT-V
+- refs:
+  - D102
+  disposition: verified
+  footprint: Diode_SMD:D_SOD-123
+  package: SOD-123
+  basis: 12 V Zener across the bypass gate-source; at most about 1 mA; cathode at pad 1 (symbol pin 1 = K)
+- refs:
+  - D1101
+  disposition: assigned_drawing_pending
+  footprint: Package_TO_SOT_SMD:SOT-23
+  package: SOT-23
+  basis: NUP2105L CAN ESD array; footprint from its KiCad 8.0.9 symbol; onsemi package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - D701
+  disposition: assigned_drawing_pending
+  footprint: Diode_SMD:D_SOD-923
+  package: SOD-923
+  basis: ESD9B3.3ST5G; footprint from its KiCad 8.0.9 symbol; bidirectional; onsemi package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - D801
+  disposition: verified
+  footprint: LED_SMD:LED_0603_1608Metric
+  package: '0603'
+  basis: status LED, cathode at pad 1 (symbol pin 1 = K, on GND)
+- refs:
+  - D802
+  disposition: verified
+  footprint: LED_SMD:LED_0603_1608Metric
+  package: '0603'
+  basis: fault LED, cathode at pad 1 (symbol pin 1 = K, on GND)
+- refs:
+  - D803
+  disposition: verified
+  footprint: Diode_SMD:D_SOD-323
+  package: SOD-323
+  basis: BAT54-class Schottky between WDG_RST_N and HW_PERMIT, in SOD-323 (a two-terminal package that matches the
+    two-pin symbol; the SOT-23 BAT54 would need a three-pin symbol); cathode at pad 1; the MPN in SOD-323 to confirm
+- refs:
+  - D1001
+  - D1002
+  - D1003
+  - D1004
+  - D1005
+  - D1006
+  - D901
+  - D902
+  - D903
+  disposition: assigned_drawing_pending
+  footprint: Diode_SMD:D_SOD-923
+  package: SOD-923
+  basis: ESD9B5.0ST5G; footprint from its KiCad 8.0.9 symbol; bidirectional; onsemi package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - F1001
+  disposition: rating_dependent
+  basis: 'sensor-supply PTC: hold current from the pedal and switch loads decides 1206 or 1812'
+  blocker: B-PEDAL
+- refs:
+  - F101
+  disposition: rating_dependent
+  basis: battery fuse from I_batt,max, V_bat,max and the BMS short-circuit current
+  blocker: B-BAT-I
+- refs:
+  - F901
+  disposition: rating_dependent
+  basis: 'hall-supply PTC: hold current from the hall sensors decides 1206 or 1812'
+  blocker: B-MOTOR
+- refs:
+  - FB801
+  disposition: verified
+  footprint: Inductor_SMD:L_0603_1608Metric
+  package: '0603'
+  basis: ferrite bead +3V3 to +3V3A, 600 R at 100 MHz class; current rating to check against the analog load (tens
+    of mA)
+- refs:
+  - J1001
+  disposition: connector_dependent
+  basis: driver-controls harness connector
+  blocker: B-HARNESS
+- refs:
+  - J101
+  disposition: connector_dependent
+  basis: battery connector from the harness and I_batt,max
+  blocker: B-HARNESS
+- refs:
+  - J1101
+  disposition: connector_dependent
+  basis: CAN harness connector
+  blocker: B-HARNESS
+- refs:
+  - J301
+  disposition: connector_dependent
+  basis: motor phase connector or lugs from I_ph,max and the harness
+  blocker: B-HARNESS
+- refs:
+  - J701
+  disposition: connector_dependent
+  basis: motor temperature connector
+  blocker: B-HARNESS
+- refs:
+  - J801
+  disposition: verified
+  footprint: Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD
+  package: 2x05 1.27 mm SMD
+  basis: ARM Cortex 10-pin debug header; the symbol numbering follows the 2x05 header numbering (pin 1 and 2 in
+    the first row); bench only
+- refs:
+  - J802
+  disposition: verified
+  footprint: Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical
+  package: 1x03 2.54 mm
+  basis: UART bench header, not fitted for competition
+- refs:
+  - J901
+  disposition: connector_dependent
+  basis: motor hall connector
+  blocker: B-HARNESS
+- refs:
+  - JP1101
+  - JP1102
+  disposition: verified
+  footprint: Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm
+  package: solder jumper
+  basis: CAN termination jumpers; whether they are closed waits for the bus layout, the footprint does not
+- refs:
+  - JP901
+  disposition: verified
+  footprint: Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm_NumberLabels
+  package: solder jumper
+  basis: hall supply selection 5 V / 3V3; the choice waits for the sensor, the footprint does not
+- refs:
+  - L1201
+  disposition: rating_dependent
+  basis: buck inductor from the LM5164 design procedure and the V_IN range
+  blocker: B-BAT-V
+- refs:
+  - NT1201
+  disposition: verified
+  footprint: NetTie:NetTie-2_SMD_Pad0.5mm
+  package: net tie
+  basis: PGND-GND single point at the shunt ground
+- refs:
+  - Q101
+  disposition: rating_dependent
+  basis: 'bypass P-FET: V_DS, current and SOA from V_bat,max and I_batt,max'
+  blocker: B-BAT-V
+- refs:
+  - Q102
+  disposition: rating_dependent
+  basis: 'bypass driver N-FET: V_DS from V_bat,max (its drain sees the battery when off)'
+  blocker: B-BAT-V
+- refs:
+  - Q301
+  disposition: rating_dependent
+  basis: 'bridge MOSFET: package from I_ph,max and V_bat,max'
+  blocker: B-MOTOR
+- refs:
+  - Q302
+  disposition: rating_dependent
+  basis: bridge MOSFET
+  blocker: B-MOTOR
+- refs:
+  - Q303
+  disposition: rating_dependent
+  basis: bridge MOSFET
+  blocker: B-MOTOR
+- refs:
+  - Q304
+  disposition: rating_dependent
+  basis: bridge MOSFET
+  blocker: B-MOTOR
+- refs:
+  - Q305
+  disposition: rating_dependent
+  basis: bridge MOSFET
+  blocker: B-MOTOR
+- refs:
+  - Q306
+  disposition: rating_dependent
+  basis: bridge MOSFET
+  blocker: B-MOTOR
+- refs:
+  - R1002
+  - R1005
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 5 V to 3.3 V input dividers; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - R101
+  disposition: rating_dependent
+  basis: 'bus shunt: value, power and Kelvin land pattern from I_batt,max'
+  blocker: B-BAT-I
+- refs:
+  - R1019
+  disposition: rating_dependent
+  basis: 'safety-loop LED resistor: power from the loop voltage'
+  blocker: B-LOOP
+- refs:
+  - R102
+  disposition: rating_dependent
+  basis: 'precharge resistor: pulse energy 0.5 C V^2 and the shorted-link case'
+  blocker: B-BAT-V
+- refs:
+  - R1003
+  - R1006
+  - R103
+  - R105
+  - R1206
+  - R402
+  - R403
+  - R405
+  - R406
+  - R407
+  - R408
+  - R409
+  - R410
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 100 k pull-ups, pull-downs and the bypass gate hold-off (across the 12 V Zener); at most 12 V across any
+    of them
+- refs:
+  - R104
+  disposition: rating_dependent
+  basis: 'bypass gate pull-down: (V_bat,max - 12 V) across it, power (V_bat,max - 12 V)^2 / 47 k'
+  blocker: B-BAT-V
+- refs:
+  - R1102
+  - R1103
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: CAN split termination halves; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - R1201
+  disposition: rating_dependent
+  basis: 'buck UVLO divider top on VBAT_PROT: working voltage from V_bat,max'
+  blocker: B-BAT-V
+- refs:
+  - R1202
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 'buck UVLO divider bottom: the EN threshold across it (a few volts); value waits for V_bat,min, the package
+    does not'
+- refs:
+  - R1203
+  disposition: datasheet_dependent
+  basis: 'LM5164 on-time resistor: value and RON pin voltage from the LM5164 data sheet'
+  blocker: B-PART-DOCS
+- refs:
+  - R1204
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: buck feedback divider top, +5V to FB; value to confirm against VFB in the data sheet, the package does
+    not depend on it
+- refs:
+  - R201
+  disposition: rating_dependent
+  basis: 'link bleeder: power V^2/R at V_bat,max'
+  blocker: B-BAT-V
+- refs:
+  - R202
+  disposition: rating_dependent
+  basis: 'over-voltage divider top on VDC: working voltage and ratio from V_bat,max'
+  blocker: B-BAT-V
+- refs:
+  - R203
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 'over-voltage divider bottom: below 3.3 V across it by design; 0.1 % thin film in 0603'
+- refs:
+  - R1008
+  - R1010
+  - R1012
+  - R1014
+  - R1016
+  - R1018
+  - R204
+  - R702
+  - R704
+  - R802
+  - R803
+  - R902
+  - R904
+  - R906
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 1 k ADC and input isolation resistors; voltage across the part bounded by the 3.3 V or 5 V rails; 0603
+    is the package
+- refs:
+  - R1001
+  - R1004
+  - R1007
+  - R1009
+  - R1011
+  - R1013
+  - R1015
+  - R1017
+  - R1020
+  - R1101
+  - R1205
+  - R205
+  - R207
+  - R401
+  - R404
+  - R605
+  - R701
+  - R801
+  - R804
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 10 k pull-ups, pull-downs and series resistors; voltage across the part bounded by the 3.3 V or 5 V rails;
+    0603 is the package
+- refs:
+  - R206
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 390 k hysteresis resistor; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - R208
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: TL431 bias, 1.4 mW
+- refs:
+  - R301
+  - R302
+  - R304
+  - R305
+  - R307
+  - R308
+  - R805
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 0 R gate and option links; almost no voltage across; high-side ones sit at the switch node, so spacing
+    follows the layout rules for PHASE nets
+- refs:
+  - R303
+  disposition: rating_dependent
+  basis: 'phase shunt: value, power and Kelvin land pattern from I_ph,max'
+  blocker: B-MOTOR
+- refs:
+  - R306
+  disposition: rating_dependent
+  basis: phase shunt
+  blocker: B-MOTOR
+- refs:
+  - R309
+  disposition: rating_dependent
+  basis: phase shunt
+  blocker: B-MOTOR
+- refs:
+  - R501
+  - R502
+  - R503
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: CSA output series resistors; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is the package
+- refs:
+  - R601
+  - R602
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: INA228 input filter resistors; the shunt voltage (millivolts) across them
+- refs:
+  - R603
+  - R604
+  - R901
+  - R903
+  - R905
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: I2C pull-ups and hall pull-ups; voltage across the part bounded by the 3.3 V or 5 V rails; 0603 is the
+    package
+- refs:
+  - R703
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: motor-temperature bias from +3V3A; value waits for the sensor type, the package does not
+- refs:
+  - SW801
+  disposition: assigned_drawing_pending
+  footprint: Button_Switch_SMD:SW_SPST_PTS645
+  package: 6 x 6 mm SMD tactile
+  basis: bench reset button; the footprint is for the C&K PTS645 series, whose drawing is not read; bench only
+- refs:
+  - TH701
+  disposition: verified
+  footprint: Resistor_SMD:R_0603_1608Metric
+  package: '0603'
+  basis: 10 k NTC in 0603 at the low-side MOSFETs; the beta and tolerance wait for the part, the land pattern does
+    not (B-NTC)
+- refs:
+  - TP1001
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1002
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1003
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP101
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1101
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1102
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1201
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1202
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP1203
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP201
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP202
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP203
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP401
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP402
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP403
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP404
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP405
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP406
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP407
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP408
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP409
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP410
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP501
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP502
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP503
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP701
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP801
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP802
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP803
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP804
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - TP805
+  disposition: verified
+  footprint: TestPoint:TestPoint_Pad_D1.5mm
+  package: 1.5 mm pad
+  basis: bench test point
+- refs:
+  - U1001
+  disposition: assigned_drawing_pending
+  footprint: Package_DIP:DIP-4_W7.62mm
+  package: DIP-4
+  basis: PC817 (PC817X2NSZ9F, through-hole); footprint from its KiCad 8.0.9 symbol; Sharp package drawing not read;
+    creepage to the safety loop waits for B-LOOP
+  blocker: B-PART-DOCS
+- refs:
+  - U101
+  disposition: pinout_blocked
+  basis: 'reverse-polarity block is a placeholder symbol: topology not decided'
+  blocker: B-HARNESS
+- refs:
+  - U1101
+  disposition: assigned_drawing_pending
+  footprint: Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
+  package: SO-8
+  basis: TJA1051T/3; footprint from its KiCad 8.0.9 symbol; NXP package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - U1201
+  disposition: assigned_drawing_pending
+  footprint: Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm_ThermalVias
+  package: SO-8 PowerPAD (DDA)
+  basis: LM5164DDA; footprint from its KiCad 8.0.9 symbol; exposed pad to GND; the library land pattern is drawn from ST's L5973D HSOP-8, so the exposed-pad size must be compared with TI's DDA drawing
+  blocker: B-PART-DOCS
+- refs:
+  - U1202
+  disposition: assigned_drawing_pending
+  footprint: Package_TO_SOT_SMD:SOT-23-5
+  package: SOT-23-5
+  basis: TLV75533PDBV; footprint from its KiCad 8.0.9 symbol; TI package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - U201
+  disposition: assigned_drawing_pending
+  footprint: Package_TO_SOT_SMD:SOT-23-5
+  package: SOT-23-5
+  basis: TLV7041DBV; the KiCad symbol has no default footprint, DBV is SOT-23-5 by TI's package code; TI package
+    drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - U202
+  disposition: assigned_drawing_pending
+  footprint: Package_TO_SOT_SMD:SOT-23
+  package: SOT-23-3
+  basis: TL431DBZ; footprint from its KiCad 8.0.9 symbol; TI package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - U401
+  disposition: pinout_blocked
+  basis: 'DRV8353S symbol pins are placeholders: package RTA (WQFN-40 with exposed pad) and pin map from SLVSDY6'
+  blocker: B-DRV
+- refs:
+  - U402
+  disposition: assigned_drawing_pending
+  footprint: Package_TO_SOT_SMD:SOT-23-5
+  package: SOT-23-5
+  basis: SN74LVC1G08DBVR; the KiCad symbol has no default footprint, DBV is SOT-23-5 by TI's package code; TI package
+    drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - U601
+  disposition: assigned_drawing_pending
+  footprint: Package_SO:VSSOP-10_3x3mm_P0.5mm
+  package: VSSOP-10 (DGS)
+  basis: INA228AIDGSR; pin numbers cross-checked against the KiCad INA228 symbol (secondary); TI package drawing
+    not read
+  blocker: B-INA
+- refs:
+  - U801
+  disposition: assigned_drawing_pending
+  footprint: Package_QFP:LQFP-100_14x14mm_P0.5mm
+  package: LQFP-100 14x14
+  basis: STM32G474VET6; footprint from its KiCad 8.0.9 symbol; pin map verified against ST's open pin data; DS12288
+    package drawing not read
+  blocker: B-ST-DOCS
+- refs:
+  - U802
+  disposition: assigned_drawing_pending
+  footprint: Package_TO_SOT_SMD:SOT-23-8
+  package: SOT-23-8
+  basis: MAX6369KA+T; footprint from its KiCad 8.0.9 symbol; Analog Devices package drawing not read
+  blocker: B-PART-DOCS
+- refs:
+  - Y801
+  disposition: verified
+  footprint: Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm
+  package: '3225'
+  basis: HSE crystal, 3.2 x 2.5 mm four-pad package (pads 1 and 3 the crystal, 2 and 4 to GND, as the symbol); the
+    frequency waits for B-CAN, the package does not

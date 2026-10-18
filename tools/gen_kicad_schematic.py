@@ -8,8 +8,11 @@ DRAFT - NOT FOR FABRICATION. The schematic captures the functional design
 (docs/HARDWARE_ARCHITECTURE.md). Every value that depends on the unknown motor,
 battery, harness or event rules is written as UNRESOLVED; every part whose
 pinout has not yet been checked against a primary datasheet
-carries Pin_check = UNVERIFIED. No PCB, footprint assignment, Gerber or
-fabrication BOM is produced from this.
+carries Pin_check = UNVERIFIED. Footprints come from the hand-maintained
+assignment in hardware/footprints/assignments.yaml (checked by
+tools/check_footprints.py); a part whose footprint waits for a rating, a
+connector, a data sheet or a pinout has none. No PCB, Gerber or fabrication
+BOM is produced from this.
 
 Connectivity is made with labels placed exactly on pin connection points
 (local labels inside a sheet, hierarchical labels + sheet pins between sheets,
@@ -29,6 +32,7 @@ import subprocess
 import sys
 import uuid as uuidlib
 
+import yaml
 from kiutils.items.common import Effects, Font, Justify, PageSettings, Position, Property, TitleBlock
 from kiutils.items.schitems import (GlobalLabel, HierarchicalLabel, HierarchicalPin, HierarchicalSheet,
                                     HierarchicalSheetInstance, LocalLabel, NoConnect, SchematicSymbol,
@@ -60,6 +64,15 @@ MCU_NET = {"PWM_BREAK": "DRV_NFAULT", "PWM_BREAK2": "BRK2_N", "DRV_ENABLE": "MCU
            "EXT_WDG_RST_SENSE": "WDG_RST_N", "EXT_WDG_WDI": "WDG_WDI"}
 
 
+FOOTPRINTS = ROOT / "hardware" / "footprints" / "assignments.yaml"
+
+
+def footprint_map() -> dict:
+    """Reference -> footprint (library:name) for the parts that have one assigned."""
+    data = yaml.safe_load(FOOTPRINTS.read_text())
+    return {r: e["footprint"] for e in data["lines"] if e.get("footprint") for r in e["refs"]}
+
+
 def uid(*parts) -> str:
     return str(uuidlib.uuid5(NS, "/".join(str(p) for p in parts)))
 
@@ -74,6 +87,7 @@ class P:
         self.props = {k: v for k, v in self.props.items() if v}
         self.dnp = dnp
         self.ref = ""
+        self.footprint = ""
 
 
 def R(value, a, b, **kw):
@@ -532,6 +546,7 @@ def build(check: bool) -> int:
                     use.setdefault(net, set()).add(sname)
     hier = {n for n, ss in use.items() if len(ss) > 1 and n not in POWER}
     counters = {}
+    fpmap = footprint_map()
     expected = {}       # net -> set((ref, pin))
     root = Schematic.create_new()
     root.version, root.generator = "20211014", "semmc_gen"
@@ -575,10 +590,11 @@ def build(check: bool) -> int:
             k = (si, prt.prefix)
             counters[k] = counters.get(k, 0) + 1
             prt.ref = f"{prt.prefix}{si * 100 + counters[k]}"     # sheet 3 -> R301, R302 ...
+            prt.footprint = fpmap.get(prt.ref, "")
             s_uuid = uid("sym", sname, prt.ref)
             props = [Property("Reference", prt.ref, 0, Position(X, Y - 5.08, 0), fx()),
                      Property("Value", prt.value, 1, Position(X, Y + 5.08, 0), fx()),
-                     Property("Footprint", "", 2, Position(X, Y, 0), fx(hide=True)),
+                     Property("Footprint", prt.footprint, 2, Position(X, Y, 0), fx(hide=True)),
                      Property("Datasheet", "", 3, Position(X, Y, 0), fx(hide=True))]
             for i, (k, v) in enumerate(prt.props.items()):
                 props.append(Property(k, v, 4 + i, Position(X, Y, 0), fx(hide=True)))
@@ -589,7 +605,7 @@ def build(check: bool) -> int:
                 ss.dnp = True
             sch.schematicSymbols.append(ss)
             root.symbolInstances.append(SymbolInstance(path=f"/{sh_uuid}/{s_uuid}", reference=prt.ref, unit=1,
-                                                       value=prt.value, footprint=""))
+                                                       value=prt.value, footprint=prt.footprint))
             for num, name, px, py, pa, et, net in pins:
                 ax, ay = round(X + px, 4), round(Y - py, 4)
                 if net is None:
@@ -663,20 +679,23 @@ def write_bom(design):
             if prt.ref.startswith("#"):
                 continue
             key = (prt.lib, prt.name, prt.value, prt.props.get("MPN", ""), prt.dnp)
-            g = groups.setdefault(key, {"refs": [], "sheets": set(), "status": prt.props.get("Status", ""),
+            g = groups.setdefault(key, {"refs": [], "sheets": set(), "footprints": set(),
+                                        "status": prt.props.get("Status", ""),
                                         "rating": prt.props.get("Rating_basis", ""),
                                         "pin_check": prt.props.get("Pin_check", "")})
             g["refs"].append(prt.ref)
             g["sheets"].add(sname)
+            g["footprints"].add(prt.footprint)
     path = ROOT / "hardware" / "bom" / "BOM_draft.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["line", "refs", "qty", "symbol", "value", "mpn_candidate", "dnp", "selection_status",
-                    "rating_basis", "pin_check", "sheets"])
+                    "rating_basis", "pin_check", "sheets", "footprint"])
         for i, ((lib, name, value, mpn, dnp), g) in enumerate(sorted(groups.items(), key=lambda kv: kv[1]["refs"][0]), 1):
             w.writerow([i, " ".join(sorted(g["refs"])), len(g["refs"]), f"{lib}:{name}", value, mpn, "DNP" if dnp else "",
-                        g["status"], g["rating"], g["pin_check"], " ".join(sorted(g["sheets"]))])
+                        g["status"], g["rating"], g["pin_check"], " ".join(sorted(g["sheets"])),
+                        " ".join(sorted(g["footprints"]))])
 
 
 # ----------------------------------------------------------------------------- check

@@ -283,19 +283,19 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 
 | Category | Lines | Estimated (USD) | Dated quotes | Unpriced (TBD) | Not counted |
 |---|---|---|---|---|---|
-| Motor controller (board parts, heatsink, enclosure) | 3 | 109 to 304 (3 lines) | 0 | 0 | 0 |
+| Motor controller (board parts, heatsink, enclosure) | 3 | 108 to 298 (3 lines) | 0 | 0 | 0 |
 | Telemetry and sensors | 12 | none priced (0 lines) | 0 | 11 | 1 |
 | Shared power, connectors and wiring | 5 | 40 to 105 (3 lines) | 0 | 2 | 0 |
 | Fabrication and assembly | 5 | 58 to 170 (3 lines) | 0 | 1 | 1 |
-| Shipping and tax | 3 | 32 to 123 (2 lines) | 0 | 1 | 0 |
+| Shipping and tax | 3 | 32 to 122 (2 lines) | 0 | 1 | 0 |
 | Spares and another board revision | 2 | 58 to 93 (1 lines) | 0 | 0 | 1 |
 | Development equipment | 7 | 119 to 404 (5 lines) | 0 | 1 | 1 |
 | Recurring connectivity | 2 | none priced (0 lines) | 0 | 2 | 0 |
 | Contingency | 1 | none priced (0 lines) | 0 | 1 | 0 |
-| **All categories** | 40 | **416 to 1,198** (17 lines) | 0 | **19** | 4 |
+| **All categories** | 40 | **414 to 1,191** (17 lines) | 0 | **19** | 4 |
 
 * Priced subtotal from dated quotes: **none**: none of the 36 counted lines has a dated quote.
-* Estimated lines: **$416 to $1,198** over 17 lines ($312 to $834 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
+* Estimated lines: **$414 to $1,191** over 17 lines ($310 to $827 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
 * Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a subtotal by a few dollars.
 * Unpriced lines: **19** (TBD). They come on top of the estimated range, so the complete cost is not known.
 * Not counted: 4 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
@@ -307,12 +307,12 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 
 | Build | Development equipment | Estimated (USD) | Unpriced lines | Against $500 | Against $1,000 |
 |---|---|---|---|---|---|
-| Minimum working build (controller only) | owned | 312 to 834 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
-| Minimum working build (controller only) | bought | 416 to 1,198 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
-| Minimum build plus local logging (no live link) | owned | 312 to 834 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced |
-| Minimum build plus local logging (no live link) | bought | 416 to 1,198 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced; the priced lines alone straddle $1,000 |
-| Full scope | owned | 312 to 834 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
-| Full scope | bought | 416 to 1,198 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
+| Minimum working build (controller only) | owned | 310 to 827 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
+| Minimum working build (controller only) | bought | 414 to 1,191 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
+| Minimum build plus local logging (no live link) | owned | 310 to 827 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced |
+| Minimum build plus local logging (no live link) | bought | 414 to 1,191 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced; the priced lines alone straddle $1,000 |
+| Full scope | owned | 310 to 827 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
+| Full scope | bought | 414 to 1,191 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
 
 Every line with its requirement, candidate, cost source and blocker: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md#lines).
 <!-- procurement-table:end -->

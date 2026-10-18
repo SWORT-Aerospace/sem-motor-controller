@@ -40,8 +40,9 @@ def parse_netlist(path: pathlib.Path):
     for m in re.finditer(r'\(comp \(ref "([^"]+)"\)\s*\(value "([^"]*)"\)(.*?)\(libsource \(lib "([^"]*)"\) \(part "([^"]*)"\)'
                          r'(.*?)\(sheetpath', t, re.S):
         sheet = re.search(r'\(property \(name "Sheetname"\) \(value "([^"]*)"\)\)', m.group(6))
+        fp = re.search(r'\(footprint "([^"]*)"\)', m.group(3))
         comps[m.group(1)] = {"value": m.group(2), "lib": m.group(4), "part": m.group(5),
-                             "sheet": sheet.group(1) if sheet else ""}
+                             "sheet": sheet.group(1) if sheet else "", "footprint": fp.group(1) if fp else ""}
     nets = {}
     for m in re.finditer(r'\(net \(code "\d+"\) \(name "([^"]+)"\)(.*?)\)\)\n(?=    \(net|  \)\))', t, re.S):
         nodes = re.findall(r'\(node \(ref "([^"]+)"\) \(pin "([^"]+)"\)(?: \(pinfunction "([^"]*)"\))? '
@@ -163,7 +164,7 @@ def run():
     # ---- BOM --------------------------------------------------------------------------
     rows = list(csv.DictReader(BOM.open()))
     bom_refs = collections.Counter()
-    val_bad, qty_bad = [], []
+    val_bad, qty_bad, fp_bad = [], [], []
     for r in rows:
         refs = [x.strip() for x in r["refs"].split() if x.strip()] if " " in r["refs"] else \
             [x.strip() for x in r["refs"].split(",") if x.strip()]
@@ -173,6 +174,8 @@ def run():
         for ref in refs:
             if ref in comps and comps[ref]["value"] != r["value"]:
                 val_bad.append(f"{ref}: BOM '{r['value']}' vs schematic '{comps[ref]['value']}'")
+            if ref in comps and comps[ref]["footprint"] != r.get("footprint", ""):
+                fp_bad.append(f"{ref}: BOM '{r.get('footprint', '')}' vs netlist '{comps[ref]['footprint']}'")
     real = {r for r in comps if not r.startswith("#")}
     missing = sorted(real - set(bom_refs))
     extra = sorted(set(bom_refs) - real)
@@ -181,6 +184,10 @@ def run():
         "PASS" if not (missing or extra or dup or qty_bad or val_bad) else "FAIL",
         f"{len(real)} components, {len(rows)} BOM lines; missing {missing[:8]}, extra {extra[:8]}, duplicated {dup[:8]}, "
         f"qty mismatches {qty_bad[:8]}, value mismatches {val_bad[:4]}")
+    with_fp = sum(1 for r in rows if r.get("footprint"))
+    rec("BM3 every netlist footprint equals its BOM line's footprint", "FAIL" if fp_bad else "PASS",
+        "; ".join(fp_bad[:6]) or f"{with_fp} of {len(rows)} BOM lines have a footprint, all identical in the netlist "
+        "(assignment and its checks: hardware/footprints/FOOTPRINT_CHECK.md)")
     unresolved = sum(1 for r in rows if r["selection_status"].startswith("UNRESOLVED"))
     rec("BM2 motor/battery-dependent parts stay unresolved", "OPEN",
         f"{unresolved} BOM lines are UNRESOLVED (ratings depend on the motor, battery, harness or rules); no fabrication "

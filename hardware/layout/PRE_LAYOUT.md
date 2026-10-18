@@ -80,9 +80,11 @@ devices in the envelope's low-speed points).
 | 11 CAN | transceiver, termination network | J1101 (B-HARNESS) |
 | 12 auxiliary rails | LDO and its capacitors | LM5164 input parts, inductor, UVLO and RON (B-BAT-V, B-PART-DOCS) |
 
-The footprints marked "can be chosen now" are standard packages whose pin mapping follows from the symbol, but they
-are not assigned: a partial layout of the logic section would be redone when the power stage and the connectors
-fix the outline, so the layout starts once B-MECH, B-HARNESS and the power ratings are known.
+The footprints that can be chosen now are assigned: [`../footprints/FOOTPRINT_CHECK.md`](../footprints/FOOTPRINT_CHECK.md)
+lists 82 of 122 BOM lines with a checked footprint (68 verified, 14 waiting for the manufacturer's package drawing)
+and the reason each of the other 40 has none. A partial layout of the logic section would still be redone when the
+power stage and the connectors fix the outline, so the layout starts once B-MECH, B-HARNESS and the power ratings
+are known.
 
 ## 5. Release gate (fabrication readiness)
 

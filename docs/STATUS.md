@@ -50,7 +50,7 @@ A passing host simulation is not a working vehicle controller. (At v0.4 the STM3
 
 ## 3. Hardware status
 
-Draft only: no footprints, no layout, no fabrication outputs, no orders; the release gate fails ([`generated/release_gate.md`](generated/release_gate.md)). Power-stage parts, connectors and ratings depend on the motor, battery, harness and rules and stay UNRESOLVED (41 BOM lines). The budget is not shown to be feasible until live quotes and those ratings close the price spread (`tools/price_bom.py`). No hardware freeze is claimed.
+Draft only: footprints on 82 of 122 BOM lines (68 verified; [`../hardware/footprints/FOOTPRINT_CHECK.md`](../hardware/footprints/FOOTPRINT_CHECK.md)), no layout, no fabrication outputs, no orders; the release gate fails ([`generated/release_gate.md`](generated/release_gate.md)). Power-stage parts, connectors and ratings depend on the motor, battery, harness and rules and stay UNRESOLVED (41 BOM lines). The budget is not shown to be feasible until live quotes and those ratings close the price spread (`tools/price_bom.py`). No hardware freeze is claimed.
 
 ## 4. Document index
 

@@ -240,6 +240,7 @@
       (tstamps "35000152-c785-5b7d-a305-3bd9e0c714e1"))
     (comp (ref "D102")
       (value "12V zener")
+      (footprint "Diode_SMD:D_SOD-123")
       (fields
         (field (name "Rating_basis") "clamps V_GS of the bypass FET (check V_GS abs max of selected FET)")
         (field (name "Status") "design value"))
@@ -331,6 +332,7 @@
       (tstamps "65a09105-9d61-56c6-93d9-806e2e5c078e"))
     (comp (ref "R103")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "gate-source hold-off")
         (field (name "Status") "design value"))
@@ -357,6 +359,7 @@
       (tstamps "58539676-0a77-567b-a97d-2f013b02a09e"))
     (comp (ref "R105")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "bypass OFF while the MCU is in reset")
         (field (name "Status") "design value"))
@@ -370,6 +373,7 @@
       (tstamps "1eda820b-a9ac-5f05-a39f-738fe5ce0702"))
     (comp (ref "TP101")
       (value "PRECHG_EN")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -472,6 +476,7 @@
       (tstamps "10908e02-f017-5560-ad4b-6effbbc8e27b"))
     (comp (ref "C207")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -509,6 +514,7 @@
       (tstamps "88ae625b-edd1-5859-95f6-d8ee4f6ef0e8"))
     (comp (ref "R203")
       (value "UNRESOLVED divider bottom")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "see top")
         (field (name "Status") "UNRESOLVED"))
@@ -522,6 +528,7 @@
       (tstamps "8da9280f-0432-5ed9-8035-5f959f328dc7"))
     (comp (ref "R204")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "ADC input isolation")
         (field (name "Status") "design value"))
@@ -535,6 +542,7 @@
       (tstamps "4bc50256-6e28-5bf9-8d86-d6b657089546"))
     (comp (ref "R205")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "isolates the comparator's + input from the TL431 so the hysteresis resistor sets a defined offset")
         (field (name "Status") "design value"))
@@ -548,6 +556,7 @@
       (tstamps "15ede5fe-c4cc-5067-9861-789c237b08ea"))
     (comp (ref "R206")
       (value "390k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "hysteresis: + input 2.5 % below the reference when tripped, 0.8 % above when released")
         (field (name "Status") "design value"))
@@ -561,6 +570,7 @@
       (tstamps "5951f9af-d25b-54c6-b0bd-41709fafee0b"))
     (comp (ref "R207")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -572,6 +582,7 @@
       (tstamps "cc6b9a97-c4c6-5c9d-8ee7-14a540d7a87a"))
     (comp (ref "R208")
       (value "470R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "TL431 cathode current (3.3 - 2.495) / 470 = 1.7 mA; the minimum cathode current is to be read from the TI datasheet")
         (field (name "Status") "design value"))
@@ -585,6 +596,7 @@
       (tstamps "f402dd04-3905-502f-a22f-d785980f34fb"))
     (comp (ref "TP201")
       (value "VBUS_SENSE")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -596,6 +608,7 @@
       (tstamps "fadffb51-3633-51bb-813d-53e422dad50d"))
     (comp (ref "TP202")
       (value "BRK2_N")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -607,6 +620,7 @@
       (tstamps "9c63b4e6-385e-5317-b13c-ee002d9f6aa3"))
     (comp (ref "TP203")
       (value "OV_REF")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -618,6 +632,7 @@
       (tstamps "f5883d7d-0df6-598a-870f-63a872cb51ad"))
     (comp (ref "U201")
       (value "TLV7041DBV")
+      (footprint "Package_TO_SOT_SMD:SOT-23-5")
       (fields
         (field (name "MPN") "TLV7041DBVR")
         (field (name "Rating_basis") "open-drain: wired-OR into TIM1_BKIN2")
@@ -633,6 +648,7 @@
       (tstamps "46923af4-08cf-59d1-b41d-560afcf52b23"))
     (comp (ref "U202")
       (value "TL431 (2.495 V)")
+      (footprint "Package_TO_SOT_SMD:SOT-23")
       (fields
         (field (name "MPN") "TL431BIDBZR")
         (field (name "Status") "CANDIDATE"))
@@ -737,6 +753,7 @@
       (tstamps "618b7f90-8a38-5fc4-a928-4b9b0cfaf7ec"))
     (comp (ref "R301")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "series gate R option; IDRIVE sets slew")
         (field (name "Status") "design option"))
@@ -750,6 +767,7 @@
       (tstamps "046811d4-08f4-56e8-93c2-0ec83adf30ce"))
     (comp (ref "R302")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design option"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -774,6 +792,7 @@
       (tstamps "93aec300-e8cb-51e2-b059-dbe8e2fe8cdd"))
     (comp (ref "R304")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "series gate R option; IDRIVE sets slew")
         (field (name "Status") "design option"))
@@ -787,6 +806,7 @@
       (tstamps "2cffc8c8-82b0-5b8c-ac4a-68d162a17d7c"))
     (comp (ref "R305")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design option"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -811,6 +831,7 @@
       (tstamps "3f1767fc-d3a2-5f88-8b70-1313951a922d"))
     (comp (ref "R307")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "series gate R option; IDRIVE sets slew")
         (field (name "Status") "design option"))
@@ -824,6 +845,7 @@
       (tstamps "f3885353-69ab-54e9-86c5-adc7a9f61395"))
     (comp (ref "R308")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design option"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -907,6 +929,7 @@
       (tstamps "b2c18db8-1938-52b5-98a3-1c5fbcff19c6"))
     (comp (ref "R401")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "open-drain nFAULT -> TIM1_BKIN + GPIO")
         (field (name "Status") "design value"))
@@ -920,6 +943,7 @@
       (tstamps "47920abb-83b0-573e-b5f7-a23bef0c3d6c"))
     (comp (ref "R402")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "driver disabled while MCU pins are high-Z")
         (field (name "Status") "design value"))
@@ -933,6 +957,7 @@
       (tstamps "c301d9ad-ad69-551f-aedc-a77a158a6da2"))
     (comp (ref "R403")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "driver disabled if the AND gate is unpowered")
         (field (name "Status") "design value"))
@@ -946,6 +971,7 @@
       (tstamps "a9c86d43-1d23-554c-a553-62f7f1de4534"))
     (comp (ref "R404")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "SPI deselected at boot")
         (field (name "Status") "design value"))
@@ -959,6 +985,7 @@
       (tstamps "35e9cafb-f62f-5aee-bcc0-cda4e9578085"))
     (comp (ref "R405")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the DRV8353 input pull-downs are read from the datasheet")
         (field (name "Status") "design value"))
@@ -972,6 +999,7 @@
       (tstamps "df2f95ae-94ee-5ce7-9877-4dfe0296d0e3"))
     (comp (ref "R406")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the DRV8353 input pull-downs are read from the datasheet")
         (field (name "Status") "design value"))
@@ -985,6 +1013,7 @@
       (tstamps "459b1ae3-2bb3-5a4e-8e79-b5aecffc571f"))
     (comp (ref "R407")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the DRV8353 input pull-downs are read from the datasheet")
         (field (name "Status") "design value"))
@@ -998,6 +1027,7 @@
       (tstamps "854ebcf2-59e3-51e4-9fc0-c2106299c1fa"))
     (comp (ref "R408")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the DRV8353 input pull-downs are read from the datasheet")
         (field (name "Status") "design value"))
@@ -1011,6 +1041,7 @@
       (tstamps "33dd8171-56a7-51e9-b8e4-23ccd016372d"))
     (comp (ref "R409")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the DRV8353 input pull-downs are read from the datasheet")
         (field (name "Status") "design value"))
@@ -1024,6 +1055,7 @@
       (tstamps "30438e42-b9af-51dc-b00f-8a154ef36bf2"))
     (comp (ref "R410")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the DRV8353 input pull-downs are read from the datasheet")
         (field (name "Status") "design value"))
@@ -1037,6 +1069,7 @@
       (tstamps "36dbc573-64a5-549c-93c2-4640689dea99"))
     (comp (ref "TP401")
       (value "PWM_A_HI")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1048,6 +1081,7 @@
       (tstamps "e86a82f2-1f35-5723-9b02-8e6182a23ead"))
     (comp (ref "TP402")
       (value "PWM_A_LO")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1059,6 +1093,7 @@
       (tstamps "1f471543-9904-520b-9342-9eb24eca1a94"))
     (comp (ref "TP403")
       (value "PWM_B_HI")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1070,6 +1105,7 @@
       (tstamps "3bd9ac08-3fa5-559c-92f9-a66011485f6b"))
     (comp (ref "TP404")
       (value "PWM_B_LO")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1081,6 +1117,7 @@
       (tstamps "fc9e9557-b9f9-5f52-9566-cfdc25dc141b"))
     (comp (ref "TP405")
       (value "PWM_C_HI")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1092,6 +1129,7 @@
       (tstamps "39c68f3d-77bc-57e9-8f37-5203ab8c8703"))
     (comp (ref "TP406")
       (value "PWM_C_LO")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1103,6 +1141,7 @@
       (tstamps "6ce1f577-9715-5a36-b74b-e78e29af5970"))
     (comp (ref "TP407")
       (value "MCU_DRV_EN")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1114,6 +1153,7 @@
       (tstamps "7827a50d-72c6-5f61-9695-b8ff8f5c9922"))
     (comp (ref "TP408")
       (value "DRV_EN_GATED")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1125,6 +1165,7 @@
       (tstamps "1e4ca204-02c9-5a03-ade4-41a3aa3ce65b"))
     (comp (ref "TP409")
       (value "VCP")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1136,6 +1177,7 @@
       (tstamps "c16ad902-db55-5da8-a954-032f7762ae0a"))
     (comp (ref "TP410")
       (value "DVDD")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1162,6 +1204,7 @@
       (tstamps "5af507ff-4c45-5172-9210-26f8dee6311a"))
     (comp (ref "U402")
       (value "74LVC1G08")
+      (footprint "Package_TO_SOT_SMD:SOT-23-5")
       (fields
         (field (name "MPN") "SN74LVC1G08DBVR")
         (field (name "Status") "CANDIDATE"))
@@ -1175,6 +1218,7 @@
       (tstamps "926beb00-30bb-5ac0-bcbc-8fc8342e6ada"))
     (comp (ref "C501")
       (value "DNP (diff. filter option)")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "DNP option"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1188,6 +1232,7 @@
       (tstamps "0befa44a-ba97-542e-8898-e649cb4142c7"))
     (comp (ref "C502")
       (value "470pF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") ">> ADC S/H capacitance (charge kick-back)")
         (field (name "Status") "design value"))
@@ -1201,6 +1246,7 @@
       (tstamps "ddb33a8f-d6b4-5539-a3e8-1c8043a8705c"))
     (comp (ref "C503")
       (value "DNP (diff. filter option)")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "DNP option"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1214,6 +1260,7 @@
       (tstamps "bc464956-c661-52e6-8b8f-0683dcc05374"))
     (comp (ref "C504")
       (value "470pF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") ">> ADC S/H capacitance (charge kick-back)")
         (field (name "Status") "design value"))
@@ -1227,6 +1274,7 @@
       (tstamps "2eb86a9d-a3e6-545c-944d-68b0091a964a"))
     (comp (ref "C505")
       (value "DNP (diff. filter option)")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "DNP option"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1240,6 +1288,7 @@
       (tstamps "ab5f07c1-b158-5330-b997-77d4a1081a6c"))
     (comp (ref "C506")
       (value "470pF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") ">> ADC S/H capacitance (charge kick-back)")
         (field (name "Status") "design value"))
@@ -1253,6 +1302,7 @@
       (tstamps "99ca5139-af37-5046-877f-d7310881f7d9"))
     (comp (ref "R501")
       (value "100R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "with 470 pF: tau = 47 ns (settling inside the PWM sampling window)")
         (field (name "Status") "design value - see timing budget"))
@@ -1266,6 +1316,7 @@
       (tstamps "56bda8a8-f15c-5c30-92b1-6f6031606e3c"))
     (comp (ref "R502")
       (value "100R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "with 470 pF: tau = 47 ns (settling inside the PWM sampling window)")
         (field (name "Status") "design value - see timing budget"))
@@ -1279,6 +1330,7 @@
       (tstamps "8e7761f1-7a30-5651-9a70-bf3d4854759c"))
     (comp (ref "R503")
       (value "100R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "with 470 pF: tau = 47 ns (settling inside the PWM sampling window)")
         (field (name "Status") "design value - see timing budget"))
@@ -1292,6 +1344,7 @@
       (tstamps "dcec0d98-ff71-56ee-9e8d-e5f2e4911359"))
     (comp (ref "TP501")
       (value "ISENSE_A")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1303,6 +1356,7 @@
       (tstamps "fcb7ad38-b04e-5f5d-8c55-92bc9d17266e"))
     (comp (ref "TP502")
       (value "ISENSE_B")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1314,6 +1368,7 @@
       (tstamps "c5ed9571-e843-55ea-aea6-ae6f45d79646"))
     (comp (ref "TP503")
       (value "ISENSE_C")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1325,6 +1380,7 @@
       (tstamps "f71c233f-46a5-5a0a-b9bf-f87299aa42fa"))
     (comp (ref "C601")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "TYPICAL - verify"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1336,6 +1392,7 @@
       (tstamps "f8bc24f9-424e-5c49-af36-3a811b1e5078"))
     (comp (ref "C602")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1347,6 +1404,7 @@
       (tstamps "e35e569e-47df-5968-9ca8-998d862deaad"))
     (comp (ref "R601")
       (value "10R (verify)")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "TYPICAL - verify input-filter guidance"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1358,6 +1416,7 @@
       (tstamps "ee40cac4-4222-5c43-a7f3-1a36bc5a021a"))
     (comp (ref "R602")
       (value "10R (verify)")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "TYPICAL - verify input-filter guidance"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1369,6 +1428,7 @@
       (tstamps "17b2067d-ad8a-5b74-ad34-5eeaa77b0436"))
     (comp (ref "R603")
       (value "4.7k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1380,6 +1440,7 @@
       (tstamps "09ca1c79-8340-5db3-9b83-6772cf250f12"))
     (comp (ref "R604")
       (value "4.7k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1391,6 +1452,7 @@
       (tstamps "19101435-e9d8-5043-af54-7f6adb4dc614"))
     (comp (ref "R605")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1402,6 +1464,7 @@
       (tstamps "a077f495-3350-500a-80f9-3156566d0b48"))
     (comp (ref "U601")
       (value "INA228 (candidate)")
+      (footprint "Package_SO:VSSOP-10_3x3mm_P0.5mm")
       (fields
         (field (name "MPN") "INA228AIDGSR (verify)")
         (field (name "Pin_check") "SECONDARY: numbers match the KiCad official library (INA226-derived VSSOP-10) @cf07d539; primary TI datasheet NOT read")
@@ -1417,6 +1480,7 @@
       (tstamps "beb4007c-f0c2-5edc-8ed3-31429bb2b1e1"))
     (comp (ref "C701")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1428,6 +1492,7 @@
       (tstamps "0e88432f-9a5d-578a-b270-8b738878681e"))
     (comp (ref "C702")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1439,6 +1504,7 @@
       (tstamps "9e42aec4-39f9-5536-a2ac-8c16a954e67c"))
     (comp (ref "D701")
       (value "ESD9B3.3ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B3.3ST5G") (description ""))
@@ -1463,6 +1529,7 @@
       (tstamps "89590a13-bb12-5194-95e5-211ff7d24749"))
     (comp (ref "R701")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1474,6 +1541,7 @@
       (tstamps "11731566-b6dd-5c3b-9065-bf9cfca6a531"))
     (comp (ref "R702")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1485,6 +1553,7 @@
       (tstamps "40bf7226-7172-5447-9ac6-97dd8e55bb9f"))
     (comp (ref "R703")
       (value "UNRESOLVED bias")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "depends on the motor's sensor")
         (field (name "Status") "UNRESOLVED"))
@@ -1498,6 +1567,7 @@
       (tstamps "68b9afc0-d3ab-5056-9e97-39a77de74095"))
     (comp (ref "R704")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1509,6 +1579,7 @@
       (tstamps "434f4547-2cb8-5a9c-bf2a-ddd7b5f0179e"))
     (comp (ref "TH701")
       (value "10k NTC (B per selection)")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "placed at the low-side MOSFETs")
         (field (name "Status") "CANDIDATE"))
@@ -1522,6 +1593,7 @@
       (tstamps "815133e3-c5b4-5edf-a835-4f843ca918a9"))
     (comp (ref "TP701")
       (value "TEMP_FET")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1533,6 +1605,7 @@
       (tstamps "b3dad31a-1ac8-5585-a82c-60d17dd8f409"))
     (comp (ref "C801")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1544,6 +1617,7 @@
       (tstamps "6194fd46-8a12-5c5c-8f98-59741c7b2791"))
     (comp (ref "C802")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1555,6 +1629,7 @@
       (tstamps "3ed5a48e-961f-571a-9b8a-06134af1a39c"))
     (comp (ref "C803")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1566,6 +1641,7 @@
       (tstamps "d8f9b806-8306-56f8-b095-3e583c5391ac"))
     (comp (ref "C804")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1577,6 +1653,7 @@
       (tstamps "b488df0d-9b99-5168-af11-792ca7c93f3e"))
     (comp (ref "C805")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1588,6 +1665,7 @@
       (tstamps "36caaf75-ae5f-58c0-9704-bffd46d1573a"))
     (comp (ref "C806")
       (value "4.7uF")
+      (footprint "Capacitor_SMD:C_0805_2012Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1599,6 +1677,7 @@
       (tstamps "7a68c136-f31e-5de0-bd0b-3de2dc50cff8"))
     (comp (ref "C807")
       (value "1uF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1610,6 +1689,7 @@
       (tstamps "96d4ecea-c9af-5bb6-9d77-86e004d0cc99"))
     (comp (ref "C808")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1621,6 +1701,7 @@
       (tstamps "0070ea20-8003-5543-94b3-c5982ac25622"))
     (comp (ref "C809")
       (value "1uF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "VREF+ decoupling (ratiometric with DRV VREF)")
         (field (name "Status") "design value"))
@@ -1634,6 +1715,7 @@
       (tstamps "a767e284-2511-5189-8bf1-6299de8b946f"))
     (comp (ref "C810")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -1645,6 +1727,7 @@
       (tstamps "66349aac-eb00-5d53-9ded-ad0f9c2a3692"))
     (comp (ref "C811")
       (value "UNRESOLVED load")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "from the selected crystal's C_L and stray")
         (field (name "Status") "UNRESOLVED"))
@@ -1658,6 +1741,7 @@
       (tstamps "69d58264-8d03-5ae9-ad36-a902f52642f3"))
     (comp (ref "C812")
       (value "UNRESOLVED load")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "see above")
         (field (name "Status") "UNRESOLVED"))
@@ -1671,6 +1755,7 @@
       (tstamps "4265d3a5-044f-553e-8816-39c716dae048"))
     (comp (ref "D801")
       (value "green")
+      (footprint "LED_SMD:LED_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "LED") (description ""))
@@ -1682,6 +1767,7 @@
       (tstamps "f4d90982-ae52-5329-9e6d-ca325abe6d98"))
     (comp (ref "D802")
       (value "red")
+      (footprint "LED_SMD:LED_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "LED") (description ""))
@@ -1693,6 +1779,7 @@
       (tstamps "e94a6236-60bf-58c8-8b9e-45778190e5a6"))
     (comp (ref "D803")
       (value "BAT54")
+      (footprint "Diode_SMD:D_SOD-323")
       (fields
         (field (name "Rating_basis") "watchdog timeout pulls HW_PERMIT low (driver disabled in hardware)")
         (field (name "Status") "CANDIDATE"))
@@ -1706,6 +1793,7 @@
       (tstamps "05313a1f-aee3-5ee8-8f80-a4a0bbaa3f01"))
     (comp (ref "FB801")
       (value "600R@100MHz")
+      (footprint "Inductor_SMD:L_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "FerriteBead_Small") (description ""))
@@ -1717,6 +1805,7 @@
       (tstamps "53c60830-9796-595f-a60f-c86e208e61d9"))
     (comp (ref "J801")
       (value "SWD")
+      (footprint "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD")
       (fields
         (field (name "Status") "bench only"))
       (libsource (lib "Connector") (part "Conn_ARM_JTAG_SWD_10") (description ""))
@@ -1728,6 +1817,7 @@
       (tstamps "e1b22c04-dd7f-5417-b63c-3cb902ab42c8"))
     (comp (ref "J802")
       (value "UART (bench)")
+      (footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical")
       (fields
         (field (name "Status") "bench only; not populated for competition"))
       (libsource (lib "Connector_Generic") (part "Conn_01x03") (description ""))
@@ -1739,6 +1829,7 @@
       (tstamps "11e8dceb-4cf7-532c-a9bc-da17d343fb6e"))
     (comp (ref "R801")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "boot from flash")
         (field (name "Status") "design value"))
@@ -1752,6 +1843,7 @@
       (tstamps "09566a32-899b-5501-b29d-2af1a9e452aa"))
     (comp (ref "R802")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1763,6 +1855,7 @@
       (tstamps "6407e759-ee3e-5379-8982-c421284cc8be"))
     (comp (ref "R803")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1774,6 +1867,7 @@
       (tstamps "695e4026-e563-5e84-b7ed-c943db938c6e"))
     (comp (ref "R804")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -1785,6 +1879,7 @@
       (tstamps "cee11f00-16fb-5c92-871d-3a004e8e1a0d"))
     (comp (ref "R805")
       (value "0R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "watchdog resets the MCU")
         (field (name "Status") "design option"))
@@ -1798,6 +1893,7 @@
       (tstamps "02930a39-9b99-5ff1-80b9-4f2aeeb8eb13"))
     (comp (ref "SW801")
       (value "RESET")
+      (footprint "Button_Switch_SMD:SW_SPST_PTS645")
       (fields
         (field (name "Status") "bench"))
       (libsource (lib "Switch") (part "SW_Push") (description ""))
@@ -1809,6 +1905,7 @@
       (tstamps "e2621de5-81a5-598a-befa-94ca5e6ca012"))
     (comp (ref "TP801")
       (value "+3V3")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1820,6 +1917,7 @@
       (tstamps "1a4caab9-7b8b-58ad-8d43-3d40a38eb3dc"))
     (comp (ref "TP802")
       (value "NRST")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1831,6 +1929,7 @@
       (tstamps "602fd019-b193-5785-9497-31b4f84f3d60"))
     (comp (ref "TP803")
       (value "DRV_NFAULT")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1842,6 +1941,7 @@
       (tstamps "dd8f8273-1e1c-5c22-897d-d47401b3fe47"))
     (comp (ref "TP804")
       (value "WDG_WDI")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1853,6 +1953,7 @@
       (tstamps "dfefcce4-c874-51dd-846f-0ed46c676e8c"))
     (comp (ref "TP805")
       (value "WDG_RST_N")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -1864,6 +1965,7 @@
       (tstamps "aa6ccc38-18a8-5a0b-85b0-ed2e3691238a"))
     (comp (ref "U801")
       (value "STM32G474VET6")
+      (footprint "Package_QFP:LQFP-100_14x14mm_P0.5mm")
       (fields
         (field (name "MPN") "STM32G474VET6")
         (field (name "Pin_check") "KiCad library symbol (pin map from ST open pin data @7d1f151)")
@@ -1879,6 +1981,7 @@
       (tstamps "d2b0e6b8-5729-59bf-9e36-d20e4f3619d2"))
     (comp (ref "U802")
       (value "MAX6369 (candidate)")
+      (footprint "Package_TO_SOT_SMD:SOT-23-8")
       (fields
         (field (name "MPN") "MAX6369KA+T")
         (field (name "Status") "CANDIDATE - SET0..2 strap per timeout table (verify)"))
@@ -1892,6 +1995,7 @@
       (tstamps "471f3290-8735-59cf-b945-430247151248"))
     (comp (ref "Y801")
       (value "HSE UNSELECTED")
+      (footprint "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm")
       (fields
         (field (name "Rating_basis") "frequency NOT selected: depends on the vehicle bus (classic or FD, bit rates) and the CPU frequency; candidates 8-40 MHz in hardware/timing/clock_tree_alternatives.md. The v0.2 '40 MHz required' claim is withdrawn.")
         (field (name "Status") "UNRESOLVED"))
@@ -1905,6 +2009,7 @@
       (tstamps "da509d39-4ca9-536a-a750-b7e6208bba16"))
     (comp (ref "C901")
       (value "1nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "tau = 1 us")
         (field (name "Status") "design value"))
@@ -1918,6 +2023,7 @@
       (tstamps "fe7063a4-d84d-5be0-b77e-e8981cc0a5e4"))
     (comp (ref "C902")
       (value "1nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "tau = 1 us")
         (field (name "Status") "design value"))
@@ -1931,6 +2037,7 @@
       (tstamps "ddda0725-45a2-579c-9898-15ca25c5fabf"))
     (comp (ref "C903")
       (value "1nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "tau = 1 us")
         (field (name "Status") "design value"))
@@ -1944,6 +2051,7 @@
       (tstamps "021625f4-cf34-5c94-9002-2ece07e0fdf9"))
     (comp (ref "D901")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -1955,6 +2063,7 @@
       (tstamps "ec5b6d9b-832f-51f3-affe-6d6b979cc936"))
     (comp (ref "D902")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -1966,6 +2075,7 @@
       (tstamps "c080899c-b1c4-51df-9e71-bd03a2189e40"))
     (comp (ref "D903")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2003,6 +2113,7 @@
       (tstamps "2cbdd8d5-17bc-5058-a616-47a1743c71f3"))
     (comp (ref "JP901")
       (value "HALL SUPPLY 5V/3V3")
+      (footprint "Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm_NumberLabels")
       (fields
         (field (name "Rating_basis") "hall sensor supply voltage unknown")
         (field (name "Status") "UNRESOLVED"))
@@ -2016,6 +2127,7 @@
       (tstamps "7ad908e4-14c9-504f-aafc-c48151dbcf0e"))
     (comp (ref "R901")
       (value "4.7k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "assumes open-collector hall outputs (verify)")
         (field (name "Status") "design value"))
@@ -2029,6 +2141,7 @@
       (tstamps "1c6de0e5-2959-5294-8dcb-bae0198315d8"))
     (comp (ref "R902")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2040,6 +2153,7 @@
       (tstamps "8c64327e-a7c7-515c-aac7-302236c4cc3d"))
     (comp (ref "R903")
       (value "4.7k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "assumes open-collector hall outputs (verify)")
         (field (name "Status") "design value"))
@@ -2053,6 +2167,7 @@
       (tstamps "0c22920f-39a5-56de-a391-f8a125fc5d2e"))
     (comp (ref "R904")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2064,6 +2179,7 @@
       (tstamps "e18644c0-918d-50f6-9bf2-50ba432c93e0"))
     (comp (ref "R905")
       (value "4.7k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "assumes open-collector hall outputs (verify)")
         (field (name "Status") "design value"))
@@ -2077,6 +2193,7 @@
       (tstamps "a660548f-09b5-5c1c-9072-822f9e08f13d"))
     (comp (ref "R906")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2088,6 +2205,7 @@
       (tstamps "a3f269de-33d9-5c8f-8ee9-1c2c6c760e98"))
     (comp (ref "C1001")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2099,6 +2217,7 @@
       (tstamps "d34a7441-ebb9-59b3-aa35-bffc8b5fafde"))
     (comp (ref "C1002")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2110,6 +2229,7 @@
       (tstamps "be0833a0-5bfe-5a17-bea4-d371b1444be2"))
     (comp (ref "C1003")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2121,6 +2241,7 @@
       (tstamps "34b5f48f-1ebb-5bbb-a513-59d2a953fb4f"))
     (comp (ref "C1004")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2132,6 +2253,7 @@
       (tstamps "9bca6102-ae7d-5a4f-acb9-ed50aea25473"))
     (comp (ref "C1005")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2143,6 +2265,7 @@
       (tstamps "6c9a8b6c-7346-5353-b1f0-fcbfc0b51ad5"))
     (comp (ref "C1006")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2154,6 +2277,7 @@
       (tstamps "48f811a3-84e6-5e7b-83f4-4003c2be90d3"))
     (comp (ref "C1007")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2165,6 +2289,7 @@
       (tstamps "d1ce69e5-cfc9-52d7-9feb-405a06705511"))
     (comp (ref "C1008")
       (value "10nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2176,6 +2301,7 @@
       (tstamps "e45562f0-f62a-5e94-bc94-82950786a17e"))
     (comp (ref "C1009")
       (value "1nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2187,6 +2313,7 @@
       (tstamps "b022c091-d278-52f9-b887-0e1d4b77b66c"))
     (comp (ref "D1001")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2198,6 +2325,7 @@
       (tstamps "01e1b484-31b9-55af-8e8d-7a2ebc110206"))
     (comp (ref "D1002")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2209,6 +2337,7 @@
       (tstamps "acf19fc2-7115-5256-9512-2b00e71e7501"))
     (comp (ref "D1003")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2220,6 +2349,7 @@
       (tstamps "eecd9324-47bf-5780-a10f-1795253fbc41"))
     (comp (ref "D1004")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2231,6 +2361,7 @@
       (tstamps "cbff2db4-5873-51b8-aa5d-c2e77548c0da"))
     (comp (ref "D1005")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2242,6 +2373,7 @@
       (tstamps "44a6dbfe-9005-582e-8343-5390d836c895"))
     (comp (ref "D1006")
       (value "ESD9B5.0ST5G")
+      (footprint "Diode_SMD:D_SOD-923")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Diode") (part "ESD9B5.0ST5G") (description ""))
@@ -2277,6 +2409,7 @@
       (tstamps "61c5605c-9724-5e29-9e4a-92e43d2753fc"))
     (comp (ref "R1001")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value - assumes 0-5 V ratiometric pedal"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2288,6 +2421,7 @@
       (tstamps "67600756-87a6-5c4f-af5e-7954a9070c34"))
     (comp (ref "R1002")
       (value "18k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "5 V -> 3.21 V")
         (field (name "Status") "design value"))
@@ -2301,6 +2435,7 @@
       (tstamps "24be29d1-feb7-5860-93e2-23a3a26d4514"))
     (comp (ref "R1003")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "open wire reads 0 -> implausible")
         (field (name "Status") "design value"))
@@ -2314,6 +2449,7 @@
       (tstamps "4e7c545d-1c1e-5fde-b40e-f9b4525c2a48"))
     (comp (ref "R1004")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value - assumes 0-5 V ratiometric pedal"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2325,6 +2461,7 @@
       (tstamps "7b4afcf2-bd86-5a68-a69a-6f2443ae13ed"))
     (comp (ref "R1005")
       (value "18k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "5 V -> 3.21 V")
         (field (name "Status") "design value"))
@@ -2338,6 +2475,7 @@
       (tstamps "e5b70d29-01d2-55bd-bcc3-2039f6bb9184"))
     (comp (ref "R1006")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "open wire reads 0 -> implausible")
         (field (name "Status") "design value"))
@@ -2351,6 +2489,7 @@
       (tstamps "f082fa9b-47fe-55cc-a202-315380b03444"))
     (comp (ref "R1007")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2362,6 +2501,7 @@
       (tstamps "a2feba80-d383-5275-a53d-d34c2d6b13a8"))
     (comp (ref "R1008")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2373,6 +2513,7 @@
       (tstamps "50576ef4-8195-5ed8-94ed-6299185f05e3"))
     (comp (ref "R1009")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2384,6 +2525,7 @@
       (tstamps "da870b1b-426e-5df3-8f76-58a375e2e880"))
     (comp (ref "R1010")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2395,6 +2537,7 @@
       (tstamps "ca922e3b-4ec9-5692-b1be-28c289a66b5e"))
     (comp (ref "R1011")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2406,6 +2549,7 @@
       (tstamps "da70fe9a-409a-5dff-924b-59ae01f209bb"))
     (comp (ref "R1012")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2417,6 +2561,7 @@
       (tstamps "19c87160-199c-5a17-b68e-d9dc4f7788a0"))
     (comp (ref "R1013")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2428,6 +2573,7 @@
       (tstamps "3ae00d8a-0434-58dc-8ea2-3c68b5210870"))
     (comp (ref "R1014")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2439,6 +2585,7 @@
       (tstamps "20d56093-1462-5222-ba49-c0ed98a9e1a3"))
     (comp (ref "R1015")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2450,6 +2597,7 @@
       (tstamps "6f877605-b11f-519d-8efb-d67967698245"))
     (comp (ref "R1016")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2461,6 +2609,7 @@
       (tstamps "f25de83d-72ee-5f5d-8a43-30f31f2027d6"))
     (comp (ref "R1017")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2472,6 +2621,7 @@
       (tstamps "f58764c7-cd4c-53cb-b6f1-d956fd9eaabd"))
     (comp (ref "R1018")
       (value "1k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2496,6 +2646,7 @@
       (tstamps "0ec2cda0-ab3c-5506-aa7f-11e8d663e9bc"))
     (comp (ref "R1020")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "HW_PERMIT low unless the loop is energised")
         (field (name "Status") "design value"))
@@ -2509,6 +2660,7 @@
       (tstamps "a7029ce0-46b6-5d83-ab49-ae8c299b8d77"))
     (comp (ref "TP1001")
       (value "HW_PERMIT")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2520,6 +2672,7 @@
       (tstamps "0b17fdb0-06cc-5515-bdc4-cfdf057b6df3"))
     (comp (ref "TP1002")
       (value "THROTTLE_A")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2531,6 +2684,7 @@
       (tstamps "e59dc22d-9f4f-5649-bbc5-164340aaa545"))
     (comp (ref "TP1003")
       (value "THROTTLE_B")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2542,6 +2696,7 @@
       (tstamps "b905d8fb-1ce3-55b5-a758-d41ad9fdd3da"))
     (comp (ref "U1001")
       (value "PC817 (safety-loop sense)")
+      (footprint "Package_DIP:DIP-4_W7.62mm")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Isolator") (part "PC817") (description ""))
@@ -2553,6 +2708,7 @@
       (tstamps "70a62438-2f95-5799-aa7e-db41fee2e643"))
     (comp (ref "C1101")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2564,6 +2720,7 @@
       (tstamps "c874fd9f-28e6-5047-a4d0-195db77b660a"))
     (comp (ref "C1102")
       (value "100nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2575,6 +2732,7 @@
       (tstamps "7330baa6-1404-5ea8-97d6-a9c19ee64648"))
     (comp (ref "C1103")
       (value "4.7nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "split termination")
         (field (name "Status") "design value"))
@@ -2588,6 +2746,7 @@
       (tstamps "b1465adf-a09e-5008-a898-3fca12b54f9a"))
     (comp (ref "C1104")
       (value "1nF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "shield termination per harness")
         (field (name "Status") "UNRESOLVED"))
@@ -2601,6 +2760,7 @@
       (tstamps "bb5051fb-4f0a-5e7d-9b8c-ed15dffcd4db"))
     (comp (ref "D1101")
       (value "NUP2105L")
+      (footprint "Package_TO_SOT_SMD:SOT-23")
       (fields
         (field (name "Status") "CANDIDATE"))
       (libsource (lib "Power_Protection") (part "NUP2105L") (description ""))
@@ -2625,6 +2785,7 @@
       (tstamps "53eca8eb-4233-524d-a461-74bc24cd24a2"))
     (comp (ref "JP1101")
       (value "TERM")
+      (footprint "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm")
       (fields
         (field (name "Rating_basis") "close only if this node is a bus end (harness unknown)")
         (field (name "Status") "UNRESOLVED"))
@@ -2638,6 +2799,7 @@
       (tstamps "3cc0e1f4-f22f-5240-8fa8-0c4ff36d50db"))
     (comp (ref "JP1102")
       (value "TERM")
+      (footprint "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm")
       (fields
         (field (name "Status") "UNRESOLVED"))
       (libsource (lib "Jumper") (part "SolderJumper_2_Open") (description ""))
@@ -2649,6 +2811,7 @@
       (tstamps "56a9ec66-4dde-5f07-a40e-b3b28ab3ebca"))
     (comp (ref "R1101")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Rating_basis") "normal (not silent) mode")
         (field (name "Status") "design value"))
@@ -2662,6 +2825,7 @@
       (tstamps "b6af3b00-93f5-5bbc-a298-c2631affb69b"))
     (comp (ref "R1102")
       (value "60.4R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2673,6 +2837,7 @@
       (tstamps "c9484592-032c-5ec6-9376-f0874a5a761c"))
     (comp (ref "R1103")
       (value "60.4R")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2684,6 +2849,7 @@
       (tstamps "6f89dda7-af3f-5fd4-b65f-fc2fb8788f78"))
     (comp (ref "TP1101")
       (value "CAN_TX")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2695,6 +2861,7 @@
       (tstamps "605b0e51-e9d2-514a-b971-f9f1546259d7"))
     (comp (ref "TP1102")
       (value "CAN_RX")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2706,6 +2873,7 @@
       (tstamps "608efef0-6398-564f-8171-3b45b6ded522"))
     (comp (ref "U1101")
       (value "TJA1051T/3")
+      (footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm")
       (fields
         (field (name "MPN") "TJA1051T/3/1J")
         (field (name "Status") "CANDIDATE (alternate TCAN1042V, pin-compatible class - verify)"))
@@ -2754,6 +2922,7 @@
       (tstamps "1b70cb10-36a3-5803-8a8b-db14cdfb0aac"))
     (comp (ref "C1204")
       (value "22uF")
+      (footprint "Capacitor_SMD:C_1206_3216Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2765,6 +2934,7 @@
       (tstamps "262aba6d-2d92-5e0b-b7eb-348d3663620c"))
     (comp (ref "C1205")
       (value "22uF")
+      (footprint "Capacitor_SMD:C_1206_3216Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2776,6 +2946,7 @@
       (tstamps "0e00182d-444a-5bea-8d9c-57fffd8b96b6"))
     (comp (ref "C1206")
       (value "1uF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2787,6 +2958,7 @@
       (tstamps "31df1b19-feba-57ca-8de8-4bef76ab7ea1"))
     (comp (ref "C1207")
       (value "1uF")
+      (footprint "Capacitor_SMD:C_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "C") (description ""))
@@ -2811,6 +2983,7 @@
       (tstamps "3de1fdd5-2994-5837-a600-c6f9b83a389d"))
     (comp (ref "NT1201")
       (value "PGND-GND star")
+      (footprint "NetTie:NetTie-2_SMD_Pad0.5mm")
       (fields
         (field (name "Status") "layout: single point at the shunt ground"))
       (libsource (lib "Device") (part "NetTie_2") (description ""))
@@ -2835,6 +3008,7 @@
       (tstamps "cb072155-f26f-5a5b-ab78-3e04ee49fd32"))
     (comp (ref "R1202")
       (value "UNRESOLVED UVLO bottom")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "UNRESOLVED"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2859,6 +3033,7 @@
       (tstamps "ad048e9f-0260-5f4b-9306-950cc7584520"))
     (comp (ref "R1204")
       (value "31.6k (verify VFB)")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "TYPICAL - verify"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2870,6 +3045,7 @@
       (tstamps "ebd14c99-85d2-55c0-a00f-36b859828509"))
     (comp (ref "R1205")
       (value "10k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2881,6 +3057,7 @@
       (tstamps "f805c5bf-41e4-56a4-88f0-6678fb197908"))
     (comp (ref "R1206")
       (value "100k")
+      (footprint "Resistor_SMD:R_0603_1608Metric")
       (fields
         (field (name "Status") "design value"))
       (libsource (lib "Device") (part "R") (description ""))
@@ -2892,6 +3069,7 @@
       (tstamps "b821ce16-b0f0-5761-963d-8fba41a98f1c"))
     (comp (ref "TP1201")
       (value "+5V")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2903,6 +3081,7 @@
       (tstamps "24673068-7e89-5a68-bdb3-1cb9b634e285"))
     (comp (ref "TP1202")
       (value "GND")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2914,6 +3093,7 @@
       (tstamps "02c78c2f-3866-55b4-b2ed-85fd29a0cce1"))
     (comp (ref "TP1203")
       (value "BUCK_PG")
+      (footprint "TestPoint:TestPoint_Pad_D1.5mm")
       (fields
         (field (name "Status") "bench test point"))
       (libsource (lib "Connector") (part "TestPoint") (description ""))
@@ -2925,6 +3105,7 @@
       (tstamps "d98055b0-ca5e-5b99-9e80-8c76cc86ce8a"))
     (comp (ref "U1201")
       (value "LM5164 (candidate)")
+      (footprint "Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm_ThermalVias")
       (fields
         (field (name "MPN") "LM5164DDAR")
         (field (name "Status") "CANDIDATE (100 V input class - verify)"))
@@ -2938,6 +3119,7 @@
       (tstamps "ca583cf8-26c3-5533-a563-2835bc17c5ba"))
     (comp (ref "U1202")
       (value "TLV75533")
+      (footprint "Package_TO_SOT_SMD:SOT-23-5")
       (fields
         (field (name "MPN") "TLV75533PDBVR")
         (field (name "Status") "CANDIDATE"))

@@ -8,19 +8,19 @@ Statuses: **Candidate** (named, requirements not yet confirmed), **Selected** (r
 
 | Category | Lines | Estimated (USD) | Dated quotes | Unpriced (TBD) | Not counted |
 |---|---|---|---|---|---|
-| Motor controller (board parts, heatsink, enclosure) | 3 | 109 to 304 (3 lines) | 0 | 0 | 0 |
+| Motor controller (board parts, heatsink, enclosure) | 3 | 108 to 298 (3 lines) | 0 | 0 | 0 |
 | Telemetry and sensors | 12 | none priced (0 lines) | 0 | 11 | 1 |
 | Shared power, connectors and wiring | 5 | 40 to 105 (3 lines) | 0 | 2 | 0 |
 | Fabrication and assembly | 5 | 58 to 170 (3 lines) | 0 | 1 | 1 |
-| Shipping and tax | 3 | 32 to 123 (2 lines) | 0 | 1 | 0 |
+| Shipping and tax | 3 | 32 to 122 (2 lines) | 0 | 1 | 0 |
 | Spares and another board revision | 2 | 58 to 93 (1 lines) | 0 | 0 | 1 |
 | Development equipment | 7 | 119 to 404 (5 lines) | 0 | 1 | 1 |
 | Recurring connectivity | 2 | none priced (0 lines) | 0 | 2 | 0 |
 | Contingency | 1 | none priced (0 lines) | 0 | 1 | 0 |
-| **All categories** | 40 | **416 to 1,198** (17 lines) | 0 | **19** | 4 |
+| **All categories** | 40 | **414 to 1,191** (17 lines) | 0 | **19** | 4 |
 
 * Priced subtotal from dated quotes: **none**: none of the 36 counted lines has a dated quote.
-* Estimated lines: **$416 to $1,198** over 17 lines ($312 to $834 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](BUDGET.md)); they are estimates, not quotes.
+* Estimated lines: **$414 to $1,191** over 17 lines ($310 to $827 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](BUDGET.md)); they are estimates, not quotes.
 * Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a subtotal by a few dollars.
 * Unpriced lines: **19** (TBD). They come on top of the estimated range, so the complete cost is not known.
 * Not counted: 4 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
@@ -34,12 +34,12 @@ Every build contains every line of the controller category: features are deferre
 
 | Build | Development equipment | Estimated (USD) | Unpriced lines | Against $500 | Against $1,000 |
 |---|---|---|---|---|---|
-| Minimum working build (controller only) | owned | 312 to 834 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
-| Minimum working build (controller only) | bought | 416 to 1,198 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
-| Minimum build plus local logging (no live link) | owned | 312 to 834 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced |
-| Minimum build plus local logging (no live link) | bought | 416 to 1,198 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced; the priced lines alone straddle $1,000 |
-| Full scope | owned | 312 to 834 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
-| Full scope | bought | 416 to 1,198 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
+| Minimum working build (controller only) | owned | 310 to 827 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
+| Minimum working build (controller only) | bought | 414 to 1,191 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
+| Minimum build plus local logging (no live link) | owned | 310 to 827 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced |
+| Minimum build plus local logging (no live link) | bought | 414 to 1,191 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced; the priced lines alone straddle $1,000 |
+| Full scope | owned | 310 to 827 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
+| Full scope | bought | 414 to 1,191 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
 
 **Minimum working build (controller only).** One controller board assembled, bench-accepted and driven in the vehicle with the existing driver controls. The controller runs without telemetry, LTE, MQTT, the pit software and CSIA.
 
@@ -70,7 +70,7 @@ Every build contains every line of the controller category: features are deferre
 | Item | Purpose | Qty | Unit cost (USD) | Total (USD) | Status |
 |---|---|---|---|---|---|
 | **Motor controller (board parts, heatsink, enclosure)** | | | | | |
-| Controller board parts, one board | Every component on the draft motor-controller schematic (100 BOM lines) | 1 set | est. 89 to 239 | est. 89 to 239 | Blocked |
+| Controller board parts, one board | Every component on the draft motor-controller schematic (122 BOM lines) | 1 set | est. 88 to 233 | est. 88 to 233 | Blocked |
 | Thermal interface, heatsink plate and fasteners | Carries the power-stage losses away from the MOSFETs | 1 set | est. 10 to 35 | est. 10 to 35 | Blocked |
 | Controller enclosure and mounting | Holds and protects the controller in the vehicle | 1 set | est. 10 to 30 | est. 10 to 30 | Blocked |
 | **Telemetry and sensors** | | | | | |
@@ -100,11 +100,11 @@ Every build contains every line of the controller category: features are deferre
 | Telematics PCB fabrication and assembly | The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal) | TBD | TBD | TBD | Blocked |
 | **Shipping and tax** | | | | | |
 | Controller PCB shipping | Delivery of the boards | 1 order | est. 20 to 45 | est. 20 to 45 | Blocked |
-| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 78 | est. 12 to 78 | Blocked |
+| Tax and shipping on the controller parts | Distributor shipping and import tax on the two parts lines above | 1 order | est. 12 to 77 | est. 12 to 77 | Blocked |
 | Shipping and tax on the telemetry lines | Delivery and import tax | TBD | TBD | TBD | Blocked |
 | **Spares and another board revision** | | | | | |
 | Spare parts for bring-up | Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU) | 1 set | est. 58 to 93 | est. 58 to 93 | Blocked |
-| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 250 | est. 90 to 250 | Candidate |
+| Second controller board revision (optional) | One more PCB order, shipping, stencil and changed parts if the first board needs a respin | 1 set | est. 90 to 248 | est. 90 to 248 | Candidate |
 | **Development equipment** | | | | | |
 | NUCLEO-U575ZI-Q development board | Bench development of the telemetry firmware before the telematics board exists | 1 | TBD | TBD | Candidate |
 | Bench dummy load, power resistors and bench harness | Loads the controller's supply stages on the bench before a motor is connected | 1 set | est. 15 to 40 | est. 15 to 40 | Blocked |

@@ -21,6 +21,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BOM = ROOT / "hardware" / "bom" / "BOM_draft.csv"
 PRICING = ROOT / "hardware" / "bom" / "pricing.yaml"
+FOOTPRINTS = ROOT / "hardware" / "footprints" / "assignments.yaml"
 GEN = ROOT / "tools" / "gen_kicad_schematic.py"
 BUDGETS = (500.0, 1000.0)
 
@@ -44,7 +45,9 @@ def price_lines():
     rows = list(csv.DictReader(BOM.open()))
     titles = sheet_titles()
     out = []
+    fps = {e["refs"][0]: e for e in yaml.safe_load(FOOTPRINTS.read_text())["lines"]}
     for r in rows:
+        fp = fps.get(r["refs"].split()[0], {})
         rule = next((x for x in P["rules"] if match(x, r)), None)
         if rule is None:
             raise SystemExit(f"no pricing rule for BOM line {r['line']} {r['symbol']} {r['value']}")
@@ -53,7 +56,8 @@ def price_lines():
         hi = max(qty * rule["high"], rule.get("min_line_high", 0.0) if qty else 0.0)
         out.append({**r, "qty_per_board": qty, "mpn": rule.get("mpn", r["mpn_candidate"]) if not r["mpn_candidate"] or
                     "UNRESOLVED" in str(rule.get("mpn", "")) else r["mpn_candidate"].replace(" (verify)", ""),
-                    "package": rule.get("package", ""), "footprint": "UNASSIGNED (draft)",
+                    "package": fp.get("package") or rule.get("package", ""),
+                    "footprint": r["footprint"] or f"UNASSIGNED ({fp.get('disposition', 'no disposition')})",
                     "supplier": rule.get("supplier", "-"), "unit_low": rule["low"], "unit_high": rule["high"],
                     "price_date": P["retrieved"] if rule["evidence"] != "allowance" else "-",
                     "ext_low": round(lo, 2), "ext_high": round(hi, 2), "availability": rule.get("availability", ""),
