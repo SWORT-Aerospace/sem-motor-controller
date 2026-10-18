@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Host telemetry pipeline through a real local MQTT broker (host software, not vehicle firmware).
+"""LEGACY supervised telemetry pipeline through a real local MQTT broker (host software; research only).
 
-    python3 tools/run_mqtt_demo.py --out build/mqtt_demo [--duration 120] [--pace 2] [--samples DIR]
+    python3 tools/run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo [--duration 120] [--pace 2]
+
+Superseded for the telematics delivery by tools/run_telematics_demo.py, which runs the receive-only node
+against a simulated external controller. This one keeps the v0.5 chain with the ECO supervisor and the
+project's own controller core, and runs only when `--legacy-supervised` is given.
 
 Needs the C host build (`cmake -S firmware -B build && cmake --build build`)
 and a Mosquitto binary (docs/MQTT_SETUP.md). Chain:
@@ -46,7 +50,7 @@ from host.logger.semmc_log import io_event  # noqa: E402
 from host.csia_adapter.adapter import AdapterParams  # noqa: E402
 from host.pit import ingest, shadow_replay  # noqa: E402
 from host.telematics.mqtt_link import MqttLink  # noqa: E402
-from host.telematics.node import SCHEMA, NodeConfig  # noqa: E402
+from host.telemetry_adapter.legacy_node import SCHEMA, NodeConfig  # noqa: E402
 from tools import mqtt_broker  # noqa: E402
 from tools.run_host_demo import build_chain, simulate  # noqa: E402
 
@@ -418,7 +422,7 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0, pace: f
     L = ["# Telemetry pipeline through a real MQTT broker (HOST SOFTWARE)", "",
          f"Run `{RUN_ID}`, {duration:.0f} s of controller time at {pace:g}x wall-clock speed, commit "
          f"`{ch.git[:12]}`{' plus uncommitted changes' if ch.dirty else ''}. Broker: {res['broker']} on loopback; "
-         f"client: paho-mqtt {res['paho_mqtt']}. Command: `python3 tools/run_mqtt_demo.py --out build/mqtt_demo`. "
+         f"client: paho-mqtt {res['paho_mqtt']}. Command: `python3 tools/run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo`. "
          "Synthetic plant and sensors; the car side is the host model of the telematics unit, not its firmware, and "
          "no LTE modem is involved. Nothing here was measured on hardware.", "",
          "| Check | Result | Evidence |", "|---|---|---|"]
@@ -436,7 +440,15 @@ def main() -> int:
     ap.add_argument("--duration", type=float, default=120.0)
     ap.add_argument("--pace", type=float, default=2.0, help="simulated seconds per wall-clock second")
     ap.add_argument("--samples", type=pathlib.Path, help="copy summary.md and summary.json here")
+    ap.add_argument("--legacy-supervised", action="store_true",
+                    help="confirm this LEGACY research simulation: the telematics model runs the ECO supervisor and "
+                         "sends torque requests to the simulated controller (never the deployed telematics path)")
     a = ap.parse_args()
+    if not a.legacy_supervised:
+        print("LEGACY research simulation with the ECO supervisor and the project's own controller core. The "
+              "deployed telematics unit is receive-only: run tools/run_telematics_demo.py. To run this one anyway, "
+              "add --legacy-supervised.")
+        return 2
     if mqtt_broker.find_mosquitto() is None:
         print("MQTT NOT AVAILABLE: no mosquitto binary (set SEMMC_MOSQUITTO or see docs/MQTT_SETUP.md)")
         return 2

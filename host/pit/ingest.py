@@ -31,7 +31,9 @@ import pathlib
 import sqlite3
 
 from host.telematics import stlg
-from host.telematics.node import SCHEMAS_ACCEPTED, STATES
+from host.telematics import controller_adapter, measurement, signals
+from host.telematics.node import SCHEMAS_ACCEPTED
+from host.telematics.wheel import EdgeRecord, WheelConfig, WheelEstimator
 from protocol.generated import semmc_protocol as proto
 
 DDL = """
@@ -51,11 +53,22 @@ CREATE TABLE IF NOT EXISTS signals (
   t_local_us INTEGER NOT NULL, utc REAL, value REAL, seq INTEGER, src TEXT NOT NULL,
   PRIMARY KEY (run_id, block, idx, name));
 CREATE INDEX IF NOT EXISTS signals_by_name ON signals (run_id, name, t_local_us);
+CREATE TABLE IF NOT EXISTS measurements (
+  run_id TEXT NOT NULL, record_id INTEGER NOT NULL, block INTEGER NOT NULL, idx INTEGER NOT NULL,
+  source TEXT NOT NULL, signal TEXT NOT NULL, value REAL, unit TEXT NOT NULL, t_rx_us INTEGER NOT NULL,
+  t_sample_us INTEGER, t_unc_us INTEGER, source_seq INTEGER, validity TEXT NOT NULL, provenance TEXT NOT NULL,
+  upper REAL, utc REAL, utc_q TEXT NOT NULL,
+  PRIMARY KEY (run_id, record_id));
+CREATE INDEX IF NOT EXISTS measurements_by_signal ON measurements (run_id, signal, t_rx_us);
 CREATE TABLE IF NOT EXISTS imports (run_id TEXT NOT NULL, source TEXT NOT NULL, report_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS rx (
   rx INTEGER PRIMARY KEY AUTOINCREMENT, received_s REAL NOT NULL, topic TEXT NOT NULL, dup_flag INTEGER,
   outcome TEXT NOT NULL, run_id TEXT, seq INTEGER, reason TEXT);
 """
+
+# controller states of the semmc protocol (simulation fixture), for v1 to v3 messages of the legacy simulation;
+# the same list as host/telemetry_adapter/legacy_node.py STATES, kept here so the pit imports no supervisor code
+STATES = ["BOOT", "SELF_TEST", "DISARMED", "READY", "MANUAL", "ECO_ASSIST", "DERATED", "FAULT_LATCHED"]
 
 # controller fields kept as signals (name -> (message, field))
 CTRL_SIGNALS = {
@@ -98,6 +111,75 @@ def _is_num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
+LIVE_Q = tuple(measurement.VALIDITY) + ("stale", "missing")
+
+
+def _validate_common(m: dict) -> str | None:
+    if m.get("utc_q") not in ("pps", "holdover", "none"):
+        return "bad utc_q"
+    if m.get("utc") is not None and not _is_num(m["utc"]):
+        return "utc not a finite number or null"
+    if m["utc_q"] == "none" and m.get("utc") is not None:
+        return "utc given with utc_q none"
+    if m.get("utc_err_s") is not None and not (_is_num(m["utc_err_s"]) and m["utc_err_s"] >= 0):
+        return "utc_err_s not a non-negative number or null"
+    c = m.get("counters")
+    if c is not None and not (isinstance(c, dict) and all(_is_int(v) and v >= 0 for v in c.values())):
+        return "counters not an object of non-negative integers"
+    return None
+
+
+def _validate_v4(m: dict) -> str | None:
+    """sem.telemetry.v4 (host/telematics/node.py): the latest measurement per registry signal."""
+    for k, ok, what in (("run_id", lambda v: isinstance(v, str) and v != "", "a non-empty string"),
+                        ("boot", _is_int, "an integer"), ("seq", _is_int, "an integer"),
+                        ("t_local_ms", _is_int, "an integer"), ("adapter", lambda v: isinstance(v, dict), "an object"),
+                        ("m", lambda v: isinstance(v, dict), "an object"),
+                        ("replayed", lambda v: isinstance(v, bool), "a boolean")):
+        if not ok(m.get(k)):
+            return f"field {k} missing or not {what}"
+    for k in ("boot", "seq", "t_local_ms"):
+        if m[k] < 0:
+            return f"negative {k}"
+    for k in ("sup", "ctrl"):
+        if k in m:
+            return f"v4 message with a {k!r} block: the receive-only node has none"
+    a = m["adapter"]
+    if not isinstance(a.get("id"), str) or not isinstance(a.get("fixture"), bool):
+        return "adapter.id or adapter.fixture missing"
+    if a.get("silent_ms") is not None and not (_is_int(a["silent_ms"]) and a["silent_ms"] >= 0):
+        return "adapter.silent_ms not a non-negative integer or null"
+    for sid, e in m["m"].items():
+        reg = signals.lookup(sid)
+        if reg is None:
+            return f"m.{sid}: not a registry signal"
+        if not isinstance(e, dict):
+            return f"m.{sid} not an object"
+        if e.get("u") != reg.unit:
+            return f"m.{sid}: unit {e.get('u')!r}, the registry says {reg.unit!r}"
+        q, v, age = e.get("q"), e.get("v"), e.get("age_ms")
+        if q not in LIVE_Q:
+            return f"m.{sid}: unknown q {q!r}"
+        if q in ("valid", "unverified"):
+            if not (_is_num(v) and reg.lo <= v <= reg.hi):
+                return f"m.{sid}.v={v!r} outside [{reg.lo}, {reg.hi}] or missing for q {q}"
+            if not (_is_int(age) and 0 <= age <= reg.stale_s * 1000 + 1):
+                return f"m.{sid}: q {q} with age_ms {age!r} (stale after {reg.stale_s} s)"
+        elif v is not None:
+            return f"m.{sid}: a value with q {q}: a missing or invalid value must be null"
+        if q == "missing" and age is not None:
+            return f"m.{sid}: missing with an age"
+        if q != "missing" and not (_is_int(age) and age >= 0):
+            return f"m.{sid}: age_ms not a non-negative integer"
+        if e.get("seq") is not None and not (_is_int(e["seq"]) and 0 <= e["seq"] < 2**32):
+            return f"m.{sid}: seq not an unsigned integer or null"
+        if e.get("ts") not in ("sample", "rx", None):
+            return f"m.{sid}: ts {e.get('ts')!r}"
+        if "upper" in e and not (_is_num(e["upper"]) and e["upper"] >= 0):
+            return f"m.{sid}: upper not a non-negative number"
+    return _validate_common(m)
+
+
 def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
     """Parse and check one live message. Returns (message, None) or (None, reason)."""
     try:
@@ -106,6 +188,9 @@ def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
         return None, f"not JSON ({type(e).__name__})"
     if not isinstance(m, dict) or m.get("schema") not in SCHEMAS_ACCEPTED:
         return None, "wrong or missing schema"
+    if m["schema"] == "sem.telemetry.v4":
+        why = _validate_v4(m)
+        return (None, why) if why else (m, None)
     for k, ok, what in (("run_id", lambda v: isinstance(v, str) and v != "", "a non-empty string"),
                         ("seq", _is_int, "an integer"), ("t_local_ms", _is_int, "an integer"),
                         ("ctrl", lambda v: isinstance(v, dict), "an object"),
@@ -125,17 +210,9 @@ def validate_live(payload: bytes) -> tuple[dict | None, str | None]:
             continue
         if not _is_num(v) or not lo <= v <= hi:
             return None, f"ctrl.{k}={v!r} outside [{lo}, {hi}]"
-    if m.get("utc_q") not in ("pps", "holdover", "none"):
-        return None, "bad utc_q"
-    if m.get("utc") is not None and not _is_num(m["utc"]):
-        return None, "utc not a finite number or null"
-    if m["utc_q"] == "none" and m.get("utc") is not None:
-        return None, "utc given with utc_q none"
-    if m.get("utc_err_s") is not None and not (_is_num(m["utc_err_s"]) and m["utc_err_s"] >= 0):
-        return None, "utc_err_s not a non-negative number or null"
-    c = m.get("counters")
-    if c is not None and not (isinstance(c, dict) and all(_is_int(v) and v >= 0 for v in c.values())):
-        return None, "counters not an object of non-negative integers"
+    why = _validate_common(m)
+    if why:
+        return None, why
     if m["schema"] in ("sem.telemetry.v2", "sem.telemetry.v3"):
         w = m.get("wheel")
         if not isinstance(w, dict) or not isinstance(w.get("speed_mps"), dict):
@@ -241,7 +318,21 @@ def _utc_mapper(pps: list[tuple[int, int]], holdover_after_us: int = 2_500_000):
     return utc
 
 
-def import_log(db: sqlite3.Connection, path: pathlib.Path) -> dict:
+def _rid(block: int, idx: int, k: int) -> int:
+    """Measurement record id at import: from the record's place in the log (block, index) and its position
+    in the record, so a second import of the same log gives the same ids and adds nothing."""
+    return (block << 20) | (idx << 4) | k
+
+
+def _meas_row(run_id, blk, idx, m, u, q):
+    return (run_id, m.record_id, blk, idx, m.source, m.signal, m.value, m.unit, m.t_rx_us, m.t_sample_us, m.t_unc_us,
+            m.source_seq, m.validity, m.provenance, m.upper, u, q)
+
+
+def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.Path | None = None) -> dict:
+    """Import one STLG log: every record into `records`, every measurement into `measurements` (decoded with
+    the controller adapter the log names, `controller_adapter` in its metadata; a log without one is a semmc
+    simulation log and uses the simulation fixture), and the legacy `signals` rows the shadow replay reads."""
     meta, recs, rr = stlg.read(path)
     run_id = meta.get("run_id")
     if not run_id:
@@ -254,55 +345,120 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path) -> dict:
     ppr = sens.get("wheel_ppr")
     chan = {int(k): v for k, v in sens.get("wheel_channels", {}).items()}
     tchan = {int(k): v for k, v in sens.get("temp_channels", {}).items()}
+    adapter = controller_adapter.from_meta(meta.get("controller_adapter") or {"id": "semmc-sim-fixture"}, mapping_dir)
+    wcfg = WheelConfig(C, ppr, active_high=bool(sens.get("wheel_active_high"))) if C and ppr else None
+    west = {}
     rep = {"run_id": run_id, "blocks_ok": rr.blocks_ok, "blocks_corrupt": rr.blocks_corrupt,
            "block_seq_gaps": rr.block_seq_gaps, "truncated_tail_bytes": rr.truncated_tail_bytes,
-           "records": rr.records, "new_records": 0, "frames_bad_crc": 0, "utc_quality": {}}
-    rows, sig = [], []
-    for blk, idx, t, rtype, f in recs:
+           "records": rr.records, "new_records": 0, "frames_bad_crc": 0, "frames": {}, "utc_quality": {},
+           "adapter": adapter.id, "boot": None, "last_counters": None, "final_counters": False,
+           "wheel_lost_records": 0, "wheel_lost_edges": 0, "measurements": 0, "validity": {}}
+    rows, sig, meas = [], [], []
+    for n_rec, (blk, idx, t, rtype, f) in enumerate(recs):
         u, q = utc_of(t)
         rep["utc_quality"][q] = rep["utc_quality"].get(q, 0) + 1
         can_id = msg = seq = status = None
-        if rtype == stlg.CAN:
+        made = []
+        if rtype in (stlg.CAN, stlg.CAN2):
             can_id = f["can_id"]
-            m = proto.BY_ID.get(can_id)
-            if m is not None:
+            k = iter(range(16))
+            adapter.rid = lambda: _rid(blk, idx, next(k))   # noqa: B023  (ids from the record's place)
+            res = adapter.decode(t, controller_adapter.Frame(can_id, f["data"], f.get("extended", False),
+                                                             f.get("fd", False)))
+            rep["frames"][res.kind] = rep["frames"].get(res.kind, 0) + 1
+            msg, status = res.message, ("ok" if res.kind in ("decoded", "ignored") else
+                                        res.detail if res.kind == "invalid" else "unknown_id")
+            made = res.measurements
+            seq = made[0].source_seq if made else None
+            if res.kind == "invalid" and res.detail == "bad_crc":
+                rep["frames_bad_crc"] += 1
+            if adapter.id == controller_adapter.SimFixtureAdapter.id and res.kind in ("decoded", "ignored"):
                 values, info = proto.decode(can_id, f["data"])
-                msg, status, seq = m["name"], info["status"], info.get("seq")
-                if status != "ok":
-                    rep["frames_bad_crc"] += 1
-                else:
-                    for name, (mn, fld) in CTRL_SIGNALS.items():
-                        if mn == msg:
-                            v = values[fld]
-                            v = float(v) if isinstance(v, (int, float, bool)) else None
-                            sig.append((run_id, blk, idx, name, t, u, v if v is None or math.isfinite(v) else None,
-                                        seq, "controller" if msg != "sup_torque_req" else "supervisor"))
-            else:
-                status = "unknown_id"
+                seq = info.get("seq")
+                for name, (mn, fld) in CTRL_SIGNALS.items():
+                    if mn == msg:
+                        v = values[fld]
+                        v = float(v) if isinstance(v, (int, float, bool)) else None
+                        sig.append((run_id, blk, idx, name, t, u, v if v is None or math.isfinite(v) else None,
+                                    seq, "controller" if msg != "sup_torque_req" else "supervisor"))
         elif rtype == stlg.WHEEL and C and ppr:
             v = f["counts"] * C / (ppr * f["window_ms"] / 1000.0)
             sig.append((run_id, blk, idx, chan.get(f["channel"], f"wheel_{f['channel']}"), t, u, v, None, "telematics"))
+        elif rtype == stlg.WHEEL_EDGES:
+            name = chan.get(f["channel"], f"wheel_{f['channel']}")
+            if wcfg is not None:
+                k = iter(range(16))
+                est = west.setdefault(f["channel"], WheelEstimator(wcfg, name))
+                est.rid = lambda: _rid(blk, idx, next(k))   # noqa: B023
+                made = est.feed(EdgeRecord(t, f["channel"], f["n"], f["span_us"], f["total"], f["flags"], f["rec_seq"],
+                                           f["lost"]))
+                for m in made:
+                    if m.signal.endswith(".speed") and m.usable:
+                        sig.append((run_id, blk, idx, name, t, u, m.value, None, "telematics"))
+            status = "heartbeat" if f["n"] == 0 else "edges"
         elif rtype == stlg.TEMP:
             # an invalid reading is stored as NULL with the record kept, so a missing value is visible
-            sig.append((run_id, blk, idx, "temp_" + tchan.get(f["channel"], str(f["channel"])), t, u, f["deg_c"],
-                        None, "telematics"))
+            name = tchan.get(f["channel"], str(f["channel"]))
+            sig.append((run_id, blk, idx, "temp_" + name, t, u, f["deg_c"], None, "telematics"))
             status = f["status"]
+            made = [measurement.checked(_rid(blk, idx, 0), "temp", f"temp.{name}", f["deg_c"], "degC", t,
+                                        provenance=f"temp-probe:ch{f['channel']} {f['status']}",
+                                        invalid=f["deg_c"] is None)]
         elif rtype == stlg.GNSS:
             v = f["speed_mps"] if f["fix"] and math.isfinite(f["speed_mps"]) else None
             sig.append((run_id, blk, idx, "gnss", t, u, v, None, "gnss"))
             sig.append((run_id, blk, idx, "gnss_sacc", t, u, f["sacc_mps"] if f["fix"] else None, None, "gnss"))
             sig.append((run_id, blk, idx, "gnss_num_sv", t, u, float(f["num_sv"]), None, "gnss"))
+            made = [measurement.checked(_rid(blk, idx, 0), "gnss", "gnss.speed", v, "m/s", t, provenance="gnss",
+                                        invalid=v is None),
+                    measurement.checked(_rid(blk, idx, 1), "gnss", "gnss.speed_acc",
+                                        f["sacc_mps"] if f["fix"] else None, "m/s", t, provenance="gnss",
+                                        invalid=not f["fix"]),
+                    measurement.checked(_rid(blk, idx, 2), "gnss", "gnss.num_sv", f["num_sv"], "1", t,
+                                        provenance="gnss")]
         elif rtype == stlg.IMU:
             sig.append((run_id, blk, idx, "imu_ax", t, u, f["ax_mps2"], None, "imu"))
             sig.append((run_id, blk, idx, "imu_gz", t, u, f["gz_rad_s"], None, "imu"))
-        elif rtype == stlg.COUNTERS:
-            for k, v in f.items():
-                sig.append((run_id, blk, idx, "cnt_" + k, t, u, float(v), None, "telematics"))
+            made = [measurement.checked(_rid(blk, idx, 0), "imu", "imu.ax", f["ax_mps2"], "m/s^2", t, provenance="imu"),
+                    measurement.checked(_rid(blk, idx, 1), "imu", "imu.gz", f["gz_rad_s"], "rad/s", t, provenance="imu")]
+        elif rtype == stlg.BATT:
+            status = f["status"]
+            made = [measurement.checked(_rid(blk, idx, k2), "batt", sig, f[fld], unit, t,
+                                        provenance=f"battery-monitor {f['status']}", invalid=f[fld] is None)
+                    for k2, (sig, fld, unit) in enumerate((("batt.voltage", "voltage_V", "V"),
+                                                           ("batt.current", "current_A", "A")))]
+        elif rtype in (stlg.COUNTERS, stlg.COUNTERS2):
+            for k2, v in f.items():
+                sig.append((run_id, blk, idx, "cnt_" + k2, t, u, float(v), None, "telematics"))
+            rep["last_counters"] = {"record": n_rec, "t_us": t, **f}
+            rep["final_counters"] = n_rec == len(recs) - 1
+        elif rtype == stlg.BOOT:
+            rep["boot"] = f
+        for m in made:
+            meas.append(_meas_row(run_id, blk, idx, m, u, q))
+            rep["validity"][m.validity] = rep["validity"].get(m.validity, 0) + 1
         rows.append((run_id, blk, idx, t, u, q, rtype, can_id, msg, seq, status))
+    for est in west.values():
+        rep["wheel_lost_records"] += est.lost_records
+        rep["wheel_lost_edges"] += est.lost_edges
+    rep["measurements"] = len(meas)
+    lc = rep["last_counters"]
+    if lc and "log_records" in lc:
+        # every record the unit wrote before its last counters record must be in the file; with an orderly
+        # shutdown that record is the last one and counts itself
+        rep["accounting"] = {"records_in_file": rr.records, "unit_log_records": lc["log_records"],
+                             "dropped_queue": lc.get("log_dropped_queue"), "dropped_storage": lc.get("log_dropped_storage"),
+                             "missing_from_file": max(0, lc["log_records"] - rr.records) if rep["final_counters"] else
+                             max(0, lc["log_records"] - (lc["record"] + 1)),
+                             "after_last_counters": "none (orderly close)" if rep["final_counters"] else
+                             "unknown: the session ended without a final counters record (restart or power loss)"}
     before = db.total_changes
     db.executemany("INSERT OR IGNORE INTO records VALUES (?,?,?,?,?,?,?,?,?,?,?)", rows)
     rep["new_records"] = db.total_changes - before
     db.executemany("INSERT OR IGNORE INTO signals VALUES (?,?,?,?,?,?,?,?,?)", sig)
+    before = db.total_changes
+    db.executemany("INSERT OR IGNORE INTO measurements VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", meas)
+    rep["new_measurements"] = db.total_changes - before
     db.execute("INSERT INTO imports VALUES (?,?,?)", (run_id, str(path.name), json.dumps(rep, sort_keys=True)))
     db.commit()
     return rep

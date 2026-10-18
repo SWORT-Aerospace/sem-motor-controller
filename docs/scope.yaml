@@ -1,0 +1,161 @@
+# Repository scope (v0.7): every tracked file and every test file belongs to one suite.
+#
+#   telematics  active telematics delivery: sensor acquisition, controller-data reception (receive-only),
+#               local logging, uplink, pit tools, energy analysis, shadow-mode diagnostics. It must build,
+#               run and pass without building, fabricating or flashing our own motor controller.
+#   reference   reusable simulation and reference material: vehicle and optimisation models, the semmc CAN
+#               protocol (a SIMULATION FIXTURE until the controller team accepts it), the frozen CSIA
+#               evaluation, documentation history.
+#   controller  deferred controller development: the controller core and its STM32G474 port, the power-stage
+#               hardware, its acceptance procedures, and the legacy supervised simulations that need the
+#               controller core. Kept and tested, but nothing in the telematics delivery depends on it.
+#
+# `modules`: a path prefix and its suite; the longest matching prefix wins. tools/scope.py checks that every
+# tracked file matches one and renders docs/generated/scope.md. `tests`: a test file (or file::test) and its
+# suite; conftest.py marks every collected test with it (pytest -m telematics, -m reference, -m controller)
+# and fails a telematics or reference test that asks for the controller build.
+
+suites:
+  telematics: "active telematics delivery"
+  reference: "reusable simulation and reference"
+  controller: "deferred controller development"
+
+modules:
+  # ---- telematics delivery
+  README.md: telematics
+  CONTRIBUTING.md: telematics
+  conftest.py: telematics
+  pytest.ini: telematics
+  requirements.txt: telematics
+  .gitignore: telematics
+  .github/: telematics
+  host/README.md: telematics
+  host/__init__.py: telematics
+  host/telematics/: telematics
+  host/telematics/sim_vehicle.py: reference        # simulation fixture (external controller stand-in)
+  host/telematics/sensors.py: reference            # synthetic sensors of the legacy demonstration
+  host/pit/: telematics
+  host/vcu_bridge/: reference
+  telematics/: telematics
+  tests/README.md: telematics
+  tests/telematics/: telematics
+  tools/README.md: telematics
+  tools/__init__.py: telematics
+  tools/run_telematics_demo.py: telematics
+  tools/telematics_import.py: telematics
+  tools/telematics_bom.py: telematics
+  tools/scope.py: telematics
+  tools/mqtt/: telematics
+  tools/mqtt_broker.py: telematics
+  tools/run_pit_replay.py: telematics
+  tools/check_links.py: telematics
+  tools/wheel_sensor_check.py: telematics
+  tools/bus_load.py: telematics
+  tools/can_bit_timing.py: telematics
+  tools/telematics_budget.py: telematics
+  docs/README.md: telematics
+  docs/FILE_INDEX.md: telematics
+  docs/scope.yaml: telematics
+  docs/CONTROLLER_INTERFACE_REQUEST.md: telematics
+  docs/TELEMATICS_BOM.md: telematics
+  docs/TELEMETRY_INTEGRATION.md: telematics
+  docs/TELEMETRY_EMBEDDED_PORT.md: telematics
+  docs/TELEMETRY_CANDIDATES.md: telematics
+  docs/MQTT_SETUP.md: telematics
+  docs/ENERGY_METHODS.md: telematics
+  docs/ENERGY_ACCOUNTING.md: telematics
+  docs/ICD.md: telematics
+  docs/STATUS.md: telematics
+  docs/BLOCKERS.md: telematics
+  docs/blockers.yaml: telematics
+  docs/INPUT_SHEET.md: telematics
+  docs/IMPLEMENTATION_PLAN.md: telematics
+  docs/INTEGRATION_GUIDE.md: telematics
+  docs/DEVELOPMENT.md: telematics
+  docs/DESIGN_DECISIONS.md: telematics
+  docs/BATTERY.md: telematics
+  docs/RULES_COMPLIANCE.md: telematics
+  docs/REQUIREMENTS.md: telematics
+  docs/VALIDATION_PLAN.md: telematics
+  docs/VERIFICATION_REPORT.md: telematics
+  docs/OPEN_PARAMETERS.md: telematics
+  docs/PROCUREMENT.md: telematics
+  docs/BUDGET.md: controller                        # the v0.6 controller board budget (historical)
+  docs/generated/: reference
+  docs/generated/telematics_demo/: telematics
+  docs/generated/scope.md: telematics
+  docs/generated/wheel_sensor_check.md: telematics
+  docs/generated/telematics_budget.md: telematics
+  docs/generated/telematics_budget.json: telematics
+  docs/generated/bus_load.md: telematics
+  docs/generated/can_bit_timing.md: telematics
+  docs/generated/telematics_bom.json: telematics
+  docs/csia/: reference                              # frozen evaluation (R3v result preserved)
+  docs/decisions/: reference
+  docs/decisions/ADR-0013-telematics-scope.md: telematics
+  docs/reference/: reference
+  docs/archive/: reference
+  docs/figures/: reference
+  docs/MATH_SPEC.md: reference
+  docs/METHOD_SELECTION.md: reference
+  docs/EFFICIENCY_RESEARCH.md: reference
+  docs/COMBINED_ARCHITECTURE.md: reference
+  hardware/README.md: controller
+  hardware/telematics/: telematics
+  # ---- reusable simulation and reference
+  models/: reference
+  protocol/: reference
+  config/: reference
+  third_party/: reference
+  host/csia_adapter/: reference
+  host/logger/: controller
+  host/replay/: controller
+  host/telemetry_adapter/: controller               # ECO supervisor, co-simulation, legacy supervised node
+  tools/fetch_csia.py: reference
+  tools/run_csia_evaluation.py: reference
+  tools/run_csia_evaluation_v2.py: reference
+  tools/run_csia_posthoc.py: reference
+  tools/run_csia_study.py: reference
+  tools/run_optimization.py: reference
+  tools/coastdown_sensitivity.py: reference
+  tools/gen_protocol.py: reference
+  tools/gen_dbc.py: reference
+  tools/config_tool.py: reference
+  tools/config_registry.py: reference
+  tools/gen_config.py: reference
+  tools/make_replay_sample.py: controller
+  tools/verify_all.py: reference
+  # ---- deferred controller development
+  firmware/: controller
+  hardware/: controller
+  tools/: controller                                 # every tool not listed above
+  docs/ARCHITECTURE_FREEZE.md: controller
+  docs/BENCH_ACCEPTANCE.md: controller
+  docs/CONTROL_CONTRACT.md: controller
+  docs/HARDWARE_ARCHITECTURE.md: controller
+  tests/: controller                                 # every test file not listed below
+
+tests:
+  # telematics delivery
+  tests/telematics/: telematics
+  tests/integration/test_docs.py: telematics
+  tests/integration/test_pit_energy.py: telematics
+  tests/integration/test_shadow_replay.py: telematics
+  tests/hardware/test_wheel_sensor_check.py: telematics
+  tests/integration/test_mqtt_pipeline.py: telematics
+  tests/integration/test_mqtt_pipeline.py::test_node_wheel_speed_formula_staleness_and_unknown_configuration: controller
+  tests/integration/test_mqtt_pipeline.py::test_node_temperatures_staleness_invalid_and_controller_values: controller
+  tests/integration/test_mqtt_pipeline.py::test_step_timing_tolerates_one_scheduling_stall_but_not_a_blocking_uplink: controller
+  tests/integration/test_mqtt_pipeline.py::test_refused_messages_stay_in_the_bounded_backlog_and_are_replayed_flagged: controller
+  tests/integration/test_mqtt_pipeline.py::test_every_mqtt_demo_check_passes: controller
+  tests/integration/test_mqtt_pipeline.py::test_mqtt_demo_accounts_for_every_message: controller
+  # reusable simulation and reference
+  tests/simulation/test_models.py: reference
+  tests/integration/test_protocol_python.py: reference
+  tests/integration/test_dbc.py: reference
+  tests/integration/test_vcu_bridge.py: reference
+  tests/integration/test_math_spec.py: reference
+  tests/fault_injection/test_csia_freeze.py: reference
+  tests/fault_injection/test_csia_v2_freeze.py: reference
+  # everything else under tests/ is deferred controller development (modules: tests/)
+  tests/: controller

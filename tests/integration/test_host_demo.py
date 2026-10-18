@@ -10,7 +10,8 @@ import pytest
 from host.pit import ingest
 from host.telematics import stlg
 from host.telematics.clocks import LocalClock, PpsModel, UtcEstimator
-from host.telematics.node import NodeConfig, SimLink, TelematicsNode
+from host.telematics.node import SimLink
+from host.telemetry_adapter.legacy_node import NodeConfig, SupervisedTelematicsNode as TelematicsNode
 from host.telemetry_adapter.supervisor import Supervisor, SupervisorConfig, speed_hold_policy
 from tools import run_host_demo
 
