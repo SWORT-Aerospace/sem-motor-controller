@@ -329,3 +329,56 @@ Clone of the pushed branch into an empty directory; same tools as 9.2.
 * The register behaviour that only RM0456, DS13737 and ES0499 settle ([`U575_REGISTER_CHECK.md`](U575_REGISTER_CHECK.md) section 3), and the W25Q128JV data sheet's command set, pinout and timings (B1 shows the JEDEC id).
 * The battery's maximum voltage, without which no vehicle supply part can be chosen (T-VEH-PWR, B-BAT-V); the vehicle power connection stays blocked.
 * The controller's bus, frames and frame rate (T-CTRL-IF), which decide how long the NOR holds a full-rate vehicle log (T-STORAGE).
+
+## 11. v0.7: evidence platform (2026-10-18)
+
+Work on `eng/v0.7-telematics` after `295a815`, recorded at `27d513e`. The repository implements vehicle telemetry and
+evidence analysis; it has no propulsion authority, and CSIA integration is shadow and advisory only. **Nothing was
+flashed, connected, energised, measured on a vehicle or ordered.** Every result below is HOST-TESTED or SIMULATED
+([`CLAIMS.md`](CLAIMS.md)); the audit made before any edit and what changed with this work are in
+[`CURRENT_STATE.md`](CURRENT_STATE.md).
+
+### 11.1 What changed, and the test behind each change
+
+| Area | Change | Shown by |
+|---|---|---|
+| Receive-only boundary | `host/vcu_bridge/semmc_socketcan.py` lost `send()`; `open_socket` returns a receive-only socket | `test_receive_only_boundary.py`: import graph and AST scan of every production telematics file, a planted `set_torque` caught (negative control), no transmit API on node, adapters or assurance, 5,000 random frames through the adapter give measurements only, the firmware CAN driver has no transmit function and sets bus-monitoring mode |
+| Canonical schema | `telematics/schema/telemetry_schema.yaml`; the signal registry is built from it; registry hash `reg-cbac7dc42d28` unchanged, so earlier logs and live messages still decode | `tools/telematics_schema.py --check`; `test_evidence_model.py` (hash kept, five kinds of contract change refused) |
+| Evidence states, timing, lineage, context | `evidence.py`, `timing.py` (with the wait bound of a late or burst frame, applied at import), `lineage.py`, `context.py` | `test_evidence_model.py` (20 tests: Hall no edge is UNKNOWN with a bound and never 0; invalid temperature; gap, duplicate, reorder, wrap, ambiguous silence, late, burst, stale, missing, backwards receive time; monotonic record times; lineage; context) |
+| Witnesses, verdicts, receipts | `host/assurance/`: relations A1, A2, B1 to B4, D1; localization only with two independent agreeing witnesses; common cause supported only with direct disturbance evidence; receipts | `test_witnesses_and_verdicts.py` (15 tests) and `test_evidence_pipeline.py` (every stored receipt passes `receipt_problems`) |
+| CAN noninterference, receive side | the log queue keeps 32 of its 256 records for the unit's own records; frames beyond it counted as `can_not_logged` (COUNTERS2 id 27); host model keeps 1/8 of its queue | `test_tm.c` `test_can_flood` (a loaded 500 kbit/s bus during a 0.4 s storage stall: no own record lost; with the reserve set to 0 the same test fails), `test_evidence_pipeline.py::test_flood_of_frames_keeps_the_units_own_records` |
+| Local logging and storage | unchanged behaviour, now tested against the evidence chain | `test_local_logging_continues_through_a_network_outage` (uplink down throughout: complete log, review from the log alone), `test_a_storage_stall_is_counted_and_reviewed_as_a_recorder_event` |
+| Pit store and queries | tables `evidence`, `raw_records`, `source_timing`, `receipts`, `receipt_snapshots`, view `evidence_records`; `host/pit/queries.py`, `tools/pit_query.py` | `test_pit_queries_advisory.py` |
+| Bench chain | `tools/run_bench_chain.py`; bench step B4 runs it on the board's log | host build: C1 to C7 PASS (600 pulses, speed exact at 40 and 80 Hz, the stop UNKNOWN with a bound and never 0, distance exact, 1,160 evidence rows with raw records, query states equal, data class SIMULATED) |
+| Advisory energy | `host/pit/advisory.py`: rolling Wh/km, energy by speed band, nominal remaining energy, cruise-band suggestion, all marked advisory | `test_advisory_energy_is_labelled_and_refuses_without_evidence`, `test_advisory_module_has_no_way_to_reach_the_vehicle` |
+| CSIA boundary | `host/assurance/csia_boundary.py`: only VALID evidence reaches the frozen adapter; no torque request, grade or KCL input invented; trust numbers withheld | `test_csia_boundary_passes_only_valid_evidence_and_withholds_trust` |
+| Vehicle-validation protocols | `research/vehicle_validation/` EXP-01 to EXP-04 with ground truth, falsifiers, inapplicability and a run sheet; `tools/run_vehicle_experiment.py` | simulated pre-check: 8 of 8 variants pass, 34 checks, two of them limitations (below) |
+| Claims and docs | `docs/claims.yaml`, `tools/claims.py` (labels against tests and run records; overclaim scan), README boundary statement, `HARDWARE_OPEN_ITEMS.md` | `test_claims_and_docs.py`; `tools/claims.py --check` in CI |
+| CI | jobs static-checks, schema-validation, firmware-build, host-tools, unit-tests, integration-tests and a final `telematics` job; `hardware_required` tests never run in CI | `.github/workflows/ci.yml` |
+
+### 11.2 Results on this machine at `27d513e`
+
+| Check | Result |
+|---|---|
+| Firmware unit tests (ASan, UBSan) | 473 checks and 35 driver checks, 0 failed |
+| Target images | fresh build: `tm_u575.elf` 20,464 B flash, `tm_u575_can.elf` 21,492 B flash (a few bytes vary with the revision string they carry); bench package: 14 files, valid for a recorded run, images rebuilt with identical SHA-256 |
+| Generated files and static checks | `scope.py`, `telematics_schema.py`, `claims.py`, `gen_protocol.py`, `gen_dbc.py`, `telematics_bom.py`, `telematics_bench.py render`, `wheel_sensor_check.py`, `telematics_storage.py` (`--check`): current; `check_links.py`: 149 files, 0 broken. The counters record grew by one item, so sparse logging lasts 133 min instead of 138 (`generated/telematics_storage.md`) |
+| Telematics and reference suites (`SEMMC_REQUIRE_MQTT=1 SEMMC_REQUIRE_ARM=1`, no controller build) | 221 passed (116 in the unit-tests selection, 105 in the integration-tests selection), 0 skipped; the controller build directory was not created |
+| Controller suite (`pytest -m controller`) | 216 passed (the controller work is untouched by this change apart from the scope file) |
+| Demonstration through Mosquitto | 9/9 checks; samples refreshed in `generated/telematics_demo/` |
+| Evidence review of the demonstration | boot 1: 1,228 ticks, 0 INCONSISTENT, 0 ambiguous; two SUPPORTED shared-path events on `unit:recorder` (the storage stall, with its counted drops; the restart, with no final counters record and a brown-out reset cause in the next session). Boot 2: 469 ticks, 0 INCONSISTENT, STOPPED shown by GNSS |
+| Simulated pre-check of the protocols | EXP-01: a 15 % corrupted wheel path is localized to that wheel only (B1, B2, B3 inconsistent for 95 % of the window); a braking slowdown gives no inconsistency. EXP-02: a 150 N drag gives A1 inconsistent with B4 consistent; a 1.2 m/s^2 IMU offset gives B4 inconsistent. EXP-03: a unit power cut is a SUPPORTED shared-path event; GNSS loss and a wheel disconnect together stay AMBIGUOUS. EXP-04: a 0.6 s CAN stall shows as 1 late arrival and 60 wait-bounded burst frames, released values INSUFFICIENT_EVIDENCE, no INCONSISTENT |
+
+### 11.3 Limitations found, and corrections made on the way
+
+* **A constant CAN latency is not observable from the receive side** (EXP-04): with values 0.3 s old and regular arrivals, B2 is evaluated as CONSISTENT. Only a producer timestamp from the controller can bound it; it is a request to the controller team, not something this unit can add by transmitting.
+* **A1 is blind below its 50 W effort floor** (EXP-02): the simulated cruise needs about 33 W, so an IMU offset at cruise is seen by B4 only.
+* **The frozen CSIA adapter disagrees with itself on nominal data**: on the simulated slowdown run (all sensors correct) it reports an unattributed disagreement in 328 of 550 ticks, while the witness relations report none; on the corrupted-wheel run it attributes the disagreement to the wheel_l path. Its output stays research-only, consistent with the documented evaluation that favours R3v; the frozen files are unchanged.
+* Corrected before the record: the pre-check first compared its windows in simulation time against results in the unit's clock (offset 1.732 s); its first A1 expectation for the IMU offset ignored the effort floor (now recorded as the limitation above); its first slowdown only coasted from 6.5 to 5.8 m/s (now a braking slowdown to about 4 m/s); B4 first compared an instantaneous IMU value with a 1 s wheel derivative and was always timing-uncertain (now both over the same window); the context first took acceleration from the IMU, so an IMU offset switched off every CRUISE relation (now the speed derivative first); the host model's reserve could exceed a small queue (now at most 1/8, as in the firmware).
+
+### 11.4 Still depending on the physical world
+
+Every bench step B0 to B12 and check E1 to E6; every protocol EXP-01 to EXP-04 (no run sheet exists); the register
+behaviour that only RM0456, DS13737 and ES0499 settle (www.st.com was refused by this environment's network policy
+again, T-U5-DOCS); the battery's maximum voltage (T-VEH-PWR); the controller's bus and frames (T-CTRL-IF); the items of
+[`HARDWARE_OPEN_ITEMS.md`](HARDWARE_OPEN_ITEMS.md).

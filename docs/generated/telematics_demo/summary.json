@@ -11,7 +11,7 @@
    "pass": true
   },
   {
-   "detail": "boot 1: 54762 records in the log = written 54762; queue drops 451, storage drops 0; 21 records lost in the restart (queue and open block), after the last counters record, as the import reports ('unknown: the session ended without a final counters record (restart or power loss)'); boot 2: 21074 records in the log = written 21074; queue drops 0, storage drops 0; orderly close, final counters record matches the file. Uplink: boot 1: published 239 = 11 dropped on the car, 228 stored; boot 2: published 88 = 88 stored",
+   "detail": "boot 1: 54730 records in the log = written 54730; queue drops 140, storage drops 0; 53 records lost in the restart (queue and open block), after the last counters record, as the import reports ('unknown: the session ended without a final counters record (restart or power loss)'); boot 2: 21074 records in the log = written 21074; queue drops 0, storage drops 0; orderly close, final counters record matches the file. Uplink: boot 1: published 239 = 11 dropped on the car, 228 stored; boot 2: published 88 = 88 stored",
    "id": "every_dropped_record_accounted_for",
    "pass": true
   },
@@ -26,17 +26,17 @@
    "pass": true
   },
   {
-   "detail": "wheel_l speed: 2808 edge-period samples above 0.5 m/s, RMS error 0.0003 m/s against the simulated speed; distance boot 1 726.00 m (-0.000 m), boot 2 158.62 m (+0.061 m), pitch 0.1875 m; drive wheel disconnected while the others turn: 130 speed records suspect inactive (invalid, no value), its distance a lower bound afterwards; right wheel shorted to ground: 130 suspect active; parked at the end: 543 wheel speed records, all no evidence (a held line is never read as standstill)",
+   "detail": "wheel_l speed: 2811 edge-period samples above 0.5 m/s, RMS error 0.0003 m/s against the simulated speed; distance boot 1 725.62 m (+0.000 m), boot 2 158.62 m (+0.061 m), pitch 0.1875 m; drive wheel disconnected while the others turn: 130 speed records suspect inactive (invalid, no value), its distance a lower bound afterwards; right wheel shorted to ground: 130 suspect active; parked at the end: 543 wheel speed records, all no evidence (a held line is never read as standstill)",
    "id": "speed_and_distance_from_edge_timing",
    "pass": true
   },
   {
-   "detail": "controller input 1.776 Wh, battery 2.098 Wh (difference 0.322 Wh: telematics, auxiliaries and harness); each within 0.384 % of the simulated energy over the same covered intervals; boot 1 controller-input missing intervals 5 (18.03 s): ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x2 | ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x2 | no valid ctrl.dc_current | ctrl.dc_voltage invalid x298 | ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x1",
+   "detail": "controller input 1.775 Wh, battery 2.098 Wh (difference 0.322 Wh: telematics, auxiliaries and harness); each within 0.384 % of the simulated energy over the same covered intervals; boot 1 controller-input missing intervals 5 (18.16 s): ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x2 | ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x2 | no valid ctrl.dc_current | ctrl.dc_voltage invalid x298 | ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x1",
    "id": "energy_from_valid_aligned_v_and_i_at_two_boundaries",
    "pass": true
   },
   {
-   "detail": "boot 2 log starts with BOOT (count 2, cause 'power loss (simulated: brown-out reset)'); 1.06 s without any record between the sessions; boot 1 ends without a final counters record (unknown: the session ended without a final counters record (restart or power loss))",
+   "detail": "boot 2 log starts with BOOT (count 2, cause 'power loss (simulated: brown-out reset)'); 1.13 s without any record between the sessions; boot 1 ends without a final counters record (unknown: the session ended without a final counters record (restart or power loss))",
    "id": "telemetry_restart_is_a_new_session_and_a_reported_gap",
    "pass": true
   },
@@ -48,12 +48,13 @@
  ],
  "counters": {
   "1": {
+   "can_not_logged": 311,
    "companion_frames_seen": 0,
    "frames_decoded": 32754,
    "frames_ignored": 0,
    "frames_invalid": 291,
    "frames_unknown": 0,
-   "log_dropped_queue": 451,
+   "log_dropped_queue": 140,
    "log_dropped_storage": 0,
    "log_queue_capacity": 512,
    "log_records": 54783,
@@ -70,6 +71,7 @@
    "wheel_suspect_inactive": 1
   },
   "2": {
+   "can_not_logged": 0,
    "companion_frames_seen": 0,
    "frames_decoded": 12804,
    "frames_ignored": 0,
@@ -95,11 +97,11 @@
  "distance": {
   "1": {
    "channel": "wheel_l",
-   "distance_m": 726.0,
+   "distance_m": 725.625,
    "lower_bound": false,
    "no_evidence_records": 61,
    "suspect_records": 0,
-   "t_us": 121631464
+   "t_us": 121573769
   },
   "2": {
    "channel": "wheel_l",
@@ -115,42 +117,42 @@
   "boot1_battery": {
    "boundary": "battery",
    "boundary_text": "battery terminals, measured by the battery-side monitor; includes the controller, the telematics unit and every auxiliary load downstream of the monitor",
-   "covered_s": 118.79492199999878,
-   "discretisation_J": 1.3872372311125218,
-   "energy_J": 6676.4001602176,
-   "energy_Wh": 1.8545556000604446,
+   "covered_s": 118.89492699999877,
+   "discretisation_J": 1.4144054685211813,
+   "energy_J": 6674.114569756555,
+   "energy_Wh": 1.8539207138212654,
    "max_gap_us": 300012,
-   "missing_energy_bound_J": 493.9668645990072,
+   "missing_energy_bound_J": 404.15450328936964,
    "missing_intervals": [
     [
-     67.734781,
+     67.93479,
      68.834828,
      "no measurement of either signal"
     ]
    ],
-   "missing_s": 1.100047,
+   "missing_s": 0.900038,
    "p_max_W": 449.04159967620217,
-   "pairs": 1190,
-   "relative_error": 0.0022945584880249745,
+   "pairs": 1191,
+   "relative_error": 0.002053834536808695,
    "run_id": "TLMSIM-0001-B0001",
    "signals": [
     "batt.voltage",
     "batt.current"
    ],
    "timestamp_uncertainty_us": 0,
-   "true_over_covered_J": 6661.115840326462,
-   "true_total_J": 6669.365840326462,
+   "true_over_covered_J": 6660.435138039875,
+   "true_total_J": 6667.185138039875,
    "unpaired_current_samples": 0
   },
   "boot1_controller_input": {
    "boundary": "controller_input",
    "boundary_text": "DC input terminals of the external controller, measured by the controller's own sensors; excludes the telematics unit, sensors, display and other auxiliary loads",
-   "covered_s": 101.8841980000163,
+   "covered_s": 101.69419100001622,
    "discretisation_J": 0.14587376471445168,
-   "energy_J": 5672.965940430731,
-   "energy_Wh": 1.5758238723418698,
+   "energy_J": 5670.481087061085,
+   "energy_Wh": 1.575133635294746,
    "max_gap_us": 30000,
-   "missing_energy_bound_J": 8081.607752206279,
+   "missing_energy_bound_J": 8139.877551973885,
    "missing_intervals": [
     [
      21.725818,
@@ -173,23 +175,23 @@
      "ctrl.dc_voltage invalid x298"
     ],
     [
-     67.777783,
+     67.647778,
      68.757825,
      "ctrl.dc_current unverified x2; ctrl.dc_voltage unverified x1"
     ]
    ],
-   "missing_s": 18.030771,
+   "missing_s": 18.160776,
    "p_max_W": 448.21199005889866,
-   "pairs": 10194,
-   "relative_error": 0.001437060291056097,
+   "pairs": 10175,
+   "relative_error": 0.001436707057701373,
    "run_id": "TLMSIM-0001-B0001",
    "signals": [
     "ctrl.dc_voltage",
     "ctrl.dc_current"
    ],
-   "timestamp_uncertainty_us": 10000,
-   "true_over_covered_J": 5681.130066858138,
-   "true_total_J": 6245.602100101489,
+   "timestamp_uncertainty_us": 10010430,
+   "true_over_covered_J": 5678.6396286937725,
+   "true_total_J": 6243.6316537378925,
    "unpaired_current_samples": 297
   },
   "boot2_battery": {
@@ -242,16 +244,16 @@
   }
  },
  "kind": "HOST SIMULATION (receive-only telematics node; simulated external controller)",
- "live_message_bytes_mean": 2108,
+ "live_message_bytes_mean": 2129,
  "mode": "real Mosquitto broker on loopback, pit ingestion service as its own process, pace 4x",
  "plots": [
   "speed_distance.png",
   "power.png",
   "data_quality.png"
  ],
- "repo_commit": "b7d3b89a85188f5e929b896f4b479837a3aafd80",
- "speed_rms_mps": 0.00026818766539988577,
+ "repo_commit": "27d513e54b5435bbcfe830360f5e8805e901091e",
+ "speed_rms_mps": 0.00026816477263380653,
  "unit": "TLMSIM-0001",
- "wall_s": 41.25154564600007,
- "working_tree_dirty": true
+ "wall_s": 41.2514540129996,
+ "working_tree_dirty": false
 }
