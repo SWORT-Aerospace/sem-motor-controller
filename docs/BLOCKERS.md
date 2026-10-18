@@ -49,11 +49,11 @@ Inside the team (no outside input): [B-ASSY](#b-assy) Assembly process and coppe
 **DRV8353 gate-driver datasheet**
 
 - **Missing:** TI DRV8353 datasheet (SLVSDY6x) not read: pin numbers, operating limits, SPI register map, IDRIVE, VDS trip levels and deglitch, CSA gain/offset/settling, input pull-downs, behaviour with ENABLE low.
-- **Affects:** U401 symbol (placeholder pins) and its footprint (sheet 04); firmware GATE_DRIVER_CONFIGURED and the boot offset measurement (firmware/platform/stm32g4/src/main.c); acceptance S5.7, S7, S8.
+- **Affects:** U401 symbol (placeholder pins) and its footprint (sheet 04); the mc_drv835x_desc_t and settings the firmware passes (none in this revision) and GATE_DRIVER_CONFIGURED (firmware/platform/stm32g4/src/main.c); the SPI1 transport; acceptance S5.7, S7, S8.
 - **Why it matters:** Without the pinout no footprint or layout of the gate drive is possible; without the register map the firmware cannot enable the driver, so the motor cannot be driven.
-- **Done now:** Placeholder symbol marked; firmware keeps DRV_ENABLE low; nFAULT break path verified; the six gate-signal pull-downs fitted.
+- **Done now:** Placeholder symbol marked; nFAULT break path verified; the six gate-signal pull-downs fitted. Driver logic written and host-tested against an invented register map (firmware/src/io/mc_drv835x.c, firmware/tests/test_drivers.c): wake only after the bypass closes, wake wait, configuration with read-back under a mask, clear-fault written with the register's configured value, status and nFAULT supervision, one register re-read per step while ready, clear only on request. Linked in the image with no description, so it stays UNVERIFIED and DRV_ENABLE stays low.
 - **Input required:** The SLVSDY6 PDF committed to docs/reference/datasheets/, or network access to ti.com for this environment.
-- **Closure criterion:** DATASHEET_REGISTER.md row filled with revision and pages; U401 renumbered and pin-checked; driver configuration implemented and acceptance S5.7 passed.
+- **Closure criterion:** DATASHEET_REGISTER.md row filled with revision and pages; U401 renumbered and pin-checked; a verified mc_drv835x_desc_t citing its tables, the settings from the design review, the SPI1 transport, and acceptance S5.7 passed.
 
 ### B-ST-DOCS
 
@@ -104,11 +104,11 @@ Inside the team (no outside input): [B-ASSY](#b-assy) Assembly process and coppe
 **INA228 register map**
 
 - **Missing:** TI INA228 datasheet not read: register addresses, shunt calibration, VBUS and current scaling, conversion timing.
-- **Affects:** Firmware battery-side voltage and current (src/main.c: ibatt missing); precharge completion (mc_precharge never closes); controller energy measurement; acceptance S6.3 to S6.5.
+- **Affects:** The mc_ina228_desc_t and settings the firmware passes (none in this revision), so battery-side voltage and current are missing and the start-up sequence never closes the bypass; the I2C1 transport; controller energy measurement; acceptance S6.3 to S6.5.
 - **Why it matters:** The precharge bypass may only close when the link voltage is compared with the battery-side voltage, which this meter provides.
-- **Done now:** Precharge state machine with timeout and post-close failure detection implemented and host-tested; the firmware reports the meter as missing.
+- **Done now:** Precharge state machine with timeout and post-close failure detection implemented and host-tested. Driver logic written and host-tested against an invented register map (firmware/src/io/mc_ina228.c): reset, identity, configuration read-back, SHUNT_CAL range check, conversion-ready polling, sample age and validity kept apart from bus success, bounded re-initialisation. Start-up sequence (mc_startup.c) closes the bypass only on fresh samples and only when the link reading agrees with the resistor current. Linked with no description: UNVERIFIED.
 - **Input required:** The INA228 PDF committed to docs/reference/datasheets/, or network access to ti.com.
-- **Closure criterion:** Driver implemented, host-tested against the datasheet's register examples, and acceptance S6.3 passed.
+- **Closure criterion:** A verified mc_ina228_desc_t citing its tables, host-tested against the datasheet's register examples, the I2C1 transport, the five power.* start-up parameters set, and acceptance S6.3 passed.
 
 ### B-HARNESS
 

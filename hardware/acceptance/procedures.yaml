@@ -400,6 +400,20 @@ stages:
         kind: measurement
         unit: s
         limit: {pending: "bleeder value (UNRESOLVED) and the required discharge time (rules / hazard analysis)"}
+      - id: S6.9
+        action: "Precharge cross-check - power up with the link reading offset on purpose (calibration copy with inverter.vbus_divider_ratio raised by more than power.precharge_agreement_V / V_BAT), then restore it."
+        expect: "bench_read precharge state FAULT, startup_fault PRECHARGE, precharge fault SENSOR_DISAGREE; PRECHG_EN never rises; with the correct calibration the bypass closes as in S6.4."
+        kind: observation
+        blocked_by: B-INA
+        source: "firmware/include/semmc/mc_startup.h"
+        stop: true
+      - id: S6.10
+        action: Gate-driver wake order - record PRECHG_EN and DRV_EN_GATED on two scope channels from supply on.
+        expect: DRV_EN_GATED rises only after PRECHG_EN (the driver is supplied from the link).
+        kind: observation
+        blocked_by: B-DRV
+        source: "firmware/include/semmc/mc_startup.h"
+        stop: true
     stop_conditions:
       - The link does not charge, or charges faster than its RC predicts (bypass or resistor fault).
       - The over-voltage break does not act.

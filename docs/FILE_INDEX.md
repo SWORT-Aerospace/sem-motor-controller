@@ -61,6 +61,9 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 | `firmware/include/semmc/mc_protection.h` | Software fault list (`mc_fault_t`), derate reasons, protection inputs and state, and timing constants (undervoltage debounce, derate recovery and hold, stall detection). |
 | `firmware/include/semmc/mc_io.h` | Measurement scaling and plausibility for the board's inputs: NTC conversion with open/short detection, two-track pedal with range and agreement checks, phase-current and bus-voltage scaling, boot offset self-test, low-side sampling window, driver-enable path check. |
 | `firmware/include/semmc/mc_precharge.h` | Precharge sequencing: states, completion and timeout rules, failure detection after the bypass closes, what is not detected. |
+| `firmware/include/semmc/mc_startup.h` | Power-stage start-up sequence for this board: precharge with the battery-current cross-check, gate-driver wake after the bypass closes, offsets with the driver awake, arm permission, fault attempts and lockout. |
+| `firmware/include/semmc/mc_drv835x.h` | DRV8353 driver logic with every device constant in a verified description: wake, configure, read back, clear on request, status supervision. |
+| `firmware/include/semmc/mc_ina228.h` | INA228 driver logic with every device constant in a verified description: reset, identity, configure and read back, conversion polling, sample age and validity. |
 | `firmware/include/semmc/mc_periph_timing.h` | Register timing values computed from clock frequencies: FDCAN nominal bit timing, TIM1 centre-aligned ARR, dead-time generator encoding. |
 | `firmware/include/semmc/mc_config.h` | Calibration blob format v1, validator rule codes shared with `tools/config_tool.py`, raw configuration and typed parameter structs (`mc_params_t`), and the physical-output gate. |
 | `firmware/include/semmc/mc_crc.h` | CRC-8/SAE-J1850 (with data-ID seeding) and CRC-32 interfaces; CRC-32 protects the calibration blob. |
@@ -121,6 +124,9 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 | `firmware/src/io/mc_io.c` | Implementation of `mc_io.h` (portable; host-tested by `firmware/tests/test_io.c`). |
 | `firmware/src/io/mc_precharge.c` | Implementation of `mc_precharge.h`. |
 | `firmware/src/io/mc_periph_timing.c` | Implementation of `mc_periph_timing.h`. |
+| `firmware/src/io/mc_startup.c` | Implementation of `mc_startup.h` (host-tested by `firmware/tests/test_drivers.c`). |
+| `firmware/src/io/mc_drv835x.c` | Implementation of `mc_drv835x.h`. |
+| `firmware/src/io/mc_ina228.c` | Implementation of `mc_ina228.h`. |
 
 ### firmware/src/csia_adapter/
 
@@ -161,6 +167,7 @@ Paths are relative to the repository root. Build outputs (`<build>/cal/*.bin`, t
 | `firmware/tests/test_core.c` | Closed-loop tests of the core with the generated codec and simulated plant: FOC tracking, ECO handshake and loss, bus-off, reboot, limits sets, reconstructed phase, overcurrent, telemetry validity, energy gaps and CAN block relocation. |
 | `firmware/tests/test_core_preemption.c` | The current interrupt preempting the slow step, emulated with `ld --wrap`: an overcurrent raised between the slow step's read and clear is kept and latches. |
 | `firmware/tests/test_io.c` | `src/io`: NTC, pedal, ADC scaling and offsets, sampling window, enable path, precharge sequences, CAN bit timing, TIM1 ARR and dead time. |
+| `firmware/tests/test_drivers.c` | INA228 and DRV8353 driver logic against simulated devices with invented test register maps (bus errors, identity, read-back, ageing, fault clearing), and the start-up sequence (order, stale or disagreeing measurements, timeouts, disconnect, attempts and lockout). |
 | `firmware/tests/test_core_properties.c` | Randomised property test (P1 to P8) with an adversarial supervisor, random driver and reboots through the real CAN binding; arguments `[n_seeds [seconds [base_seed]]]`, run by ctest at 6 x 12 s and 24 x 12 s. |
 | `firmware/tests/mc_test.h` | Minimal dependency-free test harness (`CHECK`, `CHECK_NEAR`, `CHECK_EQ_INT`, `RUN`, summary line). |
 | `firmware/tests/test_support.h` | Shared test helpers that load the build-time calibration blobs and derive the synthetic parameters. |

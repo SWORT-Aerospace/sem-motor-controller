@@ -211,6 +211,24 @@ than the timeout (bypass not conducting, or an overload); loss of either measure
 permission. A fault opens the bypass and latches until a fault-reset. In this revision the battery-side meter is
 not read, so the bypass never closes.
 
+**Start-up order (`firmware/include/semmc/mc_startup.h`, host-tested).** The link charges through the resistor as
+soon as the battery is connected; the MCU only closes the bypass. The DRV8353 is supplied from the link (VM =
+VDC), so it is woken only after the bypass has closed, then configured and read back, and the current offsets
+are measured with its amplifiers running. Before closing, the link reading must agree with the link voltage the
+battery-side current implies, |V_DC - (V_BAT - I_BAT x R_pre)| <= `power.precharge_agreement_V`; this rejects a
+stuck or offset reading on either side, which the voltage ratio alone accepts. The INA228 provides both V_BAT
+and I_BAT, so a fault common to that one device is not covered by this check.
+
+**Energy.** Each charge from 0 V puts E = 0.5 C_link V_BAT^2 into the resistor (equal to the energy stored in the
+link) with an initial peak power V_BAT^2 / R_pre; `models/inverter/losses.py` `precharge()` computes both. C_link,
+R_pre and V_bat,max are not selected, so no number is given. A controller reset does not repeat this energy:
+the bypass opens in reset but the link stays charged through the resistor.
+
+**Shorted link.** A short on the link side (a failed bridge leg, a damaged capacitor) holds V_BAT across the
+resistor and dissipates V_BAT^2 / R_pre for as long as the battery stays connected. The MCU cannot interrupt this
+current. The resistor must survive it until the vehicle isolates the battery, or the path needs an element that
+opens (a fuse or PTC sized for it). This is a selection decision that waits for V_bat,max and R_pre.
+
 **Not detected.** A shorted bypass or a missing precharge resistor (the link charges too fast): detection needs
 the expected RC time, i.e. the resistor and the link capacitance. The bleeder's discharge time is not
 monitored.

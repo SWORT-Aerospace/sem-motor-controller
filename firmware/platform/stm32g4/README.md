@@ -43,9 +43,10 @@ hardware-valid. Flashing: [FLASHING.md](FLASHING.md).
 | Calibration store (read only) | yes | blob format shared with the host tests | no | |
 | Event log across resets | yes | no | no | |
 | Sensor scaling, pedal plausibility, precharge sequencing, enable-path check | yes | host tests (test_io.c) | no | portable code in `firmware/src/io` |
-| DRV8353 SPI configuration | **no** | - | - | datasheet not read; DRV_ENABLE is never set |
-| INA228 battery meter | **no** | - | - | register map not verified; battery voltage missing, precharge never closes |
-| Motor operation | **inhibited** | - | - | needs both items above and a bench-measured calibration |
+| Start-up sequence (precharge cross-check, driver wake after the bypass closes, offsets with the driver awake, arm permission) | yes | host tests (test_drivers.c) | no | `mc_startup`; INHIBITED in this image until both devices below are verified |
+| DRV8353 driver logic (wake, configure, read back, clear, status supervision) | linked, **inhibited** | host tests against a test register map | no | no verified description passed (datasheet not read); SPI1 transport not written; DRV_ENABLE never set |
+| INA228 driver logic (reset, identity, configure, read back, conversion polling, sample age) | linked, **inhibited** | host tests against a test register map | no | no verified description passed (datasheet not read); I2C1 transport not written; battery side missing, bypass never closes |
+| Motor operation | **inhibited** | - | - | needs both devices verified, their transports, and a bench-measured calibration |
 
 Timing evidence, in three separate kinds:
 
@@ -85,7 +86,7 @@ Timing evidence, in three separate kinds:
 |---|---|---|
 | 0 | ADC1_2 (end of injected sequence) | phase currents and hall code, `mc_core_fast_step`, duties |
 | 1 | TIM1_BRK_TIM15 | records which break input fired (the hardware already cleared the outputs) |
-| 3 | TIM6_DAC (1 kHz) | inputs, pedal, temperatures, precharge, enable-path check, CAN receive, `mc_core_slow_step`, CAN transmit, LEDs, watchdogs |
+| 3 | TIM6_DAC (1 kHz) | inputs, pedal, temperatures, battery meter, start-up sequence (precharge, gate driver, offsets), enable-path check, CAN receive, `mc_core_slow_step`, CAN transmit, LEDs, watchdogs |
 
 The core's slow-to-fast command is double-buffered and published with one store
 (`firmware/include/semmc/mc_core.h`); fast-step flags are cleared by the slow step only after it has
@@ -99,9 +100,11 @@ period never runs on stale compare values (at reset those would turn all three l
 ## Safety behaviour in this revision
 
 - **Physical output** requires, all at once: a calibration that is hardware-valid, `bench_measured` and
-  permits output (checked in the core); a configured gate driver (not implemented: DRV_ENABLE stays low);
-  the precharge bypass closed with both voltages verified (the battery meter is not read: never); no break
-  input active; HW_PERMIT high (safety loop and external watchdog, in hardware through the AND gate).
+  permits output (checked in the core); the start-up sequence in READY (`mc_startup.h`: bypass closed on
+  fresh, cross-checked battery and link readings, gate driver configured and read back, offsets measured
+  with the driver awake); `GATE_DRIVER_CONFIGURED` true at compile time; no break input active; HW_PERMIT
+  high (safety loop and external watchdog, in hardware through the AND gate). In this revision the sequence
+  stays INHIBITED because neither device description is verified.
 - **A synthetic calibration never runs**: the core refuses its provenance in a hardware build.
 - **Without a calibration** the core latches CONFIG_INVALID. TIM1 still runs as a sampling clock with its
   outputs permanently off, so the zero-current ADC offsets can be read on the bench.
@@ -145,7 +148,8 @@ CMSIS sources are used for register encodings only.
 * SRAM 96 KB from 0x20000000 (SRAM1 80 KB, SRAM2 16 KB); the 32 KB CCM SRAM is unused. Stack at the top
   (0x20018000), at least 4 KB reserved at link time, painted at start-up and measured in the main loop
   (`g_bench.stack_unused_min_bytes`); no static stack-depth analysis has been done.
-* This revision uses 49.8 KB of flash and 7.8 KB of RAM.
+* This revision uses 54 728 bytes of flash (text and initialised data) and 8 120 bytes of RAM (data and
+  bss), from `arm-none-eabi-size` on `semmc_stm32g474.elf`.
 * **STM32G474VCT6 (256 KB flash).** The image itself would fit. The current linker layout places the
   calibration page at 0x0807F000, which a 256 KB part does not have, so that variant needs its own layout with
   the calibration at the end of its flash, and matching programming instructions. Its other differences from the
@@ -155,8 +159,11 @@ CMSIS sources are used for register encodings only.
 
 | Item | Needs |
 |---|---|
-| DRV8353 register settings (gate drive current, VDS trip, CSA gain, 6x PWM mode) and `GATE_DRIVER_CONFIGURED` | DRV8353 datasheet |
-| INA228 driver (shunt calibration, VBUS and current registers) | INA228 datasheet |
+| DRV8353 description (SPI frame and mode, register addresses, status fault bits, clear bit, wake and clear times) and settings (gate drive current, VDS trip, CSA gain, PWM mode), then `GATE_DRIVER_CONFIGURED` | DRV8353 datasheet (SLVSDY6) and the MOSFET selection |
+| INA228 description (register map, byte order, field widths, LSBs, SHUNT_CAL equation, IDs, reset time, I2C address for the strapping) and settings (ADC conversion and averaging, current LSB) | INA228 datasheet and the shunt selection |
+| SPI1 transport (16-bit frames, software NSS on PD5) and I2C1 transport (PA15/PB7), both with bounded waits | RM0440 SPI and I2C chapters (timing register values) and the devices' SPI mode and bus speed |
+| Battery-meter read rate: a full INA228 step is three register reads; at 1 kHz on the slow step that may not fit at the chosen I2C speed | transport timing, then a measured slow-step time |
+| Start-up parameters `power.precharge_resistor_ohm`, `power.precharge_agreement_V`, `power.battery_sample_max_age_s`, `power.startup_step_timeout_s`, `power.startup_max_attempts` | precharge resistor selection; both sensors' tolerances; INA228 conversion time |
 | ADC clock and sampling times | DS12288, amplifier output impedance |
 | IWDG timeout tolerance | DS12288 (LSI accuracy) |
 | Crystal and `SEMMC_HSE_HZ` | board decision (16 MHz proposed) |
