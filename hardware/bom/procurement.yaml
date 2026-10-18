@@ -124,7 +124,7 @@ items:
     requirement: >-
       Replaces the stencil and consumables lines, not added to them; if the assembler also sources the parts, its
       parts price replaces the board-parts line. Needs footprints, a layout and the assembler's part library.
-    blocked_by: hand assembly or an assembly service (team decision, input sheet Q9; register B-ASSY)
+    blocked_by: hand assembly or an assembly service (team decision in the input sheet; register B-ASSY)
     evidence: "docs/BLOCKERS.md#b-assy"
   - id: mc_thermal
     item: Thermal interface, heatsink plate and fasteners
@@ -306,7 +306,7 @@ items:
     candidate: null
     in_assembly: null
     requirement: Classic CAN 2.0B or CAN FD per the vehicle bus; 3.3 V logic for the STM32U575 FDCAN1. The Nucleo needs one for bench work too.
-    blocked_by: vehicle bus type and bit rate (input sheet Q4); whether the PCB assembly includes it
+    blocked_by: vehicle bus type and bit rate (input sheet item 5); whether the PCB assembly includes it
     evidence: "docs/ICD.md"
   - id: display
     item: Driver display
@@ -368,7 +368,7 @@ items:
     status: Blocked
     candidate: null
     requirement: No splices; connections visible and accessible (Article 57k).
-    blocked_by: connector pinouts (input sheet Q5)
+    blocked_by: connector pinouts (input sheet item 6)
     evidence: "docs/BUDGET.md"
   - id: wire
     item: Wire, heat-shrink and sleeving
@@ -391,7 +391,7 @@ items:
     status: Blocked
     candidate: null
     requirement: Not covered by the controller signal-connector line above. No splices; connections visible and accessible (Article 57k).
-    blocked_by: harness plan and connector pinouts (input sheet Q5)
+    blocked_by: harness plan and connector pinouts (input sheet item 6)
     evidence: "docs/RULES_COMPLIANCE.md"
   - id: dcdc
     item: Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly
@@ -452,7 +452,7 @@ items:
     status: Candidate
     candidate: CANable-class adapter with candleLight firmware
     requirement: Bit rate and frame type of the vehicle bus; works with Linux SocketCAN.
-    blocked_by: vehicle bus type and bit rate (input sheet Q4)
+    blocked_by: vehicle bus type and bit rate (input sheet item 5)
     evidence: "docs/BUDGET.md"
   - id: bench_supply
     item: Current-limited bench supply, only if not owned

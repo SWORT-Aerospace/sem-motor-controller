@@ -135,10 +135,10 @@ Full layouts: [`generated/can_messages.md`](generated/can_messages.md). Load at 
 | Item | Status | Value | Source |
 |---|---|---|---|
 | Nominal voltage, capacity | reported, not verified | 48 V, 10 Ah | team message 2026-10-16 ([`BATTERY.md`](BATTERY.md)) |
-| Maximum charged and minimum voltage, chemistry, cells, current limits, BMS thresholds | unknown | null in the configuration | Q1 |
+| Maximum charged and minimum voltage, chemistry, cells, current limits, BMS thresholds | unknown | null in the configuration | request 1 |
 | Power connection | confirmed in the design | J101 pins 1 (VBAT_IN), 2 (PGND), ratings UNRESOLVED | sheet 01 |
 | Battery-side measurement | confirmed in the design, driver blocked | INA228 on the battery side of the precharge: voltage, current and energy | sheet 06; B-INA |
-| BMS data link | unknown | none in the controller design; whether the BMS has one (CAN, UART) is part of Q1 | - |
+| BMS data link | unknown | none in the controller design; whether the BMS has one (CAN, UART) is part of request 1 | - |
 
 ### 2.9 Wheel speed
 
@@ -150,11 +150,11 @@ Not yet decisions: each needs the named input or a review before it is recorded 
 
 | Proposal | Why | Needs |
 |---|---|---|
-| 16 MHz crystal, 160 MHz SYSCLK | exact classic CAN bit rates with the FDCAN kernel on the crystal; the internal RC's tolerance exceeds the CAN limit (`hardware/review/DESIGN_REVIEW.md` 13) | Q4 (bus bit rate) |
-| Brake switch normally closed | an open wire then reads as braking | Q6 |
-| Precharge on the controller board | the controller sequences it with its own measurements | Q1 and the vehicle's contactor arrangement (open decision 4 in `hardware/selection/COMPONENT_SELECTION.md`) |
-| Hardware overcurrent through the MCU's internal comparators into the timer break | a faster trip without a schematic change; not independent: it watches the gate driver's own amplifiers and exists only once firmware has configured it (`DESIGN_REVIEW.md` 5) | Q2 (peak current), Q3 (RM0440) |
-| Zero-current offsets measured with the driver awake and all gates off | the driver's amplifiers may be off while it is disabled | Q3 (DRV8353) |
+| 16 MHz crystal, 160 MHz SYSCLK | exact classic CAN bit rates with the FDCAN kernel on the crystal; the internal RC's tolerance exceeds the CAN limit (`hardware/review/DESIGN_REVIEW.md` 13) | request 5 (bus bit rate) |
+| Brake switch normally closed | an open wire then reads as braking | request 4 |
+| Precharge on the controller board | the controller sequences it with its own measurements | request 1 and the vehicle's contactor arrangement (open decision 4 in `hardware/selection/COMPONENT_SELECTION.md`) |
+| Hardware overcurrent through the MCU's internal comparators into the timer break | a faster trip without a schematic change; not independent: it watches the gate driver's own amplifiers and exists only once firmware has configured it (`DESIGN_REVIEW.md` 5) | request 2 (peak current), D1 (RM0440) |
+| Zero-current offsets measured with the driver awake and all gates off | the driver's amplifiers may be off while it is disabled | D1 (DRV8353) |
 
 ## 3. Proposed
 
@@ -181,7 +181,7 @@ Telemetry unit side. Source: the team's telematics proposal (STM32U575) and the 
 | Battery connector, isolation and fuse order | connector type, emergency isolation position relative to the joulemeter, fuse ratings | vehicle wiring plan; the event rules |
 | Telemetry power | DC-DC input rating (from the maximum pack voltage with transients), fuse, where the branch leaves the main wiring | battery datasheet; telemetry board files |
 | Display [16] | type, interface, power (vehicle-powered through the joulemeter, or an unmodified device with a built-in battery, Article 57i) | display decision |
-| Vehicle CAN bus | bit rate, classic or FD, other nodes and their identifiers, termination positions | input sheet Q4 |
+| Vehicle CAN bus | bit rate, classic or FD, other nodes and their identifiers, termination positions | input sheet item 5 |
 | All external connectors | families and pinouts (J101, J301, J701, J901, J1001, J1101; telemetry board) | harness agreement ([`ICD.md`](ICD.md) 11) |
 | Driver controls | contact types, switch polarities, pedal type and supply, safety-loop voltage | vehicle team |
 | Motor feedback | Hall output stage and supply; motor temperature sensor type | motor datasheet |

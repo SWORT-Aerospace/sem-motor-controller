@@ -8,35 +8,48 @@ schema: semmc.blockers.v1
 
 battery_as_reported: "Team-reported: 48 V nominal, 10 Ah. Not datasheet-verified. The maximum charged voltage, minimum cut-off voltage, current capability, chemistry and BMS limits are NOT inferred from it."
 
-# The short list: what the team must send, grouped so that one request closes several blockers. Ordered by how
-# much engineering work each answer unlocks. Entries with group "team" are decisions or work inside the team.
+# The short list. `audience: physical` groups are the seven requests to the physical team, documents and photos
+# first, in this order; none asks them for register values or MCU details. `audience: documentation` is the
+# primary-document request (PDF uploads or network access), for whoever can provide it. Entries with group "team"
+# are decisions or work inside the team.
 groups:
-  - id: G1
-    title: Battery and BMS documents
+  - id: P1
+    audience: physical
+    title: Battery and BMS
     request: "Battery and BMS model numbers, a photo of the battery label, and the battery and BMS datasheets (maximum charge voltage, minimum cut-off, cell count, continuous and peak discharge current, charge current limit, short-circuit trip)."
-  - id: G2
-    title: Motor documents
+  - id: P2
+    audience: physical
+    title: Motor
     request: "Motor model number, nameplate photo, motor datasheet, and photos of the motor's phase, hall and temperature connectors."
-  - id: G3
-    title: Datasheet PDFs (or network access)
-    request: "The PDFs listed in hardware/selection/DATASHEET_REGISTER.md committed to docs/reference/datasheets/ (DRV8353, INA228, DS12288, RM0440, ES0430, MAX6369, TJA1051, LM5164, TLV755P, TLV7041, TL431), or ti.com, st.com, nxp.com, analog.com and onsemi.com added to this environment's allowed domains."
-  - id: G4
-    title: Vehicle CAN bus description
-    request: "Nodes on the bus, bit rate, classic or FD, the identifier block for the motor controller, and where the bus is terminated."
-  - id: G5
-    title: Harness and mounting
-    request: "Photos of the mating connectors with part numbers (battery, motor, halls, motor temperature, driver controls, CAN), and photos and dimensions of where the controller mounts, including any metal plate that can serve as a heatsink."
-  - id: G6
-    title: Driver controls and sensors
-    request: "Pedal model and datasheet, brake and other switch types, the safety-loop voltage and wiring, and the choice of power-stage NTC."
-  - id: G7
-    title: Event and rules
+  - id: P3
+    audience: physical
+    title: Drivetrain
+    request: "Wheel circumference (or tyre size), the gear or chain ratio between motor and wheel, whether there is a freewheel, and the vehicle mass with driver."
+  - id: P4
+    audience: physical
+    title: Controls and safety
+    request: "Pedal model and datasheet, the brake and other switch types (normally open or closed), how the emergency stop, dead-man and safety loop are wired and at what voltage, and a photo of the dashboard controls."
+  - id: P5
+    audience: physical
+    title: Vehicle CAN bus
+    request: "If the vehicle has a CAN bus: the nodes on it, bit rate, classic or FD, the identifier block for the motor controller, and where it is terminated. If no bus exists yet, this is a team design decision: whether the controller needs one and what else would sit on it."
+  - id: P6
+    audience: physical
+    title: Mechanics and harness
+    request: "Photos and part numbers of the mating connectors (battery, motor, halls, motor temperature, driver controls, CAN), and photos and dimensions of where the controller mounts, including any metal plate that can serve as a heatsink."
+  - id: P7
+    audience: physical
+    title: Event
     request: "The event name and the official rule PDF of the edition that applies."
+  - id: D1
+    audience: documentation
+    title: Primary documents (PDF upload or network access)
+    request: "The PDFs listed in docs/reference/datasheets/README.md committed to docs/reference/datasheets/, or ti.com, st.com, nxp.com, analog.com and onsemi.com added to this environment's allowed domains. Not a physical-team task."
 
 blockers:
   - id: B-BAT-V
     status: open
-    group: G1
+    group: P1
     title: Battery maximum and minimum voltage
     missing: "Maximum charged pack voltage V_bat,max and minimum (BMS cut-off) voltage V_bat,min are unavailable; only 48 V nominal is reported."
     affects: "MOSFET V_DS class and DC-link capacitor voltage rating (sheets 02, 03); TVS stand-off and clamp, fuse voltage, precharge resistor energy, bypass FET V_DS and Zener current (sheet 01); over-voltage trip divider (sheet 02); LM5164 UVLO divider and input capacitors (sheet 12); config battery.*, limits.overvoltage_trip_V, limits.undervoltage_trip_V, limits.undervoltage_derate_V."
@@ -48,7 +61,7 @@ blockers:
 
   - id: B-BAT-I
     status: open
-    group: G1
+    group: P1
     title: Battery and BMS current limits
     missing: "Continuous and peak discharge current, regenerative charge current limit, BMS short-circuit response; 10 Ah is a capacity, not a current."
     affects: "Fuse rating and breaking capacity, bus shunt and INA228 range, battery connector J101 and cable (sheet 01); config limits.battery_current_limit_A; regeneration policy."
@@ -60,7 +73,7 @@ blockers:
 
   - id: B-MOTOR
     status: open
-    group: G2
+    group: P2
     title: Motor data
     missing: "Motor model, continuous and peak phase current, pole pairs, phase resistance and inductance, flux linkage or K_v, hall output type and supply, temperature sensor type."
     affects: "MOSFET current rating, phase shunts, CSA gain, DC-link ripple current (sheets 02, 03, 05); hall supply jumper and pull-ups (sheet 09); motor temperature bias (sheet 07); connectors J301, J701, J901; config motor.*, limits.max_phase_current_A, inverter.hw_overcurrent_trip_A."
@@ -70,9 +83,21 @@ blockers:
     closure: "docs/INPUT_SHEET.md motor items filled with sources; config motor.* marked datasheet or measured."
     unlocks: 22
 
+  - id: B-DRIVETRAIN
+    status: open
+    group: P3
+    title: Drivetrain and vehicle mass
+    missing: "Wheel circumference, gear ratio, freewheel present or not, and the vehicle mass with driver (config vehicle.wheel_circumference_m, vehicle.gear_ratio, vehicle.freewheel_present, vehicle.mass_with_driver_kg: null)."
+    affects: "Vehicle speed from the hall period and the wheel-speed cross-check; the motor speed at the event's top speed (current and voltage headroom); coasting behaviour (without a freewheel the spinning motor's back-EMF reaches the link); the energy model and the speed-hold policy; the hardware-valid calibration (all four are required for a hardware build)."
+    why: "The controller works in motor quantities; every vehicle-level limit and the energy strategy go through these four numbers."
+    done_now: "Parameters defined with plausibility bounds and required for hardware; the host plant runs on synthetic values."
+    input: "The four values, with a photo of the tyre sidewall or the wheel and of the sprockets or gearbox plate."
+    closure: "Values entered in the vehicle calibration and checked by tools/config_tool.py; wheel-speed sensor scaling recomputed."
+    unlocks: 6
+
   - id: B-DRV
     status: open
-    group: G3
+    group: D1
     title: DRV8353 gate-driver datasheet
     missing: "TI DRV8353 datasheet (SLVSDY6x) not read: pin numbers, operating limits, SPI register map, IDRIVE, VDS trip levels and deglitch, CSA gain/offset/settling, input pull-downs, behaviour with ENABLE low."
     affects: "U401 symbol (placeholder pins) and its footprint (sheet 04); the mc_drv835x_desc_t and settings the firmware passes (none in this revision) and GATE_DRIVER_CONFIGURED (firmware/platform/stm32g4/src/main.c); the SPI1 transport; acceptance S5.7, S7, S8."
@@ -84,7 +109,7 @@ blockers:
 
   - id: B-INA
     status: open
-    group: G3
+    group: D1
     title: INA228 register map
     missing: "TI INA228 datasheet not read: register addresses, shunt calibration, VBUS and current scaling, conversion timing."
     affects: "The mc_ina228_desc_t and settings the firmware passes (none in this revision), so battery-side voltage and current are missing and the start-up sequence never closes the bypass; the I2C1 transport; controller energy measurement; acceptance S6.3 to S6.5."
@@ -96,7 +121,7 @@ blockers:
 
   - id: B-ST-DOCS
     status: open
-    group: G3
+    group: D1
     title: STM32G474 datasheet, reference manual and errata
     missing: "ST DS12288, RM0440 and ES0430 not read: ADC clock limit and sampling time vs source impedance, HSI16 and LSI tolerances, VDDA limits, 5 V tolerance of the hall and switch pins, break-path delay, dead-time insertion rule, comparator blanking, output state while halted by a debugger, LQFP-100 package drawing."
     affects: "ADC sampling times (src/adc.c), IWDG timeout tolerance (src/watchdog.c), MCU footprint, acceptance limits S3.5, S4.3, S4.6; the internal-comparator overcurrent option (DESIGN_REVIEW.md item 5)."
@@ -108,7 +133,7 @@ blockers:
 
   - id: B-PART-DOCS
     status: open
-    group: G3
+    group: D1
     title: Datasheets of the other candidate parts
     missing: "MAX6369 (SET0..2 timeout table, start-up delay), TJA1051 (VCC/VIO ranges), LM5164 (VFB, RON equation), TLV755P, TLV7041 (input range), TL431 (minimum cathode current), PC817, NUP2105L."
     affects: "Watchdog strap timing (sheet 08), +5V divider, buck design (sheet 12), OV comparator bias (sheet 02), acceptance limits S2.3, S3.3, S3.6."
@@ -120,19 +145,19 @@ blockers:
 
   - id: B-OVTRIP
     status: open
-    group: G3
+    group: D1
     title: Over-voltage trip not verified at its worst case
     missing: "Device bounds for the trip network: TL431 reference tolerance, drift and minimum cathode current; TLV7041 offset, bias current, output low voltage, output leakage, internal hysteresis and minimum supply; TLV75533 output accuracy; PC3 leakage (DS12288). Also V_bat,max, the regeneration margin and the lowest stress rating, which set the divider and the pass criteria."
     affects: "hardware/kicad/02_dc_link.kicad_sch (U201, U202, R202 to R208); acceptance S6.6; the TL431 and TLV7041 BOM lines."
     why: "The trip is the only over-voltage protection that does not depend on firmware. Its nominal thresholds (+0.79 % and -2.50 % of the set point) say nothing about where it trips with real parts, or whether it releases above the full-charge voltage."
     done_now: "Node equations and an all-corners evaluation in tools/ov_trip_worst_case.py, with every input in hardware/calculations/ov_trip_inputs.yaml (null where unknown). Resistor-only spread computed: trip +0.57 % to +1.00 %, release -2.74 % to -2.26 % of the set point (1 % network, 0.1 % divider). The device terms and the criteria are pending; the tool reports the full worst case only when every bound exists."
-    input: "The TL431, TLV7041 and TLV75533 data sheets (docs/reference/datasheets/README.md, priorities 7 and 8) and the battery documents (G1)."
+    input: "The TL431, TLV7041 and TLV75533 data sheets (docs/reference/datasheets/README.md, priorities 7 and 8) and the battery documents (request P1)."
     closure: "Every input bounded from a cited table, the full worst case computed, the three criteria in ov_trip_worst_case.md met, and acceptance S6.6 measured within the computed range."
     unlocks: 4
 
   - id: B-CAN
     status: open
-    group: G4
+    group: P5
     title: Vehicle CAN bus
     missing: "Bit rate, classic CAN or CAN FD, the identifier block for this controller (supervision.can_id_base), the other nodes and the termination positions."
     affects: "Crystal decision (16 MHz proposed), supervision.can_bitrate_bps and can_id_base, termination jumpers (sheet 11), acceptance S9."
@@ -144,7 +169,7 @@ blockers:
 
   - id: B-HARNESS
     status: open
-    group: G5
+    group: P6
     title: Connectors and harness
     missing: "Connector families and pinouts for J101 (battery), J301 (motor phases), J701 (motor temperature), J901 (halls), J1001 (driver controls), J1101 (CAN)."
     affects: "Footprints, board outline and connector placement (hardware/layout/PRE_LAYOUT.md); docs/ICD.md section 11."
@@ -156,7 +181,7 @@ blockers:
 
   - id: B-LOOP
     status: open
-    group: G6
+    group: P4
     title: Safety loop and emergency stop wiring
     missing: "Safety-loop voltage and current, and how the emergency stop and dead-man are wired into it."
     affects: "PC817 LED series resistor (sheet 10); HW_PERMIT behaviour; acceptance S6.7."
@@ -168,7 +193,7 @@ blockers:
 
   - id: B-PEDAL
     status: open
-    group: G6
+    group: P4
     title: Pedal and switch hardware
     missing: "Pedal sensor model (one or two tracks, output range, supply), brake switch contact type, mode/arm/dead-man switch types."
     affects: "Throttle divider (sheet 10), config controls.*, controls.brake_switch."
@@ -180,7 +205,7 @@ blockers:
 
   - id: B-NTC
     status: open
-    group: G6
+    group: P4
     title: Temperature sensors
     missing: "Power-stage NTC part number (R25, beta, tolerance) and the motor's temperature sensor type."
     affects: "config sensing.*; the motor temperature bias resistor (sheet 07); derate and trip temperatures."
@@ -192,7 +217,7 @@ blockers:
 
   - id: B-MECH
     status: open
-    group: G5
+    group: P6
     title: Board outline, mounting and cooling
     missing: "Space and mounting points for the controller in the vehicle, enclosure, heatsink or cold-plate approach, cable entry directions."
     affects: "Board outline, mounting holes, MOSFET placement and thermal path (hardware/layout/PRE_LAYOUT.md)."
@@ -216,7 +241,7 @@ blockers:
 
   - id: B-RULES
     status: open
-    group: G7
+    group: P7
     title: Event and rule edition
     missing: "The event, season and the governing Chapter I edition (2026 read from a third-party copy; a 2027 edition listed but not read)."
     affects: "Discharge requirements, purpose-built controller and kit-software rule (ADR-0009), joulemeter placement, telemetry power."
