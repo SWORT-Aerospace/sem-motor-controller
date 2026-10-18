@@ -81,6 +81,14 @@ CTRL_SIGNALS = {
     "state": ("ctrl_status", "state"), "sup_torque_Nm": ("sup_torque_req", "torque_Nm"),
     "t_fet": ("ctrl_thermal", "t_fet_degC"), "t_motor": ("ctrl_thermal", "t_motor_degC"),
 }
+# registry signal -> name in the `signals` table the shadow replay reads (for adapters other than the semmc
+# fixture, whose frames are decoded into `signals` directly); a value that is not valid is stored as NULL
+REGISTRY_TO_SIGNALS = {
+    "ctrl.motor_speed": "rotor", "ctrl.phase_current_q": "iq", "ctrl.dc_voltage": "vbus", "ctrl.dc_current": "ibatt",
+    "ctrl.kcl_residual": "kcl", "ctrl.dc_power": "p_dc", "ctrl.energy_counter": "energy_J",
+    "ctrl.energy_integrated_time": "energy_integrated_s", "ctrl.energy_gap_time": "energy_gap_s",
+    "ctrl.torque_reference": "accepted_Nm", "ctrl.state": "state", "ctrl.fet_temp": "t_fet", "ctrl.motor_temp": "t_motor",
+}
 RANGES = {"speed_mech_rad_s": (-1000.0, 1000.0), "iq_A": (-200.0, 200.0), "vbus_V": (0.0, 100.0),
           "p_batt_W_mean": (-5000.0, 5000.0), "energy_J": (-1e9, 1e9)}
 
@@ -384,6 +392,12 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
             seq = made[0].source_seq if made else None
             if res.kind == "invalid" and res.detail == "bad_crc":
                 rep["frames_bad_crc"] += 1
+            if adapter.id != controller_adapter.SimFixtureAdapter.id:
+                for m in made:
+                    name = REGISTRY_TO_SIGNALS.get(m.signal)
+                    if name:
+                        sig.append((run_id, blk, idx, name, t, u, m.value if m.usable else None, m.source_seq,
+                                    "controller"))
             if adapter.id == controller_adapter.SimFixtureAdapter.id and res.kind in ("decoded", "ignored"):
                 values, info = proto.decode(can_id, f["data"])
                 seq = info.get("seq")
