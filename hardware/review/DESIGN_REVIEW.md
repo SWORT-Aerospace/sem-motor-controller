@@ -140,16 +140,30 @@ which clears the main output enable in hardware (PR4: PASS; filter 4 samples at 
 
 The software check depends on the firmware running and on valid samples, so it is not independent.
 
-**Option identified, not implemented: internal comparators.** ST's pin database shows each phase-current pin
-on a comparator's non-inverting input: PA0 = COMP3_INP, PA1 = COMP1_INP, PE7 = COMP4_INP [ST]. With an internal
-DAC on the inverting input and the comparator outputs routed inside the MCU to TIM1's break input, a hardware
-overcurrent trip independent of the gate driver is possible without any schematic change. Limits: one current
-direction per phase (in a three-phase fault at least one phase current is positive, so detection is guaranteed
-at twice the threshold in the worst split); the shunt only carries current while its low side conducts, so
-blanking is needed (comparator blanking from a TIM1 channel, to be confirmed in RM0440); the threshold comes
-from `inverter.hw_overcurrent_trip_A`, the CSA gain and polarity. **Decision for the review** once the motor
-peak current is known: internal comparators (firmware only), an external comparator on a bus or phase shunt,
-or the VDS monitor alone.
+**Proposed path, not implemented: internal comparators.** ST's pin database shows each phase-current pin on a
+comparator's non-inverting input: PA0 = COMP3_INP, PA1 = COMP1_INP, PE7 = COMP4_INP [ST]. With an internal DAC on
+the inverting input and the comparator outputs routed inside the MCU to TIM1's break input, an overcurrent trip
+that does not wait for the current interrupt or the CPU is possible without a schematic change. It is a faster
+path, **not independent protection**:
+
+* *Common cause with the gate driver.* The comparators watch the DRV8353's own current-sense amplifier outputs:
+  a driver supply fault, a wrong or lost CSA gain or reference setting (SPI), or an amplifier failure blinds this
+  path and the VDS monitor together.
+* *Common cause with the software check.* Same amplifier outputs, same +3V3A supply and VREF+ as the ADC.
+* *Firmware configuration.* The trip exists only after firmware has written, and locked, the comparator
+  (`COMPx_CSR`: input selection, polarity, hysteresis, blanking source, `LOCK`), the DAC threshold, the break
+  routing and polarity (`TIM1_AF1` `BKCMPxE`/`BKCMPxP`) and `TIM1_BDTR` (`LOCK`). A configuration defect, or a
+  reset before configuration, leaves no trip (a reset also turns the outputs off, so that case is safe). The
+  field names are from the CMSIS device header; their behaviour, the DAC settling and the comparator delay are
+  to be read in RM0440 and ES0430 before this is designed.
+* *Coverage.* One current direction per phase (in a three-phase fault at least one phase current is positive,
+  so detection is guaranteed at twice the threshold in the worst split); a low-side shunt carries current only
+  while its low side conducts, so blanking is needed and the trip is blind during it.
+
+The threshold comes from `inverter.hw_overcurrent_trip_A`, the CSA gain and polarity. **Decision for the
+review** once the motor peak current is known: internal comparators as an additional fast path (with the
+limits above), an external comparator on a bus or phase shunt with its own reference (the only option here that
+is independent of the gate driver), or the VDS monitor alone.
 
 ## 6. Over- and undervoltage
 
@@ -169,7 +183,12 @@ sets the hysteresis [D]:
   0.8 % above.
 
 So the trip is 0.8 % above, and the release 2.5 % below, the value set by the divider: about 3.3 % hysteresis,
-whatever trip voltage the divider later sets.
+whatever trip voltage the divider later sets. These are nominal values with an ideal comparator and reference.
+The worst case ([`ov_trip_worst_case.md`](../calculations/ov_trip_worst_case.md), all corners) adds the resistor
+tolerances, the reference, offset and bias, the output low level, the leakages on BRK2_N and the supply. With the
+resistor tolerances alone the trip spans +0.57 % to +1.00 % and the release -2.74 % to -2.26 %; the device
+terms and the pass criteria (trip above V_bat,max plus the regeneration margin, below the lowest stress rating;
+release above V_bat,max) wait for the data sheets and the battery: blocker B-OVTRIP. **Not verified.**
 
 **Reference bias.** The 1 k gave (3.3 - 2.495) / 1 k = 0.8 mA of cathode current. The TL431's minimum cathode
 current for regulation is [R] up to about 1 mA, so the reference might not regulate. 470 ohm gives 1.7 mA

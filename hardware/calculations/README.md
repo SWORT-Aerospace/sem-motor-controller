@@ -9,6 +9,7 @@ Covered: design bus voltage with margin; MOSFET hot RDS(on) (iterative Tj), cond
 MOSFET data used are **search-snippet values (UNVERIFIED)**; operating points are **synthetic**.
 
 ## v0.2 additions
+* `ov_trip_worst_case.md` (`tools/ov_trip_worst_case.py`, inputs `ov_trip_inputs.yaml`): over-voltage comparator trip and release at every corner; the device terms are null until the data sheets are read (B-OVTRIP).
 * `current_sense_error_budget.md` (`tools/hardware_calcs.py`): input-referred phase-current error over full-scale current × CSA gain, before and after calibration.
 * `power_stage_envelope.md` (`tools/hardware_calcs.py`): loss and junction-temperature envelope over phase current and bus voltage for the snippet-valued candidate MOSFETs; DC-link ripple table.
 * Timing and sampling-window budget: `hardware/timing/timing_budget.md` (`tools/timing_budget.py`), enforced by validator rule 39.

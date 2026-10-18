@@ -153,7 +153,7 @@ Not yet decisions: each needs the named input or a review before it is recorded 
 | 16 MHz crystal, 160 MHz SYSCLK | exact classic CAN bit rates with the FDCAN kernel on the crystal; the internal RC's tolerance exceeds the CAN limit (`hardware/review/DESIGN_REVIEW.md` 13) | Q4 (bus bit rate) |
 | Brake switch normally closed | an open wire then reads as braking | Q6 |
 | Precharge on the controller board | the controller sequences it with its own measurements | Q1 and the vehicle's contactor arrangement (open decision 4 in `hardware/selection/COMPONENT_SELECTION.md`) |
-| Hardware overcurrent through the MCU's internal comparators into the timer break | a path independent of the gate driver without a schematic change (`DESIGN_REVIEW.md` 5) | Q2 (peak current), Q3 (RM0440) |
+| Hardware overcurrent through the MCU's internal comparators into the timer break | a faster trip without a schematic change; not independent: it watches the gate driver's own amplifiers and exists only once firmware has configured it (`DESIGN_REVIEW.md` 5) | Q2 (peak current), Q3 (RM0440) |
 | Zero-current offsets measured with the driver awake and all gates off | the driver's amplifiers may be off while it is disabled | Q3 (DRV8353) |
 
 ## 3. Proposed

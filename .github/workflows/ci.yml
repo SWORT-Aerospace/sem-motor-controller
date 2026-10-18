@@ -38,6 +38,7 @@ jobs:
           python tools/gen_board_pins.py --check
           python tools/blockers.py --check
           python tools/check_datasheets.py --check
+          python tools/ov_trip_worst_case.py --check
           python tools/acceptance.py render --check
           python tools/wheel_sensor_check.py --check
           python tools/coastdown_sensitivity.py --check

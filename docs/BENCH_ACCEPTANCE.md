@@ -27,7 +27,7 @@ Recording: `python3 tools/acceptance.py template --stage <S> --board <serial> --
 | [S3](#s3-power-rails-and-clock) | Power rails and clock | yes | yes, with a board |
 | [S4](#s4-pwm-and-break-behaviour-with-propulsion-disabled) | PWM and break behaviour with propulsion disabled | yes | yes, with a board |
 | [S5](#s5-sensor-calibration) | Sensor calibration | yes | partly: B-DRV blocked |
-| [S6](#s6-precharge-and-fault-behaviour) | Precharge and fault behaviour | yes | partly: B-DRV, B-INA blocked |
+| [S6](#s6-precharge-and-fault-behaviour) | Precharge and fault behaviour | yes | partly: B-DRV, B-INA, B-OVTRIP blocked |
 | [S7](#s7-low-energy-motor-testing) | Low-energy motor testing | yes | no: B-DRV |
 | [S8](#s8-controlled-load-testing) | Controlled load testing | yes | no: B-DRV |
 | [S9](#s9-controller-and-telematics-integration) | Controller and telematics integration | yes | no: B-CAN |
@@ -240,7 +240,7 @@ Setup:
 | S6.3 | Battery-side voltage from the INA228 against a meter. | Agreement within the INA228's accuracy. | [V] pending: INA228 datasheet; blocked by B-INA |  |
 | S6.4 | Bypass closure - record the link voltage and battery-side voltage at the moment PRECHG_EN rises, and the time from supply on. | Closure at power.precharge_complete_fraction x battery voltage, within power.precharge_timeout_s. | [fraction] >= power.precharge_complete_fraction (calibration); blocked by B-INA |  |
 | S6.5 | Precharge fault - remove the battery-side reading or slow the charge so the timeout expires. | Bypass stays open; precharge state FAULT; fault reset clears it. | observation; blocked by B-INA |  |
-| S6.6 | Over-voltage trip - raise the supply slowly until BRK2_N goes low; then lower until it releases. | Trip 0.8 % above 2.495 V x divider ratio; release 2.5 % below (hardware/review/DESIGN_REVIEW.md item 6). | [V] pending: divider values from V_bat,max (UNRESOLVED) | stop |
+| S6.6 | Over-voltage trip - raise the supply slowly until BRK2_N goes low; then lower until it releases. | Trip and release inside the full worst-case range of hardware/calculations/ov_trip_worst_case.md (nominal: +0.79 % and -2.50 % of 2.495 V x divider ratio). | [V] pending: divider values from V_bat,max (UNRESOLVED) and the worst-case range (B-OVTRIP); blocked by B-OVTRIP | stop |
 | S6.7 | Safety loop - with the loop energised, HW_PERMIT high; open the loop. | HW_PERMIT low; state DISARMED; DRV_EN_GATED low. | observation | stop |
 | S6.8 | Discharge - supply off, record V_DC against time to a level the lab's safety rules permit to touch. | Exponential decay through the bleeder and divider. | [s] pending: bleeder value (UNRESOLVED) and the required discharge time (rules / hazard analysis) |  |
 | S6.9 | Precharge cross-check - power up with the link reading offset on purpose (calibration copy with inverter.vbus_divider_ratio raised by more than power.precharge_agreement_V / V_BAT), then restore it. | bench_read precharge state FAULT, startup_fault PRECHARGE, precharge fault SENSOR_DISAGREE; PRECHG_EN never rises; with the correct calibration the bypass closes as in S6.4. | observation; blocked by B-INA | stop |

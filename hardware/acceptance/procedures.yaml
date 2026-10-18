@@ -384,10 +384,11 @@ stages:
         blocked_by: B-INA
       - id: S6.6
         action: Over-voltage trip - raise the supply slowly until BRK2_N goes low; then lower until it releases.
-        expect: "Trip 0.8 % above 2.495 V x divider ratio; release 2.5 % below (hardware/review/DESIGN_REVIEW.md item 6)."
+        expect: "Trip and release inside the full worst-case range of hardware/calculations/ov_trip_worst_case.md (nominal: +0.79 % and -2.50 % of 2.495 V x divider ratio)."
         kind: measurement
         unit: V
-        limit: {pending: "divider values from V_bat,max (UNRESOLVED)"}
+        blocked_by: B-OVTRIP
+        limit: {pending: "divider values from V_bat,max (UNRESOLVED) and the worst-case range (B-OVTRIP)"}
         stop: true
       - id: S6.7
         action: Safety loop - with the loop energised, HW_PERMIT high; open the loop.

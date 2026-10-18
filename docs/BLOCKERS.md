@@ -12,7 +12,7 @@ Ordered by how much engineering work each answer unlocks.
 |---|---|---|
 | 1 | **Battery and BMS documents**: Battery and BMS model numbers, a photo of the battery label, and the battery and BMS datasheets (maximum charge voltage, minimum cut-off, cell count, continuous and peak discharge current, charge current limit, short-circuit trip). | [B-BAT-V](#b-bat-v), [B-BAT-I](#b-bat-i) |
 | 2 | **Motor documents**: Motor model number, nameplate photo, motor datasheet, and photos of the motor's phase, hall and temperature connectors. | [B-MOTOR](#b-motor) |
-| 3 | **Datasheet PDFs (or network access)**: The PDFs listed in hardware/selection/DATASHEET_REGISTER.md committed to docs/reference/datasheets/ (DRV8353, INA228, DS12288, RM0440, ES0430, MAX6369, TJA1051, LM5164, TLV755P, TLV7041, TL431), or ti.com, st.com, nxp.com, analog.com and onsemi.com added to this environment's allowed domains. | [B-DRV](#b-drv), [B-ST-DOCS](#b-st-docs), [B-PART-DOCS](#b-part-docs), [B-INA](#b-ina) |
+| 3 | **Datasheet PDFs (or network access)**: The PDFs listed in hardware/selection/DATASHEET_REGISTER.md committed to docs/reference/datasheets/ (DRV8353, INA228, DS12288, RM0440, ES0430, MAX6369, TJA1051, LM5164, TLV755P, TLV7041, TL431), or ti.com, st.com, nxp.com, analog.com and onsemi.com added to this environment's allowed domains. | [B-DRV](#b-drv), [B-ST-DOCS](#b-st-docs), [B-PART-DOCS](#b-part-docs), [B-INA](#b-ina), [B-OVTRIP](#b-ovtrip) |
 | 4 | **Vehicle CAN bus description**: Nodes on the bus, bit rate, classic or FD, the identifier block for the motor controller, and where the bus is terminated. | [B-CAN](#b-can) |
 | 5 | **Harness and mounting**: Photos of the mating connectors with part numbers (battery, motor, halls, motor temperature, driver controls, CAN), and photos and dimensions of where the controller mounts, including any metal plate that can serve as a heatsink. | [B-HARNESS](#b-harness), [B-MECH](#b-mech) |
 | 6 | **Driver controls and sensors**: Pedal model and datasheet, brake and other switch types, the safety-loop voltage and wiring, and the choice of power-stage NTC. | [B-PEDAL](#b-pedal), [B-NTC](#b-ntc), [B-LOOP](#b-loop) |
@@ -131,6 +131,17 @@ Inside the team (no outside input): [B-ASSY](#b-assy) Assembly process and coppe
 - **Done now:** Pre-layout requirements written; the electrical constraints that do not depend on the outline listed.
 - **Input required:** Photos and dimensions of the controller's location in the vehicle; whether a metal plate is available as a heatsink.
 - **Closure criterion:** Outline, mounting and thermal approach recorded in PRE_LAYOUT.md.
+
+### B-OVTRIP
+
+**Over-voltage trip not verified at its worst case**
+
+- **Missing:** Device bounds for the trip network: TL431 reference tolerance, drift and minimum cathode current; TLV7041 offset, bias current, output low voltage, output leakage, internal hysteresis and minimum supply; TLV75533 output accuracy; PC3 leakage (DS12288). Also V_bat,max, the regeneration margin and the lowest stress rating, which set the divider and the pass criteria.
+- **Affects:** hardware/kicad/02_dc_link.kicad_sch (U201, U202, R202 to R208); acceptance S6.6; the TL431 and TLV7041 BOM lines.
+- **Why it matters:** The trip is the only over-voltage protection that does not depend on firmware. Its nominal thresholds (+0.79 % and -2.50 % of the set point) say nothing about where it trips with real parts, or whether it releases above the full-charge voltage.
+- **Done now:** Node equations and an all-corners evaluation in tools/ov_trip_worst_case.py, with every input in hardware/calculations/ov_trip_inputs.yaml (null where unknown). Resistor-only spread computed: trip +0.57 % to +1.00 %, release -2.74 % to -2.26 % of the set point (1 % network, 0.1 % divider). The device terms and the criteria are pending; the tool reports the full worst case only when every bound exists.
+- **Input required:** The TL431, TLV7041 and TLV75533 data sheets (docs/reference/datasheets/README.md, priorities 7 and 8) and the battery documents (G1).
+- **Closure criterion:** Every input bounded from a cited table, the full worst case computed, the three criteria in ov_trip_worst_case.md met, and acceptance S6.6 measured within the computed range.
 
 ### B-PEDAL
 

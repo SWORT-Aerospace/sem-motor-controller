@@ -118,6 +118,18 @@ blockers:
     closure: "DATASHEET_REGISTER.md rows filled; TYPICAL values confirmed or changed."
     unlocks: 8
 
+  - id: B-OVTRIP
+    status: open
+    group: G3
+    title: Over-voltage trip not verified at its worst case
+    missing: "Device bounds for the trip network: TL431 reference tolerance, drift and minimum cathode current; TLV7041 offset, bias current, output low voltage, output leakage, internal hysteresis and minimum supply; TLV75533 output accuracy; PC3 leakage (DS12288). Also V_bat,max, the regeneration margin and the lowest stress rating, which set the divider and the pass criteria."
+    affects: "hardware/kicad/02_dc_link.kicad_sch (U201, U202, R202 to R208); acceptance S6.6; the TL431 and TLV7041 BOM lines."
+    why: "The trip is the only over-voltage protection that does not depend on firmware. Its nominal thresholds (+0.79 % and -2.50 % of the set point) say nothing about where it trips with real parts, or whether it releases above the full-charge voltage."
+    done_now: "Node equations and an all-corners evaluation in tools/ov_trip_worst_case.py, with every input in hardware/calculations/ov_trip_inputs.yaml (null where unknown). Resistor-only spread computed: trip +0.57 % to +1.00 %, release -2.74 % to -2.26 % of the set point (1 % network, 0.1 % divider). The device terms and the criteria are pending; the tool reports the full worst case only when every bound exists."
+    input: "The TL431, TLV7041 and TLV75533 data sheets (docs/reference/datasheets/README.md, priorities 7 and 8) and the battery documents (G1)."
+    closure: "Every input bounded from a cited table, the full worst case computed, the three criteria in ov_trip_worst_case.md met, and acceptance S6.6 measured within the computed range."
+    unlocks: 4
+
   - id: B-CAN
     status: open
     group: G4
@@ -317,7 +329,7 @@ blockers:
     missing: "Found in this revision: the hysteresis resistor acted on the TL431's low-impedance node."
     affects: "hardware/kicad/02_dc_link.kicad_sch"
     why: "The trip could chatter or the reference could collapse."
-    done_now: "10 k series input resistor and 390 k hysteresis resistor; TL431 bias 1.7 mA."
+    done_now: "10 k series input resistor and 390 k hysteresis resistor; TL431 bias 1.7 mA. This closed the topology defect only; the worst-case thresholds are B-OVTRIP."
     input: "none"
     closure: "Schematic changed and connectivity re-checked."
     evidence: "commit a9a378c; hardware/review/DESIGN_REVIEW.md item 6; CONNECTIVITY_CHECK.md 136 nets, 0 problems; CI run 39078886365 (connectivity gate and drift check on KiCad 8.0.9, ERC 0 errors, 0 warnings)."
