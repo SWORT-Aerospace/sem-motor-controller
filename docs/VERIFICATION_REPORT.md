@@ -1,4 +1,4 @@
-# Verification report (v0.4; v0.5 in section 7; v0.6 in section 8)
+# Verification report (v0.4; v0.5 in section 7; v0.6 in section 8; v0.7 in section 9)
 
 Environment of every result here: x86-64 Linux host (Python 3.13.16, gcc 13.3, cmake 3.28, arm-none-eabi-gcc 13.2.1, KiCad 7.0.11) and GitHub-hosted ubuntu-24.04 runners (KiCad 8.0.9 for the ERC, and from v0.6 also for the connectivity gate and drift check). Nothing here was run on hardware. Commands are run from the repository root. Documentation and previously reported test counts were not taken as evidence: each line below was re-run.
 
@@ -249,3 +249,43 @@ broker and the ARM toolchain required; target images linked: `semmc_stm32g474.el
 bytes RAM, SHA-256 `99f41e9b...77bdd`; `semmc_stm32g474_pwmtest.elf` `4672013d...0aeebba`;
 `semmc_stm32g474_timing.elf` `610ff5da...1b7758`. The MQTT latency maxima and deadline-miss counts of the committed
 demonstration samples were not regenerated. Nothing was flashed, energised or measured.
+
+## 9. v0.7: telematics delivery
+
+Scope: the telematics unit and the pit software; the motor controller is another team's ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)). Branch `eng/v0.7-telematics`, stacked on `eng/v0.6-vehicle-package` (SWORT-Aerospace/sem-motor-controller#5, unchanged at `92682c1`). **Nothing was flashed, connected to a bus, energised or measured.**
+
+### 9.1 What was reused, written and kept
+
+| Kind | Items |
+|---|---|
+| Reused from earlier releases | STLG v1 format and reader (`host/telematics/stlg.py`, extended with record types 9 to 13), clock and UTC estimator, MQTT link and pit ingestion service, broker helper, pit database, shadow replay and the frozen CSIA v2 files, the semmc codec (now a simulation fixture), cantools for the DBC adapter |
+| Written for v0.7 (host) | measurement model, signal registry, controller adapters, wheel estimator from edge timing, simulated external controller, receive-only node with `sem.telemetry.v4`, pit measurements and accounting, energy at two boundaries, shadow-input gating, independent demonstration, log import tool, BOM tool, scope classification |
+| Written for v0.7 (target, NUCLEO-U575ZI-Q) | startup and vector table, linker script, clock, TIM2 wheel capture, bounded queue, STLG blocks in internal flash bank 2, reset causes, counters, IWDG, console, FDCAN1 bus-monitoring receive, SPI1 and I2C1 transports with the W25Q, IMU and TMP117 drivers (`telematics/firmware/`) |
+| Host only (no target code) | GNSS with PPS, the LTE modem and live uplink, microSD, the battery-side monitor |
+| Kept, deferred | the controller core, STM32G474 port, power-stage schematic and the ECO supervisor (legacy mode, `--legacy-supervised`), with their own suite and CI job |
+
+### 9.2 Fresh-clone verification of `c2f9816` (2026-10-18)
+
+Clone of the branch head into an empty directory; this environment's tools (Python 3.13.16, gcc 13.3.0, CMake 3.28.3, Ninja 1.11.1, arm-none-eabi-gcc 13.2.1, Mosquitto 2.0.18 from Ubuntu's package). The tree had no changes after the run.
+
+| Check | Command | Result |
+|---|---|---|
+| Generated files current | `tools/scope.py --check`, `tools/blockers.py --check`, `tools/telematics_bom.py --check`, `tools/gen_procurement.py --check`, `tools/gen_protocol.py --check`, `tools/gen_dbc.py --check` | all exit 0 |
+| Links | `tools/check_links.py` | 135 Markdown files, 0 broken |
+| Firmware unit tests (host, ASan and UBSan) | `cmake -S telematics/firmware -B build-telematics -G Ninja`, build, `ctest` | 1/1 test program: 451 + 22 checks, 0 failed |
+| Target images | README section 3 (`-DTM_TARGET_U575=ON`, MinSizeRel) | `tm_u575.elf` 15 808 B flash, 59 200 B RAM; `tm_u575_can.elf` 16 824 B flash, 59 208 B RAM; log region empty in the image. SHA-256: `tm_u575.bin` `a91e261e...e817f9`, `tm_u575_can.bin` `e49d2689...aadaf9` |
+| Telematics and reference suites | `SEMMC_REQUIRE_MQTT=1 SEMMC_REQUIRE_ARM=1 SEMMC_BUILD_DIR=/nonexistent-controller-build python3 -m pytest -rs -m "telematics or reference"` | 132 passed, 0 skipped, 216 deselected (90 s); the controller build directory was not created |
+| Demonstration | `tools/run_telematics_demo.py --out build/telematics_demo` (real broker) | 9/9 checks: 46 143 frames on the bus, all from the external controller; boot 1: 54 627 records logged, 451 queue drops counted, 156 records lost in the restart and reported; 11 oldest live messages dropped on the car during the outage and counted; second import adds 0 records; wheel speed RMS error 0.0003 m/s; controller input 1.773 Wh, battery 2.095 Wh, each within 0.384 % of the simulated energy over the covered intervals |
+| Deferred controller suite | `python3 tools/fetch_kicad_symbols.py`, `python3 tools/check_footprints.py --fetch`, then `SEMMC_REQUIRE_MQTT=1 SEMMC_REQUIRE_ARM=1 python3 -m pytest -rs -m controller` | 216 passed, 0 skipped (115 s). A first run without the two fetch steps had 1 failure and 5 skips, all for the missing pinned KiCad libraries (`test_hardware_tools.py`, `test_footprints.py`), as CI fetches them first |
+| Legacy supervised demonstrations | `tools/run_host_demo.py --legacy-supervised`, `tools/run_mqtt_demo.py --legacy-supervised`, `tools/run_pit_replay.py` on the host demonstration's database | 11/11 and 12/12 checks; replay report written. Without `--legacy-supervised` the host demonstration refuses to run (exit 2) |
+
+Linker note: both images warn that newlib's `nosys` stubs `_close`, `_lseek`, `_read` and `_write` always fail. They are pulled in by `snprintf`; the firmware writes through its own UART driver and calls no stdio output, so the warning has no effect, and it is recorded rather than silenced.
+
+### 9.3 What these results do not show
+
+* That the firmware runs on the board: no image has been flashed, and the host tests do not show it. The first physical test is [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) B1 to B7.
+* That any pin, level or solder bridge in the connection table is right: taken from ST's board files and not checked on a board; the STM32U575 manuals were not readable here (T-U5-DOCS).
+* Electrical noninterference with a vehicle bus: the firmware sends nothing, but checks E1 to E6 are still to be run.
+* Anything about the real controller's frames: it is simulated; its team has not answered [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md).
+* Vehicle energy: every number above comes from simulation.
+
