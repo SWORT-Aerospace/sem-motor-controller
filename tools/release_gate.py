@@ -74,15 +74,19 @@ def gate_pcb_drc():
 
 
 def gate_erc():
-    if not ERC_JSON.exists():
-        return False, "no ERC report in this tree (CI job erc writes it; run tools/run_kicad_erc.sh with KiCad 8)"
-    rep = json.loads(ERC_JSON.read_text())
-    items = [v for s in rep.get("sheets", []) for v in s.get("violations", [])]
-    errors = [v for v in items if v.get("severity") == "error"]
-    warnings = [v for v in items if v.get("severity") == "warning"]
+    """The committed ERC record (tools/erc_record.py) for the current schematic inputs, from the CI KiCad 8.0.9
+    ERC; every warning type it lists must be discussed in the design review."""
+    sys.path.insert(0, str(ROOT))
+    from tools import erc_record  # noqa: E402
+    ok, text = erc_record.status()
+    r = erc_record.load() or {}
     reviewed = (ROOT / "hardware/review/DESIGN_REVIEW.md").read_text()
-    unreviewed = [w for w in warnings if w.get("type", "") not in reviewed]
-    return not errors and not unreviewed, f"ERC: {len(errors)} errors, {len(warnings)} warnings, {len(unreviewed)} not reviewed"
+    unreviewed = [t for t in r.get("warning_types", []) if t not in reviewed]
+    if ERC_JSON.exists():  # in the CI ERC job the fresh report is also present: it must agree
+        _, err, warn, _ = erc_record.report_counts(ERC_JSON)
+        if (err, warn) != (r.get("errors"), r.get("warnings")):
+            return False, f"{text}; this tree's ERC_REPORT.json has {err} errors, {warn} warnings"
+    return ok and not unreviewed, f"{text}; {len(unreviewed)} warning types not reviewed"
 
 
 def gate_signed_reviews():
@@ -110,7 +114,7 @@ GATES = [
     ("G2", "Footprints assigned, pinouts primary-checked, no placeholder symbol", gate_footprints_and_pins),
     ("G3", "Datasheet register complete", gate_datasheets),
     ("G4", "PCB exists and passes DRC", gate_pcb_drc),
-    ("G5", "ERC: no error, every warning reviewed", gate_erc),
+    ("G5", "ERC on the current schematic: no error, every warning reviewed", gate_erc),
     ("G6", "Design review and schematic-to-layout review signed", gate_signed_reviews),
     ("G7", "Hardware-valid vehicle configuration for the release", gate_release_config),
 ]

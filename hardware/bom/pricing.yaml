@@ -189,6 +189,27 @@ equipment:
   - {item: "Oscilloscope >= 100 MHz, 4 ch (+ differential probe for the switch node)", low: 0, high: 0, evidence: allowance, source: "assumed borrowed from the lab: NOT in the budget; a differential probe can cost more than this whole budget"}
   - {item: "Bench DMM x2, clamp/current probe", low: 0, high: 60, evidence: allowance, source: "assumed owned; clamp meter if not"}
 
+# Telemetry and recording lines of hardware/bom/procurement.yaml (referenced there as pricing: telemetry/<item>).
+# Search-result snapshots of distributor pages, retrieved 2026-10-18: not quotes; re-check on the live page.
+telemetry:
+  - {item: "NUCLEO-U575ZI-Q", low: 24.15, high: 25.36, evidence: snippet, source: "Future Electronics US $24.15 and $25.36 at qty 1 (two snapshots); Digi-Key 497-NUCLEO-U575ZI-Q-ND shows a 99-week factory lead time, stock not shown (search 2026-10-18)"}
+  - {item: "CAN transceiver on an adapter", low: 2.0, high: 8.0, evidence: allowance, source: "TJA1051T/3,118 chip $0.84 to $1.23 (Newark snapshot, search 2026-10-18) plus an adapter board and connector, not quoted"}
+  - {item: "Wheel Hall switch", low: 1.0, high: 5.0, evidence: representative, source: "DRV5023AJQDBZR $0.44 to $0.89 (aggregator snapshot of Mouser, Digi-Key, Newark, search 2026-10-18) plus carrier and potting, not quoted; the sensor waits for the wheel geometry"}
+  - {item: "Wheel magnets", low: 3.0, high: 15.0, evidence: allowance, source: "6 x 3 mm N52 discs: EUR 0.55 each (Tinytronics), GBP 3.29 per 10 (eBay) (snapshots 2026-10-18); count and mounting wait for the wheel geometry"}
+  - {item: "microSD socket and card", low: 12.5, high: 64.0, evidence: snippet, source: "Adafruit 254 breakout $7.50; card from a consumer card (allowance $5) to Kingston SDCIT2/8GBCP industrial pSLC $55.73 (Future Electronics snapshot) (search 2026-10-18)"}
+  - {item: "Telemetry DC-DC", low: 12.0, high: 18.0, evidence: representative, source: "RECOM R-78HB5.0-0.5 (9 to 72 V in, 5 V 0.5 A) about $12.27 to $17 (Findchips, Digi-Key /W variant snapshots, search 2026-10-18); its input range must cover V_bat,max and transients (B-BAT-V)"}
+  - {item: "Telemetry harness", low: 10.0, high: 30.0, evidence: allowance, source: "not quoted"}
+  - {item: "Telemetry shipping and tax", low: 10.0, high: 25.0, evidence: allowance, source: "not quoted"}
+  - {item: "GNSS receiver", low: 30.0, high: 76.5, evidence: snippet, source: "SparkFun GPS-15733 NEO-M9N breakout $76.50 (SparkFun and Digi-Key US, 24 in stock, snapshot); the bare module on a board is the low end, allowance (search 2026-10-18)"}
+  - {item: "GNSS antenna", low: 15.0, high: 28.0, evidence: snippet, source: "Adafruit 960 active 28 dB SMA antenna $21.50 at 1-9; Jameco $27.75 (snapshots 2026-10-18)"}
+  - {item: "LTE modem", low: 13.5, high: 22.6, evidence: snippet, source: "SIMCom A7672E: TME $13.50, Digi-Key LASE $17.90 and FASE $22.62 at qty 1 (aggregator snapshots 2026-10-18); the regional variant waits for the event country"}
+  - {item: "LTE antenna", low: 8.0, high: 28.0, evidence: snippet, source: "700-2700 MHz SMA male: MikroE 3371 GBP 6.64, Teltonika PR1CS450 $11.00, Pulse WA700/2700SMA $27.20 (snapshots 2026-10-18)"}
+  - {item: "SIM and data plan", low: 1.0, high: 40.0, evidence: snippet, source: "1NCE IoT Lifetime Flat $1 for 500 MB over 10 years; Hologram $3 per SIM, $1 per month and $0.03 per MB, about $34 for 1 GB in one month (pricing pages, snapshots 2026-10-18); the volume waits for the uplink rate and event length"}
+  - {item: "MQTT broker hosting", low: 0.0, high: 30.0, evidence: allowance, source: "$0 with a tunnel to the pit computer; a small hosted server for a few months, not quoted"}
+  - {item: "IMU", low: 20.0, high: 26.0, evidence: snippet, source: "SparkFun SEN-19764 ISM330DHCX breakout $25.50; Adafruit ISM330DHCX GBP 19.20 (snapshots 2026-10-18)"}
+  - {item: "Temperature probes", low: 6.0, high: 22.0, evidence: snippet, source: "DS18B20 waterproof probe $5.50 each (Konnected); 5-pack $10.95 plus $10.49 shipping (Fruugo) (snapshots 2026-10-18)"}
+  - {item: "Driver display", low: 5.0, high: 30.0, evidence: allowance, source: "LED bar burn / coast, not quoted; the display type is a team decision"}
+
 spares:
   # extra units per scenario (most likely to be damaged during bring-up)
   "Device:Q_NMOS_GDS": 6

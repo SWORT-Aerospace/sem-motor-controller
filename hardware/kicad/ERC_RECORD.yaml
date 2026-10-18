@@ -1,0 +1,31 @@
+# KiCad ERC result tied to the schematic inputs it checked; written by tools/erc_record.py.
+# Valid only while schematic_inputs_sha256 equals `python3 tools/erc_record.py hash`.
+schematic_inputs_sha256: 45cf038533a8f23155e5fc9754aed792a52c89de80bfde5f724ebf4a5c087df9
+kicad_version: 8.0.9
+errors: 0
+warnings: 0
+warning_types: []
+run: https://github.com/SWORT-Aerospace/sem-motor-controller/actions/runs/39085951988 (job erc, commit 8e230d8)
+artifact: erc-report, artifact 12120299029, zip SHA-256 123b0fb812f71fe85770615e946a06944d9b87cacf69403e63891660732d9c5a
+report_sha256: null
+recorded: '2026-10-18'
+inputs:
+- hardware/kicad/01_power_input.kicad_sch
+- hardware/kicad/02_dc_link.kicad_sch
+- hardware/kicad/03_bridge.kicad_sch
+- hardware/kicad/04_gate_drive.kicad_sch
+- hardware/kicad/05_current_sense.kicad_sch
+- hardware/kicad/06_bus_measurement.kicad_sch
+- hardware/kicad/07_temperature.kicad_sch
+- hardware/kicad/08_mcu_debug.kicad_sch
+- hardware/kicad/09_hall_inputs.kicad_sch
+- hardware/kicad/10_driver_controls.kicad_sch
+- hardware/kicad/11_can_phy.kicad_sch
+- hardware/kicad/12_aux_rails.kicad_sch
+- hardware/kicad/semmc.kicad_sch
+- hardware/kicad/semmc.kicad_sym
+- hardware/kicad/sym-lib-table
+- hardware/kicad/fp-lib-table
+- hardware/kicad/semmc.kicad_pro
+- hardware/footprints/library_pins.yaml
+- tools/fetch_kicad_symbols.py SHA256 table

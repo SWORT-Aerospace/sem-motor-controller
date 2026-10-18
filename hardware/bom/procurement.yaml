@@ -15,9 +15,10 @@
 #   * `in_assembly: true` marks a part inside the telematics PCB assembly line; it is not counted again;
 #   * `optional: true` lines and `not_budgeted` lines are listed but kept out of the subtotals;
 #   * unknown quantities and costs stay null and print as TBD, never as zero.
-# Nothing here has been ordered, and no line has a dated quote yet.
+# Nothing here has been ordered, and no line has a dated quote yet: the telemetry estimates are search-result
+# snapshots of distributor pages (hardware/bom/pricing.yaml, telemetry), not quotes.
 schema: sem.procurement.v2
-updated: "2026-10-17"
+updated: "2026-10-18"
 currency: USD
 statuses: [Candidate, Selected, Ordered, Received, Blocked]
 estimate_scenario: S1 one functional prototype
@@ -194,22 +195,24 @@ items:
     item: Wheel-speed Hall sensor
     purpose: Wheel pulses for vehicle speed and distance
     category: telemetry
-    qty: null
+    qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Wheel Hall switch"}
     status: Blocked
     candidate: "Team reference DRV5032: rejected for wheel speed (sampled; misses magnet passes at speed). Comparison: DRV5023-Q1 (continuous), not selected"
-    requirement: A continuous (non-sampled) Hall switch; quantity = instrumented wheels (the ICD has three provisional channels).
+    requirement: Quantity 1 here (one wheel sensor in the minimum and recording builds). A continuous (non-sampled) Hall switch; quantity = instrumented wheels (the ICD has three provisional channels).
     blocked_by: maximum vehicle speed, wheel circumference, magnet count and geometry, which wheels are instrumented
     evidence: "docs/generated/wheel_sensor_check.md"
   - id: wheel_magnets
     item: Wheel magnets and mounting hardware
     purpose: Targets for the wheel-speed sensor
     category: telemetry
-    qty: null
+    qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Wheel magnets"}
     status: Blocked
     candidate: null
-    requirement: Field above the switch operate point across the air gap; magnet count per wheel from the speed resolution needed.
+    requirement: Quantity 1 here (one set for one instrumented wheel). Field above the switch operate point across the air gap; magnet count per wheel from the speed resolution needed.
     blocked_by: wheel and hub geometry, sensor choice
     evidence: "docs/generated/wheel_sensor_check.md"
   - id: imu
@@ -218,6 +221,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/IMU"}
     status: Candidate
     candidate: "LSM6DSV or ISM330DHCX (team references); MC3419 from the board proposal has no gyroscope"
     in_assembly: null
@@ -229,8 +233,9 @@ items:
     item: Temperature sensors/probes
     purpose: Slow temperatures for logging (battery surface, motor case, ambient)
     category: telemetry
-    qty: null
+    qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Temperature probes"}
     status: Candidate
     candidate: DS18B20 (team reference)
     requirement: Logging only. Not for power-stage protection (750 ms conversion at 12 bit); the controller keeps its own thermal protection. No log record type yet (docs/ICD.md section 8).
@@ -242,6 +247,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/GNSS receiver"}
     status: Blocked
     candidate: NEO-M9N (board proposal)
     in_assembly: null
@@ -254,6 +260,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/GNSS antenna"}
     status: Blocked
     candidate: null
     requirement: L1 band (GPS/QZSS L1C/A, GLONASS L1OF, Galileo E1, BeiDou B1I); supply from the receiver's VCC_RF (VCC - 0.1 V, at most 50 mA); external gain at most 30 dB; mounted with sky view through non-conductive bodywork.
@@ -265,6 +272,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/LTE modem"}
     status: Blocked
     candidate: SIMCom A7672 (board proposal); variant by region (A7672E, A7672SA, A7672S)
     in_assembly: null
@@ -277,6 +285,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/LTE antenna"}
     status: Blocked
     candidate: null
     requirement: Covers the chosen variant's LTE bands; 50 ohm; one main antenna (the A7672X has no diversity input).
@@ -288,6 +297,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/microSD socket and card"}
     status: Candidate
     candidate: microSD (optional in the proposal) in addition to the proposal's 8 MB NOR flash
     in_assembly: null
@@ -302,6 +312,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/CAN transceiver on an adapter"}
     status: Blocked
     candidate: null
     in_assembly: null
@@ -314,6 +325,7 @@ items:
     category: telemetry
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Driver display"}
     status: Blocked
     candidate: "LED bar \"burn / coast\" (optional in the proposal), or an unmodified self-contained device"
     requirement: >-
@@ -338,8 +350,9 @@ items:
     item: Shipping and tax on the telemetry lines
     purpose: Delivery and import tax
     category: shipping_tax
-    qty: null
+    qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Telemetry shipping and tax"}
     status: Blocked
     candidate: null
     requirement: From the supplier quotes.
@@ -386,8 +399,9 @@ items:
     item: Telemetry harness (sensor cables and connectors)
     purpose: Wheel, temperature, GNSS and LTE antenna, display and CAN cables to the telemetry unit
     category: shared
-    qty: null
+    qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Telemetry harness"}
     status: Blocked
     candidate: null
     requirement: Not covered by the controller signal-connector line above. No splices; connections visible and accessible (Article 57k).
@@ -399,6 +413,7 @@ items:
     category: shared
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/Telemetry DC-DC"}
     status: Blocked
     candidate: null
     in_assembly: null
@@ -415,6 +430,7 @@ items:
     category: development
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/NUCLEO-U575ZI-Q"}
     status: Candidate
     candidate: NUCLEO-U575ZI-Q (STM32U575ZIT6Q), the MCU named in the telematics proposal
     requirement: Needs an external CAN transceiver (none on the board) and a 5 V supply.
@@ -494,6 +510,7 @@ items:
     category: recurring
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/SIM and data plan"}
     status: Blocked
     candidate: null
     requirement: Coverage at the event; about 0.5 to 7.7 MB per 40-minute attempt at 1 to 5 Hz (docs/COMBINED_ARCHITECTURE.md).
@@ -505,6 +522,7 @@ items:
     category: recurring
     qty: 1
     unit_cost_usd: null
+    estimate: {pricing: "telemetry/MQTT broker hosting"}
     status: Blocked
     candidate: Mosquitto on a hosted server, or a tunnel to the pit computer
     requirement: >-
@@ -527,30 +545,40 @@ items:
 
 # Build scenarios evaluated against the budget by tools/gen_procurement.py. Every build includes every line of the
 # controller category (the generator refuses a build that drops one), so protection is never traded for budget.
+# `minimum` is the agreed minimum scope (protection and local recording); `controller_only` is shown below it for
+# comparison only. Each deferred group is costed in docs/PROCUREMENT.md, so adding an option back has a price.
 # Equipment lines are reported separately: the team may already own them.
 builds:
-  - id: minimum
-    title: Minimum working build (controller only)
+  - id: controller_only
+    title: Controller only (below the minimum, no recording)
     goal: >-
-      One controller board assembled, bench-accepted and driven in the vehicle with the existing driver controls.
-      The controller runs without telemetry, LTE, MQTT, the pit software and CSIA.
+      One controller board assembled, bench-accepted and driven in the vehicle with the existing driver controls, and
+      nothing else. Shown for comparison: it records nothing, so it does not meet the agreed minimum.
+    capability: >-
+      Drives the motor with every protection of the controller; no record of a run beyond the controller's fault
+      event log.
     includes: [mc_parts, mc_thermal, mc_enclosure, mc_pcb, mc_stencil, mc_consumables, mc_pcb_shipping, mc_tax,
                mc_spares, power_connectors, signal_connectors, wire, bench_load]
     equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
     deferred:
-      - {lines: [telematics_pcb, nucleo, wheel_hall, wheel_magnets, can_xcvr, local_storage, dcdc, harness],
-         effect: "no wheel-speed distance and no telematics log; energy per distance only from rotor speed, and only while the motor is rigidly coupled"}
+      - {lines: [nucleo, wheel_hall, wheel_magnets, can_xcvr, local_storage, dcdc, harness, shipping],
+         effect: "no local recording: no wheel-speed distance, no energy log; energy per distance only from rotor speed, and only while the motor is rigidly coupled"}
+      - {lines: [telematics_pcb], effect: "no telematics board"}
       - {lines: [gnss, gnss_antenna, imu, temperature, steering],
          effect: "no position, UTC alignment, grade or slow temperatures"}
       - {lines: [lte_modem, lte_antenna, sim, broker_hosting],
          effect: "no live data at the pit"}
       - {lines: [display], effect: "no driver display"}
       - {lines: [mc_revision], effect: "a design error needs a new budget decision"}
-  - id: logging
-    title: Minimum build plus local logging (no live link)
+  - id: minimum
+    title: Minimum build (controller protection and local recording)
     goal: >-
-      The minimum build plus a development-board telematics node on the vehicle CAN bus with one wheel sensor and
-      local storage: the essential energy-accounting signals (docs/TELEMETRY_INTEGRATION.md 3), recorded offline.
+      The agreed minimum: the whole controller with its protection, plus a development-board recorder on the CAN link
+      with one wheel sensor and local storage, so every run's essential energy-accounting signals
+      (docs/TELEMETRY_INTEGRATION.md 3) are recorded on the vehicle. LTE, display and steering are optional.
+    capability: >-
+      Drives the motor with every protection; records battery voltage and current, energy, motor and wheel speed,
+      temperatures and the controller state on the vehicle, read out after the run.
     includes: [mc_parts, mc_thermal, mc_enclosure, mc_pcb, mc_stencil, mc_consumables, mc_pcb_shipping, mc_tax,
                mc_spares, power_connectors, signal_connectors, wire, bench_load, nucleo, wheel_hall, wheel_magnets,
                can_xcvr, local_storage, dcdc, harness, shipping]
@@ -558,13 +586,16 @@ builds:
     deferred:
       - {lines: [telematics_pcb], effect: "the development board is mounted instead of the telematics PCB"}
       - {lines: [gnss, gnss_antenna, imu, temperature, steering],
-         effect: "no position, UTC alignment, grade or slow temperatures"}
-      - {lines: [lte_modem, lte_antenna, sim, broker_hosting], effect: "no live data at the pit"}
-      - {lines: [display], effect: "no driver display"}
+         effect: "no position, UTC alignment, grade or slow temperatures; steering is optional"}
+      - {lines: [lte_modem, lte_antenna, sim, broker_hosting], effect: "no live data at the pit (optional)"}
+      - {lines: [display], effect: "no driver display (optional)"}
       - {lines: [mc_revision], effect: "a design error needs a new budget decision"}
   - id: full
     title: Full scope
     goal: Every counted line of this file.
+    capability: >-
+      The minimum plus the telematics board, position and timing, grade, slow temperatures, steering angle, live data
+      at the pit and a driver display, and a second controller revision.
     includes: all
     equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
     deferred: []

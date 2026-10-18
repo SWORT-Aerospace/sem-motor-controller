@@ -9,7 +9,7 @@ Electronics and software for our Shell Eco-marathon battery-electric vehicle: a 
 | Milestone | Status |
 |---|---|
 | 1. Engineering design ready for review | **Reviewable, with open items.** The schematic is reviewed topic by topic ([`hardware/review/DESIGN_REVIEW.md`](hardware/review/DESIGN_REVIEW.md)); KiCad ERC 0 errors, 0 warnings; the vehicle interfaces are specified as confirmed, proposed or unknown ([`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md)). Ratings that depend on the battery, motor and harness stay open ([`docs/BLOCKERS.md`](docs/BLOCKERS.md)). |
-| 2. Fabrication-ready hardware and buildable target firmware | **Firmware builds; hardware is not fabrication-ready.** The STM32G474 image links in every CI run with the power stage inhibited (the gate-driver and battery-meter drivers wait for their datasheets). No footprints or layout: the release gate fails ([`docs/generated/release_gate.md`](docs/generated/release_gate.md)). |
+| 2. Fabrication-ready hardware and buildable target firmware | **Firmware builds; hardware is not fabrication-ready.** The STM32G474 image links in every CI run with the power stage inhibited (the gate-driver and battery-meter drivers wait for their datasheets). Footprints on 82 of 122 BOM lines (68 verified), no layout: the release gate fails ([`docs/generated/release_gate.md`](docs/generated/release_gate.md)). |
 | 3. Bench-validated integrated hardware | **Not started.** No board exists. The staged acceptance procedures and the result checker are ready ([`docs/BENCH_ACCEPTANCE.md`](docs/BENCH_ACCEPTANCE.md)). |
 
 Elsewhere in this README, **Host** means implemented and tested on a computer (the C core against a simulated motor and vehicle, the Python models, a real local MQTT broker) on every push; **Proposed** means designed or specified but not built; **Physically tested** is still nothing: nothing has been energised and no vehicle data has been recorded. What the physical team should send (seven items): [`docs/INPUT_SHEET.md`](docs/INPUT_SHEET.md).
@@ -277,29 +277,29 @@ The quantity to minimise is the battery energy over the whole attempt, ∫ P_bat
 The table is generated from one file, [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml); the motor-controller lines take their ranges from the priced draft BOM ([`docs/BUDGET.md`](docs/BUDGET.md)). Estimates are not quotes, and TBD means no price is known.
 
 <!-- procurement-table:begin -->
-Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) (updated 2026-10-17) by `tools/gen_procurement.py`; edit the YAML file, not this table. Requirements, candidates, cost sources and what blocks each line: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md).
+Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) (updated 2026-10-18) by `tools/gen_procurement.py`; edit the YAML file, not this table. Requirements, candidates, cost sources and what blocks each line: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md).
 
 **Subtotals**
 
 | Category | Lines | Estimated (USD) | Dated quotes | Unpriced (TBD) | Not counted |
 |---|---|---|---|---|---|
 | Motor controller (board parts, heatsink, enclosure) | 3 | 108 to 298 (3 lines) | 0 | 0 | 0 |
-| Telemetry and sensors | 12 | none priced (0 lines) | 0 | 11 | 1 |
-| Shared power, connectors and wiring | 5 | 40 to 105 (3 lines) | 0 | 2 | 0 |
+| Telemetry and sensors | 12 | 116 to 325 (11 lines) | 0 | 0 | 1 |
+| Shared power, connectors and wiring | 5 | 62 to 153 (5 lines) | 0 | 0 | 0 |
 | Fabrication and assembly | 5 | 58 to 170 (3 lines) | 0 | 1 | 1 |
-| Shipping and tax | 3 | 32 to 122 (2 lines) | 0 | 1 | 0 |
+| Shipping and tax | 3 | 42 to 147 (3 lines) | 0 | 0 | 0 |
 | Spares and another board revision | 2 | 58 to 93 (1 lines) | 0 | 0 | 1 |
-| Development equipment | 7 | 119 to 404 (5 lines) | 0 | 1 | 1 |
-| Recurring connectivity | 2 | none priced (0 lines) | 0 | 2 | 0 |
+| Development equipment | 7 | 143 to 429 (6 lines) | 0 | 0 | 1 |
+| Recurring connectivity | 2 | 1 to 70 (2 lines) | 0 | 0 | 0 |
 | Contingency | 1 | none priced (0 lines) | 0 | 1 | 0 |
-| **All categories** | 40 | **414 to 1,191** (17 lines) | 0 | **19** | 4 |
+| **All categories** | 40 | **588 to 1,685** (34 lines) | 0 | **2** | 4 |
 
 * Priced subtotal from dated quotes: **none**: none of the 36 counted lines has a dated quote.
-* Estimated lines: **$414 to $1,191** over 17 lines ($310 to $827 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
+* Estimated lines: **$588 to $1,685** over 34 lines ($484 to $1,321 if the development equipment is already owned). These ranges come from the draft controller BOM pricing ([`docs/BUDGET.md`](docs/BUDGET.md)); they are estimates, not quotes.
 * Estimates are summed before rounding to whole dollars, so adding the rounded rows can differ from a subtotal by a few dollars.
-* Unpriced lines: **19** (TBD). They come on top of the estimated range, so the complete cost is not known.
+* Unpriced lines: **2** (TBD). They come on top of the estimated range, so the complete cost is not known.
 * Not counted: 4 lines (optional lines, the borrowed oscilloscope, and parts inside the telematics PCB assembly line).
-* Budget: the project budget is about $500 to $1,000; which lines it must cover is **unconfirmed**. With 19 lines unpriced, a fit within $500 to $1,000 is **not established**.
+* Budget: the project budget is about $500 to $1,000; which lines it must cover is **unconfirmed**. With 2 lines unpriced, a fit within $500 to $1,000 is **not established**.
 * Status: Candidate 9, Selected 0, Ordered 0, Received 0, Blocked 31. Nothing has been ordered.
 * A separate battery for the driver display is not an approved purchase: Article 57i allows built-in batteries only in unmodified, self-contained display or communication devices, and Article 57b allows no accessory battery on a Battery Electric vehicle.
 
@@ -307,12 +307,12 @@ Generated from [`hardware/bom/procurement.yaml`](hardware/bom/procurement.yaml) 
 
 | Build | Development equipment | Estimated (USD) | Unpriced lines | Against $500 | Against $1,000 |
 |---|---|---|---|---|---|
-| Minimum working build (controller only) | owned | 310 to 827 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
-| Minimum working build (controller only) | bought | 414 to 1,191 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
-| Minimum build plus local logging (no live link) | owned | 310 to 827 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced |
-| Minimum build plus local logging (no live link) | bought | 414 to 1,191 | 8 | not established: 8 lines unpriced; the priced lines alone straddle $500 | not established: 8 lines unpriced; the priced lines alone straddle $1,000 |
-| Full scope | owned | 310 to 827 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced |
-| Full scope | bought | 414 to 1,191 | 19 | not established: 19 lines unpriced; the priced lines alone straddle $500 | not established: 19 lines unpriced; the priced lines alone straddle $1,000 |
+| Controller only (below the minimum, no recording) | owned | 310 to 827 | 0 | straddles $500: within only if prices land in the lower part of the range | high end of the estimate below $1,000 (estimates, not quotes) |
+| Controller only (below the minimum, no recording) | bought | 414 to 1,191 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
+| Minimum build (controller protection and local recording) | owned | 385 to 1,018 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
+| Minimum build (controller protection and local recording) | bought | 489 to 1,382 | 0 | straddles $500: within only if prices land in the lower part of the range | straddles $1,000: within only if prices land in the lower part of the range |
+| Full scope | owned | 484 to 1,321 | 2 | not established: 2 lines unpriced; the priced lines alone straddle $500 | not established: 2 lines unpriced; the priced lines alone straddle $1,000 |
+| Full scope | bought | 588 to 1,685 | 2 | over: above $500 even at the low end | not established: 2 lines unpriced; the priced lines alone straddle $1,000 |
 
 Every line with its requirement, candidate, cost source and blocker: [`docs/PROCUREMENT.md`](docs/PROCUREMENT.md#lines).
 <!-- procurement-table:end -->

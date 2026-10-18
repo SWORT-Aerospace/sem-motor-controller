@@ -139,3 +139,5 @@ jobs:
           path: hardware/kicad/ERC_REPORT.*
       - name: Summary (fails on any ERC error)
         run: python tools/erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors
+      - name: ERC record (fails if the committed record for these inputs disagrees with this run)
+        run: python tools/erc_record.py check --report hardware/kicad/ERC_REPORT.json

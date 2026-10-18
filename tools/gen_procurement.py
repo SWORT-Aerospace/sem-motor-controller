@@ -15,7 +15,7 @@ TBD, never as zero. Subtotals leave out optional lines, lines marked not
 budgeted and lines inside the telematics PCB assembly; no total is printed while
 any counted line is unpriced.
 
-`builds` (minimum, logging, full scope) are evaluated against the $500 and
+`builds` (controller only, minimum, full scope) are evaluated against the $500 and
 $1,000 budget with and without the development equipment. Every build must
 contain every line of the controller category, so a build can defer features
 but never protection.
@@ -336,18 +336,41 @@ def builds_table(d: dict, budget: dict, pricing: dict) -> list[str]:
     return L
 
 
+def group_cost(ids: list, d: dict, budget: dict, pricing: dict):
+    """Estimated range and unpriced lines of a group of items, optional lines included (adding one back is the
+    point); lines inside the PCB assembly or not budgeted are skipped."""
+    items = {it["id"]: it for it in d["items"]}
+    lo = hi = 0.0
+    tbd = []
+    for i in ids:
+        k = cost(items[i], d, budget, pricing)
+        if k["kind"] in ("assembly", "not_budgeted"):
+            continue
+        if k["kind"] in ("quote", "estimate") and k.get("line"):
+            lo, hi = lo + k["line"][0], hi + k["line"][1]
+        else:
+            tbd.append(i)
+    return lo, hi, tbd
+
+
 def builds_detail(d: dict, budget: dict, pricing: dict) -> list[str]:
     items = {it["id"]: it for it in d["items"]}
     L = []
     for b in d.get("builds", []):
         s = build_sums(b, d, budget, pricing)
         L += [f"**{b['title']}.** {' '.join(b['goal'].split())}", ""]
+        if b.get("capability"):
+            L.append(f"* Capability: {' '.join(b['capability'].split())}")
         unp = s["bought"][2]
         L.append("* Lines: " + "; ".join(items[i]["item"] for i in s["ids"]) + ".")
         if unp:
             L.append("* Unpriced (TBD): " + "; ".join(items[i]["item"] for i in unp) + ".")
         for g in b.get("deferred", []):
-            L.append("* Deferred: " + "; ".join(items[i]["item"] for i in g["lines"]) + f". Effect: {g['effect']}.")
+            glo, ghi, gtbd = group_cost(g["lines"], d, budget, pricing)
+            price = (f"adds {range_text(glo, ghi)} USD" + (f" plus {len(gtbd)} unpriced" if gtbd else "")
+                     if glo or ghi else ("unpriced" if gtbd else "nothing counted"))
+            L.append("* Deferred: " + "; ".join(items[i]["item"] for i in g["lines"])
+                     + f". Effect: {g['effect']}. To add back: {price}.")
         L.append("")
     return L
 
