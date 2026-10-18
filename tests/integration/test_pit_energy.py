@@ -1,4 +1,4 @@
-"""Energy per distance at the pit (host/pit/energy.py) and the README worked example (README section D)."""
+"""Energy per distance at the pit (host/pit/energy.py) and the worked example of docs/ENERGY_METHODS.md 0.4."""
 import json
 import math
 import pathlib
@@ -10,7 +10,7 @@ from host.pit import energy, ingest
 from models.vehicle import longitudinal as lon
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-README = (ROOT / "README.md").read_text()
+README = (ROOT / "docs" / "ENERGY_METHODS.md").read_text()   # the worked example lives there since v0.7
 
 
 def test_formulas():

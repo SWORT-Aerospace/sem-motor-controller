@@ -1,8 +1,31 @@
 # Status in detail
 
-The README keeps a short status; this page holds the detail. "Works" always names the environment in which it was shown. A passing host simulation is not a working vehicle controller, and nothing here has been built, energised or tested on the vehicle.
+The README keeps a short status; this page holds the detail. "Works" always names the environment in which it was shown. Host simulation is not embedded firmware, a passing host test does not show that the firmware runs on the board, and nothing here has been flashed, connected to a bus or tested on the vehicle.
 
-## 0. The three milestones (v0.6)
+**Scope (v0.7).** The deliverable is the telematics unit and the pit software; the motor controller is built by another team ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)). Section 1 is the current status. Sections 2 onwards record the earlier controller-and-telemetry work as it stood; the controller parts of it are deferred controller development.
+
+## 1. Telematics (v0.7)
+
+| Function | On the target (NUCLEO-U575ZI-Q firmware, built) | Host only | Bench-tested |
+|---|---|---|---|
+| Wheel pulses: TIM2 input capture on three channels, 1 µs, extended to 64 bits across the 32-bit overflow; edge count and span per record; standstill only with the line held active, otherwise no evidence | yes (`telematics/firmware/src/tm_wheel.c`, `platform/u575/main_u575.c`) | the speed and distance estimate (`host/telematics/wheel.py`, pit) | no |
+| Bounded log queue with drop counters and high-water mark; STLG records and blocks; log in internal flash bank 2 (256 slots of 4 KiB); restart reasons and a BOOT record; counters every second | yes (`tm_queue.c`, `tm_stlg.c`, `tm_flashlog.c`, `tm_reset.c`, `tm_app.c`, `flash_u575.c`) | | no |
+| Console: status line, `DUMP` of the log, `ERASE YES` | yes (`uart_u575.c`, `main_u575.c`) | | no |
+| CAN receive: FDCAN1 in bus-monitoring mode (sends nothing, not even the acknowledge bit), frames to the log with receive time | yes, in the `tm_u575_can` image (`can_u575.c`) | decoding: semmc fixture and DBC adapters (`host/telematics/controller_adapter.py`) | no |
+| IMU (LSM6DSOX or ISM330DHCX) and TMP117 temperature on I2C1 | yes (`i2c_u575.c`, `tm_imu.c`), polled at 100 Hz and 1 Hz | | no |
+| SPI NOR (W25Q) on SPI1 | driver written and host-tested (`spi_u575.c`, `tm_w25q.c`); not wired into the images | | no |
+| GNSS with PPS capture | no | `host/telematics/node.py`, `host/telematics/clocks.py` | no |
+| LTE modem and the live uplink `sem.telemetry.v4` | no | `host/telematics/node.py`, `host/telematics/mqtt_link.py`; real Mosquitto broker | no |
+| Battery-side monitor (total battery energy) | no | `host/telematics/sim_vehicle.py`, STLG `BATT` | no |
+| Pit: validation, SQLite with idempotent re-import, speed and distance, energy at two boundaries, data quality, shadow monitors | runs on the pit computer | yes (`host/pit/`, `tools/telematics_import.py`, `tools/run_pit_replay.py`) | no vehicle data |
+
+**Bench-tested: nothing.** No connection in the connection table ([`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) section 4) has been checked on a board. The first bench test is B1 to B7 of that page.
+
+**Evidence on a computer.** Portable firmware code: unit tests under AddressSanitizer and UndefinedBehaviorSanitizer, its records byte-for-byte equal to the Python reference (`tests/telematics/test_firmware_host.py`); target images link with arm-none-eabi-gcc 13.2, and their vector table, memory map and sections are checked (`tests/telematics/test_firmware_target.py`). The independent demonstration passes 9 checks through a real broker ([`generated/telematics_demo/summary.md`](generated/telematics_demo/summary.md)). Commands and results: [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) section 9.
+
+**Waiting on others.** The controller team's answer to [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md); the battery's maximum voltage for the input protection; part choices and quotes ([`TELEMATICS_BOM.md`](TELEMATICS_BOM.md)). Order of work: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+
+## 2. Deferred controller development: the v0.6 milestones (kept as recorded)
 
 | Milestone | Status | Evidence | What closes it |
 |---|---|---|---|
@@ -22,7 +45,7 @@ The README keeps a short status; this page holds the detail. "Works" always name
 
 Item by item: [`../firmware/platform/stm32g4/README.md`](../firmware/platform/stm32g4/README.md) "Status".
 
-## 1. What works, and where it was shown (v0.4, kept as recorded)
+## 3. What works, and where it was shown (v0.4, kept as recorded)
 
 | Item | Shown in | Evidence |
 |---|---|---|
@@ -32,11 +55,11 @@ Item by item: [`../firmware/platform/stm32g4/README.md`](../firmware/platform/st
 | Telematics node, local log (STLG), LTE/MQTT uplink, pit ingestion into SQLite, offline import, pit-side CSIA replay | host simulation | `python3 tools/run_host_demo.py`: 11 checks, all pass (`docs/generated/host_demo/summary.md`) |
 | Energy optimisation (spatial DP), strategies, policy comparison | synthetic models and host plant | `docs/generated/optimization_synthetic.md`, `docs/generated/policy_comparison_host.md` |
 | CSIA monitor evaluation (protocol v2, frozen before data) | synthetic, untouched set, run once | `docs/csia/EVALUATION_RESULTS_v2.md`: the simpler majority-vote monitor (R3v) is retained |
-| Draft schematic (12 sheets) | KiCad 7 netlist + KiCad 8.0.9 ERC in CI | connectivity 0 problems; ERC 0 errors, 9 library warnings at v0.4 (0 warnings from v0.6, section 0); protection topology and cross-artefact checks 14 PASS, 0 FAIL, 4 OPEN (`hardware/review/CONSISTENCY_CHECK.md`) |
+| Draft schematic (12 sheets) | KiCad 7 netlist + KiCad 8.0.9 ERC in CI | connectivity 0 problems; ERC 0 errors, 9 library warnings at v0.4 (0 warnings from v0.6, section 2); protection topology and cross-artefact checks 14 PASS, 0 FAIL, 4 OPEN (`hardware/review/CONSISTENCY_CHECK.md`) |
 
-A passing host simulation is not a working vehicle controller. (At v0.4 the STM32G4 platform layer was not written; v0.6 adds it, section 0. The telematics firmware is still not implemented.)
+A passing host simulation is not a working vehicle controller. (At v0.4 the STM32G4 platform layer was not written; v0.6 adds it, section 2. The telematics firmware followed in v0.7, section 1.)
 
-## 2. Added in v0.5 (host software)
+## 4. Added in v0.5 (host software)
 
 | Item | Shown in | Evidence |
 |---|---|---|
@@ -48,36 +71,38 @@ A passing host simulation is not a working vehicle controller. (At v0.4 the STM3
 | Energy per distance at the pit (controller-input energy, wheel distance, Wh/km, cross-check between wheels) | host (synthetic runs) | `host/pit/energy.py`; `tests/integration/test_pit_energy.py` (includes the README worked example) |
 | Documentation for a student team: README front page, integration guide, implementation plan, design decisions, development guide, folder guides, file index | repository | `tests/integration/test_docs.py` (links, file-index coverage, wording) |
 
-## 3. Hardware status
+## 5. Controller hardware status (deferred)
 
 Draft only: footprints on 82 of 122 BOM lines (68 verified; [`../hardware/footprints/FOOTPRINT_CHECK.md`](../hardware/footprints/FOOTPRINT_CHECK.md)), no layout, no fabrication outputs, no orders; the release gate fails ([`generated/release_gate.md`](generated/release_gate.md)). Power-stage parts, connectors and ratings depend on the motor, battery, harness and rules and stay UNRESOLVED (41 BOM lines). The budget is not shown to be feasible until live quotes and those ratings close the price spread (`tools/price_bom.py`). No hardware freeze is claimed.
 
-## 4. Document index
+## 6. Document index
 
 | Topic | Document |
 |---|---|
-| Interfaces (authoritative) | [`docs/ICD.md`](ICD.md) v1.0 |
-| Mathematics, tied to code and tests | [`docs/MATH_SPEC.md`](MATH_SPEC.md) |
-| Method selection and sources read | [`docs/METHOD_SELECTION.md`](METHOD_SELECTION.md) |
+| Scope: telematics, reference, deferred controller | [`docs/scope.yaml`](scope.yaml), [`docs/generated/scope.md`](generated/scope.md), [`docs/decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md) |
+| Interfaces (authoritative) | [`docs/ICD.md`](ICD.md) v2.0 (Part A telematics, Part B deferred controller and the semmc fixture) |
+| What we ask the controller team | [`docs/CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md) |
+| Signals, energy, shadow mode | [`docs/TELEMETRY_INTEGRATION.md`](TELEMETRY_INTEGRATION.md), [`docs/ENERGY_METHODS.md`](ENERGY_METHODS.md) |
+| Firmware status by function | [`docs/TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md), [`telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) |
+| Telematics BOM | [`docs/TELEMATICS_BOM.md`](TELEMATICS_BOM.md) |
+| Plan and open items | [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md), [`docs/BLOCKERS.md`](BLOCKERS.md), [`docs/INPUT_SHEET.md`](INPUT_SHEET.md) |
 | Verification report | [`docs/VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) |
-| Control contract | [`docs/CONTROL_CONTRACT.md`](CONTROL_CONTRACT.md) |
 | CSIA v2 protocol and results | [`docs/csia/EVALUATION_PROTOCOL_v2.md`](csia/EVALUATION_PROTOCOL_v2.md), [`docs/csia/EVALUATION_RESULTS_v2.md`](csia/EVALUATION_RESULTS_v2.md) |
-| Hardware status, BOM and budget | [`docs/HARDWARE_ARCHITECTURE.md`](HARDWARE_ARCHITECTURE.md), [`hardware/bom/README.md`](../hardware/bom/README.md), [`docs/BUDGET.md`](BUDGET.md) |
-| Inputs needed from the team (prioritised) | [`docs/INPUT_SHEET.md`](INPUT_SHEET.md) |
-| Validation plan and bench bring-up | [`docs/VALIDATION_PLAN.md`](VALIDATION_PLAN.md), [`docs/BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md) |
-| Decisions | [`docs/DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) (D1 to D10, v0.5); [`docs/decisions/`](decisions/) (ADR-0001 to ADR-0012) |
-| Integration and the staged plan | [`docs/INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md), [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) |
+| Decisions | [`docs/DESIGN_DECISIONS.md`](DESIGN_DECISIONS.md) (D1 to D11); [`docs/decisions/`](decisions/) (ADR-0001 to ADR-0013) |
+| Deferred controller: mathematics, control contract, hardware, budget, validation, bench bring-up | [`docs/MATH_SPEC.md`](MATH_SPEC.md), [`docs/CONTROL_CONTRACT.md`](CONTROL_CONTRACT.md), [`docs/HARDWARE_ARCHITECTURE.md`](HARDWARE_ARCHITECTURE.md), [`hardware/bom/README.md`](../hardware/bom/README.md), [`docs/BUDGET.md`](BUDGET.md), [`docs/VALIDATION_PLAN.md`](VALIDATION_PLAN.md), [`docs/BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md), [`docs/INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md) |
+| Method selection and sources read | [`docs/METHOD_SELECTION.md`](METHOD_SELECTION.md) |
 | Every document with its status | [`docs/README.md`](README.md); every file: [`docs/FILE_INDEX.md`](FILE_INDEX.md) |
 | Earlier releases (records) | [`docs/archive/REVIEW_v0.3.md`](archive/REVIEW_v0.3.md), [`docs/archive/CHECKPOINT_v0.2.md`](archive/CHECKPOINT_v0.2.md), [`docs/archive/HANDOFF_v0.1.md`](archive/HANDOFF_v0.1.md) (v0.1) |
 
-## 5. Repository layout
+## 7. Repository layout
 ```
+telematics/  telematics unit firmware for the NUCLEO-U575ZI-Q (portable code, host simulator, target platform, tests)
 config/      parameter registry, schema, unconfigured hardware config, SYNTHETIC vehicle config
-firmware/    portable C11 core, public headers, host platform + simulated plant, STM32G474 target platform, C tests
-protocol/    CAN schema (protocol.yaml), generated codecs, golden vectors, DBC
-host/        supervisor + co-simulation, telematics node model, pit ingestion, replay, CSIA adapters
+firmware/    deferred controller: portable C11 core, public headers, host platform + simulated plant, STM32G474 target platform, C tests
+protocol/    semmc CAN schema (a simulation fixture: protocol.yaml), generated codecs, golden vectors, DBC
+host/        telematics node model and adapters, pit ingestion, energy, replay, CSIA adapters; legacy supervisor
 models/      vehicle and powertrain models, inverter losses, DP optimiser, strategies
-hardware/    KiCad draft, BOM and pricing, calculations, timing, protection, selection, acceptance, layout, review
+hardware/    telematics BOM; deferred controller: KiCad draft, BOM and pricing, calculations, timing, protection, selection, acceptance, layout, review
 tests/       integration, fault injection, simulation, hardware (pytest)
 tools/       generators, validators, studies, verification
 docs/        ICD, specifications, decisions, evaluations, generated reports

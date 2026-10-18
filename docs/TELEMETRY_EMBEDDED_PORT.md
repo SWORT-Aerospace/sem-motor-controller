@@ -1,66 +1,65 @@
-# Telematics firmware: embedded port plan (not implemented)
+# Telematics firmware: status by function (v0.7)
 
-**No telematics firmware exists.** The host model (`host/telematics/`) fixes the behaviour; this page lists what the STM32U575 firmware needs to reproduce it, and the bench checks that would show it does. The STM32U575 allocation is not frozen (`ICD.md` 12). Development starts on a NUCLEO-U575ZI-Q with an external CAN transceiver (`TELEMETRY_CANDIDATES.md`).
+What the NUCLEO-U575ZI-Q firmware ([`../telematics/firmware/`](../telematics/firmware/README.md)) implements, what exists only in the host model (`host/telematics/`), and the checks that would show each on the bench. **Nothing has been flashed or run on a board**; "on the target" means written for the STM32U575, compiled and linked, with the portable part unit-tested on a computer. Host simulation is not embedded firmware, and the host tests do not show that the firmware runs on the board. Bench procedure and connection table: [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md).
 
-## 1. Drivers
+The firmware sends nothing to the motor controller and has no supervisor ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)).
 
-| Function | STM32U575 peripheral (candidate) | Notes | Host counterpart |
+## 1. Functions
+
+| Function | Peripheral, pins (from ST's board files, not bench-checked) | Status | Code | Host counterpart | Bench step |
+|---|---|---|---|---|---|
+| Clock and timebase | MSIS 4 MHz; LSE 32.768 kHz trims the MSI (PLL mode) when it starts; TIM2 at 1 MHz, extended to 64 bits across its 32-bit overflow | on the target | `platform/u575/system_u575.c`, `board_u575.c`, `include/tm_time.h` | `host/telematics/clocks.py` | B1, B4, B7 |
+| Wheel pulses | TIM2 CH4 PA3, CH3 PA2, CH1 PA0; falling edge, input filter; one `WHEEL_EDGES` record per channel every 50 ms (edges, span, cumulative total, line level, overrun) | on the target | `src/tm_wheel.c`, `TIM2_IRQHandler` in `main_u575.c` | `host/telematics/wheel.py` (speed and distance are computed at the pit) | B3 to B7 |
+| Log queue | 256 records; full: the new record is dropped and counted; high-water mark | on the target | `src/tm_queue.c` | `TelematicsNode` log queue | B9 |
+| Local log | STLG v1 in internal flash bank 2 (0x08100000, 256 slots of 4 KiB); one session per boot: header slot, then blocks with sequence and CRC-32; a partly filled block written after 2 s | on the target | `src/tm_stlg.c`, `src/tm_flashlog.c`, `platform/u575/flash_u575.c` | `host/telematics/stlg.py` (byte-for-byte equal, `tests/telematics/test_firmware_host.py`) | B4, B8 to B10 |
+| Restart reasons and counters | reset flags to a `BOOT` record; named counters (`COUNTERS2`) every second: drops, high-water marks, stalls, lost edges, CAN overruns, uptime | on the target | `src/tm_reset.c`, `src/tm_app.c` | `host/telematics/node.py` | B2, B8 |
+| Watchdog | IWDG, about 2 s | on the target | `board_u575.c` | | not yet tested |
+| Console | USART1 PA9/PA10 through the ST-LINK; status line every second; `STATUS`, `DUMP`, `ERASE YES`, `HELP` | on the target | `uart_u575.c`, `main_u575.c` | `tools/telematics_import.py` reads the dump | B1, B4 |
+| CAN receive | FDCAN1 PD0/PD1 in bus-monitoring mode (sends nothing, not even the acknowledge bit); 500 kbit/s; frames to a 128-frame ring, then `CAN2` records with receive time; only in the `tm_u575_can` image, and only when the LSE starts (the CAN clock needs it) | on the target | `platform/u575/can_u575.c` | `host/telematics/controller_adapter.py` decodes at the pit (semmc fixture, DBC) | B11 |
+| IMU and temperature | I2C1 PB8/PB9, about 100 kHz, bounded waits; LSM6DSOX or ISM330DHCX at 100 Hz (`IMU`), TMP117 at 1 Hz (`TEMP`) | on the target | `i2c_u575.c`, `src/tm_imu.c` | `TelematicsNode.on_sensor` in `host/telematics/node.py`; simulated by `sim_vehicle.py` | B12 |
+| SPI NOR (W25Q) | SPI1 PA5/PA6/PA7, CS PD14 | driver written and host-tested; **not wired into the images** | `spi_u575.c`, `src/tm_w25q.c` | | none yet |
+| GNSS with PPS capture | a UART and a timer capture channel (not allocated) | **host only** | | `host/telematics/node.py` `on_pps`, `on_sensor("gnss")`; `clocks.py` | none yet |
+| Battery-side monitor | not chosen | **host only** | | `host/telematics/sim_vehicle.py`, STLG `BATT` | none yet |
+| LTE modem and live uplink | UART with flow control through a 1.8 V translator (configuration B) | **host only** | | `host/telematics/node.py` (`sem.telemetry.v4`), `mqtt_link.py` | U1 to U5 |
+
+## 2. Scheduling (no supervisor)
+
+The firmware is one interrupt-driven capture path and a cooperative main loop; nothing waits on a lower-priority task.
+
+1. **TIM2 interrupt (priority 1):** reads the capture registers, extends the time to 64 bits, adds the edge to the channel's accumulator. No logging, no flash, no printing.
+2. **FDCAN1 interrupt (priority 2, CAN image):** copies the frame with its receive time into the 128-frame ring; a full ring counts an overrun.
+3. **Main loop:** moves frames from the ring to the log queue; every 50 ms takes each wheel channel's record (capture masked for the copy only); every second the counters; then at most 64 queued records into the open block; then one bounded flash step; then the sensors on I2C, the status line and the console.
+4. **Flash:** each page erase and quad-word program is started and then polled from the main loop, so nothing waits on it. The code runs from bank 1 while the log is written in bank 2 (the dual-bank read-while-write behaviour, to be confirmed in RM0456). While an erase runs, records wait in the queue and are counted if it fills.
+5. **Later, lowest priority:** the modem state machine (configuration B). The modem never blocks acquisition or the log.
+
+Bounded waits: an I2C wait gives up after about 20 ms (a stuck bus), an SPI transfer after about 4 ms per byte; a slow device delays the main loop but not the capture interrupt. A main loop that falls behind takes the next wheel record at once instead of catching up.
+
+## 3. Buffers and what happens when they fill
+
+| Buffer | Size on the target | Full | Counter |
 |---|---|---|---|
-| CAN receive and transmit | FDCAN1 (the only instance, RM0456) + external transceiver | hardware filters on the controller's 64-identifier block; RX FIFO serviced by interrupt; timestamp each frame from a free-running 1 µs timer | `TelematicsNode.on_can` |
-| PPS capture | timer input-capture channel | the same timebase as CAN timestamps | `on_pps`, `UtcEstimator` |
-| Wheel pulses | timer input capture, one channel per wheel | count edges per 100 ms window (PROV); a continuous Hall switch (`TELEMETRY_CANDIDATES.md`) | `Sensors`, STLG `WHEEL` |
-| GNSS | UART with DMA (UBX binary protocol) | default 38400 baud (UBX-19014285 p. 15), raise after boot | STLG `GNSS` |
-| IMU | SPI with DMA, data-ready interrupt captured on the timebase | self-test at boot; offset calibration at rest | STLG `IMU` |
-| LTE modem | UART with RTS/CTS and DMA, through a 1.8 V level translator | AT-command MQTT client (AT+CMQTT*, A76XX AT manual V1.12 ch. 18); non-blocking state machine; power-key and reset GPIOs | `MqttLink` |
-| Local log | OCTOSPI NOR flash (8 MB in the proposal), or microSD | 4 KiB blocks with header, sequence and CRC-32 (STLG v1); erase ahead of the writer | `stlg.Writer` |
-| Slow temperatures | 1-Wire on a UART in half-duplex, or GPIO | 12-bit conversion up to 750 ms: start, then read later | proposed |
-| Steering angle (optional) | I2C (AS5600 at fixed address 0x36) | | proposed |
-| Supply monitoring | ADC on the input rail | brown-out warning before the log loses power | proposed |
-| Watchdogs | IWDG + a task-level watchdog for the supervisor | | `supervisor_overruns` counter |
-| RTC | LSE 32.768 kHz | wall time between PPS fixes is not trusted for UTC | |
+| CAN ring | 128 frames | new frame dropped | `can_rx_overrun` |
+| Log queue | 256 records | new record dropped | `log_dropped_queue`, `queue_high_water` |
+| Internal flash log | 256 slots of 4 KiB (1 MiB) | logging stops; acquisition continues | `log_dropped_storage` |
+| Wheel accumulator | edges between records | an overrun marks the record; the cumulative total keeps distance | `wheel_edges_lost` |
+| Uplink backlog (host model) | 30 messages | oldest dropped | `uplink_dropped` |
 
-## 2. Scheduling
+The internal flash holds minutes at the demonstration's rate; storage for a whole attempt is open (T-STORAGE in [`BLOCKERS.md`](BLOCKERS.md#t-storage)).
 
-Priorities follow `host/telematics/node.py`, highest first. No task may wait on a lower one.
+## 4. Uplink checks for configuration B (U1 to U5)
 
-1. **CAN RX interrupt:** timestamp, hand the frame to the supervisor's input, enqueue a log record; never waits for the log or the modem.
-2. **Supervisor task, 50 Hz (PROV):** fixed-period task; output frames go to CAN first, then the log. Deadline: done within its period; a miss is counted (`supervisor_overruns`).
-3. **Sensor tasks:** PPS, wheel windows, GNSS parsing, IMU reads; each fills its own bounded buffer.
-4. **Log writer:** moves queued records into flash blocks at a bounded rate; a flash stall fills the queue and drops are counted, never hidden.
-5. **Uplink, 2 Hz:** builds the summary, hands it to the modem state machine when connected, else to the bounded backlog.
-
-LTE, MQTT and the modem never block the supervisor or the log: all modem I/O is DMA plus a state machine polled from the lowest-priority task.
-
-## 3. Buffers (host values, PROV)
-
-| Buffer | Host size | Overflow | Counter |
-|---|---|---|---|
-| Log queue | 512 records | drop the new record | `log_dropped_queue`, `queue_high_water` |
-| Flash | 8 MB: 14.6 min at the host demo's 9.35 KiB/s | stop logging | `log_dropped_storage` |
-| Uplink backlog | 30 messages (15 s at 2 Hz) | drop the oldest | `uplink_dropped` |
-| Client buffer of unacknowledged MQTT messages | 10 messages | refuse; the message stays in the backlog | link statistics |
-
-The flash size against an attempt's length is an open decision (`INPUT_SHEET.md` item 9).
-
-## 4. Bench acceptance checks
-
-Each check reproduces on the bench a property the host already tests. Pass criteria marked PROV until the hazard and latency analysis sets them.
+Each reproduces on the bench a property the host demonstration checks. Pass criteria are provisional until the hardware is chosen.
 
 | # | Check | Method | Pass | Host reference |
 |---|---|---|---|---|
-| E1 | Supervisor timing under load | GPIO toggle per task cycle; logic analyser during a flash stall and an LTE transfer | 50 Hz, jitter within 1 ms (PROV), no overrun | `control_unaffected_by_logging_and_lte` |
-| E2 | CAN receive without loss | replay the controller's frames at the full protocol rate (466 frames/s with the supervisor's) during a flash stall | every frame logged or counted as dropped; RX FIFO never overflows | `log_drops_counted_not_hidden` |
-| E3 | PPS capture | capture against the GNSS PPS for 10 min | timebase drift and capture jitter recorded; holdover error within the 50 ppm bound | `utc_alignment_with_quality` |
-| E4 | Log integrity after power loss | 100 abrupt supply cuts during writing | the import reads every closed block; at most the open block lost | STLG reader tests |
-| E5 | Uplink outage and reconnect with the real modem and SIM | remove the antenna or block the network for 20 s, then restore | bounded backlog, drops counted, every sequence number accounted for at the pit, replayed messages flagged | `run_mqtt_demo.py` checks |
-| E6 | Pit restart | stop the pit service for 10 s | no loss: the broker queues for the persistent session | `pit_restart_without_loss` |
-| E7 | Modem supply | current probe on VBAT during 2G/LTE transmission | voltage stays within 3.4-4.2 V at peak current (A7672X Hardware Design V1.04 p. 26) | n/a |
-| E8 | Unit consumption | average and peak input power over a simulated attempt | recorded as an energy term for the analysis | `ENERGY_METHODS.md` |
-| E9 | Emergency-stop power cut | cut the supply as the e-stop would | log intact up to the last closed block; modem reconnects after power-up (about 8 s to UART-ready) | `ICD.md` 9 |
+| U1 | Network outage and reconnect with the real modem and SIM | remove the antenna or block the network for 20 s, then restore | bounded backlog, drops counted, every sequence number accounted for at the pit, replayed messages flagged; acquisition and the log unaffected | `acquisition_continues_through_uplink_outage` |
+| U2 | Pit restart | stop the pit service for 10 s | no loss: the broker queues for the persistent session | `pit_restart_without_loss` (`tools/run_mqtt_demo.py`) |
+| U3 | Modem supply | current probe on VBAT during transmission | voltage stays within 3.4 to 4.2 V at peak current (A7672X Hardware Design V1.04 p. 26) | none |
+| U4 | Unit consumption | average and peak input power over a simulated attempt | recorded as an energy term | [`ENERGY_METHODS.md`](ENERGY_METHODS.md) 2.2 |
+| U5 | Supply cut | cut the supply as the emergency stop would | log intact up to the last closed block; modem reconnects after power-up | B8 |
 
-## 5. Open items before the port starts
+## 5. Open items
 
-* The telematics board files (`bk4000tg_kicad.zip`, `telemetry.pdf`) to fix pins and parts.
-* The STM32U575 datasheet (DS13737) to confirm electrical and temperature limits.
-* The vehicle CAN bus parameters (`INPUT_SHEET.md` item 5) and the controller's identifier block.
-* The battery arrangement: no accessory battery on the telematics board (Article 57b).
+* The STM32U575 manuals (RM0456, DS13737, UM2861): pin levels, LSE fitting, solder-bridge defaults, PLL limits, flash timings, the I2C timing formula (T-U5-DOCS).
+* Storage for an attempt (T-STORAGE); GNSS and PPS on the target (T-GNSS); the modem (T-MODEM).
+* The controller's bus parameters and frames (T-CTRL-IF; [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md)).

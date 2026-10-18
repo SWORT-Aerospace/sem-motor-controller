@@ -1,6 +1,71 @@
-# Energy methods: what can be measured and decided now (v0.5)
+# Energy methods: what can be measured and decided now (v0.7)
 
-The goal is lower energy per attempt as the organisers measure it. This page keeps the findings so far, adds what v0.5 read and computed, and states for each method whether it can be used now or needs motor maps, a coast-down or vehicle data. Nothing here is a vehicle result: every number comes from synthetic models, the host plant or documents.
+The goal is lower energy per attempt as the organisers measure it. This page states how the telematics unit measures energy (section 0, v0.7), keeps the findings so far, and says for each method whether it can be used now or needs motor maps, a coast-down or vehicle data. Nothing here is a vehicle result: every number comes from synthetic models, the host simulation or documents. Optimisation stays offline analysis or advice to the driver: nothing in this repository controls the vehicle's speed.
+
+## 0. Energy and speed from the telematics unit (v0.7)
+
+### 0.1 Two measurement boundaries
+
+| Boundary | Signals | Who measures | Includes | Code |
+|---|---|---|---|---|
+| Controller input | `ctrl.dc_voltage`, `ctrl.dc_current` | the external controller's own sensors, received over CAN | the motor drive only | `vi_energy(boundary="controller_input")` in [`../host/pit/energy.py`](../host/pit/energy.py) |
+| Battery | `batt.voltage`, `batt.current` | a battery-side monitor of the telematics unit (optional hardware, configuration A/B option) | the controller, the telematics unit, sensors, display and every other load downstream of the monitor | `vi_energy(boundary="battery")` |
+
+The organisers' joulemeter sits between the battery and the vehicle electrical system (section 2.1), so the battery boundary is the closer one; the difference between the two is the auxiliary and harness energy, which the demonstration shows ([`generated/telematics_demo/summary.md`](generated/telematics_demo/summary.md)). The controller's own energy counter, when it sends one, is a cross-check, not the figure.
+
+**Method.** Energy is integrated only from valid, time-aligned V and I: each current sample is paired with the nearest valid voltage sample at most 20 ms away (both in the telematics clock; the larger of their timestamp uncertainties is reported), and consecutive pairs no more than three median sample spacings apart are integrated with the trapezoid rule. A longer gap, a value whose validity is not `valid`, or no data at all makes a **missing interval**, reported with its cause (for example "ctrl.dc_voltage invalid x298", "no valid ctrl.dc_current"); it is never filled in. The result states the covered time, the missing time, a rough bound on the missing energy (largest observed power times the missing time), the discretisation difference between trapezoid and rectangle sums, and that the sensor accuracy of V and I is not included until their source states it ([`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md) 3.1). A telematics restart starts a new session: the gap between sessions is reported, not bridged.
+
+### 0.2 Speed and distance
+
+Wheel speed comes from edge timing, not from pulses counted in a fixed window: over the complete edge intervals between two records, v = n x pitch / (t_last - t_prev_last), with the sample time in the middle of the interval and half the interval as its uncertainty ([`../host/telematics/wheel.py`](../host/telematics/wheel.py), the same rules in the firmware's `tm_wheel.c`). The fixed-window estimate of the worked example (section 0.4) is off by up to one count per window, 7 % at 7 m/s with 32 pulses per revolution and 0.1 s windows; edge timing has no such quantisation. Distance is the cumulative edge count times the pitch (one pitch uncertainty); a record lost in transit loses no distance, an edge lost to capture overrun makes the distance a lower bound. When no edge arrives, the speed is unknown and only bounded (less than one pitch since the last edge); it is reported as 0 only when the sensor line has been held at the magnet level for 2 s after the sensor has produced edges (positive evidence of a stopped wheel). A disconnected sensor therefore reads "no evidence", never 0.
+
+### 0.3 What the shadow-mode monitors need
+
+The monitors (R3v, the selected one, and CSIA2, experimental; frozen in [`csia/V2_FREEZE.json`](csia/V2_FREEZE.json), results in [`csia/EVALUATION_RESULTS_v2.md`](csia/EVALUATION_RESULTS_v2.md)) run at the pit only, with no path to the vehicle. Each consistency relationship needs these measurements; a relationship whose input the external controller does not broadcast (or whose sensor is not fitted) is disabled and reported as such, and on a vehicle run the road grade is not assumed, so E4 stays disabled until a grade source exists ([`../host/pit/shadow_replay.py`](../host/pit/shadow_replay.py)):
+
+| Relationship | Needs |
+|---|---|
+| E1 rotor vs driven wheel | `ctrl.motor_speed`, `wheel.wheel_drive.speed` |
+| E2 left vs right wheel | `wheel.wheel_l.speed`, `wheel.wheel_r.speed`, `imu.gz` |
+| E3a/E3b GNSS vs a front wheel | `gnss.speed`, `wheel.wheel_l.speed` or `wheel.wheel_r.speed`, `imu.gz` |
+| E4 IMU vs wheel | `imu.ax`, `wheel.wheel_l.speed`, road grade |
+| E6 power balance | `ctrl.dc_power`, `ctrl.phase_current_q`, `ctrl.motor_speed` |
+| E7 GNSS vs driven wheel | `gnss.speed`, `wheel.wheel_drive.speed` |
+| P phase-current checks | `ctrl.phase_current_q`, `ctrl.torque_reference`, `ctrl.kcl_residual` |
+
+A vehicle report never takes ground truth, plant data or fault lists from a simulation: such fields in a vehicle run's metadata are ignored and named in the report.
+
+### 0.4 Worked example (synthetic values, checked by `tests/integration/test_pit_energy.py`)
+
+Inputs: m = 100 kg, C_rr = 0.0025, C_d A = 0.035 m², ρ = 1.20 kg/m³, C = 1.5 m (r = 0.238732 m), G = 10, η = 0.95, K_t = 0.06 N·m/A, N = 32, T_w = 0.1 s; cruise at v = 7 m/s, a = 0, no wind, 1 % uphill grade (θ = atan 0.01). Battery: V = 48 V (team-reported nominal) and I = 2.5 A (assumed for the arithmetic).
+
+| Step | Calculation | Result |
+|---|---|---|
+| Grade force | 100 x 9.80665 x sin(atan 0.01) | 9.8062 N |
+| Rolling resistance | 0.0025 x 100 x 9.80665 x cos(atan 0.01) | 2.4515 N |
+| Aerodynamic drag | 0.5 x 1.20 x 0.035 x 7 x 7 | 1.0290 N |
+| Total force | 9.8062 + 2.4515 + 1.0290 | 13.2867 N |
+| Power at the wheel | 13.2867 x 7 | 93.007 W |
+| Motor torque | 13.2867 x 0.238732 / (10 x 0.95) | 0.33389 N·m |
+| q-axis current | 0.33389 / 0.06 | 5.565 A |
+| Wheel pulses | 7 x 32 / 1.5 = 149.33 Hz, i.e. 14.93 pulses per 100 ms window | reads 14 or 15 counts: 6.5625 or 7.0313 m/s (why the unit now measures edge periods instead, section 0.2) |
+| Battery power | 48 x 2.5 | 120 W |
+| Energy over 1 km | 120 x (1000 / 7) / 3600 | 4.762 Wh, so 4.762 Wh/km (210 km/kWh) |
+| Instantaneous efficiency | 93.007 / 120 | 77.5 % |
+
+With the model's synthetic drivetrain drag of 0.3 N, `resistive_force` gives 13.587 N for the same point ([`MATH_SPEC.md`](MATH_SPEC.md) 1.5).
+
+### 0.5 Efficiency at an instant is not energy per attempt
+
+The quantity to minimise is the battery energy over the whole attempt, ∫ P_batt dt, with the route fixed and the finish time inside the limit. A strategy that keeps the motor at its best efficiency point can still use more energy, and pulse-and-coast spends part of its time at low efficiency yet can use less, depending on whether the losses include a part that is independent of torque (section 1; on the host plant pulse-and-coast used 11 to 24 % more energy per metre). A fair comparison between two strategies uses:
+
+* the same route and start, and the same finish time (or both within the limit with the time stated);
+* the same initial and final speed, or a correction for the kinetic-energy difference ½ m_eff (v_end² - v_start²);
+* the same auxiliary loads, which the joulemeter counts (telemetry unit, sensors, display);
+* the same energy boundary: the controller input differs from the joulemeter.
+
+`tools/run_optimization.py` uses a matched finish target, a common start at rest, the same auxiliary load and no credit for remaining kinetic energy; the host policy comparison integrates whole cycles at the same mean speed and reports the residual kinetic-energy change. Both are synthetic: no strategy has been compared on the vehicle.
+
 
 ## 1. Findings kept from earlier work
 
@@ -28,7 +93,7 @@ Figures read in the manufacturer documents (`TELEMETRY_CANDIDATES.md`):
 | LTE A7672, average current while transmitting at 23 dBm | up to 859 mA (Hardware Design V1.04 p. 62) at 3.8 V recommended | about 3.3 W while transmitting |
 | LTE idle and sleep, MCU, regulators | not read | unknown |
 
-**Each watt of continuous telemetry load costs 3.6 kJ per hour**, 2.1 kJ over 35 minutes (an attempt length used for scale only; the event's time limit is in its Chapter II, not read). For scale only: the synthetic optimisation study's attempt energy is about 40 kJ, so one watt would be about 5 % of it. The real share depends on the vehicle and on the measured consumption of the unit (bench check E8, `TELEMETRY_EMBEDDED_PORT.md`). It can be lowered by keeping the modem's transmit duty cycle low (batched publishing at 1 to 5 Hz), by keeping logging local, and by not running unneeded sensors.
+**Each watt of continuous telemetry load costs 3.6 kJ per hour**, 2.1 kJ over 35 minutes (an attempt length used for scale only; the event's time limit is in its Chapter II, not read). For scale only: the synthetic optimisation study's attempt energy is about 40 kJ, so one watt would be about 5 % of it. The real share depends on the vehicle and on the measured consumption of the unit (check U4, `TELEMETRY_EMBEDDED_PORT.md`). It can be lowered by keeping the modem's transmit duty cycle low (batched publishing at 1 to 5 Hz), by keeping logging local, and by not running unneeded sensors.
 
 ### 2.3 Coast-down: what the measurement needs
 
@@ -43,8 +108,8 @@ The repository already fits a coast-down (`models/vehicle/longitudinal.py fit_co
 
 | Method | Status | Needs before it is meaningful | Evidence | Next step |
 |---|---|---|---|---|
-| Controller-input energy with gap accounting | implemented (host and core) | synchronised voltage and current, valid samples | host demo energy boundary; firmware tests | compare with the joulemeter on the vehicle |
-| Auxiliary (telemetry, display) energy | figures read for parts; total unknown | the unit's measured consumption | section 2.2 | bench check E8 |
+| Energy from valid aligned V x I, controller input and battery boundaries, missing intervals reported | implemented (host, pit) | the controller's V and I with their accuracy and sample-to-transmit delay; a battery-side monitor for the battery boundary | section 0.1; telematics demonstration | the controller team's answer; compare with the joulemeter on the vehicle |
+| Auxiliary (telemetry, display) energy | difference of the two boundaries; part figures read | the battery-side monitor and the unit's measured consumption | section 2.2 | bench measurement of the unit's supply current |
 | Coast-down road load | method implemented and tested on synthetic data | coast-downs in both directions on a flat section; mass, rotating inertia, freewheel state; wind | `generated/coastdown_sensitivity.md` | input sheet item 3 |
 | Battery-power map (speed x torque) | not possible yet | the motor and controller on a bench or the vehicle | `METHOD_SELECTION.md` | bench stage 6, input sheet item 3 |
 | Constant speed (speed hold) | implemented policy | controller tuning on the vehicle | baseline in every comparison | first powered tests |
@@ -52,7 +117,7 @@ The repository already fits a coast-down (`models/vehicle/longitudinal.py fit_co
 | Offline spatial DP schedule | implemented (synthetic) | road load, power map, track profile, time limit (Chapter II) | `generated/optimization_synthetic.md` | real inputs |
 | Online MPC | not selected | as DP, plus a real-time solver | `METHOD_SELECTION.md` | none |
 | Minimum gate-off dwell or hysteresis | open decision | the decision (speed hold switched the gates 2752 times in 260 s on the host plant) | `generated/policy_comparison_host.md` | input sheet item 12 |
-| Energy per metre and per lap in the pit | data stored (SQLite `signals`: energy, wheel and GNSS distance) | an analysis script; vehicle runs | `host/pit/ingest.py` | write the analysis on host logs |
+| Energy per metre and per lap in the pit | measurements stored (SQLite `measurements`); energy and distance per session | vehicle runs | `host/pit/energy.py` | per-lap split once a track map exists |
 
 ## 4. Literature read for these methods
 

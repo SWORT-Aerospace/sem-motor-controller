@@ -19,7 +19,7 @@ def test_committed_file_is_valid_and_tables_are_current():
     d = _data()
     b, p = _refs()
     assert gp.validate(d, b, p) == []
-    assert gp.render_readme(d, gp.README.read_text(), b, p) == gp.README.read_text()
+    assert gp.BEGIN not in gp.README.read_text()            # v0.7: the README shows the telematics BOM instead
     assert gp.doc(d, b, p) == gp.DOC.read_text()
 
 

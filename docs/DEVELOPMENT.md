@@ -45,7 +45,9 @@ Generated files are never edited by hand. Edit the source, run the generator, co
 | `protocol/protocol.yaml` | `python3 tools/gen_protocol.py` | C and Python codecs, golden vectors, `docs/generated/can_messages.md` | `--check` |
 | `protocol/protocol.yaml` | `python3 tools/gen_dbc.py` | `protocol/generated/semmc_base0x300.dbc` | `--check` |
 | `hardware/bom/BOM_draft.csv`, `hardware/bom/pricing.yaml` | `python3 tools/price_bom.py` | `hardware/bom/BOM_priced.csv`, `docs/BUDGET.md`, `docs/generated/budget.json` | none: re-run and commit after a pricing change |
-| `hardware/bom/procurement.yaml` (+ `budget.json`) | `python3 tools/gen_procurement.py` | the README budget table, `docs/PROCUREMENT.md` | `--check` |
+| `hardware/telematics/bom.yaml` | `python3 tools/telematics_bom.py` | `docs/TELEMATICS_BOM.md`, `docs/generated/telematics_bom.json` | `--check` |
+| `docs/scope.yaml` | `python3 tools/scope.py` | `docs/generated/scope.md` | `--check` |
+| `hardware/bom/procurement.yaml` (+ `budget.json`) | `python3 tools/gen_procurement.py` | `docs/PROCUREMENT.md` (v0.6 combined table) | `--check` |
 | the generator's design data | `python3 tools/gen_kicad_schematic.py` | `hardware/kicad/*`, `hardware/bom/BOM_draft.csv` | `--check` then `git diff` (note: `--check` rewrites the files before comparing) |
 | sensor and coast-down assumptions in the tools | `python3 tools/wheel_sensor_check.py`, `python3 tools/coastdown_sensitivity.py` | `docs/generated/wheel_sensor_check.md`, `docs/generated/coastdown_sensitivity.md` | `--check` |
 
@@ -54,8 +56,9 @@ Order after a pricing change: `price_bom.py`, then `gen_procurement.py` (it read
 Demonstration outputs committed under `docs/generated/` are refreshed with `--samples`:
 
 ```sh
-python3 tools/run_host_demo.py --out build/host_demo --samples docs/generated/host_demo
-python3 tools/run_mqtt_demo.py --out build/mqtt_demo --samples docs/generated/mqtt_demo
+python3 tools/run_telematics_demo.py --out build/telematics_demo --samples docs/generated/telematics_demo
+python3 tools/run_host_demo.py --legacy-supervised --out build/host_demo --samples docs/generated/host_demo
+python3 tools/run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo --samples docs/generated/mqtt_demo
 ```
 
 `run_mqtt_demo.py` deletes its `--out` directory before it runs. The synthetic studies: `python3 tools/run_optimization.py` (full resolution; rewrites `docs/generated/optimization_synthetic.*`, the DP CSV files and `docs/figures/dp_plan_synthetic.png`); `--quick` writes to `build/optimization_quick/` and leaves the committed files alone.

@@ -40,17 +40,16 @@ def test_current_documents_have_no_em_dash_or_assistant_branding():
 
 def test_readme_keeps_the_scope_honest():
     text = (ROOT / "README.md").read_text()
-    assert "**Physically tested** is still nothing: nothing has been energised" in text
-    assert "**Not started.** No board exists." in text                 # milestone 3 is not claimed
-    assert "hardware is not fabrication-ready" in text and "the release gate fails" in text
-    assert "a reviewed design is not a tested board" in text
-    assert "**Proposed** means designed or specified but not built" in text
-    assert "**Host** means implemented and tested on a computer" in text
-    assert "CONTRIBUTING.md" in text
-    assert "They are not wiring diagrams" in text                  # block diagrams, not construction-ready wiring
-    assert "TELEMETRY_EMBEDDED_PORT.md" in text                     # embedded firmware is listed as remaining work
-    assert "Estimates are not quotes" in text and "not established" in text
-    assert text.count("```mermaid") == 3
+    assert "**The unit only listens.**" in text and "no automatic speed control" in text
+    assert "The motor controller is built by another team" in text
+    assert "simulation fixture" in text                                  # semmc is not an agreed interface
+    assert "never flashed; no connection bench-verified" in text           # firmware status not overstated
+    assert "**Bench-tested:** nothing yet." in text
+    assert "48 V nominal, 10 Ah, as the vehicle team reports it" in text
+    assert "Estimates are not quotes" in text and "nothing ordered" in text
+    assert "CONTRIBUTING.md" in text and "TELEMETRY_EMBEDDED_PORT.md" in text and "CONTROLLER_INTERFACE_REQUEST.md" in text
+    assert "do not block any of these" in text                           # controller items off the critical path
+    assert text.count("```mermaid") == 1
 
 
 def _mentioned(path: str, texts: dict) -> bool:

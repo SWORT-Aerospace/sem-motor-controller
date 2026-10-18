@@ -1,10 +1,95 @@
-# Interface control document v1.0
+# Interface control document v2.0
 
-**Authoritative** for every interface between the motor controller, the telematics unit, the driver controls, the pit and the vehicle. Supersedes `docs/archive/INTERFACE_CONTROL.md` (v0.1, amended v0.3), which is kept as a record. Generated tables that this document points to are part of it: `docs/generated/can_messages.md` (message layouts), `protocol/generated/semmc_base0x300.dbc`, `docs/generated/bus_load.md`.
+**Authoritative** for the interfaces of the telematics unit: with the vehicle's motor controller (receive only), with its own sensors, its local log, its uplink to the pit and the pit's import. Part B keeps the interfaces of the deferred controller development and of the `semmc` simulation fixture, unchanged in substance from v1.0 (v0.6); they bind nothing in the telematics delivery. Supersedes v1.0 (this file's history) and `docs/archive/INTERFACE_CONTROL.md`.
 
-Owners: controls lead (protocol, controller behaviour, this document); telematics engineer (telematics firmware, log, uplink); vehicle team (harness, connectors, driver controls, bus allocation). A change to any **frozen** item needs a protocol version change and the owners' agreement. Values marked PROV are provisional and simulation-only; UNKNOWN values stay null until measured or decided (`docs/INPUT_SHEET.md`).
+Owners: telematics engineer (Part A); the controller team owns its controller's interface, which Part A records once they answer [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md); controls and hardware leads (Part B). UNKNOWN values stay null until measured or stated by their owner (`docs/INPUT_SHEET.md`).
 
-## 1. Node responsibilities
+# Part A. Telematics unit (current)
+
+## A.1 Nodes and responsibilities
+
+| Node | Hardware | Responsibilities | Must never |
+|---|---|---|---|
+| Motor controller | the controller team's product; model UNKNOWN | its own drive, protection, precharge, driver controls; whatever it broadcasts on CAN | depend on the telematics unit for anything |
+| Telematics unit | NUCLEO-U575ZI-Q for development (`telematics/firmware/`); a product board later | receive and timestamp the controller's broadcast; capture its own sensors; local log; live summary to the pit | transmit on the vehicle bus: no torque request, arming, mode selection, fault reset, configuration change, or part in protection or precharge |
+| Pit | laptop | MQTT broker, validation and SQLite storage, log import, analysis, shadow-mode monitors | send anything to the car |
+
+The deployed node (`host/telematics/node.py` as the host model, `telematics/firmware/` on the target) has no transmit path; tests check both (`tests/telematics/test_wheel_node_pit.py`, `tests/telematics/test_firmware_target.py`). The earlier supervised node is a research simulation only (`host/telemetry_adapter/legacy_node.py`, Part B).
+
+## A.2 Vehicle CAN interface (receive only)
+
+| Item | Value | Status |
+|---|---|---|
+| Role of the unit | listener; FDCAN1 in bus-monitoring mode (no frame, no acknowledge, no error frame); transceiver transmitter disabled in hardware (silent pin) | firmware implemented, not run on hardware |
+| Physical layer, bit rate, frame format, identifiers | as the controller team states them | **UNKNOWN**: [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md) section 2 |
+| Messages and signals | from their DBC or protocol document, decoded by `DbcAdapter` with a unit-checked mapping | **UNKNOWN** until their answer |
+| Bus load added by the unit | zero frames | by design |
+| Termination | none added unless the controller team asks | the breakout's terminator switched off |
+| Electrical noninterference | not proven by receive-only firmware; the checks E1 to E6 of `telematics/firmware/BENCH.md` section 6 | to be run before any connection |
+| Test fixture | `semmc` (Part B), our own message set, used only to exercise the adapter path in simulation and on the bench | not an agreed interface |
+
+## A.3 Measurements and adapters
+
+Every received or sensed value becomes a measurement (`host/telematics/measurement.py`): `record_id` (local), `source`, `signal` and `unit` from the registry (`host/telematics/signals.py`), `value` or null, `t_rx_us`, `t_sample_us` (null when the source gives no sample time; never invented), `t_unc_us`, `source_seq` (the source's own counter, or null), `validity` (`valid`, `unverified`, `invalid`, `out_of_range`, `decode_error`, `no_evidence`), `provenance`, and `upper` for a bounded unknown. A missing value is null with its reason, never zero.
+
+| Adapter | Use | Sequence | Sample time | Validity |
+|---|---|---|---|---|
+| `SimFixtureAdapter` (`semmc-sim-fixture`) | simulation and bench fixture | byte 1 of every semmc frame | none in the protocol: receive time, uncertainty one broadcast period (ASSUMED) | CRC-8 per frame; `ctrl_validity` flags fresh within 0.3 s, else `unverified` |
+| `DbcAdapter` | the controller team's definitions | a counter signal named in the mapping, else none | only if the mapping names a time signal | sentinel raw values and flag signals named in the mapping; units checked against the DBC at load |
+
+The log keeps the raw frames (STLG `CAN2`), so the pit can decode them again with a corrected adapter; the adapter's identity is in the log metadata (`controller_adapter`).
+
+## A.4 Time
+
+| Domain | Clock | Use |
+|---|---|---|
+| telematics | TIM2, 1 MHz, extended to 64 bits across overflow (`tm_time.h`); MSIS locked to the LSE when it starts, else untrimmed MSI (the log metadata says which) | every receive and capture time |
+| source | whatever a source states (none for the controller's broadcast in the fixture) | `t_sample_us` when given and mapped |
+| utc | GNSS PPS edges timestamped in the telematics clock | pit interpolation between edges (`pps`), extrapolation (`holdover`), `none` before two edges |
+
+## A.5 The unit's own inputs
+
+Pins, levels and the connection table: `telematics/firmware/BENCH.md` section 4 (not bench-verified). Wheel edges are captured on falling edges with a 2 µs input filter; one record per channel every 50 ms, a heartbeat when there was no edge; standstill and missing evidence are distinguished as `docs/ENERGY_METHODS.md` 0.2 describes. IMU (LSM6DSOX or ISM330DHCX) and TMP117 on I2C1 when they answer at start; GNSS with PPS, 1-Wire probes and the battery-side monitor are on the host model only so far.
+
+## A.6 Local log (STLG v1)
+
+`host/telematics/stlg.py` is the reference; the firmware writes the same format (`telematics/firmware/src/tm_stlg.c`).
+* Header `STLG | u16 1 | u32 meta length | metadata JSON | CRC-32`. Metadata: `run_id` (unit and boot: one session per boot), `unit_id`, `boot`, `reset` (cause and flags), clock source, format, `controller_adapter`, `transmits`, sensors (wheel circumference and pulses per revolution or null, channel names), firmware revision, kind (simulation, bench or vehicle).
+* Block `BK | u32 seq | u64 base_us | u16 n | CRC-32 | records`, at most 4076 bytes of records; the base lies up to 1 s before the first record so slightly older records still fit.
+* Records `u8 type | u8 len | u32 dt_us | body`. Types: 1 CAN, 2 PPS, 3 GNSS, 4 IMU, 5 WHEEL (counts per window, legacy), 6 COUNTERS (legacy), 7 EVENT, 8 TEMP, **9 WHEEL_EDGES** (channel, flags, edges, span, cumulative edges, record counter, lost edges), **10 COUNTERS2** (id/value pairs), **11 CAN2** (29-bit and FD capable), **12 BOOT** (boot count, reset flags and cause), **13 BATT** (battery-side monitor). Readers keep unknown types as raw bytes.
+* On the target the log region is internal flash bank 2 (1 MB): 256 slots of 4 KiB, a header slot per session followed by block slots, never wrapped; a slot interrupted by a power loss fails its CRC and is counted; `ERASE YES` on the console clears the region. `tools/telematics_import.py` splits a dump into sessions.
+
+## A.7 Queues, storage and loss reporting
+
+| Item | Value | Status |
+|---|---|---|
+| Log queue | 256 records on the target, 512 in the host model; a full queue drops the new record and counts it | implemented |
+| Storage | internal flash 1 MB (bench); microSD for the vehicle (driver not written); a 16 MB NOR holds about 33 min at the demonstration's 8.4 KB/s | decision: `docs/TELEMATICS_BOM.md` |
+| Full storage | the block is not written, its records are counted (`log_dropped_storage`), acquisition continues | implemented |
+| Counters | COUNTERS2 every second and in every live message: frames received, decoded, ignored, unknown, invalid, companion frames seen, records logged, queue drops and high water, storage drops, blocks written, stall events, write errors, wheel records and lost edges, CAN ring overruns, uplink sent, dropped and backlog high water, uptime | implemented |
+| Restart | a new session with `BOOT` (count, cause); the import reports the gap and that records after the last counters record of the previous session are unaccounted | implemented |
+
+## A.8 Live uplink
+
+* Topic `sem/car/telemetry`, MQTT 3.1.1, QoS 1, 2 Hz. Schema **`sem.telemetry.v4`**: `run_id`, `boot`, `seq`, `t_local_ms`, `utc`, `utc_q`, `utc_err_s`, `adapter` (`id`, `fixture`, `silent_ms`), `registry` (the signal registry's identifier: units and ranges), `m` (per signal `[value, q, age_ms, source seq, time reference ("s" sample, "r" receive), upper]`, q one of the validities above or `stale` or `missing`; the value is null unless q is `valid` or `unverified`; values rounded to 6 significant digits), `counters`, `replayed`.
+* The pit rejects a v4 message with a `sup` or `ctrl` block (the receive-only node has neither), an unknown registry, a unit or range outside the registry, a value with a q that is not valid, or an age beyond the signal's staleness limit. It still accepts `sem.telemetry.v1` to `v3` from the legacy simulations and older runs.
+* While the link is down the unit keeps the newest 30 messages, drops the oldest and counts them; the backlog is sent oldest first with `replayed = true`; the log does not depend on the link.
+* Transport, persistence and the meaning of a broker acknowledgement: unchanged from v1.0 (`docs/MQTT_SETUP.md`; host implementation `host/telematics/mqtt_link.py`, `host/pit/mqtt_ingest.py`). The link is monitoring only: no inbound message reaches the vehicle bus.
+* Measured size in the demonstration: about 2.1 KB per message (`docs/generated/telematics_demo/summary.json`), 15 MB per running hour at 2 Hz; 1 Hz or fewer signals halves it.
+
+## A.9 Pit import and database
+
+`host/pit/ingest.py`: tables `runs`, `live`, `rejected`, `rx`, `records`, `signals` (names the shadow replay reads), `measurements` (every measurement with its fields, keyed by `(run_id, record_id)` where the import's record id comes from the record's place in the log), `imports`. A second import of the same log adds nothing. Energy from valid aligned V x I at the controller input and at the battery, with missing intervals: `host/pit/energy.py`, `docs/ENERGY_METHODS.md` 0.1.
+
+## A.10 Power
+
+The unit is powered from the propulsion battery (48 V nominal, 10 Ah as the vehicle team reports it) through its own fuse, TVS, reverse protection and an isolated DC-DC (`docs/TELEMATICS_BOM.md`), downstream of the joulemeter: its consumption counts in the official result. It takes no supply from the controller's connector. The emergency stop removes its power; the log loses at most the queued records and the open block, which the import reports.
+
+# Part B. Deferred controller development and the semmc simulation fixture
+
+The sections below are the v1.0 interfaces of our own controller design and of the `semmc` protocol. They describe the deferred controller development and the simulation fixture; nothing in Part A depends on them, and the vehicle's actual controller does not use them.
+
+### B.1 Node responsibilities
 
 | Node | Hardware | Responsibilities | Must never |
 |---|---|---|---|
@@ -17,7 +102,7 @@ Owners: controls lead (protocol, controller behaviour, this document); telematic
 
 Motor control stays local to the controller. CSIA and the R3v monitor run in the pit, or on logged data as replay; their outputs are never an input to the controller (`docs/csia/EVALUATION_RESULTS_v2.md`, ADR-0008).
 
-## 2. CAN
+### B.2 CAN
 
 | Item | Value | Status |
 |---|---|---|
@@ -28,7 +113,7 @@ Motor control stays local to the controller. CSIA and the R3v monitor run in the
 | Load | controller 394 frames/s, supervisor 72 frames/s; 12.6 % of a 500 kbit/s bus; worst-case response time of every message below its period (`docs/generated/bus_load.md`) | estimate; other traffic UNKNOWN |
 | Termination, topology | 120 Ω at both ends (telematics proposal); the controller draft has a split-termination network (populate if the controller is a bus end) | position UNKNOWN |
 
-## 3. Encoding
+### B.3 Encoding
 
 * **Byte and bit order:** Intel, LSB first; multi-byte fields little-endian.
 * **Byte 0:** CRC-8/SAE-J1850 (poly 0x1D, init 0xFF, xorout 0xFF) over the 16-bit data ID `(major << 11) | protocol_id`, little-endian, then bytes 1–7. Check value of "123456789": 0x4B. A frame from another major version fails the CRC.
@@ -37,17 +122,7 @@ Motor control stays local to the controller. CSIA and the R3v monitor run in the
 * **Invalid values:** NaN encodes as the field's `invalid` raw sentinel; a field without a sentinel refuses to encode NaN. Decoders map the sentinel to NaN and flag raw values outside the declared range. A torque request carrying the sentinel or an out-of-range value makes the supervisor input INVALID (ECO exits); it is never read as zero torque. Measurements the controller does not have (before the first slow step, or flagged) are sent as NaN, never as 0.
 * **Versioning:** protocol 1.1 (spec hash `16ff00853dfda3ce`). Minor versions are additive: 1.1 added `ctrl_energy_quality` (0x323); every 1.0 message is unchanged. `sup_hello` carries the companion's major/minor; `ctrl_session` and `ctrl_identity` carry the controller's. A major mismatch is rejected (`rx_proto_mismatch`).
 
-## 4. Timestamps and clock domains
-
-| Domain | Clock | Where it appears |
-|---|---|---|
-| controller | free-running µs timer, extended to 64 bits (`mc_time_extend`) | controller-internal; controller frames carry no timestamp, only the sequence counter |
-| telematics | the unit's monotonic clock | receive time of every frame and sensor sample in the log; `src_time_ms` (u16, wraps every 65.5 s) of supervisor frames |
-| utc | GNSS: PPS edges timestamped in the telematics clock | log records `PPS`; the pit maps telematics time to UTC by interpolation between edges, extrapolation marked `holdover`, `none` before two edges |
-
-No node assumes the clocks agree. The controller checks supervisor timing against its own clock (section 5). UTC quality is carried with every UTC value. In the host demonstration the PPS-derived UTC error was 0.72 µs with PPS and 7.4 µs after 15 s of holdover (`docs/generated/host_demo/summary.md`); the hardware figure is to be measured.
-
-## 5. Sequence, session, freshness and reconnection (controller side, `mc_freshness.c`, `mc_core.c`)
+### B.4 Sequence, session, freshness and reconnection (controller side, `mc_freshness.c`, `mc_core.c`)
 
 ```
 companion                                            controller
@@ -68,7 +143,7 @@ driver: mode switch OFF -> ON (wired)          --->   ECO_ASSIST only if the sup
 * **Limits sets:** a new `limits_seq` makes a new newest set and keeps the previous one; re-sending the same `limits_seq` refreshes in place; the companion changes `limits_seq` whenever the content changes. The bound applied is `min(newest, referenced)`.
 * Verified by `firmware/tests/test_freshness.c`, `test_core.c` and the property test `test_core_properties.c` (properties P1–P8; soaks of 100 × 30 s and 300 × 30 s simulated driving with 0 failures). Host simulation only.
 
-## 6. Driver controls and protection boundaries
+### B.5 Driver controls and protection boundaries
 
 | Signal | Path | Effect | Independent of firmware |
 |---|---|---|---|
@@ -85,7 +160,7 @@ driver: mode switch OFF -> ON (wired)          --->   ECO_ASSIST only if the sup
 
 Every row of this table is checked on the exported netlist by `tools/hw_consistency.py` (PR1–PR7). Electrical levels of the driver inputs, contact types and the safety-loop voltage are UNKNOWN (input sheet).
 
-## 7. Status, trace and fault messages (controller → bus)
+### B.6 Status, trace and fault messages (controller → bus)
 
 | Message | Period | Content |
 |---|---|---|
@@ -98,51 +173,7 @@ Every row of this table is checked on the exported netlist by `tools/hw_consiste
 | `ctrl_motion`, `ctrl_currents`, `ctrl_thermal` | 10 / 10 / 100 ms | speed, iq, vbus (NaN unless usable); id, battery current, measured/reconstructed phase masks, KCL residual and availability; temperatures and derate |
 | `ctrl_identity` 0x330 | 1 s | protocol, firmware and calibration versions, calibration provenance, build kind, hardware revision |
 
-## 8. Local log (telematics unit)
-
-**STLG v1** (`host/telematics/stlg.py` is the reference implementation):
-* header `STLG | version | metadata JSON | CRC-32`; metadata: `run_id`, `kind` (HOST SIMULATION or vehicle), format, clock domain, storage size, protocol major/minor/spec hash, calibration blob SHA-256 and provenance, vehicle configuration SHA-256, software commit and working-tree state, sensor configuration (wheel circumference, pulses per revolution, channel assignment) with its status;
-* 4 KiB blocks `BK | block_seq | base_us | n | CRC-32 | records`; a power loss loses at most the block being written;
-* records `type | len | dt_us | body`: CAN frame (every received and sent frame), PPS edge, GNSS fix, IMU sample, wheel window, counters, event, temperature (type 8, v0.6).
-* **Temperature record (type 8, v0.6):** `u8 channel | u8 status | i16 centi-degC`, one probe sample, record time = end of the conversion in the telematics clock. Status 0 ok, 1 CRC error, 2 conversion timeout, 3 out of range; the value is -32768 unless the status is 0, so an invalid reading is logged (and imported as NULL), never dropped or replaced. Channel names are in the metadata `sensors.temp_channels` (proposed: 0 battery surface, 1 motor case, 2 ambient); the sampling period is `sensors.temp_period_s`. The probe part is a candidate (DS18B20-class on 1-Wire, `docs/TELEMETRY_CANDIDATES.md`), not selected, and the placements are proposals. Readers older than v0.6 keep the record as raw bytes, so the STLG version is unchanged. The controller's FET and motor temperatures are logged as `ctrl_thermal` CAN frames, as before.
-The controller's calibration identity is logged twice: as the blob hash in the header and as `ctrl_identity` frames.
-
-## 9. Storage, queues and drop reporting
-
-| Item | Value | Status |
-|---|---|---|
-| Storage | QSPI flash 8 MB (telematics proposal); microSD optional | proposal |
-| Rate | 9.35 KiB/s with every semmc frame and the unit's own sensors, uncompressed: 8 MB lasts 14.6 min (host demonstration); semmc frames alone: 16.9 min (`docs/generated/telematics_budget.md`) | estimate; a full run needs microSD, compression or decimation: **decision for the telematics engineer** |
-| Log queue | 512 records; writer 4000 records/s (PROV) | to size on the target |
-| Full queue | newest record dropped and counted (`log_dropped_queue`); receive and the supervisor are never blocked | implemented in the host model |
-| Full storage | block not written, records counted (`log_dropped_storage`), `storage_full` set | implemented |
-| Reporting | a `COUNTERS` record every second in the log; counters in every uplink message: rx_frames, log_records, log_dropped_queue, log_dropped_storage, uplink_sent, uplink_dropped, queue_high_water, supervisor_overruns | implemented |
-
-## 10. LTE / MQTT and offline import
-
-* Topic `sem/car/telemetry`, JSON, 2 Hz (the proposal allows 1-5 Hz). Schema `sem.telemetry.v3` (v0.6): `run_id`, `seq`, `t_local_ms`, `utc` with `utc_q` and `utc_err_s`, controller state and summary values (speed, iq, vbus, mean battery power, energy, energy integrated/gap seconds, accepted torque, reason), supervisor torque and reason, GNSS, `wheel.speed_mps` per channel, `temp` (below), counters, `replayed`. Unknown values are JSON null.
-* `wheel.speed_mps` (new in v2): per channel, counts x circumference / (pulses per revolution x window), the formula of the offline import, from the latest window if it is at most 0.3 s old (PROV), else null. Null also when the circumference or pulses per revolution are not configured. Needed because rotor speed is not vehicle speed when the motor is decoupled (freewheel) and GNSS may have no fix.
-* `temp` (new in v3): `ctrl_fet_degC` and `ctrl_motor_degC` from the latest valid `ctrl_thermal` frame if it is at most 0.3 s old (three periods), else null, and NaN (invalid at the controller) as null; `probe_degC` per probe channel, the latest sample's logged value (0.01 degC resolution, so live and log agree exactly) if it is at most 3 s old (PROV, three periods of 1 s) and its status is ok, else null. The pit rejects a temperature outside -55 to 200 degC (a plausibility bound, wider than the DS18B20's -55 to +125 degC, PROV until the probe is selected).
-* **Compatibility.** The pit accepts `sem.telemetry.v1` (no wheel block), `sem.telemetry.v2` (no temp block) and `sem.telemetry.v3`, and stores the schema per row (`live.schema`; a database created before v2 gains the column on open, old rows read as v1). Any other schema value is rejected with its reason. A producer changes the schema name whenever a field changes meaning or a required field is added (`docs/INTEGRATION_GUIDE.md` 6).
-* While LTE is down the unit keeps the newest 30 messages (15 s), drops the oldest and counts them; on reconnection the backlog is sent oldest first with `replayed = true`.
-* Pit ingestion validates every message (schema, types, states, ranges) and stores rejections with their reason; keys are idempotent: `(run_id, seq)` for live messages, `(run_id, block, index)` for log records, so replays and re-imports add no rows.
-* Offline import reads the STLG file from flash, SD or USB into the same SQLite database, with telematics time and PPS-derived UTC and quality per record.
-* **Transport (v1.1 of this section, v0.5).**
-  * Car side: MQTT 3.1.1, QoS 1 (at least once). The unit hands a message to the client only while connected; the client holds at most 10 unacknowledged messages and resends them, DUP set, after reconnecting.
-  * Pit side: a subscriber with a persistent session (clean session off, fixed client id) that re-subscribes on every connection. It records every receipt in `rx` with its outcome (stored, duplicate, rejected) and the DUP flag, and commits before acknowledging, so a crash causes a redelivery, never a loss.
-  * The broker persists sessions and queued messages.
-  * A broker acknowledgement is not delivery to the pit: a broker that loses its state can acknowledge messages no subscriber receives. Gaps are therefore reported by `seq`, and the local log stays the complete record.
-  * Host implementation: `host/telematics/mqtt_link.py`, `host/pit/mqtt_ingest.py`, `tools/mqtt_broker.py`; setup `docs/MQTT_SETUP.md`.
-* **Power and emergency stop.** The telematics unit is powered from the propulsion battery downstream of the joulemeter (2026 Articles 56d, 57b); its consumption is part of the official result. The emergency stop removes its power at once (Article 37e); the log loses at most its open block, and the modem needs about 8 s after power-up before its UART is ready (A7672X Hardware Design V1.04).
-* The link is monitoring only: no inbound message leads to a CAN write; no remote arming, mode selection or limit change. A future pit-to-car message (for example a schedule between runs) may be applied only while the vehicle is stopped and DISARMED, and confirmed locally.
-
-Host demonstrations of this chain: `python3 tools/run_host_demo.py --out build/host_demo` (simulated link, section 13) and `python3 tools/run_mqtt_demo.py --out build/mqtt_demo` (real local Mosquitto broker, `docs/generated/mqtt_demo/summary.md`).
-
-## 11. Connectors
-
-None is confirmed. The telematics proposal shows a CAN connector with CANH, CANL and GND and 120 Ω termination at both ends. The controller's connectors in the draft schematic (battery, phases, driver controls, halls, motor temperature, CAN, SWD) have UNRESOLVED part numbers and pinouts until the harness is decided (input sheet). This section is completed when the vehicle team confirms connector types and pinouts.
-
-## 12. STM32U575 allocation: what must be verified before it is frozen
+### B.7 STM32U575 allocation: what must be verified before it is frozen
 
 | Item | Required | How to verify |
 |---|---|---|
@@ -153,6 +184,6 @@ None is confirmed. The telematics proposal shows a CAN connector with CANH, CANL
 | Clock | PPS capture with a timer input; drift of the unit's oscillator | capture against GNSS PPS for 10 min |
 If any item fails, the supervisor moves to another computer or ECO is not offered (manual only); the controller is unaffected.
 
-## 13. Host demonstration (HOST SIMULATION)
+### B.8 Host demonstration (HOST SIMULATION)
 
 `tools/run_host_demo.py` runs: synthetic driver and plant → controller core (C) → CAN → telematics node (timestamps, supervisor, bounded queue, STLG log, GNSS/PPS, IMU, halls) → controller arbitration → simulated motor → LTE/MQTT with outage → pit validation and SQLite → offline import → pit-side CSIA replay and shadow replay. Ten checks with their evidence: `docs/generated/host_demo/summary.md`. It validates no hardware.

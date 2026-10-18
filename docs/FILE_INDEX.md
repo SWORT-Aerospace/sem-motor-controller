@@ -1,21 +1,84 @@
 # File index
 
-Every file in the repository, by folder, with its role. Generated files and test fixtures are marked or grouped; build outputs (`build/`, `.deps/`, `.venv/`) are not part of the tree. The documents in `docs/` are listed with their status in [`README.md`](README.md) (current guides, verification results, research, historical records). Each folder has its own guide: [`config/`](../config/README.md), [`firmware/`](../firmware/README.md), [`protocol/`](../protocol/README.md), [`host/`](../host/README.md), [`models/`](../models/README.md), [`hardware/`](../hardware/README.md), [`tools/`](../tools/README.md), [`tests/`](../tests/README.md).
+Every file in the repository, by folder, with its role. Generated files and test fixtures are marked or grouped; build outputs (`build/`, `.deps/`, `.venv/`) are not part of the tree. The documents in `docs/` are listed with their status in [`README.md`](README.md) (current guides, verification results, research, historical records). Each folder has its own guide: [`telematics/firmware/`](../telematics/firmware/README.md), [`config/`](../config/README.md), [`firmware/`](../firmware/README.md), [`protocol/`](../protocol/README.md), [`host/`](../host/README.md), [`models/`](../models/README.md), [`hardware/`](../hardware/README.md), [`tools/`](../tools/README.md), [`tests/`](../tests/README.md).
 
-Contents: [Repository root](#repository-root) · [config/](#config) · [firmware/](#firmware) · [protocol/](#protocol) · [host/](#host) · [models/](#models) · [hardware/](#hardware-hardware) · [tools/](#tools-tools) · [tests/](#tests)
+Which suite each file belongs to (telematics, reference, deferred controller): [`generated/scope.md`](generated/scope.md).
+
+Contents: [Repository root](#repository-root) · [telematics/](#telematics) · [config/](#config) · [firmware/](#firmware) · [protocol/](#protocol) · [host/](#host) · [models/](#models) · [hardware/](#hardware-hardware) · [tools/](#tools-tools) · [tests/](#tests)
 
 ## Repository root
 
 | File | Role in the system |
 |---|---|
-| `README.md` | Front page: what is being built, diagrams, operating sequence, mathematics, budget (generated block), quick start, where to work, priorities |
+| `README.md` | Front page: the telematics unit and its boundary with the controller, status, commands, bill of materials, connection guide, critical path |
 | `CONTRIBUTING.md` | Team workflow: picking up work, branches and pull requests, who reviews what, rules for engineering data, hardware safety, documentation |
 | `requirements.txt` | Pinned Python packages for every tool and test |
 | `.gitignore` | Keeps build outputs, the fetched CSIA core, Python caches and the `.venv/` of the quick start out of git |
-| `.github/workflows/ci.yml` | CI on GitHub-hosted runners: the `host` job (generators, C build and tests, pytest with a broker, demonstrations, cross-compile, studies) and the `erc` job (KiCad 8 ERC) |
+| `.github/workflows/ci.yml` | CI on GitHub-hosted runners: the `telematics` job (no controller build: telematics and reference suites with a broker, firmware unit tests, target images, the demonstration), the `controller` job (the deferred controller suite, its C build, legacy demonstrations, cross-compile, studies) and the `erc` job (KiCad 8 ERC) |
 | `third_party/csia-trust-layer.lock` | Pinned commit and licence record of the CSIA core that `tools/fetch_csia.py` fetches into `.deps/`; frozen (listed in `docs/csia/V2_FREEZE.json`) |
 | `conftest.py`, `pytest.ini` | Test configuration; see the tests section |
 | `docs/` | Every document, with its status: [`docs/README.md`](README.md); records of earlier releases are in `docs/archive/` |
+
+
+## telematics/
+
+The telematics unit's firmware for the NUCLEO-U575ZI-Q ([`../telematics/firmware/README.md`](../telematics/firmware/README.md)). Built for the target and unit-tested on a computer; **never flashed, no connection bench-verified**. Build outputs (`build-telematics/`, `build-u575/`) are not part of the tree.
+
+### telematics/firmware/
+
+| File | Role in the system |
+|---|---|
+| `telematics/firmware/README.md` | Layout, commands, and the rules the firmware keeps (bounded interrupts and loops, no transmit path, counted losses) |
+| `telematics/firmware/BENCH.md` | Build and flash commands, the connection table (unverified), bench steps B1 to B12 and electrical checks E1 to E6 before any vehicle bus |
+| `telematics/firmware/CMakeLists.txt` | Host build (portable library under sanitizers, `tm_tests`, `tm_hostsim`) and, with `TM_TARGET_U575=ON`, the `tm_u575` and `tm_u575_can` images (`.elf`, `.bin`, `.hex`, map) |
+| `telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake` | Cross toolchain file for the Cortex-M33 (single-precision hardware floating point) |
+
+### telematics/firmware/include/ and src/ (portable, no hardware access)
+
+| File | Role in the system |
+|---|---|
+| `telematics/firmware/include/tm_config.h` | Build-time sizes and periods: wheel channels, queue and CAN ring lengths, slot size, record and counter periods |
+| `telematics/firmware/include/tm_time.h` | 64-bit time from a 32-bit timer with overflow, for interrupt and main-loop readers |
+| `telematics/firmware/include/tm_le.h` | Little-endian field writers for record bodies |
+| `telematics/firmware/include/tm_crc32.h`, `telematics/firmware/src/tm_crc32.c` | CRC-32 (the one STLG uses) |
+| `telematics/firmware/include/tm_wheel.h`, `telematics/firmware/src/tm_wheel.c` | Wheel edge accumulator: edges, span and cumulative total per record, line level, overrun, heartbeat; the `WHEEL_EDGES` body |
+| `telematics/firmware/include/tm_queue.h`, `telematics/firmware/src/tm_queue.c` | Bounded log queue with drop counter and high-water mark; single-producer ring for received CAN frames |
+| `telematics/firmware/include/tm_stlg.h`, `telematics/firmware/src/tm_stlg.c` | STLG v1 header, block and record encoding, byte-for-byte as `host/telematics/stlg.py` |
+| `telematics/firmware/include/tm_flashlog.h`, `telematics/firmware/src/tm_flashlog.c` | Slot-based log on any erasable storage behind a small interface: session header, blocks, resume after restart, full-storage handling, non-blocking erase and program steps |
+| `telematics/firmware/include/tm_reset.h`, `telematics/firmware/src/tm_reset.c` | Reset cause from the reset flags and the `BOOT` record |
+| `telematics/firmware/include/tm_counters.h` | Counter identifiers of the `COUNTERS2` record (must match `COUNTER2_IDS` in `host/telematics/stlg.py`) |
+| `telematics/firmware/include/tm_app.h`, `telematics/firmware/src/tm_app.c` | The application: platform interface, frame and wheel records, counters, queue to blocks to storage, status line, flush and erase requests |
+| `telematics/firmware/include/tm_bus.h` | Bus interface (write, read, write-then-read) shared by the I2C and SPI drivers and their test doubles |
+| `telematics/firmware/include/tm_imu.h`, `telematics/firmware/src/tm_imu.c` | LSM6DSOX or ISM330DHCX IMU and TMP117 temperature drivers over the bus interface |
+| `telematics/firmware/include/tm_w25q.h`, `telematics/firmware/src/tm_w25q.c` | W25Q SPI NOR driver as a storage back end for `tm_flashlog` (not wired into the images) |
+
+### telematics/firmware/platform/host/ and tests/
+
+| File | Role in the system |
+|---|---|
+| `telematics/firmware/platform/host/tm_fakeflash.h`, `telematics/firmware/platform/host/tm_fakeflash.c` | RAM model of the flash for host tests: erase sets 0xFF, programming a unit that is not erased is an error, operations take simulated time, a stall window keeps the device busy |
+| `telematics/firmware/platform/host/tm_hostsim.c` | Host simulator: the firmware's own application code with a simulated clock, line levels and RAM flash, driven by a script on standard input (edges, overruns, frames, storage stalls, restarts, flush); not the target (interrupt and flash timing are not modelled); used by `tests/telematics/test_firmware_host.py` |
+| `telematics/firmware/tests/test_tm.c` | Unit tests of the portable code: CRC-32, time extension, wheel records, queue, STLG blocks, reset causes, flash log, application |
+| `telematics/firmware/tests/test_drivers.c` | Unit tests of the W25Q, IMU and TMP117 drivers against bus doubles |
+
+### telematics/firmware/platform/u575/ (target only)
+
+| File | Role in the system |
+|---|---|
+| `telematics/firmware/platform/u575/startup_stm32u575.c` | Vector table from ST's interrupt list, reset handler, fault handlers |
+| `telematics/firmware/platform/u575/stm32u575zi_flash.ld` | Memory map: code in bank 1, the log region in bank 2 (1 MiB), RAM with a no-init section |
+| `telematics/firmware/platform/u575/system_u575.c` | Clock: MSIS 4 MHz, LSE and MSI PLL mode when the LSE starts; PLL1 for the CAN kernel clock |
+| `telematics/firmware/platform/u575/board_u575.c`, `telematics/firmware/platform/u575/board_u575.h` | Pins, TIM2 capture on three channels, LEDs, IWDG, reset flags |
+| `telematics/firmware/platform/u575/drivers_u575.h` | Interfaces of the target drivers |
+| `telematics/firmware/platform/u575/flash_u575.c` | Internal flash bank 2: page erase and quad-word programming as non-blocking steps; ECC error handling |
+| `telematics/firmware/platform/u575/uart_u575.c` | USART1 console through the ST-LINK |
+| `telematics/firmware/platform/u575/can_u575.c` | FDCAN1 receive in bus-monitoring mode (sends nothing), frames to the ring with receive time (the `tm_u575_can` image only) |
+| `telematics/firmware/platform/u575/spi_u575.c` | SPI1 master with bounded waits |
+| `telematics/firmware/platform/u575/i2c_u575.c` | I2C1 master with bounded waits |
+| `telematics/firmware/platform/u575/main_u575.c` | Start-up, the TIM2 capture interrupt, the main loop, sensors, status line and console commands |
+| `telematics/firmware/platform/u575/vendor/PROVENANCE.md` | Source, commit, SHA-256 and licence of each vendored header; the references the register code follows |
+| `telematics/firmware/platform/u575/vendor/cmsis_core/Include/*.h`, `telematics/firmware/platform/u575/vendor/cmsis_core/LICENSE.md` | Arm CMSIS-Core 5.9.0 headers, unchanged |
+| `telematics/firmware/platform/u575/vendor/cmsis_device_u5/Include/*.h`, `telematics/firmware/platform/u575/vendor/cmsis_device_u5/LICENSE.md` | ST cmsis-device-u5 v1.4.3 headers, unchanged |
 
 
 ## config/
@@ -212,26 +275,32 @@ Paths are relative to the repository root. `__init__.py` files and `__pycache__/
 
 | File | Role in the system |
 |---|---|
-| `host/telematics/node.py` | Host model of the telematics unit's firmware tasks: timestamps controller frames, hands them to the supervisor before logging, writes STLG records through a bounded queue, and sends the 2 Hz `sem.telemetry.v3` uplink with a bounded, flagged backlog; also the in-process simulated link `SimLink`. |
-| `host/telematics/stlg.py` | Reference implementation of the STLG v1 local log format (metadata header, 4 KiB CRC-checked blocks, seven record types), with a non-blocking writer and a reader that counts corrupt blocks, gaps and truncation. |
+| `host/telematics/node.py` | Host model of the receive-only telematics unit: timestamps controller frames and decodes them through an adapter, logs every frame and sensor sample through a bounded queue, keeps the latest measurement per signal, and sends the 2 Hz `sem.telemetry.v4` summary with a bounded, flagged backlog; also the in-process link `SimLink`. No transmit path. |
+| `host/telematics/measurement.py` | The measurement record (source, signal, unit, receive and sample time, uncertainty, source sequence, validity, provenance) and the latest-value table behind the live summary. |
+| `host/telematics/signals.py` | Signal registry: identity, unit, origin, role, range and staleness limit of every reported quantity; its identifier names it in live messages. |
+| `host/telematics/controller_adapter.py` | Controller adapters: the semmc simulation fixture (CRC, sequence, validity flags), a DBC adapter with a unit-checked mapping, and a null adapter. |
+| `host/telematics/wheel.py` | Wheel speed and distance from edge timing, with standstill only on positive evidence and lower bounds after lost edges; the reference for the firmware's records. |
+| `host/telematics/sim_vehicle.py` | Simulated vehicle and external controller for the demonstration: broadcast frames, wheel edges, GNSS, IMU, temperatures, battery monitor, with injectable faults. |
+| `host/telematics/stlg.py` | Reference implementation of the STLG v1 local log format (metadata header, 4 KiB CRC-checked blocks, record types 1 to 13), with a non-blocking writer and a reader that counts corrupt blocks, gaps and truncation. |
 | `host/telematics/clocks.py` | Clock-domain models of the simulation (controller time, drifting telematics clock, GNSS PPS edges) and the estimator that maps telematics time to UTC with quality `pps`, `holdover` or `none`. |
-| `host/telematics/sensors.py` | Synthetic wheel Hall, GNSS and IMU sensors driven by the simulated vehicle speed, with injectable wheel dropouts and GNSS outages. |
+| `host/telematics/sensors.py` | Synthetic wheel Hall (counts per window), GNSS and IMU sensors of the legacy supervised demonstrations, with injectable wheel dropouts and GNSS outages. |
 | `host/telematics/mqtt_link.py` | Drop-in uplink over a real MQTT broker (paho-mqtt, QoS 1, bounded client buffer) that records hand-over and broker acknowledgement per sequence number. |
 
 ### host/pit/
 
 | File | Role in the system |
 |---|---|
-| `host/pit/ingest.py` | Pit validation and storage into one SQLite file: checks every live message and records each receipt with its outcome, and imports STLG logs with PPS-derived UTC and decoded signals; every key is idempotent. |
+| `host/pit/ingest.py` | Pit validation and storage into one SQLite file: checks every live message (`sem.telemetry.v1` to `v4`) and records each receipt with its outcome, and imports STLG logs with PPS-derived UTC, measurements through the logged adapter, and an accounting of every record; every key is idempotent. |
 | `host/pit/mqtt_ingest.py` | Pit ingestion service process: MQTT subscriber with a persistent session that validates and commits each message through `ingest.py` before acknowledging it, and logs connection events. |
 | `host/pit/shadow_replay.py` | Shadow replay of the frozen B1, R3v and CSIA2 monitors over one stored run, with run classification, input coverage, attribution episodes and insufficient-evidence notes; writes `report.md`, `report.json`, `timeline.csv` and has no command path. |
 | `host/pit/csia_replay.py` | Rebuilds the monitors' input samples from a run's decoded signals (shared with the shadow replay) and replays the frozen v1 CSIA adapter with host timing figures. |
-| `host/pit/energy.py` | Energy per distance (Wh/km at the controller input) for one stored run and wheel channel, from the controller's energy counter and wheel windows, reporting missing data and comparing wheel channels; used by `tools/run_pit_replay.py`. |
+| `host/pit/energy.py` | Energy from valid, aligned V x I at the controller input and at the battery, with missing intervals, their causes and a bound; distance from wheel edges; the earlier energy per distance from the controller's counter; used by `tools/run_pit_replay.py` and the demonstration. |
 
 ### host/telemetry_adapter/
 
 | File | Role in the system |
 |---|---|
+| `host/telemetry_adapter/legacy_node.py` | The v0.6 supervised telematics node (ECO supervisor before logging, `sem.telemetry.v3`): a legacy research simulation, run only by the legacy demonstrations with `--legacy-supervised`. |
 | `host/telemetry_adapter/supervisor.py` | The supervisor: session handshake, periodic bounds and torque requests encoded with the generated codec, rejection of stale, repeated or invalid speed, re-handshake after a controller reboot, and two test policies (speed hold, pulse-and-coast). |
 | `host/telemetry_adapter/cosim.py` | Lockstep co-simulation driver for the C host executable `semmc_host --interactive`: sends events and supervisor frames, steps the controller and reads back its frames and state. |
 | `host/telemetry_adapter/e2e.py` | End-to-end synthetic scenario runner (supervisor, both codecs, C core, simulated plant) used by the end-to-end, fault-injection and CSIA shadow tests and the policy comparison. |
@@ -310,7 +379,8 @@ Paths are relative to the repository root. Every parameter set in this directory
 
 | File | Role in the system |
 |---|---|
-| `hardware/README.md` | Entry point to the draft motor-controller hardware: sheets, important files, what is confirmed and unresolved, the checks and how to run them, generated files and limitations. |
+| `hardware/README.md` | Entry point to the hardware: the telematics BOM, then the deferred motor-controller draft (sheets, important files, what is confirmed and unresolved, checks, generated files, limitations). |
+| `hardware/telematics/bom.yaml` | Telematics bill of materials, configurations A and B: every line with quantity, price range, dated source and decision; `tools/telematics_bom.py` renders `docs/TELEMATICS_BOM.md`. |
 
 ### `hardware/bom/`
 
@@ -419,10 +489,14 @@ Paths are relative to the repository root. Every parameter set in this directory
 | `tools/config_tool.py` | Validates a vehicle configuration for simulation or hardware mode and encodes the calibration blob; the same rules run in the firmware. |
 | `tools/gen_protocol.py` | Generates the C and Python CAN codecs, golden vectors and the CAN message table from `protocol/protocol.yaml`; `--check` reports stale files. |
 | `tools/gen_dbc.py` | Generates the DBC description of the protocol for other teams' CAN tools, optionally relocated to another identifier block; `--check` for the default file. |
-| `tools/gen_procurement.py` | Generates the README budget table and `docs/PROCUREMENT.md` from `hardware/bom/procurement.yaml` and `docs/generated/budget.json`, refusing undated prices, unresolved estimate references and unevidenced orders. |
+| `tools/gen_procurement.py` | Generates `docs/PROCUREMENT.md` (the v0.6 combined table) from `hardware/bom/procurement.yaml` and `docs/generated/budget.json`, refusing undated prices, unresolved estimate references and unevidenced orders. |
 | `tools/check_links.py` | Checks relative links, anchors and (in current documents) backtick file paths in every tracked Markdown file. |
 | `tools/fetch_csia.py` | Fetches the pinned CSIA core into `.deps/` and verifies its commit; nothing of it is copied into the repository. |
 | `tools/mqtt_broker.py` | Library module that starts, kills and restarts a local loopback Mosquitto broker for the tests and the MQTT demonstration. |
+| `tools/run_telematics_demo.py` | The independent receive-only demonstration: simulated controller and sensors, local log, real MQTT broker (or in-process), SQLite, speed, power, energy and data quality, with controller silence, invalid frames, missing signals, a storage stall, a broker outage and a restart; nine checks. |
+| `tools/telematics_import.py` | Imports a log read from the board (raw dump or console `DUMP`), splits it into sessions, writes them into the pit database and plots speed and distance. |
+| `tools/telematics_bom.py` | Renders the telematics BOM and its totals from `hardware/telematics/bom.yaml`; `--check` reports a stale file. |
+| `tools/scope.py` | Renders `docs/scope.yaml` (module and test-suite classification) as `docs/generated/scope.md`; `--check` reports stale or unclassified files. |
 | `tools/run_host_demo.py` | End-to-end host demonstration of the controller core, telematics node model, local log, simulated uplink, pit storage, offline import and pit-side replays, with pass/fail checks. |
 | `tools/run_mqtt_demo.py` | The telemetry chain through a real local Mosquitto broker and a separate pit ingestion process, including broker and pit crashes, with pass/fail checks. |
 | `tools/run_pit_replay.py` | Advisory shadow replay of the R3v and CSIA2 monitors over one run stored in a pit database; reads the database and writes a report only. |
@@ -479,7 +553,7 @@ Paths are relative to the repository root. Every test runs on a host against syn
 
 | File | Role in the system |
 |---|---|
-| `conftest.py` | Puts the repository root on `sys.path` and provides the session fixtures `build_dir`, `host_exe`, `cfgcheck_exe` and `synthetic_blob`; configures the C host build on demand in `SEMMC_BUILD_DIR` (default `build/`) and runs an incremental build once per session. |
+| `conftest.py` | Marks every test with its suite from `docs/scope.yaml` (telematics, reference, controller) and refuses controller fixtures outside the controller suite; puts the repository root on `sys.path` and provides the session fixtures `build_dir`, `host_exe`, `cfgcheck_exe` and `synthetic_blob`; configures the C host build on demand in `SEMMC_BUILD_DIR` (default `build/`) and runs an incremental build once per session. |
 | `pytest.ini` | Sets `tests/` as the pytest test path and `-q` as the default verbosity. |
 
 ### tests/
@@ -506,6 +580,18 @@ Paths are relative to the repository root. Every test runs on a host against syn
 | `tests/integration/test_target_firmware.py` | Builds the STM32G474 image and checks the vector table against ST's interrupt list, the memory layout, no double precision on the current-interrupt path, fault handlers reaching the safe state, the emulated instruction-count regression guard, memory barriers in the fast/slow handoff, the bench-reader layout and the separately marked bench PWM and timing-marker images. |
 | `tests/integration/test_math_spec.py` | Recomputes every numerical example of `docs/MATH_SPEC.md` with the implementing code. |
 | `tests/integration/test_docs.py` | Documentation links and backtick paths resolve, generated check documents are current, no em dash or assistant branding in current documents, root README scope statements. |
+
+### tests/telematics/
+
+| File | Role in the system |
+|---|---|
+| `tests/telematics/test_measurement_and_adapters.py` | Measurement rules (a value cannot hide missing data; sentinels, ranges and flags classified; missing and stale reported as null), the semmc fixture adapter (sequence from the protocol, no invented sample time, sentinels, CRC errors, companion frames), the DBC adapter (same result as the fixture on the same frames, refuses a unit mismatch). |
+| `tests/telematics/test_wheel_node_pit.py` | Wheel speed over complete edge intervals, a lost record losing no distance and an overrun making it a lower bound, no evidence against standstill; the node has no transmit path, logs raw frames and reports missing values as null; v4 validation at the pit; idempotent import and energy with missing intervals. |
+| `tests/telematics/test_telematics_demo.py` | The demonstration's checks in-process and through a real broker; outputs, both energy boundaries, no non-valid value stored as a number, no supervisor block in any live message. |
+| `tests/telematics/test_firmware_host.py` | Builds the firmware on the host and runs its unit tests; counter and record identifiers equal to the Python reference; wheel records byte for byte; a flash image imported with speed, distance, restart and accounting; full storage counted; the console dump format. |
+| `tests/telematics/test_firmware_target.py` | Builds both target images and checks the vector table against ST's interrupt list, the layout (log bank left free, no controller code), and that the sources have no transmit path. |
+| `tests/telematics/test_telematics_bom.py` | Telematics BOM: totals are sums of their own lines, unknown prices stay unknown and are listed, no controller part and every line has a source, the page is current and keeps the battery as reported. |
+| `tests/telematics/test_energy_and_shadow_scope.py` | Shadow relationships without their inputs disabled and reported; a vehicle report ignores simulator fields; energy boundaries stated; frozen CSIA evaluation files unchanged and the R3v result kept. |
 
 ### tests/fault_injection/
 

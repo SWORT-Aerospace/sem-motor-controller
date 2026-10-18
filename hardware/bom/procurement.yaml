@@ -305,7 +305,7 @@ items:
       At least 9.35 KiB/s sustained with erase time (host demonstration rate); a 40-minute attempt needs about 22 MB,
       and the 8 MB flash alone lasts 14.6 minutes. Behaviour on power loss during a write to be checked on the bench.
     blocked_by: whether the PCB assembly has a card socket (board files not received)
-    evidence: "docs/ICD.md#9-storage-queues-and-drop-reporting"
+    evidence: "docs/ICD.md#a7-queues-storage-and-loss-reporting"
   - id: can_xcvr
     item: CAN transceiver/interface, if not included in the PCB assembly
     purpose: Connects the telemetry unit to the vehicle CAN bus

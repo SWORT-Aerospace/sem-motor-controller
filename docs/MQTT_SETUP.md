@@ -1,6 +1,6 @@
 # Local MQTT broker for the telemetry pipeline (host)
 
-The pit side of the telemetry chain runs on a computer with a Mosquitto broker. The tests and `tools/run_mqtt_demo.py` start and stop their own broker on a free loopback port. They only need to find the binary.
+The pit side of the telemetry chain runs on a computer with a Mosquitto broker. The tests, `tools/run_telematics_demo.py` and the legacy `tools/run_mqtt_demo.py` start and stop their own broker on a free loopback port. They only need to find the binary.
 
 ## 1. Get Mosquitto
 
@@ -16,8 +16,9 @@ The tools find the broker from `$SEMMC_MOSQUITTO`, then `mosquitto` on `PATH`, t
 
 ```sh
 pip install -r requirements.txt                    # paho-mqtt 2.1.0
-cmake -S firmware -B build -G Ninja && cmake --build build
-python3 tools/run_mqtt_demo.py --out build/mqtt_demo
+python3 tools/run_telematics_demo.py --out build/telematics_demo      # the receive-only node (no controller build)
+cmake -S firmware -B build -G Ninja && cmake --build build      # the legacy supervised demonstration needs the controller build
+python3 tools/run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo
 python3 -m pytest tests/integration/test_mqtt_pipeline.py -rs
 ```
 

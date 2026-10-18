@@ -12,6 +12,15 @@ Abbreviations used below:
 * **KiCad**: the open-source electronics design suite (`kicad-cli` is its command-line tool). **ERC**: electrical rules check. **BOM**: bill of materials. **MCU**: microcontroller unit.
 * **DP**: dynamic programming (the energy-strategy optimiser). **STLG**: the vehicle's local block log format.
 
+**Scope (v0.7).** The telematics tools are `run_telematics_demo.py`, `telematics_import.py`, `telematics_bom.py`, `scope.py`, `run_pit_replay.py`, `mqtt_broker.py`, `check_links.py` and the shared analyses `bus_load.py`, `can_bit_timing.py`, `wheel_sensor_check.py`; none needs the controller build. The others serve the reference models or the deferred controller development ([`../docs/scope.yaml`](../docs/scope.yaml)); `run_host_demo.py` and `run_mqtt_demo.py` are the LEGACY supervised simulations and run only with `--legacy-supervised`.
+
+| Tool | What it does | Writes |
+|---|---|---|
+| [`run_telematics_demo.py`](run_telematics_demo.py) | End-to-end demonstration of the receive-only telematics node against a simulated external controller and sensors: real Mosquitto broker (or `--in-process`), controller silence, invalid frames, a missing signal, a storage stall, a broker outage, a restart; 9 checks | `build/telematics_demo/`; with `--samples`, `docs/generated/telematics_demo/` |
+| [`telematics_import.py`](telematics_import.py) | A flash or UART dump of the firmware's log region -> sessions -> STLG files -> pit import -> speed and distance plots | the output directory and the database given |
+| [`telematics_bom.py`](telematics_bom.py) | Totals of configurations A and B from `hardware/telematics/bom.yaml`; `--check` in CI | `docs/TELEMATICS_BOM.md`, `docs/generated/telematics_bom.json` |
+| [`scope.py`](scope.py) | Every tracked file's suite from `docs/scope.yaml`; `--check` in CI fails on an unclassified file | `docs/generated/scope.md` |
+
 ## 1. Tools by purpose
 
 ### 1.1 Generators
@@ -112,24 +121,30 @@ The procurement generator `gen_procurement.py` (section 1.1) also belongs to the
 
 ## 2. What CI runs
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) has two jobs on GitHub-hosted Ubuntu 24.04 runners with Python 3.13. Neither touches hardware.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) has three jobs on GitHub-hosted Ubuntu 24.04 runners with Python 3.13 (the suites are defined in [`../docs/scope.yaml`](../docs/scope.yaml)). None touches hardware.
 
-**`host` job** (KiCad 8 from `ppa:kicad/kicad-8.0-releases`, Mosquitto, the ARM toolchain), in this order:
-1. `fetch_kicad_symbols.py` (the pinned 8.0.9 libraries). Generated files are current: `gen_config.py --check`, `gen_protocol.py --check`, `gen_dbc.py --check`, `gen_procurement.py --check`, `gen_board_pins.py --check`, `blockers.py --check`, `acceptance.py render --check`, `wheel_sensor_check.py --check`, `coastdown_sensitivity.py --check`, `check_links.py`.
+**`telematics` job** (Mosquitto, the ARM toolchain; no KiCad, and never the project's controller build), in this order:
+1. Generated files are current: `scope.py --check`, `gen_protocol.py --check`, `gen_dbc.py --check`, `telematics_bom.py --check`, `wheel_sensor_check.py --check`, `check_links.py`.
 2. `fetch_csia.py`.
-3. `config_tool.py validate config/vehicle.synthetic.yaml --mode sim` must pass; `config_tool.py validate config/vehicle.unconfigured.yaml --mode hw` must fail.
-4. C build and `ctest` with sanitizers (the build runs `config_tool.py blob` to make the calibration blobs).
-5. Schematic connectivity gate: `gen_kicad_schematic.py --check`, then `git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net'`, so committed schematic files and the draft BOM must equal the generator's output.
-6. `python -m pytest -rs` with `SEMMC_REQUIRE_MQTT=1` (a missing broker is a failure). Through the tests this also runs `gen_kicad_schematic.py --check`, `timing_budget.py`, `price_bom.py`, `run_pit_replay.py` (on an empty database), the checks of `hw_consistency.py` (in memory, without writing its report), and functions of `run_host_demo.py`, `run_mqtt_demo.py`, `mqtt_broker.py`, `config_tool.py`, `bus_load.py`, `clock_tree.py`, `telematics_budget.py`, `wheel_sensor_check.py`, `gen_procurement.py` and `check_links.py`.
-7. Host demonstrations: `run_host_demo.py --out build/host_demo`, `run_mqtt_demo.py --out build/mqtt_demo`, then `run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay`.
-8. Cortex-M4F cross-compile of the portable core (size per module), the linked STM32G474 target image, and the emulated instruction counts (`emulate_core_timing.py`).
-9. Quick synthetic studies: `run_optimization.py --quick`, `run_electrical_calcs.py`, `run_csia_study.py`.
+3. The telematics firmware: host build and `ctest` under sanitizers (`build-telematics`), then the NUCLEO-U575ZI-Q images (`build-u575`, uploaded as `telematics-u575-images`).
+4. `python -m pytest -rs -m "telematics or reference"` with `SEMMC_REQUIRE_MQTT=1`, `SEMMC_REQUIRE_ARM=1` and the controller build directory pointed at a path that must still not exist afterwards.
+5. `run_telematics_demo.py --out build/telematics_demo` through a real broker (uploaded as `telematics-demo`).
+
+**`controller` job** (the deferred controller development; KiCad 8 from `ppa:kicad/kicad-8.0-releases`, Mosquitto, the ARM toolchain), in this order:
+1. `fetch_kicad_symbols.py`, `check_footprints.py --fetch`. Generated files are current: `gen_config.py`, `gen_protocol.py`, `gen_dbc.py`, `gen_procurement.py`, `gen_board_pins.py`, `blockers.py`, `check_datasheets.py`, `ov_trip_worst_case.py`, `check_footprints.py`, `bench_package.py --doc`, `acceptance.py render`, `wheel_sensor_check.py`, `coastdown_sensitivity.py` (each with `--check`), `check_links.py`.
+2. `fetch_csia.py`; `config_tool.py validate config/vehicle.synthetic.yaml --mode sim` must pass and `config_tool.py validate config/vehicle.unconfigured.yaml --mode hw` must fail.
+3. C build and `ctest` with sanitizers (the build runs `config_tool.py blob` to make the calibration blobs).
+4. Schematic connectivity gate: `gen_kicad_schematic.py --check`, then `git diff --exit-code` over `hardware/kicad` and `hardware/bom/BOM_draft.csv` (the netlist and its report excluded), so committed schematic files and the draft BOM must equal the generator's output.
+5. `python -m pytest -rs -m controller` with `SEMMC_REQUIRE_MQTT=1` and `SEMMC_REQUIRE_ARM=1`. Through the tests this also runs `gen_kicad_schematic.py --check`, `timing_budget.py`, `price_bom.py`, `run_pit_replay.py` (on an empty database), the checks of `hw_consistency.py` (in memory), and functions of `run_host_demo.py`, `run_mqtt_demo.py`, `mqtt_broker.py`, `config_tool.py`, `bus_load.py`, `clock_tree.py`, `telematics_budget.py` and `gen_procurement.py`.
+6. Legacy supervised demonstrations: `run_host_demo.py --legacy-supervised --out build/host_demo`, `run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo`, then `run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay`.
+7. Cortex-M4F cross-compile of the portable core (size per module), the linked STM32G474 target image and the emulated instruction counts (`emulate_core_timing.py`), the bench package.
+8. Quick synthetic studies: `run_optimization.py --quick`, `run_electrical_calcs.py`, `run_csia_study.py`.
 
 **`erc` job** (KiCad 8 from `ppa:kicad/kicad-8.0-releases`; the recorded runs used KiCad 8.0.9): `fetch_kicad_symbols.py`, `bash tools/run_kicad_erc.sh`, upload of `hardware/kicad/ERC_REPORT.*` as the `erc-report` artifact (whatever the result), then `erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors`.
 
 **Not run in CI as commands:** `pin_type_check.py`, `hw_consistency.py` (so `CONSISTENCY_CHECK.md` is not rewritten), `clock_tree.py`, `hardware_calcs.py`, `telematics_budget.py`, `pin_allocation.py`, `can_bit_timing.py`, `bus_load.py`, `control_contract_report.py`, `make_replay_sample.py`, `run_policy_comparison.py`, `run_csia_evaluation.py`, `run_csia_evaluation_v2.py`, `run_csia_posthoc.py`, `verify_all.py`, and the generators in their writing form.
 
-**CI detects a stale committed output only for** `gen_config.py`, `gen_protocol.py`, `gen_dbc.py`, `gen_procurement.py`, `gen_board_pins.py`, `blockers.py`, `acceptance.py render`, `wheel_sensor_check.py`, `coastdown_sensitivity.py` (their `--check` forms), `release_gate.py` (its report is compared by `tests/hardware/test_release_gate.py`) and `gen_kicad_schematic.py` (the `git diff` gate). For every other tool that writes tracked files (section 4), CI does not notice a stale file: re-run the tool and commit its outputs yourself.
+**CI detects a stale committed output only for** `scope.py`, `telematics_bom.py`, `gen_config.py`, `gen_protocol.py`, `gen_dbc.py`, `gen_procurement.py`, `gen_board_pins.py`, `blockers.py`, `acceptance.py render`, `wheel_sensor_check.py`, `coastdown_sensitivity.py` (their `--check` forms), `release_gate.py` (its report is compared by `tests/hardware/test_release_gate.py`) and `gen_kicad_schematic.py` (the `git diff` gate). For every other tool that writes tracked files (section 4), CI does not notice a stale file: re-run the tool and commit its outputs yourself.
 
 ## 3. What `verify_all.py` runs
 
@@ -149,9 +164,13 @@ The `CHECKS` list in `verify_all.py`, in order. Commands run from the repository
 | `pytest` | python | `python3 -m pytest -rs -p no:cacheprovider` | both |
 | `replay` | host simulation | `python3 host/replay/replay.py tests/simulation/replay_sample.semmc.log --out build/replay` | both |
 | `contract_report` | host simulation | `python3 tools/control_contract_report.py --build build` | both |
-| `host_demo` | host simulation | `python3 tools/run_host_demo.py --out build/host_demo` | both |
+| `telematics_scope`, `telematics_bom` | generation | `python3 tools/scope.py --check`, `python3 tools/telematics_bom.py --check` | both |
+| `tm_configure`, `tm_build`, `tm_ctest` | telematics firmware | `cmake -S telematics/firmware -B build-telematics -G Ninja`, `cmake --build build-telematics`, `ctest --test-dir build-telematics --output-on-failure -V` | both |
+| `tm_u575_configure`, `tm_u575_build` | telematics firmware | configure and build the NUCLEO-U575ZI-Q images into `build-u575` (README section 3) | both |
+| `telematics_demo` | telematics | `python3 tools/run_telematics_demo.py --out build/telematics_demo` | both |
+| `host_demo` | host simulation | `python3 tools/run_host_demo.py --legacy-supervised --out build/host_demo` | both |
 | `pit_replay` | host simulation | `python3 tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay` (uses the database from `host_demo`) | both |
-| `mqtt_demo` | host simulation | `python3 tools/run_mqtt_demo.py --out build/mqtt_demo` | both |
+| `mqtt_demo` | host simulation | `python3 tools/run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo` | both |
 | `optimisation_quick` | studies | `python3 tools/run_optimization.py --quick` | quick only |
 | `optimisation_full` | studies | `python3 tools/run_optimization.py` | full only |
 | `electrical` | studies | `python3 tools/run_electrical_calcs.py` | both |
@@ -186,7 +205,7 @@ After changing a tool's inputs (or the tool), re-run it and commit its outputs i
 | `gen_config.py` | `config/vehicle.schema.json`, `firmware/include/semmc/mc_params_generated.h` |
 | `gen_protocol.py` | `protocol/generated/semmc_protocol.h`, `.c`, `.py`, `semmc_golden_vectors.c`, `protocol/golden_vectors/vectors.json`, `docs/generated/can_messages.md` |
 | `gen_dbc.py` | `protocol/generated/semmc_base0x300.dbc` (another `--base` writes a new file) |
-| `gen_procurement.py` | `README.md` (the block between the procurement-table markers), `docs/PROCUREMENT.md` |
+| `gen_procurement.py` | `docs/PROCUREMENT.md` (v0.6 combined table; since v0.7 no README block) |
 | `gen_kicad_schematic.py` | `hardware/kicad/*.kicad_sch`, `semmc.kicad_sym`, `semmc.kicad_pro`, `sym-lib-table`, `hardware/bom/BOM_draft.csv`; with `--check` also `hardware/kicad/semmc.net`, `CONNECTIVITY_CHECK.md` |
 | `pin_type_check.py` | `hardware/kicad/PIN_TYPE_CHECK.md` |
 | `hw_consistency.py` | `hardware/review/CONSISTENCY_CHECK.md` |

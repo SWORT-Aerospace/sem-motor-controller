@@ -21,7 +21,7 @@ Nothing has been purchased, and no line has a dated supplier quote.
 
 ```
 python3 tools/price_bom.py          # BOM_priced.csv, docs/BUDGET.md, docs/generated/budget.json
-python3 tools/gen_procurement.py    # the README budget block and docs/PROCUREMENT.md
+python3 tools/gen_procurement.py    # docs/PROCUREMENT.md (the v0.6 combined table)
 ```
 
 Budget scenarios of the controller: [`../../docs/BUDGET.md`](../../docs/BUDGET.md). All project lines and the builds: [`../../docs/PROCUREMENT.md`](../../docs/PROCUREMENT.md).
