@@ -1009,8 +1009,13 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "battery_sample_max_age_s",
+        "precharge_agreement_V",
         "precharge_complete_fraction",
-        "precharge_timeout_s"
+        "precharge_resistor_ohm",
+        "precharge_timeout_s",
+        "startup_max_attempts",
+        "startup_step_timeout_s"
       ],
       "properties": {
         "precharge_complete_fraction": {
@@ -1028,6 +1033,46 @@
           ],
           "minimum": 0.01,
           "maximum": 30.0
+        },
+        "precharge_resistor_ohm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.1,
+          "maximum": 10000.0
+        },
+        "precharge_agreement_V": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.05,
+          "maximum": 20.0
+        },
+        "battery_sample_max_age_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.001,
+          "maximum": 1.0
+        },
+        "startup_step_timeout_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0.001,
+          "maximum": 5.0
+        },
+        "startup_max_attempts": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 10
         },
         "notes": {
           "type": [

@@ -195,6 +195,34 @@ def test_bench_reader_layout_matches_the_firmware():
     assert bench_read.FORMAT in src
     d = bench_read.decode(bytes(bench_read.SIZE))
     assert d["state_name"] == "BOOT" and d["platform_faults_named"] == []
+    assert d["startup_state"] == "INHIBITED" and d["drv_state"] == d["ina_state"] == "UNVERIFIED"
+    # The decoder's name lists follow the C enums, in order.
+    inc = ROOT / "firmware/include/semmc"
+    for header, typedef, prefix, names in [
+            ("mc_startup.h", "mc_su_state_t", "MC_SU_", bench_read.STARTUP),
+            ("mc_startup.h", "mc_su_fault_t", "MC_SU_F_", bench_read.STARTUP_FAULTS),
+            ("mc_precharge.h", "mc_pc_fault_t", "MC_PCF_", bench_read.PRECHARGE_FAULTS),
+            ("mc_drv835x.h", "mc_drv_state_t", "MC_DRV_", bench_read.DRV_STATES),
+            ("mc_drv835x.h", "mc_drv_error_t", "MC_DRV_ERR_", bench_read.DRV_ERRORS),
+            ("mc_ina228.h", "mc_ina_state_t", "MC_INA_", bench_read.INA_STATES),
+            ("mc_ina228.h", "mc_ina_error_t", "MC_INA_ERR_", bench_read.INA_ERRORS)]:
+        body = re.search(r"typedef enum \{([^{}]*)\} " + typedef + ";", (inc / header).read_text()).group(1)
+        body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+        members = [m.split("=")[0].strip() for m in body.split(",") if m.strip()]
+        assert all(m.startswith(prefix) for m in members), typedef
+        assert [m[len(prefix):] for m in members] == names, typedef
+
+
+def test_target_image_keeps_the_gate_driver_and_meter_inhibited():
+    """Until the data sheets are read, the image passes no device description, and DRV_ENABLE is also
+    behind the compile-time GATE_DRIVER_CONFIGURED (docs/reference/datasheets/README.md)."""
+    src = (ROOT / "firmware/platform/stm32g4/src/main.c").read_text()
+    assert re.search(r"#define GATE_DRIVER_CONFIGURED false", src)
+    assert "mc_drv835x_init(&g_drv, NULL, NULL, NULL, NULL, 0u);" in src
+    assert "mc_ina228_init(&g_ina, NULL, NULL, NULL, NULL, NULL, 0u, 0u);" in src
+    calls = re.findall(r"board_set_drv_enable\(([^;]*)\);", src)
+    assert calls == ["GATE_DRIVER_CONFIGURED && g_drv.enable_pin"]
+    assert "si.gate_driver_ready = GATE_DRIVER_CONFIGURED && g_su.gate_driver_ready" in src
 
 
 def test_bench_pwm_image_is_separate_and_marked(image):

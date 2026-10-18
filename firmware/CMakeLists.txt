@@ -80,6 +80,9 @@ add_library(semmc_core STATIC
   src/io/mc_io.c
   src/io/mc_precharge.c
   src/io/mc_periph_timing.c
+  src/io/mc_ina228.c
+  src/io/mc_drv835x.c
+  src/io/mc_startup.c
   ${SEMMC_PROTO_GEN}/semmc_protocol.c)
 target_include_directories(semmc_core PUBLIC include ${SEMMC_PROTO_GEN})
 target_compile_options(semmc_core PRIVATE ${SEMMC_WARN})
@@ -196,7 +199,7 @@ add_custom_target(semmc_cal_blobs ALL DEPENDS ${SEMMC_CAL_DIR}/synthetic.bin)
 # ---- unit tests ---------------------------------------------------------------
 enable_testing()
 set(SEMMC_TESTS test_control test_freshness test_config test_state_machine test_protocol test_core test_core_properties
-                test_io)
+                test_io test_drivers)
 foreach(t ${SEMMC_TESTS})
   add_executable(${t} tests/${t}.c)
   add_dependencies(${t} semmc_cal_blobs)

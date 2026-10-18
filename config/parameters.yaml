@@ -162,6 +162,16 @@ params:
   # before the precharge resistor, and only within the timeout; otherwise the precharge is a fault.
   - {id: 190, path: power.precharge_complete_fraction,       kind: real, min: 0.5, max: 0.999, req_sim: false, req_hw: true}
   - {id: 191, path: power.precharge_timeout_s,               kind: real, min: 0.01, max: 30.0, req_sim: false, req_hw: true}
+  # Start-up sequence (firmware/include/semmc/mc_startup.h). Design-review values, not vehicle inputs:
+  # the resistor is the fitted part; the agreement bound covers both sensors' tolerance plus the link's
+  # rise during the battery-side conversion time; the sample age is the INA228 conversion period plus the
+  # read interval; the step timeout bounds driver configuration and the offset measurement each (the
+  # measurement takes 1024 PWM periods, OFFSET_SAMPLES in the platform, so it must exceed 1024 / f_pwm).
+  - {id: 192, path: power.precharge_resistor_ohm,            kind: real, min: 0.1, max: 10000.0, req_sim: false, req_hw: true}
+  - {id: 193, path: power.precharge_agreement_V,             kind: real, min: 0.05, max: 20.0, req_sim: false, req_hw: true}
+  - {id: 194, path: power.battery_sample_max_age_s,          kind: real, min: 0.001, max: 1.0, req_sim: false, req_hw: true}
+  - {id: 195, path: power.startup_step_timeout_s,            kind: real, min: 0.001, max: 5.0, req_sim: false, req_hw: true}
+  - {id: 196, path: power.startup_max_attempts,              kind: int, min: 1, max: 10, req_sim: false, req_hw: true}
 
   # ---- temperature sensing (target firmware) ---------------------------------------
   # NTC in a divider from the analog supply: R_ntc to ground, bias resistor to the supply (sheet 07).

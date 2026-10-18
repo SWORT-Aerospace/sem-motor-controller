@@ -147,6 +147,11 @@ controls:                            # wired pedal calibration, measured at the 
 power:                               # precharge sequencing (UNKNOWN)
   precharge_complete_fraction: null
   precharge_timeout_s: null
+  precharge_resistor_ohm: null
+  precharge_agreement_V: null
+  battery_sample_max_age_s: null
+  startup_step_timeout_s: null
+  startup_max_attempts: null
 
 sensing:                             # temperature sensors (UNKNOWN)
   fet_ntc_r25_ohm: null

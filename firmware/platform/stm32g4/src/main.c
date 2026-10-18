@@ -3,7 +3,8 @@
  * Contexts and priorities (lower number preempts higher; all four priority bits are preemption bits):
  *   0  ADC1_2   fast step at the PWM rate: currents, hall code, mc_core_fast_step, duties
  *   1  TIM1_BRK records which break input cleared the outputs (the hardware already did)
- *   3  TIM6     slow step at 1 kHz: inputs, precharge, CAN, mc_core_slow_step, watchdogs
+ *   3  TIM6     slow step at 1 kHz: inputs, battery meter, start-up sequence and gate driver, CAN,
+ *               mc_core_slow_step, watchdogs
  *   -  main     sleeps (WFI)
  * The fast/slow data handoff relies on the slow step never preempting the fast step (mc_core.h, "Shared
  * state"): checked below at compile time.
@@ -14,12 +15,16 @@
  * g_bench.fast_margin_min_ticks is the smallest timer-tick distance to the peak seen after that write, and
  * fast_late_writes counts writes made after it; these are the on-target evidence, observed maxima only.
  *
+ * Start-up (mc_startup.h): the bypass closes only on fresh, cross-checked battery and link readings; the
+ * gate driver (supplied from the link) is then woken with the gates off, configured and read back; the
+ * current offsets are measured with its amplifiers running; only then may the core arm.
+ *
  * What this revision does NOT drive, and why (docs/BLOCKERS.md):
- *   - the gate driver: the DRV8353 SPI register settings (gate current, VDS trip level, CSA gain) are
- *     not implemented because its datasheet has not been read; DRV_ENABLE is never set, so
- *     gate_driver_ready is false and the core never leaves its pre-drive states;
- *   - the battery-side meter: the INA228 register map is not verified, so the battery voltage is
- *     missing and the precharge never closes its bypass;
+ *   - the gate driver and the battery-side meter: their driver logic is linked (mc_drv835x, mc_ina228),
+ *     but no device description is passed, because the DRV8353 and INA228 data sheets have not been
+ *     read (docs/reference/datasheets/README.md), and the SPI1 and I2C1 transports are not written. Both
+ *     stay UNVERIFIED, the start-up sequence stays INHIBITED, DRV_ENABLE stays low (also behind
+ *     GATE_DRIVER_CONFIGURED), the bypass stays open and the core never leaves its pre-drive states;
  *   - CAN without a crystal and a configured bit rate (can.h).
  * Each of these is also refused by the core unless the calibration is hardware-valid, bench-measured
  * and permits output (mc_config_permits_physical_output); a synthetic calibration never runs.
@@ -43,8 +48,10 @@
 #include "event_log.h"
 #include "pwm.h"
 #include "semmc/mc_core.h"
+#include "semmc/mc_drv835x.h"
+#include "semmc/mc_ina228.h"
 #include "semmc/mc_io.h"
-#include "semmc/mc_precharge.h"
+#include "semmc/mc_startup.h"
 #include "stm32g4xx.h"
 #include "system_clock.h"
 #include "timebase.h"
@@ -80,8 +87,10 @@ _Static_assert(PRIO_FAST < PRIO_BREAK && PRIO_BREAK < PRIO_SLOW && PRIO_SLOW < (
 #define SAMPLING_ONLY_DEADTIME_S 1.0e-6f
 #define OFFSET_SAMPLES 1024u
 
-/* The DRV8353 is not configured by this revision (see the header). */
+/* Second, compile-time inhibit of DRV_ENABLE, set true only in the reviewed revision that also passes a
+ * verified DRV8353 description (see the header). */
 #define GATE_DRIVER_CONFIGURED false
+#define OFFSET_TIMEOUT_MS 500u
 
 #if defined(SEMMC_BENCH_PWM_TEST)
 #define BENCH_PWM_TEST true
@@ -127,6 +136,8 @@ typedef struct {
     uint32_t adc_wait_max_cycles;  /* longest wait for ADC2/ADC3 after ADC1 finished: sampling skew evidence */
     uint32_t slow_overruns;        /* slow steps that ended with the next 1 ms tick already pending */
     uint32_t stack_unused_min_bytes; /* painted stack never written so far (high-water mark), main loop */
+    uint32_t startup;              /* mc_su_state_t | fault << 8 | missing << 16 | attempts << 24 */
+    uint32_t devices;              /* drv state | drv error << 4 | ina state << 8 | ina error << 12 | exhausted << 16 */
 } bench_view_t;
 
 enum {
@@ -138,19 +149,26 @@ enum {
     /* bits 16..18: hall code (A, B, C) */
 };
 
-/* tools/bench_read.py decodes this layout ("<6I3f5H2x3f2f2f3I6I", 112 bytes); keep both in step. */
-_Static_assert(sizeof(bench_view_t) == 112u, "bench_view_t layout changed: update tools/bench_read.py");
+/* tools/bench_read.py decodes this layout ("<6I3f5H2x3f2f2f3I6I2I", 120 bytes); keep both in step. */
+_Static_assert(sizeof(bench_view_t) == 120u, "bench_view_t layout changed: update tools/bench_read.py");
 volatile bench_view_t g_bench __attribute__((used));
 
 static mc_core_t g_core;
 static mc_adc_scale_t g_scale;
 static mc_ntc_t g_ntc_fet, g_ntc_mot;
 static mc_pedal_t g_pedal;
-static mc_precharge_t g_pc;
+static mc_startup_t g_su;
+static mc_drv835x_t g_drv;
+static mc_ina228_t g_ina;
+static uint32_t g_batt_age_us; /* power.battery_sample_max_age_s */
 static mc_enable_check_t g_en;
 static pwm_setup_t g_pwm;
 static bool g_pwm_drive_allowed; /* TIM1 runs at the CONFIGURED frequency and the calibration is valid */
-static bool g_offsets_ok;
+static bool g_offsets_ok;      /* boot measurement, driver asleep: bench readout only */
+static uint32_t g_ofs_seq;     /* start-up offsets request being measured (0: none) */
+static uint32_t g_ofs_done_seq;
+static bool g_ofs_ok;          /* result of g_ofs_done_seq, driver awake: the one the core uses */
+static uint32_t g_ofs_t0_ms;
 static uint8_t g_reset_cause;
 static float g_settle_s;
 static can_status_t g_can;
@@ -292,6 +310,36 @@ static void can_transmit(mc_time_us_t now)
     for (int i = 0; i < 3 && can_tx_free() && mc_core_can_tx_poll(&g_core, now, &id, d); i++) (void)can_tx(id, d);
 }
 
+/* Offsets for the start-up sequence: driver awake, gates off. Non-blocking: the fast step accumulates
+ * while g_cal_active and, in that branch, neither drives nor reads g_scale, so g_scale is written here
+ * before g_cal_active is cleared (the barrier keeps that order). */
+static void offsets_service(void)
+{
+    if (g_su.request_offsets && g_ofs_seq != g_su.offsets_req_seq && !g_cal_active) {
+        g_ofs_seq = g_su.offsets_req_seq;
+        g_cal_n = 0u;
+        g_cal_sum[0] = g_cal_sum[1] = g_cal_sum[2] = 0u;
+        __DMB();
+        g_cal_active = true;
+        g_ofs_t0_ms = g_ms;
+        return;
+    }
+    if (!g_cal_active || g_ofs_seq == 0u || g_ofs_done_seq == g_ofs_seq) return;
+    if (g_cal_n >= OFFSET_SAMPLES) {
+        float avg[3];
+        for (int k = 0; k < 3; k++) avg[k] = (float)g_cal_sum[k] / (float)OFFSET_SAMPLES;
+        g_ofs_ok = mc_adc_accept_offsets(&g_scale, avg);
+    } else if (g_ms - g_ofs_t0_ms > OFFSET_TIMEOUT_MS) {
+        g_ofs_ok = false;
+    } else {
+        return;
+    }
+    if (!g_ofs_ok) g_bench.platform_faults |= PF_OFFSETS;
+    g_ofs_done_seq = g_ofs_seq;
+    __DMB();
+    g_cal_active = false;
+}
+
 void TIM6_DAC_IRQHandler(void)
 {
     TIM6->SR = 0u;
@@ -322,41 +370,65 @@ void TIM6_DAC_IRQHandler(void)
     si.driver.driver_present = bi.driver_present;
 
     si.vbus_V = mc_adc_vbus_V(&g_scale, adc_slow[ADC_SLOW_VBUS], &si.vbus_val);
-    si.ibatt_A = NAN; /* INA228 not read in this revision */
-    si.ibatt_val = MC_VAL_MISSING;
+    /* Battery side (INA228 VBUS on VBAT_SH, shunt on the battery side of the precharge; sheets 01, 06).
+     * UNVERIFIED in this revision: never touches the bus and reports nothing. */
+    mc_ina228_step(&g_ina, now);
+    bool vb_ok = false, vs_ok = false;
+    const float v_batt = mc_ina228_vbus_V(&g_ina, now, g_batt_age_us, &vb_ok);
+    const float v_shunt = mc_ina228_vshunt_V(&g_ina, now, g_batt_age_us, &vs_ok);
+    /* Discharge positive with IN+ on the VBAT_PROT side of the shunt (sheet 06); confirmed at acceptance S6. */
+    si.ibatt_A = vs_ok ? v_shunt / g_ina.s.shunt_ohm : NAN;
+    si.ibatt_val = vs_ok ? MC_VAL_OK : MC_VAL_MISSING;
     const float fs = 4096.0f; /* the ADC runs at 12 bits; the temperature dividers are ratiometric */
     si.t_fet_degC = mc_ntc_temp_degC(&g_ntc_fet, (float)adc_slow[ADC_SLOW_TEMP_FET] / fs, &si.t_fet_val);
     si.t_motor_degC = mc_ntc_temp_degC(&g_ntc_mot, (float)adc_slow[ADC_SLOW_TEMP_MOTOR] / fs, &si.t_motor_val);
 
-    /* Precharge: link side = VBUS_SENSE, battery side = INA228 (missing in this revision). */
-    mc_precharge_step(&g_pc, 1e-3f, si.vbus_V, mc_usable(si.vbus_val), NAN, false);
-    board_set_precharge_bypass(g_pc.bypass && g_core.config_ok);
-    if (g_pc.state == MC_PC_FAULT) g_bench.platform_faults |= PF_PRECHARGE;
+    /* Start-up sequence: precharge bypass, gate-driver wake and configuration, offsets, permission. */
+    mc_startup_in_t su;
+    memset(&su, 0, sizeof su);
+    su.config_ok = g_core.output_permitted;
+    su.drv_state = g_drv.state;
+    su.drv_ready = mc_drv835x_ready(&g_drv);
+    su.ina_state = g_ina.state;
+    su.v_batt_V = v_batt;
+    su.v_batt_ok = vb_ok;
+    su.i_batt_A = si.ibatt_A;
+    su.i_batt_ok = vs_ok;
+    su.v_link_V = si.vbus_V;
+    su.v_link_ok = mc_usable(si.vbus_val);
+    su.offsets_done_seq = g_ofs_done_seq;
+    su.offsets_ok = g_ofs_ok;
+    su.fault_reset_edge = bi.fault_reset && !g_prev_fault_reset;
+    su.outputs_off = !pwm_outputs_are_on();
+    mc_startup_step(&g_su, 1e-3f, &su);
+    if (g_su.clear_driver) mc_drv835x_request_clear(&g_drv);
+    mc_drv835x_step(&g_drv, now, g_su.want_driver_awake, bi.drv_nfault);
+    offsets_service();
+    board_set_precharge_bypass(g_su.bypass && g_core.config_ok);
+    if (g_su.pc.state == MC_PC_FAULT) g_bench.platform_faults |= PF_PRECHARGE;
 
     if (mc_enable_path_check(&g_en, board_drv_enable_commanded(), bi.hw_permit, bi.drv_en_gated)) {
         g_bench.platform_faults |= PF_ENABLE_PATH;
     }
-    board_set_drv_enable(false); /* GATE_DRIVER_CONFIGURED is false in this revision */
+    board_set_drv_enable(GATE_DRIVER_CONFIGURED && g_drv.enable_pin);
 
     const uint32_t brk = pwm_break_flags();
     si.hw_overcurrent = false; /* no separate hardware overcurrent signal reaches the MCU (hardware review H-OC) */
     si.hw_overvoltage = (brk & PWM_BREAK_OVERVOLT) != 0u;
     si.gate_driver_fault = (brk & (PWM_BREAK_DRIVER | PWM_BREAK_SYSTEM)) != 0u || g_en.fault ||
                            (board_drv_enable_commanded() && bi.drv_nfault);
-    si.gate_driver_ready = GATE_DRIVER_CONFIGURED && g_pc.ready && !g_en.fault;
+    si.gate_driver_ready = GATE_DRIVER_CONFIGURED && g_su.gate_driver_ready && !g_en.fault;
     si.watchdog_fault = bi.ext_wdg_reset;
-    si.current_offsets_ok = g_offsets_ok;
+    si.current_offsets_ok = g_ofs_done_seq != 0u && g_ofs_done_seq == g_su.offsets_req_seq && g_ofs_ok;
     si.reset_reason = g_reset_cause;
 
     can_service(now);
     mc_core_slow_step(&g_core, now, &si);
     can_transmit(now);
 
-    /* Driver fault reset (rising edge) also clears the platform latches whose cause is gone. */
-    if (bi.fault_reset && !g_prev_fault_reset) {
-        (void)pwm_break_clear();
-        mc_precharge_reset(&g_pc);
-    }
+    /* Driver fault reset (rising edge) also clears the break latch if its cause is gone; the start-up
+     * sequence took the same edge above for its own faults. */
+    if (bi.fault_reset && !g_prev_fault_reset) (void)pwm_break_clear();
     g_prev_fault_reset = bi.fault_reset;
 
     const mc_state_t st = g_core.sm.state;
@@ -365,7 +437,11 @@ void TIM6_DAC_IRQHandler(void)
         g_prev_state = st;
     }
     g_bench.state = (uint32_t)st;
-    g_bench.precharge_state = (uint32_t)g_pc.state;
+    g_bench.precharge_state = (uint32_t)g_su.pc.state;
+    g_bench.startup = (uint32_t)g_su.state | ((uint32_t)g_su.fault << 8u) | ((uint32_t)g_su.missing << 16u) |
+                      ((g_su.attempts > 255u ? 255u : g_su.attempts) << 24u);
+    g_bench.devices = (uint32_t)g_drv.state | ((uint32_t)g_drv.error << 4u) | ((uint32_t)g_ina.state << 8u) |
+                      ((uint32_t)g_ina.error << 12u) | (g_ina.retries_exhausted ? 1u << 16u : 0u);
     g_bench.inputs = (bi.brake ? BENCH_IN_BRAKE : 0u) | (bi.cancel ? BENCH_IN_CANCEL : 0u) |
                      (bi.mode_eco ? BENCH_IN_MODE_ECO : 0u) | (bi.arm ? BENCH_IN_ARM : 0u) |
                      (bi.fault_reset ? BENCH_IN_FAULT_RESET : 0u) | (bi.driver_present ? BENCH_IN_DRIVER_PRESENT : 0u) |
@@ -439,8 +515,24 @@ static void init_converters(void)
     mc_pedal_init(&g_pedal, cfg(MC_P_CONTROLS_THROTTLE_A_RELEASED_V), cfg(MC_P_CONTROLS_THROTTLE_A_FULL_V),
                   cfg(MC_P_CONTROLS_THROTTLE_B_RELEASED_V), cfg(MC_P_CONTROLS_THROTTLE_B_FULL_V),
                   cfg(MC_P_CONTROLS_THROTTLE_TRACK_TOLERANCE), cfg(MC_P_CONTROLS_THROTTLE_DIVIDER_RATIO));
-    mc_precharge_init(&g_pc, cfg(MC_P_POWER_PRECHARGE_COMPLETE_FRACTION), cfg(MC_P_POWER_PRECHARGE_TIMEOUT_S),
-                      cfg(MC_P_LIMITS_UNDERVOLTAGE_TRIP_V));
+    const mc_startup_params_t sp = {
+        .fraction = cfg(MC_P_POWER_PRECHARGE_COMPLETE_FRACTION),
+        .timeout_s = cfg(MC_P_POWER_PRECHARGE_TIMEOUT_S),
+        .uv_trip_V = cfg(MC_P_LIMITS_UNDERVOLTAGE_TRIP_V),
+        .ov_trip_V = cfg(MC_P_LIMITS_OVERVOLTAGE_TRIP_V),
+        .r_pre_ohm = cfg(MC_P_POWER_PRECHARGE_RESISTOR_OHM),
+        .agreement_V = cfg(MC_P_POWER_PRECHARGE_AGREEMENT_V),
+        .sample_max_age_s = cfg(MC_P_POWER_BATTERY_SAMPLE_MAX_AGE_S),
+        .step_timeout_s = cfg(MC_P_POWER_STARTUP_STEP_TIMEOUT_S),
+        .max_attempts = mc_config_has(&g_core.cfg, MC_P_POWER_STARTUP_MAX_ATTEMPTS)
+                            ? (uint32_t)cfg(MC_P_POWER_STARTUP_MAX_ATTEMPTS)
+                            : 0u};
+    mc_startup_init(&g_su, &sp);
+    g_batt_age_us = g_su.params_ok ? (uint32_t)(sp.sample_max_age_s * 1.0e6f) : 0u;
+    /* No device descriptions and no bus transports in this revision (see the header): both drivers stay
+     * UNVERIFIED and never touch ENABLE or the buses. */
+    mc_drv835x_init(&g_drv, NULL, NULL, NULL, NULL, 0u);
+    mc_ina228_init(&g_ina, NULL, NULL, NULL, NULL, NULL, 0u, 0u);
     g_settle_s = cfg(MC_P_INVERTER_CURRENT_SAMPLE_SETTLE_S);
     /* Unknown switch type: normally open is assumed for the reading, and the calibration is invalid for
      * hardware anyway (controls.brake_switch is required), so the core never drives on that assumption. */
@@ -535,8 +627,10 @@ int main(void)
     g_bench.can_status = (uint32_t)g_can;
     if (g_can != CAN_ON) g_bench.platform_faults |= PF_CAN_OFF;
     report("can", g_can == CAN_ON ? "on" : "off");
-    report("gate driver", "not configured in this revision: DRV_ENABLE stays low");
-    report("battery meter", "not read in this revision: precharge bypass stays open");
+    report("gate driver", "no verified DRV8353 description in this revision: DRV_ENABLE stays low");
+    report("battery meter", "no verified INA228 description in this revision: precharge bypass stays open");
+    report("start-up", g_su.params_ok ? "parameters valid; inhibited until both devices are verified"
+                                      : "inhibited: start-up parameters missing from the calibration");
 
     timebase_start_slow_tick(PRIO_SLOW);
     if (BENCH_PWM_TEST) {

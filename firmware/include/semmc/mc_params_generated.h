@@ -107,6 +107,11 @@ typedef enum {
     MC_P_CONTROLS_BRAKE_SWITCH = 186,
     MC_P_POWER_PRECHARGE_COMPLETE_FRACTION = 190,
     MC_P_POWER_PRECHARGE_TIMEOUT_S = 191,
+    MC_P_POWER_PRECHARGE_RESISTOR_OHM = 192,
+    MC_P_POWER_PRECHARGE_AGREEMENT_V = 193,
+    MC_P_POWER_BATTERY_SAMPLE_MAX_AGE_S = 194,
+    MC_P_POWER_STARTUP_STEP_TIMEOUT_S = 195,
+    MC_P_POWER_STARTUP_MAX_ATTEMPTS = 196,
     MC_P_SENSING_FET_NTC_R25_OHM = 200,
     MC_P_SENSING_FET_NTC_BETA_K = 201,
     MC_P_SENSING_FET_NTC_BIAS_OHM = 202,
@@ -274,6 +279,11 @@ typedef struct {
     {186u, 3u, 0u, 1u, 0.0f, 1.0f, "controls.brake_switch"}, \
     {190u, 0u, 0u, 1u, 0.5f, 0.999f, "power.precharge_complete_fraction"}, \
     {191u, 0u, 0u, 1u, 0.01f, 30.0f, "power.precharge_timeout_s"}, \
+    {192u, 0u, 0u, 1u, 0.1f, 10000.0f, "power.precharge_resistor_ohm"}, \
+    {193u, 0u, 0u, 1u, 0.05f, 20.0f, "power.precharge_agreement_V"}, \
+    {194u, 0u, 0u, 1u, 0.001f, 1.0f, "power.battery_sample_max_age_s"}, \
+    {195u, 0u, 0u, 1u, 0.001f, 5.0f, "power.startup_step_timeout_s"}, \
+    {196u, 1u, 0u, 1u, 1.0f, 10.0f, "power.startup_max_attempts"}, \
     {200u, 0u, 0u, 1u, 100.0f, 1000000.0f, "sensing.fet_ntc_r25_ohm"}, \
     {201u, 0u, 0u, 1u, 1000.0f, 10000.0f, "sensing.fet_ntc_beta_K"}, \
     {202u, 0u, 0u, 1u, 100.0f, 1000000.0f, "sensing.fet_ntc_bias_ohm"}, \
@@ -284,6 +294,6 @@ typedef struct {
     {207u, 0u, 0u, 1u, 0.5f, 4096.0f, "sensing.current_offset_tolerance_counts"}, \
 }
 
-#define MC_PARAM_COUNT 109
+#define MC_PARAM_COUNT 114
 
 #endif /* SEMMC_MC_PARAMS_GENERATED_H */

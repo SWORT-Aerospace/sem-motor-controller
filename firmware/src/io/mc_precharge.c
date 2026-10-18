@@ -66,6 +66,15 @@ void mc_precharge_step(mc_precharge_t *p, float dt_s, float v_link, bool v_link_
     p->ready = p->state == MC_PC_CLOSED && v_link_ok && v_batt_ok && p->mismatch_s == 0.0f;
 }
 
+void mc_precharge_force_fault(mc_precharge_t *p, mc_pc_fault_t f)
+{
+    if (p->state == MC_PC_DISABLED) return;
+    p->fault = f;
+    enter(p, MC_PC_FAULT);
+    p->bypass = false;
+    p->ready = false;
+}
+
 void mc_precharge_reset(mc_precharge_t *p)
 {
     if (p->state != MC_PC_FAULT) return;

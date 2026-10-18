@@ -31,7 +31,12 @@ typedef enum {
     MC_PC_FAULT = 4
 } mc_pc_state_t;
 
-typedef enum { MC_PCF_NONE = 0, MC_PCF_TIMEOUT = 1, MC_PCF_LINK_LOW_AFTER_CLOSE = 2 } mc_pc_fault_t;
+typedef enum {
+    MC_PCF_NONE = 0,
+    MC_PCF_TIMEOUT = 1,
+    MC_PCF_LINK_LOW_AFTER_CLOSE = 2,
+    MC_PCF_SENSOR_DISAGREE = 3 /* set by mc_startup: link reading and resistor current disagree at closure */
+} mc_pc_fault_t;
 
 typedef struct {
     float fraction, timeout_s, uv_trip_V;
@@ -45,6 +50,8 @@ typedef struct {
 
 void mc_precharge_init(mc_precharge_t *p, float fraction, float timeout_s, float uv_trip_V);
 void mc_precharge_step(mc_precharge_t *p, float dt_s, float v_link, bool v_link_ok, float v_batt, bool v_batt_ok);
+/* Latches a fault found outside this module (bypass opened, as for the module's own faults). */
+void mc_precharge_force_fault(mc_precharge_t *p, mc_pc_fault_t f);
 /* Clears a latched fault (driver fault-reset while not driving). Returns to WAIT_BATTERY. */
 void mc_precharge_reset(mc_precharge_t *p);
 

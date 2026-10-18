@@ -23,14 +23,14 @@ import subprocess
 import sys
 import time
 
-FORMAT = "<6I3f5H2x3f2f2f3I6I"
+FORMAT = "<6I3f5H2x3f2f2f3I6I2I"
 FIELDS = ["platform_faults", "can_status", "fast_count", "fast_max_cycles", "fast_overruns", "slow_max_cycles",
           "raw_current_avg_a", "raw_current_avg_b", "raw_current_avg_c",
           "raw_vbus", "raw_temp_fet", "raw_temp_motor", "raw_throttle_a", "raw_throttle_b",
           "offsets_measured_a", "offsets_measured_b", "offsets_measured_c",
           "pedal_frac_a", "pedal_frac_b", "f_pwm_Hz", "deadtime_s", "state", "precharge_state", "inputs",
           "fast_isr_max_cycles", "fast_margin_min_ticks", "fast_late_writes", "adc_wait_max_cycles", "slow_overruns",
-          "stack_unused_min_bytes"]
+          "stack_unused_min_bytes", "startup", "devices"]
 INPUT_BITS = ["brake", "cancel", "mode_eco", "arm", "fault_reset", "driver_present", "hw_permit",
               "drv_en_gated", "drv_nfault", "ext_wdg_reset", "ina_alert", "break_driver", "break_overvolt",
               "break_system", "outputs_on"]
@@ -38,8 +38,16 @@ PLATFORM_FAULTS = ["gate_driver_not_configured", "battery_meter_not_read", "pwm_
                    "adc_init", "offsets", "enable_path", "precharge", "adc_resolution"]
 STATES = ["BOOT", "SELF_TEST", "DISARMED", "READY", "MANUAL", "ECO_ASSIST", "DERATED", "FAULT_LATCHED"]
 PRECHARGE = ["DISABLED", "WAIT_BATTERY", "CHARGING", "CLOSED", "FAULT"]
+PRECHARGE_FAULTS = ["NONE", "TIMEOUT", "LINK_LOW_AFTER_CLOSE", "SENSOR_DISAGREE"]
+STARTUP = ["INHIBITED", "PRECHARGE", "DRIVER", "OFFSETS", "READY", "FAULT", "LOCKOUT"]
+STARTUP_FAULTS = ["NONE", "PRECHARGE", "DRIVER", "DRIVER_TIMEOUT", "OFFSETS"]
+STARTUP_MISSING = ["config", "params", "driver_description", "meter_description"]
+DRV_STATES = ["UNVERIFIED", "SLEEP", "WAKING", "CONFIGURE", "CLEARING", "READY", "FAULT"]
+DRV_ERRORS = ["NONE", "NO_DESCRIPTION", "SPI", "READBACK", "FAULT_BITS", "NFAULT", "NOT_CLEARED"]
+INA_STATES = ["UNVERIFIED", "RESET", "WAIT_RESET", "IDENTIFY", "CONFIGURE", "RUNNING", "FAULT"]
+INA_ERRORS = ["NONE", "NO_DESCRIPTION", "SETTINGS", "BUS", "ID", "READBACK"]
 SIZE = struct.calcsize(FORMAT)
-assert SIZE == 112 and len(FIELDS) == len(struct.unpack(FORMAT, bytes(SIZE)))
+assert SIZE == 120 and len(FIELDS) == len(struct.unpack(FORMAT, bytes(SIZE)))
 
 
 def symbol_address(elf: pathlib.Path, name: str) -> int:
@@ -100,7 +108,19 @@ def decode(raw: bytes) -> dict:
     m = d["fast_margin_min_ticks"]
     d["fast_margin_min_us"] = None if m == 0xFFFFFFFF else m / 160.0
     d["adc_wait_max_us"] = d["adc_wait_max_cycles"] / 160.0
+    su, dev = d["startup"], d["devices"]
+    d["startup_state"] = _name(STARTUP, su & 0xFF)
+    d["startup_fault"] = _name(STARTUP_FAULTS, (su >> 8) & 0xFF)
+    d["startup_missing"] = [n for i, n in enumerate(STARTUP_MISSING) if (su >> 16) >> i & 1]
+    d["startup_attempts"] = su >> 24
+    d["drv_state"], d["drv_error"] = _name(DRV_STATES, dev & 0xF), _name(DRV_ERRORS, (dev >> 4) & 0xF)
+    d["ina_state"], d["ina_error"] = _name(INA_STATES, (dev >> 8) & 0xF), _name(INA_ERRORS, (dev >> 12) & 0xF)
+    d["ina_retries_exhausted"] = bool(dev >> 16 & 1)
     return d
+
+
+def _name(names: list, i: int) -> str:
+    return names[i] if i < len(names) else str(i)
 
 
 def main() -> int:
