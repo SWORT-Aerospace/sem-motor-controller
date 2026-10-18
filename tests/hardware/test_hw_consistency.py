@@ -55,3 +55,27 @@ def test_mcu_driving_enable_directly_is_caught(mutated):
     res = mutated(lambda t: t.replace('(node (ref "U801") (pin "7") (pinfunction "PC13") (pintype "bidirectional"))',
                                       '(node (ref "U801") (pin "82") (pinfunction "PD0") (pintype "output"))', 1))
     assert _status(res, "PR1") == "FAIL"
+
+
+def test_bench_gate_disable_path_holds_on_the_committed_netlist():
+    res = HC.run()
+    for p in ("BP1", "BP2", "BP3", "BP4"):
+        assert _status(res, p) == "PASS", p
+    assert _status(res, "BP5") == "OPEN"          # needs the DRV8353 data sheet
+
+
+def test_pwm_pin_wired_to_a_gate_is_caught(mutated):
+    # the MCU's PWM_A_HI net also reaching the high-side MOSFET gate: the bench image could then switch it
+    res = mutated(lambda t: t.replace('    (net (code "69") (name "/bridge/GH_A")\n',
+                                      '    (net (code "69") (name "/bridge/GH_A")\n'
+                                      '      (node (ref "U801") (pin "15") (pinfunction "PC0") (pintype "bidirectional"))\n', 1))
+    assert _status(res, "BP2") == "FAIL"
+
+
+def test_second_path_charging_the_link_is_caught(mutated):
+    # a resistor from the battery side straight onto VDC would power the driver with the precharge resistor unfitted
+    def add(t):
+        t = re.sub(r'(\(net \(code "\d+"\) \(name "/VBAT_SH"\)\n)', r'\1      (node (ref "R999") (pin "1") (pintype "passive"))\n', t, count=1)
+        return re.sub(r'(\(net \(code "\d+"\) \(name "VDC"\)\n)', r'\1      (node (ref "R999") (pin "2") (pintype "passive"))\n', t, count=1)
+    res = mutated(add)
+    assert _status(res, "BP3") == "FAIL"

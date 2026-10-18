@@ -42,6 +42,7 @@ jobs:
           python tools/check_datasheets.py --check
           python tools/ov_trip_worst_case.py --check
           python tools/check_footprints.py --check
+          python tools/bench_package.py --doc --check
           python tools/acceptance.py render --check
           python tools/wheel_sensor_check.py --check
           python tools/coastdown_sensitivity.py --check
@@ -102,6 +103,13 @@ jobs:
             build-g4/semmc_stm32g474.bin
             build-g4/semmc_stm32g474.hex
             build-g4/semmc_stm32g474.map
+      - name: Bench package (images, procedures, templates, scripts, checks, manifest; nothing flashed)
+        run: python tools/bench_package.py --images build-g4 --board UNASSIGNED --out build/bench_package
+      - name: Upload bench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-package
+          path: build/bench_package
       - name: Synthetic studies (quick)
         run: |
           python tools/run_optimization.py --quick

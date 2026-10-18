@@ -136,6 +136,55 @@ def run():
         "PASS" if opto_on and all(n["ref"] == mcu and n["pin"] == es for n in hp_drivers) else "FAIL",
         f"{opto} on HW_PERMIT pin {[n['pin'] for n in opto_on]}; MCU on pin {[n['pin'] for n in hp_drivers]} "
         f"(ESTOP_CHAIN_SENSE = pin {es})")
+    # ---- bench PWM image: what keeps the gates off (acceptance stage 4) -------------------
+    # The bench image switches the six PWM pins with DRV_ENABLE low, on a board whose precharge resistor is not
+    # fitted. These checks show from the netlist which parts of that claim are circuit facts.
+    pwm_fns = [f for f in pins if f.startswith("PWM_") and f[-3:] in ("_HI", "_LO")]
+    bad = []
+    for fn in pwm_fns:
+        net = pin_net.get((mcu, pins[fn]["position"]))
+        for n in nets.get(net, []):
+            if n["ref"] in (mcu, drv) or n["ref"].startswith("TP"):
+                continue
+            if n["ref"].startswith("R") and other_end(n["ref"], net) == "GND":
+                continue
+            bad.append(f"{fn} net {net} also reaches {n['ref']}.{n['pin']}")
+    rec("BP1 the six PWM pins reach only the gate driver's inputs (and their pull-downs)",
+        "FAIL" if bad or len(pwm_fns) != 6 else "PASS",
+        "; ".join(bad) or f"{len(pwm_fns)} PWM nets: MCU, {drv}, pull-downs to GND and test points only")
+    bridge = [r for r, c in comps.items() if r.startswith("Q") and c["sheet"] == "bridge"]
+    bad, seen = [], 0
+    for q in bridge:
+        gate = pin_net.get((q, "1"))
+        for n in nets.get(gate, []):
+            if n["ref"] == q or n["ref"].startswith("TP"):
+                continue
+            far = other_end(n["ref"], gate) if n["ref"].startswith("R") else None
+            far_refs = {m["ref"] for m in nets.get(far, [])} if far else set()
+            if n["ref"].startswith("R") and far_refs <= {drv, n["ref"]} | {t for t in far_refs if t.startswith("TP")}:
+                seen += 1
+                continue
+            bad.append(f"{q} gate {gate} reaches {n['ref']}.{n['pin']}")
+    rec("BP2 every bridge MOSFET gate is reached only from a gate-driver output", "FAIL" if bad or seen != 6 else "PASS",
+        "; ".join(bad) or f"{len(bridge)} MOSFET gates, each through its series resistor to {drv} only; no MCU path")
+    links = sorted({r for (r, _p), n in pin_net.items() if n == "VDC"
+                    and any(m.startswith("VBAT") for (r2, _p2), m in pin_net.items() if r2 == r)})
+    vm = net_of_fn(drv, "VM")
+    q101 = [r for r in links if r.startswith("Q")]
+    body_ok = all(pin_net.get((q, "2")) == "VBAT_SH" and comps[q]["part"] == "Q_PMOS_GSD" for q in q101)
+    rec("BP3 with the precharge resistor not fitted and the bypass off, nothing charges the link that supplies the driver",
+        "PASS" if vm == "VDC" and len(links) == 2 and len(q101) == 1 and body_ok else "FAIL",
+        f"{drv} VM on {vm}; parts from a battery net to VDC: {links} (precharge resistor and bypass P-FET); the P-FET's "
+        "source is on VBAT_SH, so its body diode blocks battery to link. Stage 2 to 5 setups leave the resistor unfitted "
+        "and PRECHG_EN low, so the driver has no supply while the bench image switches its inputs")
+    rec("BP4 the bench image never commands DRV_ENABLE", "PASS",
+        "DRV_ENABLE is written only as GATE_DRIVER_CONFIGURED && g_drv.enable_pin, both false in every image "
+        "(tests/integration/test_target_firmware.py, test_target_image_keeps_the_gate_driver_and_meter_inhibited and "
+        "test_bench_pwm_image_is_separate_and_marked); PR1 to PR3 keep ENABLE low in hardware")
+    rec("BP5 the gate driver keeps its gates low when disabled or unpowered, and tolerates driven inputs unpowered",
+        "OPEN", "DRV8353 behaviour with ENABLE low (sleep and gate pull-downs) and the input ratings with VM absent are "
+        "in its data sheet (SLVSDY6, B-DRV), not read; until then the protection in stage 4 rests on BP1 to BP4 and on "
+        "measuring every gate at 0 V before and during the test (acceptance S4)")
     rec("PR8 independent over-current comparator on BKIN2", "OPEN",
         "none in the draft: hardware over-current shutdown is the gate driver's VDS monitoring through nFAULT -> BKIN "
         "(threshold depends on the MOSFET R_DS(on), i.e. on the motor current); BKIN2 carries the over-voltage trip only. "
