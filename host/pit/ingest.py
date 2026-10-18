@@ -33,7 +33,7 @@ import sqlite3
 from host.telematics import stlg
 from host.telematics import controller_adapter, measurement, signals
 from host.telematics.node import SCHEMAS_ACCEPTED
-from host.telematics.wheel import EdgeRecord, WheelConfig, WheelEstimator
+from host.telematics.wheel import EdgeRecord, WheelConfig, WheelGroup
 from protocol.generated import semmc_protocol as proto
 
 DDL = """
@@ -367,7 +367,8 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
     tchan = {int(k): v for k, v in sens.get("temp_channels", {}).items()}
     adapter = controller_adapter.from_meta(meta.get("controller_adapter") or {"id": "semmc-sim-fixture"}, mapping_dir)
     wcfg = WheelConfig(C, ppr, active_high=bool(sens.get("wheel_active_high"))) if C and ppr else None
-    west = {}
+    wheels = None
+    t_boot = None                                       # session start (BOOT record): silence is measured from it
     rep = {"run_id": run_id, "blocks_ok": rr.blocks_ok, "blocks_corrupt": rr.blocks_corrupt,
            "block_seq_gaps": rr.block_seq_gaps, "truncated_tail_bytes": rr.truncated_tail_bytes,
            "records": rr.records, "new_records": 0, "frames_bad_crc": 0, "frames": {}, "utc_quality": {},
@@ -414,10 +415,14 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
             name = chan.get(f["channel"], f"wheel_{f['channel']}")
             if wcfg is not None:
                 k = iter(range(16))
-                est = west.setdefault(f["channel"], WheelEstimator(wcfg, name))
-                est.rid = lambda: _rid(blk, idx, next(k))   # noqa: B023
-                made = est.feed(EdgeRecord(t, f["channel"], f["n"], f["span_us"], f["total"], f["flags"], f["rec_seq"],
-                                           f["lost"]))
+                if wheels is None:
+                    names = dict(chan) if chan else {}
+                    names.setdefault(f["channel"], name)
+                    t0 = t - (f["span_us"] if f["n"] else 0)
+                    wheels = WheelGroup(wcfg, names, t0_us=min(t0, t_boot) if t_boot is not None else t0)
+                wheels.set_record_id(lambda: _rid(blk, idx, next(k)))   # noqa: B023
+                made = wheels.feed(EdgeRecord(t, f["channel"], f["n"], f["span_us"], f["total"], f["flags"],
+                                              f["rec_seq"], f["lost"]))
                 for m in made:
                     if m.signal.endswith(".speed") and m.usable:
                         sig.append((run_id, blk, idx, name, t, u, m.value, None, "telematics"))
@@ -460,13 +465,15 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
             rep["final_counters"] = n_rec == len(recs) - 1
         elif rtype == stlg.BOOT:
             rep["boot"] = f
+            t_boot = t
         for m in made:
             meas.append(_meas_row(run_id, blk, idx, m, u, q))
             rep["validity"][m.validity] = rep["validity"].get(m.validity, 0) + 1
         rows.append((run_id, blk, idx, t, u, q, rtype, can_id, msg, seq, status))
-    for est in west.values():
+    for est in (wheels.est.values() if wheels else ()):
         rep["wheel_lost_records"] += est.lost_records
         rep["wheel_lost_edges"] += est.lost_edges
+    rep["wheel_suspect_episodes"] = dict(wheels.episodes) if wheels else {"A": 0, "I": 0}
     rep["measurements"] = len(meas)
     lc = rep["last_counters"]
     if lc and "log_records" in lc:

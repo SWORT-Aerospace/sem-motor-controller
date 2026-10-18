@@ -1,0 +1,83 @@
+{
+  "config": {
+    "flush_s": 2.0,
+    "reserve": 32,
+    "sparse_period_s": 10.0
+  },
+  "mixes": [
+    {
+      "can_hz": 0,
+      "id": "wheel",
+      "imu_hz": 0,
+      "seconds_per_slot": 2.041,
+      "steps": "B1 to B11 (signal generator on wheel_0; edge rate does not matter)",
+      "storages": {
+        "W25Q128JV NOR": {
+          "full_rate_s": 8292,
+          "reserve": 32,
+          "slots": 4096,
+          "sparse_s": 8296,
+          "total_s": 16588
+        },
+        "internal flash bank 2": {
+          "full_rate_s": 455,
+          "reserve": 32,
+          "slots": 256,
+          "sparse_s": 8296,
+          "total_s": 8751
+        }
+      },
+      "temp_hz": 0
+    },
+    {
+      "can_hz": 0,
+      "id": "wheel_imu_temp",
+      "imu_hz": 100,
+      "seconds_per_slot": 1.429,
+      "steps": "B12 (IMU at 100 Hz and one TMP117 at 1 Hz added)",
+      "storages": {
+        "W25Q128JV NOR": {
+          "full_rate_s": 5804,
+          "reserve": 32,
+          "slots": 4096,
+          "sparse_s": 8296,
+          "total_s": 14101
+        },
+        "internal flash bank 2": {
+          "full_rate_s": 319,
+          "reserve": 32,
+          "slots": 256,
+          "sparse_s": 8296,
+          "total_s": 8615
+        }
+      },
+      "temp_hz": 1
+    },
+    {
+      "can_hz": 394.0,
+      "id": "fixture_vehicle",
+      "imu_hz": 100,
+      "seconds_per_slot": 0.394,
+      "steps": "vehicle with the semmc fixture's controller broadcast (394 frames/s), IMU and three TMP117",
+      "storages": {
+        "W25Q128JV NOR": {
+          "full_rate_s": 1600,
+          "reserve": 32,
+          "slots": 4096,
+          "sparse_s": 8296,
+          "total_s": 9896
+        },
+        "internal flash bank 2": {
+          "full_rate_s": 88,
+          "reserve": 32,
+          "slots": 256,
+          "sparse_s": 8296,
+          "total_s": 8384
+        }
+      },
+      "temp_hz": 3
+    }
+  ],
+  "sparse_seconds_per_slot": 259.3,
+  "timer_overflow_s": 4295.0
+}

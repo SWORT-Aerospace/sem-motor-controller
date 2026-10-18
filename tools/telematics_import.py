@@ -3,6 +3,7 @@
 
     python3 tools/telematics_import.py dump.bin --db pit.sqlite --out build/bench_import \
         [--wheel-circumference 1.50 --wheel-ppr 8] [--uart-capture capture.txt]
+    python3 tools/telematics_import.py --status-capture capture.txt --out build/bench_status   # console only
 
 The firmware (telematics/firmware) writes its log as 4 KiB slots in a region of storage: a session (one
 boot) is a header slot ("STLG" + run metadata) followed by block slots ("BK"); unwritten slots read 0xFF.
@@ -17,12 +18,18 @@ This tool:
   3. imports each session with host/pit/ingest.py (idempotent: a second import adds nothing);
   4. writes OUT/import.json and, per session, OUT/<run_id>_speed_distance.png: wheel speed from edge
      timing and distance per channel.
+
+`--status-capture` reads the status lines ("TM t=... tov=... edges=...") of a console capture instead: evidence
+that does not depend on the log storage (bench step B7). It writes OUT/status.csv and OUT/status.json with
+the time continuity, every change of the timer overflow count with the slot then being filled (the DUMP range
+to read back around it), and the edge rate on each side of it.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import pathlib
+import re
 import struct
 import sys
 import zlib
@@ -101,6 +108,44 @@ def from_uart(text: str) -> bytes:
     return b"".join(data.get(k, b"\xff" * SLOT) for k in range(slots))
 
 
+STATUS = re.compile(r"TM t=(\d+)\.(\d{3}) s tov=(\d+) boot=(\d+) edges=(\d+)/(\d+)/(\d+) wheel=([NMSAI]{3}).*?"
+                    r"slots=(\d+)/(\d+) log=(\w+) left=(\S+)s thin=(\d+)")
+
+
+def status_lines(text: str) -> list[dict]:
+    """The firmware's status lines in a console capture, in order (other lines ignored)."""
+    out = []
+    for m in STATUS.finditer(text):
+        g = m.groups()
+        out.append({"t_s": int(g[0]) + int(g[1]) / 1000.0, "tov": int(g[2]), "boot": int(g[3]),
+                    "edges": [int(g[4]), int(g[5]), int(g[6])], "wheel": g[7], "slots": int(g[8]),
+                    "slots_total": int(g[9]), "log": g[10], "left_s": None if g[11] == "?" else int(g[11]),
+                    "thinned": int(g[12])})
+    return out
+
+
+def overflow_check(rows: list[dict], channel: int = 0, rate_tol: float = 0.002) -> dict:
+    """Time continuity and the edge rate around each change of the timer overflow count (B7)."""
+    rows = [r for r in rows if r["boot"] == rows[-1]["boot"]] if rows else []
+    dts = [b["t_s"] - a["t_s"] for a, b in zip(rows, rows[1:])]
+    rates = [(b["edges"][channel] - a["edges"][channel]) / (b["t_s"] - a["t_s"])
+             for a, b in zip(rows, rows[1:]) if b["t_s"] > a["t_s"]]
+    med = sorted(rates)[len(rates) // 2] if rates else None
+    changes = []
+    for k, (a, b) in enumerate(zip(rows, rows[1:])):
+        if b["tov"] != a["tov"]:
+            around = [r for r in rates[max(0, k - 5):k + 6]]
+            changes.append({"t_s": b["t_s"], "tov": [a["tov"], b["tov"]], "slot": b["slots"],
+                            "rate_around": [round(x, 3) for x in around],
+                            "steady": bool(med) and all(abs(x - med) <= rate_tol * med for x in around)})
+    return {"lines": len(rows), "t_first_s": rows[0]["t_s"] if rows else None, "t_last_s": rows[-1]["t_s"] if rows else None,
+            "dt_min_s": round(min(dts), 3) if dts else None, "dt_max_s": round(max(dts), 3) if dts else None,
+            "time_monotonic": all(d > 0 for d in dts), "median_rate_hz": round(med, 3) if med else None,
+            "tov_changes": changes,
+            "pass": bool(rows) and all(d > 0 for d in dts) and max(dts, default=0) < 2.5 and bool(changes)
+                    and all(c["steady"] for c in changes)}
+
+
 def plot(db, run_id: str, out: pathlib.Path) -> str | None:
     import matplotlib
     matplotlib.use("Agg")
@@ -159,7 +204,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("dump", type=pathlib.Path, nargs="?", help="binary dump of the log region")
     ap.add_argument("--uart-capture", type=pathlib.Path, help="text capture of the UART DUMP command instead")
-    ap.add_argument("--db", type=pathlib.Path, required=True)
+    ap.add_argument("--status-capture", type=pathlib.Path, help="console capture: check the status lines only (B7)")
+    ap.add_argument("--db", type=pathlib.Path)
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "build" / "telematics_import")
     ap.add_argument("--wheel-circumference", type=float, help="m (vehicle or bench fixture value)")
     ap.add_argument("--wheel-ppr", type=int, help="edges counted per revolution")
@@ -167,6 +213,24 @@ def main() -> int:
     ap.add_argument("--source", default="command line", help="where the wheel values come from (recorded)")
     ap.add_argument("--no-plots", action="store_true")
     a = ap.parse_args()
+    if a.status_capture:
+        rows = status_lines(a.status_capture.read_text(errors="replace"))
+        a.out.mkdir(parents=True, exist_ok=True)
+        with open(a.out / "status.csv", "w") as f:
+            f.write("t_s,tov,boot,edges_0,edges_1,edges_2,wheel,slots,log,left_s,thinned\n")
+            for r in rows:
+                f.write(f"{r['t_s']:.3f},{r['tov']},{r['boot']},{','.join(map(str, r['edges']))},{r['wheel']},"
+                        f"{r['slots']},{r['log']},{'' if r['left_s'] is None else r['left_s']},{r['thinned']}\n")
+        chk = overflow_check(rows)
+        (a.out / "status.json").write_text(json.dumps(chk, indent=2) + "\n")
+        print(f"STATUS {chk['lines']} lines, t {chk['t_first_s']} to {chk['t_last_s']} s, step {chk['dt_min_s']} to "
+              f"{chk['dt_max_s']} s, median edge rate {chk['median_rate_hz']} Hz; overflow count changes: "
+              + (", ".join(f"{c['tov'][0]}->{c['tov'][1]} at {c['t_s']} s, slot {c['slot']} "
+                           f"({'steady' if c['steady'] else 'NOT steady'}; DUMP {max(0, c['slot'] - 15)} {c['slot'] + 15})"
+                           for c in chk["tov_changes"]) or "none") + f"; {'PASS' if chk['pass'] else 'FAIL'}")
+        return 0 if chk["pass"] else 1
+    if a.db is None:
+        ap.error("--db is required to import a log")
     if a.uart_capture:
         image = from_uart(a.uart_capture.read_text())
     elif a.dump:

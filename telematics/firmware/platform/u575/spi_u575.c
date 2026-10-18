@@ -82,6 +82,7 @@ void spi1_init(void)
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
     (void)RCC->APB2ENR;
     SPI1->CR1 = SPI_CR1_SSI;
-    SPI1->CFG1 = (0u << SPI_CFG1_MBR_Pos) | (7u << SPI_CFG1_DSIZE_Pos);            /* /2, 8 bits */
+    /* /2, 8 bits; CRCSIZE kept at its reset value, as ST's HAL_SPI_Init does when the CRC is unused */
+    SPI1->CFG1 = (SPI1->CFG1 & SPI_CFG1_CRCSIZE) | (0u << SPI_CFG1_MBR_Pos) | (7u << SPI_CFG1_DSIZE_Pos);
     SPI1->CFG2 = SPI_CFG2_MASTER | SPI_CFG2_SSM | SPI_CFG2_AFCNTR;                  /* mode 0, software NSS */
 }

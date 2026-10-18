@@ -29,28 +29,28 @@ The single plan for this repository. The deliverable is the telematics unit and 
   1. Send the request to the controller team. Receive their answers, DBC (or protocol document) and a recording.
   2. Write the mapping from their DBC to the signal registry (units checked against the DBC) and replay the recording through `DbcAdapter`; send them the decoded values for confirmation.
   3. If an essential signal (DC voltage and current at the controller input) is missing, send the exact broadcast request of section 4 of the request sheet. Polling stays a separate decision.
-  4. Choose the configuration A parts, take live quotes, and fix the input protection from the battery's maximum voltage.
+  4. Take live quotes for the bench and configuration A lines. The vehicle supply (DC-DC, TVS, fuse) waits for the battery's maximum voltage (T-VEH-PWR); until then the unit runs from USB on the bench only.
 * **Completion evidence:** the controller team's written answers in the repository; a mapping file and a decoded-recording report they have confirmed; a quoted configuration A list.
 * **Blockers:** the controller team's answer; the battery maximum voltage (input protection; the 48 V nominal, 10 Ah figures are team-reported).
 
 ## T2. Embedded acquisition and local log
 
-* **Prerequisites:** a NUCLEO-U575ZI-Q and a signal generator; T1 is not needed for the first steps.
-* **Files:** `telematics/firmware/` ([`../telematics/firmware/README.md`](../telematics/firmware/README.md)), [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md), `tools/telematics_import.py`, [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md).
-* **Equipment:** the board, a USB cable, a function generator (or a second timer output), STM32CubeProgrammer or OpenOCD.
+* **Prerequisites:** the bench parts (the `bench` lines of [`TELEMATICS_BOM.md`](TELEMATICS_BOM.md)); T1 is not needed.
+* **Files:** the bench package (`python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild`, also a CI artifact): images with SHA-256, [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) (rendered from `telematics/bench/bench.yaml`), connection and parts lists, `tools/uart_capture.py`, a blank results form; `tools/telematics_import.py`; [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md).
+* **Equipment:** a function generator with a stated frequency accuracy, a multimeter, a scope or logic analyzer, two USB-CAN adapters (B11), STM32CubeProgrammer or OpenOCD, a soldering iron (the NOR onto its adapter).
 * **Steps:**
-  1. **First milestone:** bench steps B1 to B7: wheel pulse, timestamped measurement, bounded queue, log in flash, read-back, import, plotted speed and distance; the timebase error against the generator; the 32-bit timer overflow at 71.6 min.
-  2. B8 to B10: power loss during a write, a full log, erase.
-  3. B12: IMU and temperature sensor on I2C1.
+  1. **First milestone:** bench steps B0 to B7: preflight, wheel pulse, timestamped measurement, bounded queue, log on the NOR, read-back, import, plotted speed and distance; the timebase error against the generator; stuck and disconnected sensors (B6); the 32-bit timer overflow at 71.6 min with the console capture and a ranged dump (B7).
+  2. B8 to B10: power loss during a write, internal flash filling into sparse logging, erase.
+  3. B12: IMU and TMP117 on I2C1.
   4. GNSS with PPS capture on the target (not written; the host model fixes the behaviour).
-  5. The log storage for an attempt's length (internal flash holds 1 MiB; the SPI NOR driver exists and is not wired into the images).
+  5. The log storage for an attempt's length (T-STORAGE: the NOR holds 26.7 min of the fixture vehicle's mix at full rate; docs/generated/telematics_storage.md).
 * **Completion evidence:** the bench record of each step with the import report and plots committed; the wheel channels against a reference tachometer once the vehicle's wheel is available.
-* **Blockers:** the board on the bench; the STM32U575 reference documents (the register-level code follows ST's HAL and board files; RM0456, DS13737 and UM2861 were not readable here); the wheel circumference and magnet count for real speed (B-DRIVETRAIN).
+* **Blockers:** the board on the bench; the STM32U575 reference documents (the register-level code is checked against ST's HAL and CMSIS sources, [`U575_REGISTER_CHECK.md`](U575_REGISTER_CHECK.md); RM0456, DS13737, ES0499 and UM2861 were not readable here); the wheel circumference and magnet count for real speed (B-DRIVETRAIN).
 
 ## T3. Bench integration
 
-* **Prerequisites:** T2 steps 1 to 3; a CAN transceiver breakout with its silent pin strapped; a USB-CAN adapter; for step 2, the controller team's DBC and recording.
-* **Files:** `telematics/firmware/platform/u575/can_u575.c` (FDCAN1 in bus-monitoring mode), [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) B11 and section 6, `host/telematics/controller_adapter.py`.
+* **Prerequisites:** T2 steps 1 to 3; the CAN Pal (bench line `can_xcvr`) with its silent pin high; two USB-CAN adapters; for step 2, the controller team's DBC and recording.
+* **Files:** `telematics/firmware/platform/u575/can_u575.c` (FDCAN1 in bus-monitoring mode), [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) B11 and section 7, `host/telematics/controller_adapter.py`.
 * **Steps:**
   1. B11: `tm_u575_can.bin` against a USB-CAN adapter: the board acknowledges nothing and sends nothing; every frame counted.
   2. Replay the controller team's recording onto a bench bus at its real rate and bit rate; import the board's log through the DBC adapter; compare with the recording frame by frame.

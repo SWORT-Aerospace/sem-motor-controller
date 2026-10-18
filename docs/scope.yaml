@@ -44,6 +44,9 @@ modules:
   tools/run_telematics_demo.py: telematics
   tools/telematics_import.py: telematics
   tools/telematics_bom.py: telematics
+  tools/telematics_bench.py: telematics
+  tools/telematics_storage.py: telematics
+  tools/uart_capture.py: telematics
   tools/scope.py: telematics
   tools/mqtt/: telematics
   tools/mqtt_broker.py: telematics
@@ -60,6 +63,7 @@ modules:
   docs/TELEMATICS_BOM.md: telematics
   docs/TELEMETRY_INTEGRATION.md: telematics
   docs/TELEMETRY_EMBEDDED_PORT.md: telematics
+  docs/U575_REGISTER_CHECK.md: telematics
   docs/TELEMETRY_CANDIDATES.md: telematics
   docs/MQTT_SETUP.md: telematics
   docs/ENERGY_METHODS.md: telematics
@@ -90,6 +94,8 @@ modules:
   docs/generated/bus_load.md: telematics
   docs/generated/can_bit_timing.md: telematics
   docs/generated/telematics_bom.json: telematics
+  docs/generated/telematics_storage.md: telematics
+  docs/generated/telematics_storage.json: telematics
   docs/csia/: reference                              # frozen evaluation (R3v result preserved)
   docs/decisions/: reference
   docs/decisions/ADR-0013-telematics-scope.md: telematics

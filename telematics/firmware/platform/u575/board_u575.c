@@ -20,14 +20,16 @@ void board_record_fault(uint32_t code)
     /* the independent watchdog, no longer refreshed, resets the MCU */
 }
 
+/* alternate function, output type, pull and speed first, mode last (the order of ST's HAL_GPIO_Init, AFR before
+ * MODER): the pin never runs another function, e.g. PD1 never drives FDCAN1_TX with AF0 on the way to AF9 */
 static void gpio_mode(GPIO_TypeDef *g, uint32_t pin, uint32_t mode, uint32_t af, uint32_t pull, bool open_drain)
 {
-    g->MODER = (g->MODER & ~(3uL << (2u * pin))) | (mode << (2u * pin));
+    volatile uint32_t *afr = &g->AFR[pin / 8u];
+    *afr = (*afr & ~(0xFuL << (4u * (pin % 8u)))) | (af << (4u * (pin % 8u)));
     g->OTYPER = (g->OTYPER & ~(1uL << pin)) | ((open_drain ? 1uL : 0uL) << pin);
     g->PUPDR = (g->PUPDR & ~(3uL << (2u * pin))) | (pull << (2u * pin));
     g->OSPEEDR = (g->OSPEEDR & ~(3uL << (2u * pin))) | (1uL << (2u * pin));   /* medium */
-    volatile uint32_t *afr = &g->AFR[pin / 8u];
-    *afr = (*afr & ~(0xFuL << (4u * (pin % 8u)))) | (af << (4u * (pin % 8u)));
+    g->MODER = (g->MODER & ~(3uL << (2u * pin))) | (mode << (2u * pin));
 }
 #define MODE_IN 0u
 #define MODE_OUT 1u
@@ -55,6 +57,17 @@ static bool wait_set(volatile uint32_t *reg, uint32_t mask, uint32_t loops)
     return false;
 }
 
+/* the same, refreshing the watchdog: if the option bytes start the IWDG in hardware (IWDG_SW = 0), its default
+ * timeout is far shorter than the LSE start-up; a refresh of a watchdog that is not running has no effect */
+static bool wait_set_kick(volatile uint32_t *reg, uint32_t mask, uint32_t loops)
+{
+    while (loops--) {
+        if (*reg & mask) return true;
+        IWDG->KR = 0xAAAAu;
+    }
+    return false;
+}
+
 static void watchdog_start(void)
 {
     /* IWDG on the LSI (32 kHz nominal): prescaler /64, reload 1000: about 2 s */
@@ -75,6 +88,11 @@ void board_init(void)
     RCC->CSR |= RCC_CSR_RMVF;
     g_board.last_fault = (g_fault.magic == FAULT_MAGIC) ? g_fault.code : FAULT_NONE;
     g_fault.magic = 0u;
+    /* option SRAM_RST = 0 erases SRAM1 on a system reset (ST: "All SRAMs (except SRAM2 and BKPSRAM) erased"), and
+     * with it the fault record above; the banner says which applies */
+    g_board.fault_record_kept = (FLASH->OPTR & FLASH_OPTR_SRAM_RST) != 0u;
+    g_board.flash_swapped = (FLASH->OPTR & FLASH_OPTR_SWAP_BANK) != 0u;
+    g_board.rev_id = (uint16_t)((DBGMCU->IDCODE & DBGMCU_IDCODE_REV_ID) >> DBGMCU_IDCODE_REV_ID_Pos);
     RCC->AHB2ENR1 |= RCC_AHB2ENR1_GPIOAEN | RCC_AHB2ENR1_GPIOBEN | RCC_AHB2ENR1_GPIOCEN | RCC_AHB2ENR1_GPIODEN;
     RCC->AHB3ENR |= RCC_AHB3ENR_PWREN;
     (void)RCC->AHB3ENR;
@@ -83,10 +101,17 @@ void board_init(void)
     /* LSE (32.768 kHz crystal of the Nucleo; its fitting is to be confirmed in UM2861) and MSIS locked to it.
      * The LSE can take seconds to start: wait a bounded time, then run untrimmed. */
     PWR->DBPR |= PWR_DBPR_DBP;
+    (void)wait_set(&PWR->DBPR, PWR_DBPR_DBP, 10000u);   /* backup domain writable before LSEON (HAL rcc.c) */
     RCC->BDCR |= RCC_BDCR_LSEON;
-    g_board.lse_ok = wait_set(&RCC->BDCR, RCC_BDCR_LSERDY, 3000000u);
+    g_board.lse_ok = wait_set_kick(&RCC->BDCR, RCC_BDCR_LSERDY, 3000000u);
+    /* LSEON alone is ST's "LSE for RTC only"; LSESYSEN makes the LSE available to RCC and peripherals
+     * (HAL RCC_LSE_ON), which MSI PLL mode needs (RM0456 RCC_BDCR to confirm) */
     if (g_board.lse_ok) {
-        RCC->CR |= RCC_CR_MSIPLLSEL;    /* PLL mode on MSIS */
+        RCC->BDCR |= RCC_BDCR_LSESYSEN;
+        g_board.lse_ok = wait_set_kick(&RCC->BDCR, RCC_BDCR_LSESYSRDY, 3000000u);
+    }
+    if (g_board.lse_ok) {
+        RCC->CR |= RCC_CR_MSIPLLSEL;    /* PLL mode on MSIS: select the LSE while MSIPLLEN is 0 */
         RCC->CR |= RCC_CR_MSIPLLEN;
     }
     watchdog_start();
@@ -125,7 +150,7 @@ void board_capture_start(void)
     for (unsigned i = 0; i < 3u; i++) board_gpio_af(GPIOA, WHEEL_PIN[i], 1u, true, false);   /* AF1 TIM2, pull-up */
     RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
     (void)RCC->APB1ENR1;
-    TIM2->CR1 = 0u;
+    TIM2->CR1 = TIM_CR1_URS;    /* only a counter overflow sets UIF, not the UG below (ST: TIM_Base_SetConfig) */
     TIM2->PSC = SystemCoreClock / 1000000u - 1u;    /* 1 MHz: APB1 prescaler 1 after reset */
     TIM2->ARR = 0xFFFFFFFFu;
     /* CCxS = 01 (input from its own pin), ICxF = 0011 (8 samples at the timer clock: 2 us at 4 MHz) */
@@ -135,12 +160,13 @@ void board_capture_start(void)
     /* falling edge (CCxP = 1, CCxNP = 0): an open-collector Hall switch pulls low when a magnet arrives */
     TIM2->CCER = TIM_CCER_CC1E | TIM_CCER_CC1P | TIM_CCER_CC3E | TIM_CCER_CC3P | TIM_CCER_CC4E | TIM_CCER_CC4P;
     TIM2->EGR = TIM_EGR_UG;                         /* load the prescaler */
-    TIM2->SR = 0u;
+    __DSB();
+    TIM2->SR = 0u;                                  /* a pending UIF here would put every time 2^32 us late */
     g_tim2_hi = 0u;
     TIM2->DIER = TIM_DIER_CC1IE | TIM_DIER_CC3IE | TIM_DIER_CC4IE | TIM_DIER_UIE;
     NVIC_SetPriority(TIM2_IRQn, 1u);
     NVIC_EnableIRQ(TIM2_IRQn);
-    TIM2->CR1 = TIM_CR1_CEN;
+    TIM2->CR1 = TIM_CR1_URS | TIM_CR1_CEN;
 }
 
 void board_unit_id(char *out, unsigned cap)
@@ -163,6 +189,9 @@ bool board_pll1q_20mhz(void)
     if (!g_board.lse_ok) return false;
     PWR->VOSR = (PWR->VOSR & ~PWR_VOSR_VOS) | (1uL << PWR_VOSR_VOS_Pos);
     if (!wait_set(&PWR->VOSR, PWR_VOSR_VOSRDY, 100000u)) return false;
+    /* the range is applied when ACTVOSRDY is set and ACTVOS reads it (HAL_PWREx_ControlVoltageScaling) */
+    if (!wait_set(&PWR->SVMSR, PWR_SVMSR_ACTVOSRDY, 100000u)) return false;
+    if (((PWR->SVMSR & PWR_SVMSR_ACTVOS) >> PWR_SVMSR_ACTVOS_Pos) != 1u) return false;   /* 01: range 3 */
     RCC->PLL1CFGR = (1uL << RCC_PLL1CFGR_PLL1SRC_Pos) | (0uL << RCC_PLL1CFGR_PLL1RGE_Pos) |
                     (0uL << RCC_PLL1CFGR_PLL1M_Pos) | RCC_PLL1CFGR_PLL1QEN;
     RCC->PLL1DIVR = (39uL << RCC_PLL1DIVR_PLL1N_Pos) | (1uL << RCC_PLL1DIVR_PLL1P_Pos) |

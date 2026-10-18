@@ -29,7 +29,8 @@ The telematics unit's firmware for the NUCLEO-U575ZI-Q ([`../telematics/firmware
 | File | Role in the system |
 |---|---|
 | `telematics/firmware/README.md` | Layout, commands, and the rules the firmware keeps (bounded interrupts and loops, no transmit path, counted losses) |
-| `telematics/firmware/BENCH.md` | Build and flash commands, the connection table (unverified), bench steps B1 to B12 and electrical checks E1 to E6 before any vehicle bus |
+| `telematics/firmware/BENCH.md` | Generated from `telematics/bench/bench.yaml` by `tools/telematics_bench.py`: images, build and package commands, the bench parts, the connection table (unverified) with the firmware line behind each pin, commands, bench steps B0 to B12 and electrical checks E1 to E6 before any vehicle bus |
+| `telematics/bench/bench.yaml` | The single source of the first bench: power, images, connection rows with their firmware checks, the parts that are not on a row, commands, steps B0 to B12 with the console text they quote, electrical checks E1 to E6 |
 | `telematics/firmware/CMakeLists.txt` | Host build (portable library under sanitizers, `tm_tests`, `tm_hostsim`) and, with `TM_TARGET_U575=ON`, the `tm_u575` and `tm_u575_can` images (`.elf`, `.bin`, `.hex`, map) |
 | `telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake` | Cross toolchain file for the Cortex-M33 (single-precision hardware floating point) |
 
@@ -50,12 +51,13 @@ The telematics unit's firmware for the NUCLEO-U575ZI-Q ([`../telematics/firmware
 | `telematics/firmware/include/tm_app.h`, `telematics/firmware/src/tm_app.c` | The application: platform interface, frame and wheel records, counters, queue to blocks to storage, status line, flush and erase requests |
 | `telematics/firmware/include/tm_bus.h` | Bus interface (write, read, write-then-read) shared by the I2C and SPI drivers and their test doubles |
 | `telematics/firmware/include/tm_imu.h`, `telematics/firmware/src/tm_imu.c` | LSM6DSOX or ISM330DHCX IMU and TMP117 temperature drivers over the bus interface |
-| `telematics/firmware/include/tm_w25q.h`, `telematics/firmware/src/tm_w25q.c` | W25Q SPI NOR driver as a storage back end for `tm_flashlog` (not wired into the images) |
+| `telematics/firmware/include/tm_w25q.h`, `telematics/firmware/src/tm_w25q.c` | W25Q SPI NOR driver (1 to 16 MiB, 3-byte addresses) as a storage back end for `tm_flashlog`: sector and chip erase, page program, blank check; the images use it when the part answers its JEDEC id |
 
 ### telematics/firmware/platform/host/ and tests/
 
 | File | Role in the system |
 |---|---|
+| `telematics/firmware/platform/host/tm_fakew25q.h`, `telematics/firmware/platform/host/tm_fakew25q.c` | Bus-level model of a W25Q NOR for host tests: JEDEC id, write enable, status, sector and chip erase, page program (wraps within a page, clears bits only), read; simulated busy times; a command while busy is ignored and counted as a violation |
 | `telematics/firmware/platform/host/tm_fakeflash.h`, `telematics/firmware/platform/host/tm_fakeflash.c` | RAM model of the flash for host tests: erase sets 0xFF, programming a unit that is not erased is an error, operations take simulated time, a stall window keeps the device busy |
 | `telematics/firmware/platform/host/tm_hostsim.c` | Host simulator: the firmware's own application code with a simulated clock, line levels and RAM flash, driven by a script on standard input (edges, overruns, frames, storage stalls, restarts, flush); not the target (interrupt and flash timing are not modelled); used by `tests/telematics/test_firmware_host.py` |
 | `telematics/firmware/tests/test_tm.c` | Unit tests of the portable code: CRC-32, time extension, wheel records, queue, STLG blocks, reset causes, flash log, application |
@@ -279,7 +281,7 @@ Paths are relative to the repository root. `__init__.py` files and `__pycache__/
 | `host/telematics/measurement.py` | The measurement record (source, signal, unit, receive and sample time, uncertainty, source sequence, validity, provenance) and the latest-value table behind the live summary. |
 | `host/telematics/signals.py` | Signal registry: identity, unit, origin, role, range and staleness limit of every reported quantity; its identifier names it in live messages. |
 | `host/telematics/controller_adapter.py` | Controller adapters: the semmc simulation fixture (CRC, sequence, validity flags), a DBC adapter with a unit-checked mapping, and a null adapter. |
-| `host/telematics/wheel.py` | Wheel speed and distance from edge timing, with standstill only on positive evidence and lower bounds after lost edges; the reference for the firmware's records. |
+| `host/telematics/wheel.py` | Wheel speed and distance from edge timing; no edge is no evidence (never 0); the plausibility rule across channels (suspect stuck active or disconnected, the same as the firmware's); lower bounds after lost edges; the reference for the firmware's records. |
 | `host/telematics/sim_vehicle.py` | Simulated vehicle and external controller for the demonstration: broadcast frames, wheel edges, GNSS, IMU, temperatures, battery monitor, with injectable faults. |
 | `host/telematics/stlg.py` | Reference implementation of the STLG v1 local log format (metadata header, 4 KiB CRC-checked blocks, record types 1 to 13), with a non-blocking writer and a reader that counts corrupt blocks, gaps and truncation. |
 | `host/telematics/clocks.py` | Clock-domain models of the simulation (controller time, drifting telematics clock, GNSS PPS edges) and the estimator that maps telematics time to UTC with quality `pps`, `holdover` or `none`. |
@@ -494,7 +496,10 @@ Paths are relative to the repository root. Every parameter set in this directory
 | `tools/fetch_csia.py` | Fetches the pinned CSIA core into `.deps/` and verifies its commit; nothing of it is copied into the repository. |
 | `tools/mqtt_broker.py` | Library module that starts, kills and restarts a local loopback Mosquitto broker for the tests and the MQTT demonstration. |
 | `tools/run_telematics_demo.py` | The independent receive-only demonstration: simulated controller and sensors, local log, real MQTT broker (or in-process), SQLite, speed, power, energy and data quality, with controller silence, invalid frames, missing signals, a storage stall, a broker outage and a restart; nine checks. |
-| `tools/telematics_import.py` | Imports a log read from the board (raw dump or console `DUMP`), splits it into sessions, writes them into the pit database and plots speed and distance. |
+| `tools/telematics_import.py` | Imports a log read from the board (raw dump or console `DUMP`, whole or a slot range), splits it into sessions, writes them into the pit database and plots speed and distance; `--status-capture` checks the console's status lines across the timer overflow and names the slot range to dump. |
+| `tools/telematics_bench.py` | Renders `telematics/firmware/BENCH.md` from `telematics/bench/bench.yaml` after checking it against the firmware sources, the BOM and the measured durations (`render --check`); `package` builds the bench package: images with SHA-256 manifest and revision, procedure, CONNECTIONS.csv, PARTS.csv, blank results form, `uart_capture.py`; `--rebuild` checks the images rebuild identically. |
+| `tools/uart_capture.py` | Console capture for the bench: a serial terminal (standard library, termios) that writes the bytes received to a file, sends typed or given commands, and stops on a text, a duration or end of input. |
+| `tools/telematics_storage.py` | Measures the log's seconds per slot with the firmware's own code in the host simulator for each record mix and writes the recording durations on internal flash and the NOR (`docs/generated/telematics_storage.md`); `--check` reports stale files. |
 | `tools/telematics_bom.py` | Renders the telematics BOM and its totals from `hardware/telematics/bom.yaml`; `--check` reports a stale file. |
 | `tools/scope.py` | Renders `docs/scope.yaml` (module and test-suite classification) as `docs/generated/scope.md`; `--check` reports stale or unclassified files. |
 | `tools/run_host_demo.py` | End-to-end host demonstration of the controller core, telematics node model, local log, simulated uplink, pit storage, offline import and pit-side replays, with pass/fail checks. |
@@ -586,11 +591,12 @@ Paths are relative to the repository root. Every test runs on a host against syn
 | File | Role in the system |
 |---|---|
 | `tests/telematics/test_measurement_and_adapters.py` | Measurement rules (a value cannot hide missing data; sentinels, ranges and flags classified; missing and stale reported as null), the semmc fixture adapter (sequence from the protocol, no invented sample time, sentinels, CRC errors, companion frames), the DBC adapter (same result as the fixture on the same frames, refuses a unit mismatch). |
-| `tests/telematics/test_wheel_node_pit.py` | Wheel speed over complete edge intervals, a lost record losing no distance and an overrun making it a lower bound, no evidence against standstill; the node has no transmit path, logs raw frames and reports missing values as null; v4 validation at the pit; idempotent import and energy with missing intervals. |
+| `tests/telematics/test_wheel_node_pit.py` | Wheel speed over complete edge intervals, a lost record losing no distance and an overrun making it a lower bound, no edge never 0 even with a held line; stuck low, stuck high, disconnected and recovery against the other channels; the firmware's constants; the node has no transmit path, logs raw frames and reports missing values as null; v4 validation at the pit; idempotent import and energy with missing intervals. |
 | `tests/telematics/test_telematics_demo.py` | The demonstration's checks in-process and through a real broker; outputs, both energy boundaries, no non-valid value stored as a number, no supervisor block in any live message. |
 | `tests/telematics/test_firmware_host.py` | Builds the firmware on the host and runs its unit tests; counter and record identifiers equal to the Python reference; wheel records byte for byte; a flash image imported with speed, distance, restart and accounting; full storage counted; the console dump format. |
 | `tests/telematics/test_firmware_target.py` | Builds both target images and checks the vector table against ST's interrupt list, the layout (log bank left free, no controller code), and that the sources have no transmit path. |
-| `tests/telematics/test_telematics_bom.py` | Telematics BOM: totals are sums of their own lines, unknown prices stay unknown and are listed, no controller part and every line has a source, the page is current and keeps the battery as reported. |
+| `tests/telematics/test_telematics_bom.py` | Telematics BOM: totals are sums of their own lines and options are in none, unknown prices stay unknown, no controller part and every line has a source, no assumed pack and the vehicle supply blocked, every bench sensor and storage part has its firmware driver, the page is current. |
+| `tests/telematics/test_telematics_bench.py` | Bench package: the procedure is current and consistent, validation catches drift from the firmware and the BOM, the steps say what the findings require (B6, E1, B7), the package's hashes, parts, connections and blank form, refusal of images from another revision, the console capture over a pseudo-terminal, real images rebuilt with identical hashes. |
 | `tests/telematics/test_energy_and_shadow_scope.py` | Shadow relationships without their inputs disabled and reported; a vehicle report ignores simulator fields; energy boundaries stated; frozen CSIA evaluation files unchanged and the R3v result kept. |
 
 ### tests/fault_injection/

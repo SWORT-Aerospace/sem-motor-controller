@@ -25,5 +25,7 @@ peripheral clock enables) follow ST's HAL, `STMicroelectronics/stm32u5xx-hal-dri
 (`STMicroelectronics/stm32u5xx-nucleo-bsp@ed50f1d2d4940e4efe23104027b8008ce79037f5`), Zephyr v4.4.2
 (`zephyrproject-rtos/zephyr@dccb09599635bdff17633fa7e9dab014b91dce90`, `boards/st/nucleo_u575zi_q`) and ST's open pin
 data (`STMicroelectronics/STM32_open_pin_data@7d1f1514ed5583ec5007ad91236b4e1d377295b1`); these are referenced, not
-vendored. RM0456, DS13737 and UM2861 were not readable from this environment; the items that depend on them are listed
-in `telematics/firmware/BENCH.md`.
+vendored. Every register sequence was compared with that HAL release, and the differences found were changed to ST's
+sequence (`docs/U575_REGISTER_CHECK.md`, with the full comparison in `docs/reference/u575_hal_audit.md`). RM0456,
+DS13737, ES0499 and UM2861 were not readable from this environment; the questions that depend on them are listed in
+`docs/U575_REGISTER_CHECK.md` section 3.

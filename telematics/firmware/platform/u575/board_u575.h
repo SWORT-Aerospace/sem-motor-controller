@@ -33,6 +33,9 @@ typedef struct {
     bool lse_ok;          /* LSE started; MSIS runs in PLL mode locked to it */
     uint32_t reset_flags; /* RCC_CSR at start, before clearing */
     uint32_t last_fault;  /* fault code recorded before the reset, FAULT_NONE if none */
+    bool fault_record_kept; /* option SRAM_RST = 1: SRAM1, which holds the fault record, survives a reset */
+    bool flash_swapped;   /* option SWAP_BANK = 1: the banks are swapped; the internal-flash log is refused */
+    uint16_t rev_id;      /* silicon revision (DBGMCU_IDCODE.REV_ID), for the errata sheet ES0499 */
 } board_state_t;
 
 extern board_state_t g_board;

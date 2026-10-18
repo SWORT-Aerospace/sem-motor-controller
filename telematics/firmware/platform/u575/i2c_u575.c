@@ -13,19 +13,34 @@ void board_gpio_af(GPIO_TypeDef *g, uint32_t pin, uint32_t af, bool pull_up, boo
 
 #define LOOPS 20000u     /* about 20 ms at 4 MHz per wait: far above one byte at 100 kHz */
 
+/* after a NACK or a bus error, as ST's I2C_IsErrorOccurred: wait for STOP and generate it if it does not come
+ * while the bus is still busy; then flush TXDR so that a byte left in it is not sent first in the next write */
+static void recover(void)
+{
+    uint32_t k = 0;
+    while (k < LOOPS && !(I2C1->ISR & I2C_ISR_STOPF)) k++;
+    if (k == LOOPS && (I2C1->ISR & I2C_ISR_BUSY) && !(I2C1->CR2 & I2C_CR2_STOP)) {
+        I2C1->CR2 |= I2C_CR2_STOP;
+        for (k = 0; k < LOOPS && !(I2C1->ISR & I2C_ISR_STOPF); k++) {
+        }
+    }
+    I2C1->ICR = I2C_ICR_STOPCF;
+    if (I2C1->ISR & I2C_ISR_TXIS) I2C1->TXDR = 0u;
+    if (!(I2C1->ISR & I2C_ISR_TXE)) I2C1->ISR |= I2C_ISR_TXE;
+}
+
 static int wait_flag(uint32_t mask)
 {
     for (uint32_t i = 0; i < LOOPS; i++) {
         uint32_t isr = I2C1->ISR;
         if (isr & I2C_ISR_NACKF) {
             I2C1->ICR = I2C_ICR_NACKCF;
-            for (uint32_t k = 0; k < LOOPS && !(I2C1->ISR & I2C_ISR_STOPF); k++) {
-            }
-            I2C1->ICR = I2C_ICR_STOPCF;
+            recover();
             return TM_BUS_NACK;
         }
         if (isr & (I2C_ISR_BERR | I2C_ISR_ARLO)) {
             I2C1->ICR = I2C_ICR_BERRCF | I2C_ICR_ARLOCF;
+            recover();
             return TM_BUS_ERROR;
         }
         if (isr & mask) return TM_BUS_OK;

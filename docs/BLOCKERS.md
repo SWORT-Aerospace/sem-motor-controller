@@ -12,12 +12,13 @@ Battery: Team-reported: 48 V nominal, 10 Ah. Not datasheet-verified. The maximum
 |---|---|---|---|
 | [B-BAT-V](#b-bat-v) Battery maximum and minimum voltage | both | Battery model number and label photo; battery and BMS datasheets giving maximum charge voltage, minimum discharge cut-off voltage and cell count. | 24 |
 | [T-CTRL-IF](#t-ctrl-if) Controller interface not agreed | telematics | The controller team's answers to the request sheet, their DBC (or protocol document) and a recording. | 9 |
-| [T-BENCH1](#t-bench1) Telematics firmware never run on hardware | telematics | A NUCLEO-U575ZI-Q, a USB cable, a function generator (or a second timer output), STM32CubeProgrammer or OpenOCD, two hours. | 8 |
+| [T-BENCH1](#t-bench1) Telematics firmware never run on hardware | telematics | The bench parts (docs/TELEMATICS_BOM.md, bench lines), a function generator with a stated frequency accuracy, a scope or logic analyzer, two USB-CAN adapters, STM32CubeProgrammer or OpenOCD, about four hours (B7 alone takes 75 min). | 8 |
 | [B-DRIVETRAIN](#b-drivetrain) Drivetrain and vehicle mass | both | The four values, with a photo of the tyre sidewall or the wheel and of the sprockets or gearbox plate. | 6 |
 | [T-PARTS](#t-parts) Configuration A parts not chosen and quoted | telematics | Live distributor quotes; the team lead's decision on the alternatives. | 6 |
-| [T-U5-DOCS](#t-u5-docs) STM32U575 reference documents not read | telematics | The three PDFs committed to docs/reference/datasheets/ or st.com reachable from this environment. | 4 |
+| [T-VEH-PWR](#t-veh-pwr) Vehicle supply of the unit blocked | telematics | V_bat,max from the battery and BMS datasheets (B-BAT-V); then a TVS and an isolated DC-DC whose absolute-maximum input is above that TVS's clamp at the surge current. | 6 |
+| [T-U5-DOCS](#t-u5-docs) STM32U575 and W25Q128JV reference documents not read | telematics | The three PDFs committed to docs/reference/datasheets/ or st.com reachable from this environment. | 4 |
 | [B-RULES](#b-rules) Event and rule edition | both | Event name and the official rule PDF of the applicable edition. | 3 |
-| [T-STORAGE](#t-storage) Vehicle log storage not decided | telematics | The attempt length (event rules) and the team's choice: microSD, a larger NOR, or a lower log rate. | 3 |
+| [T-STORAGE](#t-storage) Vehicle log storage not decided | telematics | The attempt length (event rules), the controller's frame rate (T-CTRL-IF) and the team's choice: log fewer controller frames, a larger part (4-byte addressing to be written; the driver refuses parts above 16 MiB), or microSD (driver not written). | 3 |
 | [T-GNSS](#t-gnss) GNSS and PPS on the target | telematics | none (team work) once T-BENCH1 has run | 2 |
 | [T-MODEM](#t-modem) LTE modem on the target (configuration B) | telematics | The event country (B-RULES) for the band set. | 2 |
 
@@ -33,7 +34,7 @@ Documents and photos first, in this order. The same items, with what each unlock
 
 | # | Request | Closes |
 |---|---|---|
-| 1 | **Battery and BMS**: Battery and BMS model numbers, a photo of the battery label, and the battery and BMS datasheets (maximum charge voltage, minimum cut-off, cell count, continuous and peak discharge current, charge current limit, short-circuit trip). | [B-BAT-V](#b-bat-v), [B-BAT-I](#b-bat-i) |
+| 1 | **Battery and BMS**: Battery and BMS model numbers, a photo of the battery label, and the battery and BMS datasheets (maximum charge voltage, minimum cut-off, cell count, continuous and peak discharge current, charge current limit, short-circuit trip). | [B-BAT-V](#b-bat-v), [B-BAT-I](#b-bat-i), [T-VEH-PWR](#t-veh-pwr) |
 | 2 | **Motor**: Motor model number, nameplate photo, motor datasheet, and photos of the motor's phase, hall and temperature connectors. | [B-MOTOR](#b-motor) |
 | 3 | **Drivetrain**: Wheel circumference (or tyre size), the gear or chain ratio between motor and wheel, whether there is a freewheel, and the vehicle mass with driver. | [B-DRIVETRAIN](#b-drivetrain) |
 | 4 | **Controls and safety**: Pedal model and datasheet, the brake and other switch types (normally open or closed), how the emergency stop, dead-man and safety loop are wired and at what voltage, and a photo of the dashboard controls. | [B-PEDAL](#b-pedal), [B-NTC](#b-ntc), [B-LOOP](#b-loop) |
@@ -56,7 +57,7 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 **Battery maximum and minimum voltage** (track: both)
 
 - **Missing:** Maximum charged pack voltage V_bat,max and minimum (BMS cut-off) voltage V_bat,min are unavailable; only 48 V nominal is reported.
-- **Affects:** MOSFET V_DS class and DC-link capacitor voltage rating (sheets 02, 03); TVS stand-off and clamp, fuse voltage, precharge resistor energy, bypass FET V_DS and Zener current (sheet 01); over-voltage trip divider (sheet 02); LM5164 UVLO divider and input capacitors (sheet 12); config battery.*, limits.overvoltage_trip_V, limits.undervoltage_trip_V, limits.undervoltage_derate_V.
+- **Affects:** MOSFET V_DS class and DC-link capacitor voltage rating (sheets 02, 03); TVS stand-off and clamp, fuse voltage, precharge resistor energy, bypass FET V_DS and Zener current (sheet 01); over-voltage trip divider (sheet 02); LM5164 UVLO divider and input capacitors (sheet 12); config battery.*, limits.overvoltage_trip_V, limits.undervoltage_trip_V, limits.undervoltage_derate_V. Telematics: the unit's vehicle supply (T-VEH-PWR).
 - **Why it matters:** Every power-path rating is written as a multiple of V_bat,max; a 48 V nominal pack can charge well above 48 V depending on chemistry and cell count, so no voltage class can be chosen safely from the nominal.
 - **Done now:** Rating rules written against V_bat,max (hardware/review/DESIGN_REVIEW.md items 2, 3, 6, 8); over-voltage comparator topology and hysteresis fixed; firmware reads every threshold from the calibration and refuses to run without it.
 - **Input required:** Battery model number and label photo; battery and BMS datasheets giving maximum charge voltage, minimum discharge cut-off voltage and cell count.
@@ -77,12 +78,12 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 **Telematics firmware never run on hardware** (track: telematics)
 
-- **Missing:** A first bench run of tm_u575 on a NUCLEO-U575ZI-Q (telematics/firmware/BENCH.md steps B1 to B7).
+- **Missing:** A first bench run of tm_u575 and tm_u575_can on a NUCLEO-U575ZI-Q (telematics/firmware/BENCH.md steps B0 to B12, from the bench package).
 - **Affects:** every target claim: clock, capture, overflow, flash log, restart reasons, timebase error; the connection table's pins and solder bridges
 - **Why it matters:** The firmware is built and host-tested only; host tests do not show that it runs.
-- **Done now:** Images link (CI); portable code tested on the host, byte-for-byte equal to the Python reference; bench procedure, connection table and import tool written.
-- **Input required:** A NUCLEO-U575ZI-Q, a USB cable, a function generator (or a second timer output), STM32CubeProgrammer or OpenOCD, two hours.
-- **Closure criterion:** Bench records for B1 to B7 with the image revision (not -dirty), the import report and the plots committed under docs/reference/bench/.
+- **Done now:** Images link and rebuild with identical hashes (CI); portable code tested on the host, byte-for-byte equal to the Python reference; the bench package (tools/telematics_bench.py: images with SHA-256, procedure, connection and parts lists, console capture tool, blank results form) built in CI.
+- **Input required:** The bench parts (docs/TELEMATICS_BOM.md, bench lines), a function generator with a stated frequency accuracy, a scope or logic analyzer, two USB-CAN adapters, STM32CubeProgrammer or OpenOCD, about four hours (B7 alone takes 75 min).
+- **Closure criterion:** The package's results form filled for B0 to B12 with the image revision (not -dirty), the captures, the import reports and the plots committed under docs/reference/bench/.
 
 ### B-DRIVETRAIN
 
@@ -99,18 +100,29 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 **Configuration A parts not chosen and quoted** (track: telematics)
 
-- **Missing:** Live quotes for the configuration A lines (every price so far is a search snapshot or an allowance) and the choice between the listed alternatives (transceiver, storage, temperature probes).
+- **Missing:** Live quotes for the bench and configuration A lines (every price so far is a search snapshot or an allowance).
 - **Affects:** docs/TELEMATICS_BOM.md totals; the order; the first bench run with sensors
-- **Why it matters:** The budget range ($392 to $609 for A) closes only with live prices; nothing may be ordered without a dated quote and the team lead's agreement.
-- **Done now:** Telematics BOM with dated snapshots, alternatives, rejected candidates and the decisions it depends on.
+- **Why it matters:** The budget range ($462.73 to $666.45 for A, of which the bench $97.68 to $117.74) closes only with live prices; nothing may be ordered without a dated quote and the team lead's agreement.
+- **Done now:** Telematics BOM with dated snapshots and rejected candidates. The bench configuration is exactly the parts the firmware drives (W25Q128JV NOR, ISM330DHCX IMU, TMP117, CAN Pal), checked against the driver sources by tools/telematics_bom.py; parts without a driver (microSD, DS18B20) are options outside every total; the vehicle supply lines are blocked by B-BAT-V (T-VEH-PWR).
 - **Input required:** Live distributor quotes; the team lead's decision on the alternatives.
 - **Closure criterion:** Every configuration A line has a dated quote in hardware/telematics/bom.yaml; the order agreed by the team lead.
 
+### T-VEH-PWR
+
+**Vehicle supply of the unit blocked** (track: telematics)
+
+- **Missing:** The unit's supply from the pack (DC-DC, input TVS, fuse, reverse protection) cannot be chosen without V_bat,max (B-BAT-V). The one pair checked, SMBJ58A with the 75 V input Mean Well SKMW15G-05, is rejected: its 93.6 V clamp at 6.4 A is above the module's input maximum.
+- **Affects:** configuration A's supply lines (hardware/telematics/bom.yaml, each blocked_by B-BAT-V); any test on the vehicle; electrical check E6
+- **Why it matters:** A TVS whose clamp exceeds the converter's absolute maximum protects nothing; one whose standoff is below V_bat,max conducts on a full pack.
+- **Done now:** The rule written into hardware/telematics/bom.yaml (supply) and enforced by tools/telematics_bom.py: the vehicle power connection cannot be set to allowed while battery_max_V is null. The bench runs from USB only.
+- **Input required:** V_bat,max from the battery and BMS datasheets (B-BAT-V); then a TVS and an isolated DC-DC whose absolute-maximum input is above that TVS's clamp at the surge current.
+- **Closure criterion:** battery_max_V filled from a document with page; a TVS and DC-DC pair passing both conditions in supply.checked_pairs; E6 passed on the bench.
+
 ### T-U5-DOCS
 
-**STM32U575 reference documents not read** (track: telematics)
+**STM32U575 and W25Q128JV reference documents not read** (track: telematics)
 
-- **Missing:** RM0456 (reference manual), DS13737 (data sheet) and UM2861 (Nucleo user manual): per-pin 5 V tolerance, LSE fitting, solder-bridge defaults, PLL limits per voltage range, flash timings, TIMINGR formula.
+- **Missing:** RM0456 (reference manual), DS13737 (data sheet), ES0499 (errata) and UM2861 (Nucleo user manual): per-pin 5 V tolerance, LSE fitting, solder-bridge defaults, PLL limits per voltage range, flash timings, TIMINGR formula, the register behaviour the drivers rely on (docs/U575_REGISTER_CHECK.md lists each item); and the W25Q128JV data sheet (command set, pinout, erase and program times).
 - **Affects:** the connection table's levels; the CAN image's PLL1 setting; the I2C timing; the flash write rate
 - **Why it matters:** The firmware follows ST's HAL and board files, which agree with each other, but these facts are only in the manuals.
 - **Done now:** Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md); every dependent item listed in BENCH.md.
@@ -132,12 +144,12 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 **Vehicle log storage not decided** (track: telematics)
 
-- **Missing:** Storage for a whole attempt at the logged rate: the internal flash holds minutes, a 16 MB NOR about 33 min at 8.4 KB/s; microSD needs its driver.
-- **Affects:** the BOM storage lines; the firmware's storage interface; log decimation
-- **Why it matters:** A log that fills before the attempt ends loses its last part (counted, but lost).
-- **Done now:** Storage interface with internal flash and W25Q NOR implementations; storage-full handling counted; rate measured in the demonstration.
-- **Input required:** The attempt length (event rules) and the team's choice: microSD, a larger NOR, or a lower log rate.
-- **Closure criterion:** The chosen storage holds one attempt plus margin at the measured rate on the bench.
+- **Missing:** Storage for a whole attempt at the vehicle's logged rate. The W25Q128JV NOR (16 MiB, in the images since v0.7) holds 26.7 min of the fixture vehicle's record mix (394 controller frames/s, IMU, three TMP117) at full rate, then sparse logging (wheel and counters every 10 s) for 138 min; internal flash alone 1.5 min. The real controller's frame rate is unknown (T-CTRL-IF); a NOR whose every sector needs erasing writes about 9 KB/s at worst in the host model, below that mix's 10.4 KB/s.
+- **Affects:** the BOM storage lines; which controller frames are logged; the length of a full-rate log
+- **Why it matters:** A log that fills before the attempt ends keeps only sparse wheel and counter records for the rest (counted in log_thinned).
+- **Done now:** NOR used when it answers its JEDEC id, else internal flash; sparse logging at the reserve; blank check before each sector erase; recording durations measured with the firmware's code (docs/generated/telematics_storage.md); bench step B7 checks the timer overflow on either storage.
+- **Input required:** The attempt length (event rules), the controller's frame rate (T-CTRL-IF) and the team's choice: log fewer controller frames, a larger part (4-byte addressing to be written; the driver refuses parts above 16 MiB), or microSD (driver not written).
+- **Closure criterion:** The chosen storage holds one attempt plus margin at the rate measured on the bench.
 
 ### T-GNSS
 

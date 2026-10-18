@@ -26,6 +26,7 @@
 #include "tm_wheel.h"
 
 #define TM_POLL_RECORDS 64u
+#define TM_STATUS_MAX 320u                 /* buffer for one status line; tests check the worst case fits */
 
 typedef struct {
     uint64_t (*now_us)(void);
@@ -36,6 +37,8 @@ typedef struct {
 
 typedef struct {
     const char *unit_id;                   /* e.g. "U575-<96-bit UID in hex>" */
+    const char *run_prefix;                /* run ids are <run_prefix>-B<boot>; 0: the unit id (each storage
+                                              counts its own boots, so each needs its own prefix) */
     const char *firmware;                  /* image name and revision */
     const char *clock_source;              /* what the 1 us timebase runs from, with its accuracy class */
     const char *storage;                   /* e.g. "internal flash bank 2" */
@@ -52,6 +55,9 @@ typedef struct {
 typedef struct {
     tm_platform_t pf;
     tm_wheel_acc_t wheel[TM_WHEEL_CHANNELS];
+    tm_wheel_track_t track[TM_WHEEL_CHANNELS];       /* plausibility across channels (tm_wheel_classify) */
+    char wheel_state[TM_WHEEL_CHANNELS];             /* latest state per channel: N M S A I */
+    bool wheel_active_high;
     tm_can_ring_t can;
     tm_queue_t q;
     tm_block_t blk;
@@ -65,6 +71,10 @@ typedef struct {
     bool stalled;
     bool paused;                           /* logging paused (UART dump in progress) */
     bool flush_requested;                  /* write the open block as soon as the queue is empty */
+    bool sparse;                           /* only the reserve is left: sparse logging (tm_config.h) */
+    uint32_t reserve_slots;
+    uint32_t slot0;                        /* first slot of this mode (for the time-left estimate) */
+    uint64_t mode_t0_us;                   /* start of this mode (session start, or sparse logging) */
     uint8_t header[TM_SLOT_BYTES];
     char meta[TM_META_MAX];
     size_t meta_len;
@@ -76,9 +86,11 @@ void tm_app_poll(tm_app_t *app);
 static inline void tm_app_wheel_edge(tm_app_t *app, uint8_t ch, uint64_t t_us) { tm_wheel_edge(&app->wheel[ch], t_us); }
 static inline void tm_app_wheel_overrun(tm_app_t *app, uint8_t ch) { tm_wheel_overrun(&app->wheel[ch]); }
 bool tm_app_can_frame(tm_app_t *app, const tm_can_frame_t *f);
-/* A record from a main-loop driver (IMU, temperature): into the log queue, dropped and counted if full. */
+/* A record from a main-loop driver (IMU, temperature): into the log queue, dropped and counted if full;
+ * in sparse logging not logged, counted as log_thinned. */
 bool tm_app_record(tm_app_t *app, uint64_t t_us, uint8_t type, const uint8_t *body, uint32_t len);
-/* One status line (no newline) for the UART: time, edges per channel, queue, storage. */
+/* One status line (no newline) for the UART: time, timer overflows (tov), edges and state per channel,
+ * queue, storage, and the estimated recording time left at the current rate (left, s; "?" until known). */
 size_t tm_app_status(const tm_app_t *app, char *out, size_t cap);
 /* Request that everything queued reaches the storage (before a dump); tm_app_idle() tells when it has. */
 void tm_app_request_flush(tm_app_t *app);

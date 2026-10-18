@@ -8,15 +8,17 @@ test_firmware_target.py and on the bench, telematics/firmware/BENCH.md).
 """
 import json
 import math
+import pathlib
 import re
 import subprocess
+import sys
 
 import pytest
 
 from host.pit import energy, ingest
 from host.telematics import stlg
 from host.telematics.sim_vehicle import Faults, VehicleSim, VehicleSimConfig
-from host.telematics.wheel import EdgeAccumulator
+from host.telematics.wheel import EdgeAccumulator, EdgeRecord, WheelConfig, WheelGroup, classify
 from tools import telematics_import
 
 FW = "telematics/firmware"
@@ -108,6 +110,47 @@ def test_wheel_records_equal_the_python_reference_byte_for_byte(telematics_build
         assert tc == tp and all(fc[x] == fp[x] for x in fp), (tc, fc, tp, fp)
 
 
+def test_wheel_plausibility_equals_the_python_rule(telematics_build, tmp_path):
+    """Stuck low, disconnected, recovery and a full stop through the firmware's own code (host simulator), the
+    same log through the Python rule: the same state per channel at the same instants, the same episodes."""
+    img = tmp_path / "flash.bin"
+    ev = [(0, "L 0 1 0")]                                     # ch1 shorted to ground: line low, no edges
+    ev += [(t, f"E {t} 0") for t in range(50_000, 6_000_001, 40_000)]          # ch0 turns until 6 s
+    ev += [(t, f"E {t} 2") for t in range(3_000_000, 6_000_001, 40_000)]       # ch2 connected at 3 s
+    samples = [900_000, 1_500_000, 2_500_000, 4_000_000, 6_500_000, 7_500_000, 9_000_000]
+    ev += [(s, f"P {s}\nQ") for s in samples]
+    script = "\n".join([f"I 256 1500 8 {img}"] + [x for _t, x in sorted(ev, key=lambda e: e[0])]
+                       + ["F", "W", "Q"]) + "\n"
+    out = _run(telematics_build, script)
+    c_states = re.findall(r"wheel=([NMSAI]{3})", out)[:len(samples)]
+    assert c_states == ["MNN", "MAI", "MAI", "MAM", "SNS", "SNS", "SNS"], c_states
+    sessions, _rep = telematics_import.split(img.read_bytes())
+    path = telematics_import.write_session(sessions[0], tmp_path, {})
+    _meta, recs, _rr = stlg.read(path)
+    g = WheelGroup(WheelConfig(1.5, 8), {0: "wheel_0", 1: "wheel_1", 2: "wheel_2"}, t0_us=0)
+    wr = [(t, f) for _b, _i, t, rt, f in recs if rt == stlg.WHEEL_EDGES]
+    py_states, j = [], 0
+    for s in samples:
+        while j < len(wr) and wr[j][0] <= s:
+            t, f = wr[j]
+            g.update(EdgeRecord(t, f["channel"], f["n"], f["span_us"], f["total"], f["flags"], f["rec_seq"], f["lost"]))
+            j += 1
+        t_rec = max(t for t, f in wr if f["n"] == 0 and t <= s)          # the latest record period
+        py_states.append("".join(classify(g.tracks, ch, t_rec, False)[0] for ch in range(3)))
+    assert py_states == c_states
+    last = [f for _b, _i, _t, rt, f in recs if rt == stlg.COUNTERS2][-1]
+    db = tmp_path / "pit.sqlite"
+    res = telematics_import.run(img.read_bytes(), db, tmp_path / "imp", {}, plots=False)
+    ep = res["sessions"][0]["import"]["wheel_suspect_episodes"]
+    assert last["wheel_suspect_active"] == ep["A"] == 1 and last["wheel_suspect_inactive"] == ep["I"] == 1
+    # the import never stores a speed of 0 for a silent channel, and the suspect ones are invalid
+    q = ingest.connect(db).execute("SELECT signal, validity, value FROM measurements WHERE signal LIKE "
+                                   "'wheel.%.speed' AND (validity != 'valid' OR value = 0)").fetchall()
+    assert q and all(v is None for _s, _q, v in q)
+    assert {(s, v) for s, v, _x in q} >= {("wheel.wheel_1.speed", "invalid"), ("wheel.wheel_2.speed", "invalid"),
+                                          ("wheel.wheel_0.speed", "no_evidence")}
+
+
 def test_flash_image_imports_with_speed_distance_restart_and_accounting(telematics_build, tmp_path):
     script, img, _edges, sim = _script(tmp_path, duration=40.0, restart=20.0, stall=(10.0, 13.0))
     out = _run(telematics_build, script)
@@ -160,8 +203,177 @@ def test_flash_image_imports_with_speed_distance_restart_and_accounting(telemati
     assert all(s["import"]["new_records"] == 0 and s["import"]["new_measurements"] == 0 for s in again["sessions"])
 
 
+def _records(img_bytes, tmp_path, tag):
+    sessions, _rep = telematics_import.split(img_bytes)
+    out = []
+    for k, s in enumerate(sessions):
+        d = tmp_path / f"{tag}{k}"
+        d.mkdir()
+        _meta, recs, rr = stlg.read(telematics_import.write_session(s, d, {}))
+        assert rr.blocks_corrupt == 0
+        out.append([(t, rt, json.dumps(f, sort_keys=True, default=str)) for _b, _i, t, rt, f in recs])
+    return sessions, out
+
+
+@pytest.mark.parametrize("kind", ["nor", "norslow"])
+def test_nor_storage_gives_the_same_log_as_internal_flash(telematics_build, tmp_path, kind):
+    """The W25Q path (driver, 256-byte pages, 4 KiB sector erase ahead, busy polling) through the firmware's
+    own code: the same records as on internal flash for the same inputs, and no protocol violation."""
+    script, img, _e, _s = _script(tmp_path, duration=20.0)
+    nor_img = tmp_path / "nor.bin"
+    nor_script = script.replace(f"I 256 1500 8 {img}", f"I 256 1500 8 {nor_img} {kind}") + "V\n"
+    _run(telematics_build, script)
+    out = _run(telematics_build, nor_script)
+    assert "NOR violations=0 " in out
+    s_int, r_int = _records(img.read_bytes(), tmp_path, "i")
+    s_nor, r_nor = _records(nor_img.read_bytes(), tmp_path, "n")
+    assert len(r_int) == len(r_nor) == 1 and len(r_int[0]) > 3000
+    # the records up to the end of the script (a slower device takes longer to flush, adding later heartbeats)
+    keep = lambda r: [x for x in r if x[1] != stlg.COUNTERS2 and x[0] <= 20_000_000]   # noqa: E731
+    assert keep(r_int[0]) == keep(r_nor[0])
+    assert s_nor[0]["meta"]["run_id"].endswith("-NOR-B0001") and "W25Q" in s_nor[0]["meta"]["storage"]
+    assert int(re.search(r"drop_q=(\d+)", out).group(1)) == 0
+
+
+def test_nor_worst_case_timing_with_every_sector_dirty_keeps_up_with_the_bench_rate(telematics_build, tmp_path):
+    """Slow device (400 ms sector erase, 3 ms page program) whose every sector needs erasing (no blank sector
+    to skip), with the B12 record mix (wheel records, IMU at 100 Hz, TMP117 at 1 Hz): nothing dropped."""
+    img = tmp_path / "nor.bin"
+    img.write_bytes(b"\x00" * 64 * 4096)          # loaded as the device content: every sector dirty...
+    ev = [f"I 64 1500 8 {img} norslow"]
+    # ...except that the scan reads all-zero slots as used: start from a log whose first sector is erased
+    img.write_bytes(b"\xff" * 4096 + b"\x00" * 63 * 4096)
+    ev += [f"E {t} 0\nK {t} 4 0000000000000000" for t in range(10_000, 40_000_000, 10_000)]
+    ev += [f"K {t} 8 00000000" for t in range(1_000_000, 40_000_000, 1_000_000)]
+    ev = [ev[0]] + sorted(ev[1:], key=lambda s: int(s.split()[1]))
+    out = _run(telematics_build, "\n".join(ev + ["P 40000000", "Q", "V"]) + "\n")
+    assert int(re.search(r"drop_q=(\d+)", out).group(1)) == 0 and "NOR violations=0 " in out
+    assert int(re.search(r"erases=(\d+)", out).group(1)) >= 20     # the erases happened, at worst-case time
+    assert int(re.search(r"slots=(\d+)/", out).group(1)) >= 20
+
+
+def test_nor_restart_and_erase(telematics_build, tmp_path):
+    img = tmp_path / "nor.bin"
+    ev = [f"I 64 1500 8 {img} nor"] + [f"E {t} 0" for t in range(10_000, 8_000_000, 10_000)]
+    ev += ["R 8000000", "P 14000000", "F", "Q", "W", "V", "X", "Q", "P 20000000", "F", "Q", "V"]
+    out = _run(telematics_build, "\n".join(ev) + "\n")
+    q = re.findall(r"slots=(\d+)/64", out)
+    assert int(q[0]) > 4 and q[1] == "0" and int(q[2]) >= 2       # two sessions, then erased, then new data
+    assert re.findall(r"NOR violations=(\d+)", out) == ["0", "0"]
+    assert re.findall(r"chip_erases=(\d+)", out)[-1] == "0"        # 64 of 4096 slots: page by page
+    sessions, recs = _records(img.read_bytes(), tmp_path, "r")      # the image written before the erase
+    assert [s["meta"]["boot"] for s in sessions] == [1, 2]
+
+
+def test_sparse_logging_keeps_speed_and_distance_evidence_across_2_32_us(telematics_build, tmp_path):
+    """A 40-slot internal store with the IMU logging fills its full-rate region before the 64-bit time crosses
+    2^32 us; sparse logging then keeps one wheel record per channel every 10 s, so the crossing is in the log
+    with its speed and distance (the target's 32-bit timer overflow is the same instant, BENCH.md B7)."""
+    img = tmp_path / "f.bin"
+    t0 = 2 ** 32 - 120_000_000                                       # sparse from about 50 s, crossing at 120 s
+    ev = [(t0, f"T {t0}"), (t0, f"I 40 1500 8 {img}")]
+    end = t0 + 300_000_000
+    ev += [(t, f"E {t} 0") for t in range(t0 + 10_000, end, 10_000)]                   # 100 Hz: 18.75 m/s
+    ev += [(t, f"K {t} 4 0000000000000000") for t in range(t0 + 10_000, end, 10_000)]
+    ev += [(end, f"P {end}"), (end + 1, "F\nQ\nW")]
+    out = _run(telematics_build, "\n".join(x for _t, x in sorted(ev, key=lambda e: e[0])) + "\n")
+    assert "log=sparse" in out and int(re.search(r"thin=(\d+)", out).group(1)) > 10_000
+    assert "tov=1" in out
+    sessions, _rep = telematics_import.split(img.read_bytes())
+    _meta, recs, rr = stlg.read(telematics_import.write_session(sessions[0], tmp_path, {}))
+    assert rr.blocks_corrupt == 0
+    ev_rec = [f for _b, _i, t, rt, f in recs if rt == stlg.EVENT]
+    assert ev_rec and ev_rec[0]["code"] == 2 and "sparse logging" in ev_rec[0]["text"]
+    t_sparse = [t for _b, _i, t, rt, f in recs if rt == stlg.EVENT][0]
+    w0 = [(t, f) for _b, _i, t, rt, f in recs if rt == stlg.WHEEL_EDGES and f["channel"] == 0 and t > t_sparse + 15e6]
+    assert w0 and w0[0][0] < 2 ** 32 < w0[-1][0]                    # sparse records on both sides of 2^32 us
+    gaps = [b[0] - a[0] for a, b in zip(w0, w0[1:])]
+    assert all(9_900_000 <= g <= 10_100_000 for g in gaps), gaps     # no jump at the crossing
+    db = tmp_path / "pit.sqlite"
+    res = telematics_import.run(img.read_bytes(), db, tmp_path / "imp", {}, plots=False)
+    rid = res["sessions"][0]["run_id"]
+    sp = [(t, v, q) for t, v, _u, q in energy.series(ingest.connect(db), rid, "wheel.wheel_0.speed")
+          if t > t_sparse + 15e6]
+    assert sp and all(q == "valid" and abs(v - 18.75) < 0.01 for _t, v, q in sp), sp[:5]
+    assert any(t < 2 ** 32 for t, _v, _q in sp) and any(t > 2 ** 32 for t, _v, _q in sp)
+    d = res["sessions"][0]["distance"]["wheel_0"]["distance_m"]
+    # distance is the last record's edge total; in sparse logging that record is at most 10 s (1000 edges) old
+    last_total = [f["total"] for _b, _i, _t, rt, f in recs if rt == stlg.WHEEL_EDGES and f["channel"] == 0][-1]
+    assert math.isclose(d, last_total * 0.1875) and 29_999 - 1000 <= last_total <= 29_999
+
+
+def test_console_status_lines_are_overflow_evidence_without_the_log(telematics_build, tmp_path):
+    """B7's console evidence: status lines every second across the timer overflow (here the simulated 64-bit
+    time crossing 2^32 us), parsed and checked by the import tool; a time jump makes the check fail."""
+    t0 = 2 ** 32 - 30_000_000
+    ev = [(t0, f"T {t0}"), (t0, f"I 16 1000 1 {tmp_path / 'f.bin'}")]
+    ev += [(t, f"E {t} 0") for t in range(t0 + 1000, t0 + 60_000_000, 1000)]          # 1 kHz
+    ev += [(t, f"P {t}\nQ") for t in range(t0 + 1_000_000, t0 + 60_000_001, 1_000_000)]
+    out = _run(telematics_build, "\n".join(x for _t, x in sorted(ev, key=lambda e: e[0])) + "\n")
+    rows = telematics_import.status_lines("garbage line\n" + out)
+    assert len(rows) == 60 and rows[0]["tov"] == 0 and rows[-1]["tov"] == 1
+    chk = telematics_import.overflow_check(rows)
+    assert chk["pass"] and len(chk["tov_changes"]) == 1 and abs(chk["median_rate_hz"] - 1000.0) < 1.0
+    assert 29.5 <= chk["tov_changes"][0]["t_s"] <= 31.5
+    assert chk["tov_changes"][0]["slot"] == next(r["slots"] for r in rows if r["tov"] == 1)
+    jumped = out.replace("TM t=40.000 s", "TM t=4335.000 s")                           # a 2^32 us error
+    assert not telematics_import.overflow_check(telematics_import.status_lines(jumped))["pass"]
+
+
+def _firmware_range_dump(image: bytes, slots: int, first: int, last: int) -> str:
+    """'DUMP <first> <last>' as main_u575.c prints it: the session header at or before <first>, then the range."""
+    hdr = next(k for k in range(first, -1, -1) if image[k * 4096:k * 4096 + 4] == b"STLG")
+    ks = ([hdr] if hdr < first else []) + list(range(first, last + 1))
+    return "\n".join([f"DUMP BEGIN {slots}"] + [f"S {k} {image[k * 4096:(k + 1) * 4096].hex()}" for k in ks]
+                     + ["DUMP END"]) + "\n"
+
+
+def test_b7_procedure_on_the_nor_finds_and_reads_back_the_overflow(telematics_build, tmp_path):
+    """B7 as BENCH.md writes it, on the host model: NOR log, 1 kHz on wheel_0 across 2^32 us, the status
+    capture names the slot being filled at the overflow, and 'DUMP n-15 n+15' imports with a valid, steady
+    speed on both sides of the crossing (10 mm per edge: 10 m/s)."""
+    img = tmp_path / "nor.bin"
+    t0 = 2 ** 32 - 90_000_000
+    end = t0 + 180_000_000
+    ev = [(t0, f"T {t0}"), (t0, f"I 512 10 1 {img} nor")]
+    ev += [(t, f"E {t} 0") for t in range(t0 + 1000, end, 1000)]
+    ev += [(t, f"P {t}\nQ") for t in range(t0 + 1_000_000, end + 1, 1_000_000)]
+    ev += [(end + 1, "F\nW\nV")]
+    out = _run(telematics_build, "\n".join(x for _t, x in sorted(ev, key=lambda e: e[0])) + "\n")
+    assert "NOR violations=0 " in out
+    chk = telematics_import.overflow_check(telematics_import.status_lines(out))
+    assert chk["pass"] and len(chk["tov_changes"]) == 1
+    n = chk["tov_changes"][0]["slot"]
+    assert 30 < n < 60                                              # 2.04 s per slot: about 44 slots in 90 s
+    image = img.read_bytes()
+    text = _firmware_range_dump(image, 512, n - 15, n + 15)
+    part = telematics_import.from_uart(text)
+    assert part[:4] == b"STLG" and part[4096:(n - 15) * 4096] == b"\xff" * ((n - 16) * 4096)
+    db = tmp_path / "pit.sqlite"
+    res = telematics_import.run(part, db, tmp_path / "imp", {"wheel_circumference_m": 0.01, "wheel_ppr": 1,
+                                                             "source": "test"}, plots=False)
+    rid = res["sessions"][0]["run_id"]
+    sp = [(t, v, q) for t, v, _u, q in energy.series(ingest.connect(db), rid, "wheel.wheel_0.speed")]
+    assert sp and all(q == "valid" and abs(v - 10.0) < 0.001 for _t, v, q in sp), sp[:5]
+    assert min(t for t, _v, _q in sp) < 2 ** 32 < max(t for t, _v, _q in sp)
+    ts = [t for t, _v, _q in sp]
+    assert max(b - a for a, b in zip(ts, ts[1:])) < 200_000          # no time jump at the crossing
+
+
+def test_storage_durations_are_current_and_cover_b7(telematics_build):
+    r = subprocess.run([sys.executable, "tools/telematics_storage.py", "--check", "--build", str(telematics_build)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    res = json.loads(pathlib.Path("docs/generated/telematics_storage.json").read_text())
+    wheel = {m["id"]: m for m in res["mixes"]}["wheel"]["storages"]
+    assert wheel["W25Q128JV NOR"]["full_rate_s"] > 75 * 60          # B7 at full rate on the NOR
+    assert wheel["internal flash bank 2"]["total_s"] > 75 * 60      # and still in the log on internal flash
+
+
 def test_full_storage_refuses_blocks_and_counts_them(telematics_build, tmp_path):
     script, img, _e, _s = _script(tmp_path, duration=15.0, slots=8)
+    # 8 slots, 1 in reserve: sparse logging after 6 blocks; the last slot fills (about 260 s), then storage drops
+    script = script.replace("P 15000000\nF", "P 15000000\nP 400000000\nF")
     out = _run(telematics_build, script)
     m = re.search(r"slots=(\d+)/(\d+)", out)
     assert m and m.group(1) == m.group(2) == "8"
@@ -171,7 +383,8 @@ def test_full_storage_refuses_blocks_and_counts_them(telematics_build, tmp_path)
     # the log holds 8 slots (header + 7 blocks), all readable; what did not fit is counted on the unit (the
     # counters that would say so cannot be in a full log: the status line and the live summary report them)
     assert len(sessions[0]["blocks"]) == 7 and _rr.blocks_corrupt == 0
-    assert int(re.search(r"drop_st=(\d+)", out).group(1)) > 0
+    assert int(re.search(r"drop_st=(\d+)", out).group(1)) > 0 and int(re.search(r"thin=(\d+)", out).group(1)) > 0
+    assert any(f.get("code") == 2 for _b, _i, _t, rt, f in recs if rt == stlg.EVENT)
 
 
 def test_uart_dump_format_round_trips(tmp_path):

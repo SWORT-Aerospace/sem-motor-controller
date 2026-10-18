@@ -25,7 +25,7 @@ The deployed node (`host/telematics/node.py` as the host model, `telematics/firm
 | Messages and signals | from their DBC or protocol document, decoded by `DbcAdapter` with a unit-checked mapping | **UNKNOWN** until their answer |
 | Bus load added by the unit | zero frames | by design |
 | Termination | none added unless the controller team asks | the breakout's terminator switched off |
-| Electrical noninterference | not proven by receive-only firmware; the checks E1 to E6 of `telematics/firmware/BENCH.md` section 6 | to be run before any connection |
+| Electrical noninterference | not proven by receive-only firmware; the checks E1 to E6 of `telematics/firmware/BENCH.md` section 7 | to be run before any connection |
 | Test fixture | `semmc` (Part B), our own message set, used only to exercise the adapter path in simulation and on the bench | not an agreed interface |
 
 ## A.3 Measurements and adapters
@@ -49,24 +49,26 @@ The log keeps the raw frames (STLG `CAN2`), so the pit can decode them again wit
 
 ## A.5 The unit's own inputs
 
-Pins, levels and the connection table: `telematics/firmware/BENCH.md` section 4 (not bench-verified). Wheel edges are captured on falling edges with a 2 µs input filter; one record per channel every 50 ms, a heartbeat when there was no edge; standstill and missing evidence are distinguished as `docs/ENERGY_METHODS.md` 0.2 describes. IMU (LSM6DSOX or ISM330DHCX) and TMP117 on I2C1 when they answer at start; GNSS with PPS, 1-Wire probes and the battery-side monitor are on the host model only so far.
+Pins, levels and the connection table: `telematics/firmware/BENCH.md` section 4 (not bench-verified). Wheel edges are captured on falling edges with a 2 µs input filter; one record per channel every 50 ms, a heartbeat when there was no edge. No edge is no evidence, never 0 m/s; a channel silent while another moves is suspect (stuck active, or stuck inactive / disconnected), as `docs/ENERGY_METHODS.md` 0.2 describes. COUNTERS2 ids 24 and 25 count suspect episodes; the status line shows each channel's state (N M S A I). IMU (LSM6DSOX or ISM330DHCX) and up to four TMP117 (addresses 0x48 to 0x4B, one TEMP channel each) on I2C1 when they answer at start; GNSS with PPS and the battery-side monitor are on the host model only so far; 1-Wire probes have no driver (an option in the BOM, in no total).
 
 ## A.6 Local log (STLG v1)
 
 `host/telematics/stlg.py` is the reference; the firmware writes the same format (`telematics/firmware/src/tm_stlg.c`).
-* Header `STLG | u16 1 | u32 meta length | metadata JSON | CRC-32`. Metadata: `run_id` (unit and boot: one session per boot), `unit_id`, `boot`, `reset` (cause and flags), clock source, format, `controller_adapter`, `transmits`, sensors (wheel circumference and pulses per revolution or null, channel names), firmware revision, kind (simulation, bench or vehicle).
+* Header `STLG | u16 1 | u32 meta length | metadata JSON | CRC-32`. Metadata: `run_id` (unit and boot: one session per boot; `<uid>-NOR-B<boot>` for a session on the NOR, which counts its own boots, so the two storages never give the same run id), `storage`, `unit_id`, `boot`, `reset` (cause and flags), clock source, format, `controller_adapter`, `transmits`, sensors (wheel circumference and pulses per revolution or null, channel names), firmware revision, kind (simulation, bench or vehicle).
 * Block `BK | u32 seq | u64 base_us | u16 n | CRC-32 | records`, at most 4076 bytes of records; the base lies up to 1 s before the first record so slightly older records still fit.
 * Records `u8 type | u8 len | u32 dt_us | body`. Types: 1 CAN, 2 PPS, 3 GNSS, 4 IMU, 5 WHEEL (counts per window, legacy), 6 COUNTERS (legacy), 7 EVENT, 8 TEMP, **9 WHEEL_EDGES** (channel, flags, edges, span, cumulative edges, record counter, lost edges), **10 COUNTERS2** (id/value pairs), **11 CAN2** (29-bit and FD capable), **12 BOOT** (boot count, reset flags and cause), **13 BATT** (battery-side monitor). Readers keep unknown types as raw bytes.
-* On the target the log region is internal flash bank 2 (1 MB): 256 slots of 4 KiB, a header slot per session followed by block slots, never wrapped; a slot interrupted by a power loss fails its CRC and is counted; `ERASE YES` on the console clears the region. `tools/telematics_import.py` splits a dump into sessions.
+* On the target the log region is a W25Q NOR on SPI1 when one of 1 to 16 MiB answers its JEDEC id at start (the whole part: 4096 slots of 4 KiB for 16 MiB), else internal flash bank 2 (1 MB, 256 slots): a header slot per session followed by block slots, never wrapped; a slot interrupted by a power loss fails its CRC and is counted; `ERASE YES` on the console clears the region (a chip erase on the NOR). `DUMP <first> <last>` prints a slot range with the session header before it. `tools/telematics_import.py` splits a dump, whole or ranged, into sessions.
+* EVENT code 2 marks the switch to sparse logging (A.7).
 
 ## A.7 Queues, storage and loss reporting
 
 | Item | Value | Status |
 |---|---|---|
 | Log queue | 256 records on the target, 512 in the host model; a full queue drops the new record and counts it | implemented |
-| Storage | internal flash 1 MB (bench); microSD for the vehicle (driver not written); a 16 MB NOR holds about 33 min at the demonstration's 8.4 KB/s | decision: `docs/TELEMATICS_BOM.md` |
+| Storage | W25Q128JV NOR (16 MiB) on the bench and in configuration A, internal flash 1 MB as the fallback; durations per record mix in `docs/generated/telematics_storage.md` (NOR: 138 min of the bench mix, 26.7 min of the fixture vehicle's at full rate); microSD is an option without a driver | implemented (NOR host-tested on a bus model; not on hardware) |
+| Storage reserve | once only min(32 slots, 1/8 of the storage) are free: sparse logging, one `WHEEL_EDGES` record per channel and the counters every 10 s, blocks flushed every 300 s; CAN, IMU and TEMP records counted in `log_thinned` and not written; an `EVENT` code 2 marks the switch | implemented |
 | Full storage | the block is not written, its records are counted (`log_dropped_storage`), acquisition continues | implemented |
-| Counters | COUNTERS2 every second and in every live message: frames received, decoded, ignored, unknown, invalid, companion frames seen, records logged, queue drops and high water, storage drops, blocks written, stall events, write errors, wheel records and lost edges, CAN ring overruns, uplink sent, dropped and backlog high water, uptime | implemented |
+| Counters | COUNTERS2 every second and in every live message: frames received, decoded, ignored, unknown, invalid, companion frames seen, records logged, queue drops and high water, storage drops, blocks written, stall events, write errors, wheel records and lost edges, wheel suspect episodes (ids 24 stuck active, 25 stuck inactive or disconnected), records thinned in sparse logging (id 26), CAN ring overruns, uplink sent, dropped and backlog high water, uptime | implemented |
 | Restart | a new session with `BOOT` (count, cause); the import reports the gap and that records after the last counters record of the previous session are unaccounted | implemented |
 
 ## A.8 Live uplink
@@ -83,7 +85,7 @@ Pins, levels and the connection table: `telematics/firmware/BENCH.md` section 4 
 
 ## A.10 Power
 
-The unit is powered from the propulsion battery (48 V nominal, 10 Ah as the vehicle team reports it) through its own fuse, TVS, reverse protection and an isolated DC-DC (`docs/TELEMATICS_BOM.md`), downstream of the joulemeter: its consumption counts in the official result. It takes no supply from the controller's connector. The emergency stop removes its power; the log loses at most the queued records and the open block, which the import reports.
+On the bench the unit is powered from USB only. On the vehicle it is to be powered from the propulsion battery (48 V nominal, 10 Ah as the vehicle team reports it) through its own fuse, TVS, reverse protection and an isolated DC-DC, downstream of the joulemeter, so that its consumption counts in the official result; **this connection is blocked** until the battery's maximum voltage is known and a TVS and DC-DC pair passes the clamp rule (`docs/TELEMATICS_BOM.md`, Vehicle supply; T-VEH-PWR). It takes no supply from the controller's connector. The emergency stop removes its power; the log loses at most the queued records and the open block, which the import reports.
 
 # Part B. Deferred controller development and the semmc simulation fixture
 

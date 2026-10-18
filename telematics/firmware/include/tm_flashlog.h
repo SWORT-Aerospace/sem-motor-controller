@@ -22,6 +22,10 @@ typedef struct {
     int (*program)(void *ctx, uint32_t addr, const uint8_t *src, uint32_t n); /* start; 0 ok, <0 error */
     int (*busy)(void *ctx);                                                  /* 1 busy, 0 idle, <0 error */
     int (*read)(void *ctx, uint32_t addr, uint8_t *dst, uint32_t n);         /* 0 ok */
+    int (*erase_chip)(void *ctx);   /* optional (may be 0): start erasing the whole region at once */
+    bool check_blank;               /* read a page before its first use and erase it only if it is not blank
+                                       (NOR: a blank check is far quicker than a sector erase; not for the
+                                       internal flash, where reading a damaged quad-word raises an ECC fault) */
     void *ctx;
 } tm_flash_if_t;
 
@@ -36,7 +40,12 @@ typedef struct {
     uint32_t pend_off;
     uint32_t pend_records;
     bool erasing_all;
+    bool erase_by_page;         /* erase-all page by page (no erase_chip, or it failed) */
+    bool chip_erase_started;
     uint32_t erase_all_next;
+    uint32_t check_page;        /* page being blank-checked, and how far */
+    uint32_t check_off;
+    uint32_t erases_skipped;    /* pages found blank: no erase needed */
     uint32_t blocks_written;
     uint32_t write_errors;
     uint32_t dropped_records;   /* records in slots that failed or did not fit */
@@ -46,12 +55,14 @@ typedef struct {
  * slot plus one slot verify). */
 void tm_flashlog_init(tm_flashlog_t *fl, const tm_flash_if_t *io);
 bool tm_flashlog_full(const tm_flashlog_t *fl);
+uint32_t tm_flashlog_free_slots(const tm_flashlog_t *fl);
 bool tm_flashlog_ready(const tm_flashlog_t *fl);    /* can take a slot now */
 /* Hand over one slot image with the number of records in it. false: not ready (busy or full); when full
  * the records are counted as dropped. */
 bool tm_flashlog_submit(tm_flashlog_t *fl, const uint8_t slot[TM_SLOT_BYTES], uint32_t records);
 void tm_flashlog_step(tm_flashlog_t *fl);
-/* Start erasing the whole region (the "ERASE YES" command); logging stops until it is done. */
+/* Start erasing the whole region (the "ERASE YES" command); logging stops until it is done. With an
+ * erase_chip function the device erases itself in one operation (a W25Q chip erase), else page by page. */
 void tm_flashlog_erase_all(tm_flashlog_t *fl);
 bool tm_flashlog_erasing(const tm_flashlog_t *fl);
 

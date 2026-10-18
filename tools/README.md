@@ -12,13 +12,16 @@ Abbreviations used below:
 * **KiCad**: the open-source electronics design suite (`kicad-cli` is its command-line tool). **ERC**: electrical rules check. **BOM**: bill of materials. **MCU**: microcontroller unit.
 * **DP**: dynamic programming (the energy-strategy optimiser). **STLG**: the vehicle's local block log format.
 
-**Scope (v0.7).** The telematics tools are `run_telematics_demo.py`, `telematics_import.py`, `telematics_bom.py`, `scope.py`, `run_pit_replay.py`, `mqtt_broker.py`, `check_links.py` and the shared analyses `bus_load.py`, `can_bit_timing.py`, `wheel_sensor_check.py`; none needs the controller build. The others serve the reference models or the deferred controller development ([`../docs/scope.yaml`](../docs/scope.yaml)); `run_host_demo.py` and `run_mqtt_demo.py` are the LEGACY supervised simulations and run only with `--legacy-supervised`.
+**Scope (v0.7).** The telematics tools are `run_telematics_demo.py`, `telematics_import.py`, `telematics_bom.py`, `telematics_bench.py`, `telematics_storage.py`, `uart_capture.py`, `scope.py`, `run_pit_replay.py`, `mqtt_broker.py`, `check_links.py` and the shared analyses `bus_load.py`, `can_bit_timing.py`, `wheel_sensor_check.py`; none needs the controller build. The others serve the reference models or the deferred controller development ([`../docs/scope.yaml`](../docs/scope.yaml)); `run_host_demo.py` and `run_mqtt_demo.py` are the LEGACY supervised simulations and run only with `--legacy-supervised`.
 
 | Tool | What it does | Writes |
 |---|---|---|
 | [`run_telematics_demo.py`](run_telematics_demo.py) | End-to-end demonstration of the receive-only telematics node against a simulated external controller and sensors: real Mosquitto broker (or `--in-process`), controller silence, invalid frames, a missing signal, a storage stall, a broker outage, a restart; 9 checks | `build/telematics_demo/`; with `--samples`, `docs/generated/telematics_demo/` |
-| [`telematics_import.py`](telematics_import.py) | A flash or UART dump of the firmware's log region -> sessions -> STLG files -> pit import -> speed and distance plots | the output directory and the database given |
-| [`telematics_bom.py`](telematics_bom.py) | Totals of configurations A and B from `hardware/telematics/bom.yaml`; `--check` in CI | `docs/TELEMATICS_BOM.md`, `docs/generated/telematics_bom.json` |
+| [`telematics_import.py`](telematics_import.py) | A flash or UART dump (whole or a slot range) of the firmware's log region -> sessions -> STLG files -> pit import -> speed and distance plots; `--status-capture`: the console's status lines checked across the timer overflow, with the slot range to dump | the output directory and the database given; `status.csv`, `status.json` |
+| [`telematics_bom.py`](telematics_bom.py) | Totals of the bench and configurations A and B from `hardware/telematics/bom.yaml`; refuses a bench part without its firmware driver and an unblocked vehicle supply without the pack's maximum voltage; `--check` in CI | `docs/TELEMATICS_BOM.md`, `docs/generated/telematics_bom.json` |
+| [`telematics_bench.py`](telematics_bench.py) | `render [--check]`: `telematics/firmware/BENCH.md` from `telematics/bench/bench.yaml`, checked against the firmware sources, the BOM and the measured durations; `package --images build-u575 --out build/telematics_bench [--rebuild]`: the bench package (images, SHA-256 manifest, procedure, connections, parts, blank results form) | `telematics/firmware/BENCH.md`; `build/telematics_bench/` (CI artifact `telematics-bench-package`) |
+| [`uart_capture.py`](uart_capture.py) | Console capture on the bench: serial terminal that writes every byte received to a file; `--send`, `--until`, `--duration` | the capture file |
+| [`telematics_storage.py`](telematics_storage.py) | Recording durations of the log per record mix on internal flash and the NOR, measured with the firmware's code in the host simulator; `--check` in CI | `docs/generated/telematics_storage.md`, `.json` |
 | [`scope.py`](scope.py) | Every tracked file's suite from `docs/scope.yaml`; `--check` in CI fails on an unclassified file | `docs/generated/scope.md` |
 
 ## 1. Tools by purpose
@@ -124,7 +127,7 @@ The procurement generator `gen_procurement.py` (section 1.1) also belongs to the
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) has three jobs on GitHub-hosted Ubuntu 24.04 runners with Python 3.13 (the suites are defined in [`../docs/scope.yaml`](../docs/scope.yaml)). None touches hardware.
 
 **`telematics` job** (Mosquitto, the ARM toolchain; no KiCad, and never the project's controller build), in this order:
-1. Generated files are current: `scope.py --check`, `gen_protocol.py --check`, `gen_dbc.py --check`, `telematics_bom.py --check`, `wheel_sensor_check.py --check`, `check_links.py`.
+1. Generated files are current: `scope.py --check`, `gen_protocol.py --check`, `gen_dbc.py --check`, `telematics_bom.py --check`, `telematics_bench.py render --check`, `telematics_storage.py --check` (after the host build), `wheel_sensor_check.py --check`, `check_links.py`.
 2. `fetch_csia.py`.
 3. The telematics firmware: host build and `ctest` under sanitizers (`build-telematics`), then the NUCLEO-U575ZI-Q images (`build-u575`, uploaded as `telematics-u575-images`).
 4. `python -m pytest -rs -m "telematics or reference"` with `SEMMC_REQUIRE_MQTT=1`, `SEMMC_REQUIRE_ARM=1` and the controller build directory pointed at a path that must still not exist afterwards.
@@ -144,7 +147,7 @@ The procurement generator `gen_procurement.py` (section 1.1) also belongs to the
 
 **Not run in CI as commands:** `pin_type_check.py`, `hw_consistency.py` (so `CONSISTENCY_CHECK.md` is not rewritten), `clock_tree.py`, `hardware_calcs.py`, `telematics_budget.py`, `pin_allocation.py`, `can_bit_timing.py`, `bus_load.py`, `control_contract_report.py`, `make_replay_sample.py`, `run_policy_comparison.py`, `run_csia_evaluation.py`, `run_csia_evaluation_v2.py`, `run_csia_posthoc.py`, `verify_all.py`, and the generators in their writing form.
 
-**CI detects a stale committed output only for** `scope.py`, `telematics_bom.py`, `gen_config.py`, `gen_protocol.py`, `gen_dbc.py`, `gen_procurement.py`, `gen_board_pins.py`, `blockers.py`, `acceptance.py render`, `wheel_sensor_check.py`, `coastdown_sensitivity.py` (their `--check` forms), `release_gate.py` (its report is compared by `tests/hardware/test_release_gate.py`) and `gen_kicad_schematic.py` (the `git diff` gate). For every other tool that writes tracked files (section 4), CI does not notice a stale file: re-run the tool and commit its outputs yourself.
+**CI detects a stale committed output only for** `scope.py`, `telematics_bom.py`, `telematics_bench.py render`, `telematics_storage.py`, `gen_config.py`, `gen_protocol.py`, `gen_dbc.py`, `gen_procurement.py`, `gen_board_pins.py`, `blockers.py`, `acceptance.py render`, `wheel_sensor_check.py`, `coastdown_sensitivity.py` (their `--check` forms), `release_gate.py` (its report is compared by `tests/hardware/test_release_gate.py`) and `gen_kicad_schematic.py` (the `git diff` gate). For every other tool that writes tracked files (section 4), CI does not notice a stale file: re-run the tool and commit its outputs yourself.
 
 ## 3. What `verify_all.py` runs
 
@@ -164,9 +167,11 @@ The `CHECKS` list in `verify_all.py`, in order. Commands run from the repository
 | `pytest` | python | `python3 -m pytest -rs -p no:cacheprovider` | both |
 | `replay` | host simulation | `python3 host/replay/replay.py tests/simulation/replay_sample.semmc.log --out build/replay` | both |
 | `contract_report` | host simulation | `python3 tools/control_contract_report.py --build build` | both |
-| `telematics_scope`, `telematics_bom` | generation | `python3 tools/scope.py --check`, `python3 tools/telematics_bom.py --check` | both |
+| `telematics_scope`, `telematics_bom`, `telematics_bench_doc` | generation | `python3 tools/scope.py --check`, `python3 tools/telematics_bom.py --check`, `python3 tools/telematics_bench.py render --check` | both |
 | `tm_configure`, `tm_build`, `tm_ctest` | telematics firmware | `cmake -S telematics/firmware -B build-telematics -G Ninja`, `cmake --build build-telematics`, `ctest --test-dir build-telematics --output-on-failure -V` | both |
 | `tm_u575_configure`, `tm_u575_build` | telematics firmware | configure and build the NUCLEO-U575ZI-Q images into `build-u575` (README section 3) | both |
+| `tm_storage` | telematics firmware | `python3 tools/telematics_storage.py --check --build build-telematics` | both |
+| `tm_bench_package` | telematics firmware | `python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild --allow-dirty` (a working tree with changes is marked not valid for a recorded run) | both |
 | `telematics_demo` | telematics | `python3 tools/run_telematics_demo.py --out build/telematics_demo` | both |
 | `host_demo` | host simulation | `python3 tools/run_host_demo.py --legacy-supervised --out build/host_demo` | both |
 | `pit_replay` | host simulation | `python3 tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay` (uses the database from `host_demo`) | both |

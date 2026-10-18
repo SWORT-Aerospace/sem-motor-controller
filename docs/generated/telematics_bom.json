@@ -1,37 +1,72 @@
 {
  "A": {
-  "high": 608.94,
-  "low": 392.28,
-  "parts_high": 520.85,
-  "parts_low": 377.31
+  "high": 666.45,
+  "low": 462.73,
+  "parts_high": 573.14,
+  "parts_low": 447.76
  },
  "B": {
-  "high": 812.6,
-  "low": 435.27,
-  "parts_high": 706.0,
-  "parts_low": 420.3
+  "high": 870.12,
+  "low": 505.72,
+  "parts_high": 758.29,
+  "parts_low": 490.75
  },
  "B_with_display": {
-  "high": 862.05,
-  "low": 480.22,
-  "parts_high": 750.95,
-  "parts_low": 465.25
+  "high": 919.56,
+  "low": 550.67,
+  "parts_high": 803.24,
+  "parts_low": 535.7
  },
+ "bench": {
+  "high": 117.74,
+  "low": 97.68,
+  "parts_high": 107.04,
+  "parts_low": 97.68
+ },
+ "blocked_lines": [
+  "dcdc",
+  "fuse",
+  "fuse_holder",
+  "rev_diode",
+  "spare_tvs_diode",
+  "supply_passives",
+  "tvs"
+ ],
  "equipment_if_not_owned": {
   "high": 180.0,
   "low": 85.0
  },
+ "options_not_counted": [
+  "storage_card",
+  "storage_socket",
+  "temp_probes"
+ ],
  "recurring": {
-  "mb_per_running_hour": 15.06,
-  "message_bytes": 2052,
+  "mb_per_running_hour": 15.47,
+  "message_bytes": 2108,
   "message_size_measured": true,
   "one_time": 3.0,
-  "per_month_high": 64.51,
-  "per_month_low": 1.9,
+  "per_month_high": 66.21,
+  "per_month_low": 1.93,
   "running_hours_per_month": {
    "high": 20,
    "low": 2
   }
+ },
+ "supply": {
+  "battery_max_V": null,
+  "pairs": [
+   {
+    "accepted": false,
+    "dcdc": "Mean Well SKMW15G-05",
+    "reasons": [
+     "clamp 93.6 V at 6.4 A above the DC-DC's 75 V input maximum",
+     "standoff against V_bat,max cannot be checked: V_bat,max unknown"
+    ],
+    "tvs": "SMBJ58A"
+   }
+  ],
+  "vehicle_power_connection": "blocked"
  },
  "unpriced_lines": [
   "wedge_s"

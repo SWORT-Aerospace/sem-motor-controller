@@ -11,11 +11,11 @@ Nothing here depends on the controller firmware in `../../firmware/` (deferred c
 
 | Path | Contents |
 |---|---|
-| `include/`, `src/` | Portable C11, no register access, built for the host (tests) and the target: `tm_wheel` (edge accumulation, the same rules as `host/telematics/wheel.py`), `tm_time` (64-bit time across timer overflow), `tm_queue` (bounded log queue, CAN receive ring), `tm_stlg` (STLG headers and blocks, `host/telematics/stlg.py` format), `tm_flashlog` (slot storage, at most one storage operation per call), `tm_reset` (restart cause), `tm_app` (the application), `tm_w25q` (SPI NOR on the SPI transport), `tm_imu` (LSM6DSOX/ISM330DHCX and TMP117 on the I2C transport), `tm_bus.h` (bounded SPI and I2C transport interfaces) |
-| `platform/host/` | RAM flash model and the host simulator `tm_hostsim` (the portable application driven by a script; writes a flash image) |
-| `platform/u575/` | Startup and vector table, linker script, clocks and LSE/MSI PLL mode, TIM2 capture, watchdog, USART1, internal flash bank 2, FDCAN1 bus monitoring, SPI1, I2C1, `main_u575.c`; vendored CMSIS headers with their provenance |
+| `include/`, `src/` | Portable C11, no register access, built for the host (tests) and the target: `tm_wheel` (edge accumulation, the same rules as `host/telematics/wheel.py`), `tm_time` (64-bit time across timer overflow), `tm_queue` (bounded log queue, CAN receive ring), `tm_stlg` (STLG headers and blocks, `host/telematics/stlg.py` format), `tm_flashlog` (slot storage, at most one storage operation per call), `tm_reset` (restart cause), `tm_app` (the application), `tm_w25q` (W25Q SPI NOR of 1 to 16 MiB on the SPI transport, the log storage when it answers), `tm_imu` (LSM6DSOX/ISM330DHCX and TMP117 on the I2C transport), `tm_bus.h` (bounded SPI and I2C transport interfaces) |
+| `platform/host/` | RAM flash model, the W25Q bus model `tm_fakew25q` and the host simulator `tm_hostsim` (the portable application driven by a script, on internal flash or the NOR model; writes a storage image) |
+| `platform/u575/` | Startup and vector table, linker script, clocks and LSE/MSI PLL mode, TIM2 capture, watchdog, USART1, internal flash bank 2, FDCAN1 bus monitoring, SPI1 (the NOR), I2C1, `main_u575.c` (storage selection, console, sensor polling); vendored CMSIS headers with their provenance |
 | `tests/` | C unit tests (`tm_tests`, under ASan and UBSan): CRC, timer extension, accumulator, queue, blocks, flash log on the RAM model (erase before write, power loss mid-slot, write errors, full storage), drivers on simulated devices |
-| `BENCH.md` | Build and flash commands, the connection table, the bench procedure and the electrical checks before any vehicle bus |
+| `BENCH.md` | Generated from `../bench/bench.yaml` by `tools/telematics_bench.py`: build and package commands, parts, the connection table, the bench procedure B0 to B12 and the electrical checks before any vehicle bus |
 
 ## Commands
 

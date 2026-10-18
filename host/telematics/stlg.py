@@ -68,11 +68,12 @@ COUNTER2_IDS = {
     10: "frames_ignored", 11: "frames_unknown", 12: "frames_invalid", 13: "companion_frames_seen",
     14: "wheel_edges_lost", 15: "wheel_records", 16: "storage_blocks_written", 17: "storage_stall_events",
     18: "can_rx_overrun", 19: "can_bus_errors", 20: "log_queue_capacity", 21: "uplink_queue_capacity",
-    22: "storage_write_errors", 23: "uptime_s",
+    22: "storage_write_errors", 23: "uptime_s", 24: "wheel_suspect_active", 25: "wheel_suspect_inactive",
+    26: "log_thinned",
 }
 COUNTER2_BY_NAME = {v: k for k, v in COUNTER2_IDS.items()}
 CAN2_EXT, CAN2_FD, CAN2_BRS = 1 << 31, 1 << 30, 1 << 29
-TEMP_STATUS = ("ok", "crc_error", "timeout", "out_of_range")
+TEMP_STATUS = ("ok", "crc_error", "timeout", "out_of_range", "bus_error")   # 4: I2C sensor did not answer
 TEMP_INVALID = -32768
 COUNTER_NAMES = ("rx_frames", "log_records", "log_dropped_queue", "log_dropped_storage", "uplink_sent",
                  "uplink_dropped", "queue_high_water", "supervisor_overruns")

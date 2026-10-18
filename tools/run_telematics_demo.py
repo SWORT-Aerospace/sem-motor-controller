@@ -22,6 +22,7 @@ Scenario (controller time, s; the drive profile is in sim_vehicle.default_profil
   65.0-67.0   storage stalled (log queue fills)            80.0-97.0   broker down (killed and restarted)
   100.0-108.0 drive-wheel sensor disconnected             110.0-115.0 GNSS without fix (no PPS)
   120.0       telematics unit restarts without shutdown (power loss); back at 121.0 as boot 2
+  128.0-136.0 right-wheel signal shorted to ground (line held low, no edges) while the vehicle drives
 Prints one "TELEMATICS ..." line per check; exit code 1 if any fails.
 """
 from __future__ import annotations
@@ -61,6 +62,7 @@ VBUS_INVALID = (55.0, 58.0)
 STORAGE_STALL = (65.0, 67.0)
 BROKER_DOWN = (80.0, 97.0)
 WHEEL_DISCONNECT = (2, 100.0, 108.0)
+WHEEL_STUCK_LOW = (1, 128.0, 136.0)
 GNSS_OUT = (110.0, 115.0)
 RESTART = (120.0, 121.0)
 DURATION = 165.0
@@ -95,7 +97,7 @@ def simulate(out: pathlib.Path, link_factory, duration: float = DURATION, action
     vcfg = VehicleSimConfig()
     sim = VehicleSim(vcfg, Faults(silence=(SILENCE,), corrupt=(CORRUPT,), drop_message=(DROP_CURRENTS,),
                                   vbus_invalid=(VBUS_INVALID,), wheel_disconnect=(WHEEL_DISCONNECT,),
-                                  gnss_outage=(GNSS_OUT,)))
+                                  wheel_stuck_low=(WHEEL_STUCK_LOW,), gnss_outage=(GNSS_OUT,)))
     clock = LocalClock()
     pps = PpsModel(outages=(GNSS_OUT,))
     pps_rng = np.random.default_rng(5)
@@ -328,18 +330,31 @@ def analyse(ev: dict, db: sqlite3.Connection, live_rep: dict) -> tuple[list[dict
     d_true = {b: _true_at(truth, clock, d[b]["t_us"], 2) - _true_at(truth, clock, clock.local(boots[b]["t_start"]) * 1e6, 2)
               for b in boots}
     derr = {b: d[b]["distance_m"] - d_true[b] for b in boots}
+    def window(run, ch, a, b):
+        return collections.Counter((r[0], r[1] is None, ("disconnected" in r[2]) or ("stuck active" in r[2]) * 2)
+                                   for r in db.execute(
+            "SELECT validity, value, provenance FROM measurements WHERE run_id=? AND signal=? AND t_rx_us>=? AND "
+            "t_rx_us<?", (run, f"wheel.{ch}.speed", int(clock.local(a) * 1e6), int(clock.local(b) * 1e6))))
+    # the disconnected drive wheel (line pulled up) and the right wheel shorted to ground, each while the
+    # other wheels turn: suspect, invalid, no value; never a speed
+    disc = window(boots[1]["run_id"], "wheel_drive", WHEEL_DISCONNECT[1] + 1.5, WHEEL_DISCONNECT[2])
+    stuck = window(boots[2]["run_id"], "wheel_r", WHEEL_STUCK_LOW[1] + 1.5, WHEEL_STUCK_LOW[2])
+    # parked at the end with every wheel silent: no evidence, never 0 (a held line proves nothing)
+    stand = collections.Counter((r[0], r[1]) for r in db.execute(
+        "SELECT validity, value FROM measurements WHERE run_id=? AND signal LIKE 'wheel.%.speed' AND t_rx_us>?",
+        (boots[2]["run_id"], int(clock.local(156.0) * 1e6))))   # the vehicle rolls to a stop by about 152 s
     dd = energy.wheel_distance(db, boots[1]["run_id"], "wheel_drive")
-    stand = collections.Counter(r[0] for r in db.execute(
-        "SELECT validity FROM measurements WHERE run_id=? AND signal='wheel.wheel_l.speed' AND t_rx_us>?",
-        (boots[2]["run_id"], int(clock.local(150.0) * 1e6))))
-    ok6 = (rms < 0.05 and all(abs(e) <= 2 * pitch for e in derr.values()) and dd["no_evidence_records"] > 0
-           and stand.get("valid", 0) + stand.get("no_evidence", 0) > 0)
+    ok6 = (rms < 0.05 and all(abs(e) <= 2 * pitch for e in derr.values())
+           and disc and set(disc) == {("invalid", True, 1)} and stuck and set(stuck) == {("invalid", True, 2)}
+           and stand and set(stand) == {("no_evidence", None)} and dd["lower_bound"])
     check("speed_and_distance_from_edge_timing", ok6,
           f"wheel_l speed: {len(err)} edge-period samples above 0.5 m/s, RMS error {rms:.4f} m/s against the "
           f"simulated speed; distance boot 1 {d[1]['distance_m']:.2f} m ({derr[1]:+.3f} m), boot 2 "
-          f"{d[2]['distance_m']:.2f} m ({derr[2]:+.3f} m), pitch {pitch:.4f} m; drive wheel: "
-          f"{dd['no_evidence_records']} no-evidence records while disconnected; parked at the end: {dict(stand)} "
-          "(0 m/s only with the line held active, otherwise no evidence)")
+          f"{d[2]['distance_m']:.2f} m ({derr[2]:+.3f} m), pitch {pitch:.4f} m; drive wheel disconnected while "
+          f"the others turn: {sum(disc.values())} speed records suspect inactive (invalid, no value), its distance "
+          f"a lower bound afterwards; right wheel shorted to ground: {sum(stuck.values())} suspect active; parked "
+          f"at the end: {sum(stand.values())} wheel speed records, all no evidence (a held line is never read as "
+          "standstill)")
 
     # 7. energy at two boundaries
     en = {}

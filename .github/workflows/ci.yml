@@ -35,6 +35,7 @@ jobs:
           python tools/gen_protocol.py --check
           python tools/gen_dbc.py --check
           python tools/telematics_bom.py --check
+          python tools/telematics_bench.py render --check
           python tools/wheel_sensor_check.py --check
           python tools/check_links.py
       - name: Telematics firmware, host build + unit tests (ASan/UBSan)
@@ -42,6 +43,8 @@ jobs:
           cmake -S telematics/firmware -B build-telematics -G Ninja
           cmake --build build-telematics
           ctest --test-dir build-telematics --output-on-failure
+      - name: Recording durations are current (firmware code in the host simulator)
+        run: python tools/telematics_storage.py --check --build build-telematics
       - name: Telematics firmware, NUCLEO-U575ZI-Q images (linked; not run on hardware here)
         run: |
           cmake -S telematics/firmware -B build-u575 -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_TOOLCHAIN_FILE=$PWD/telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake -DTM_TARGET_U575=ON
@@ -56,6 +59,13 @@ jobs:
             build-u575/tm_u575*.bin
             build-u575/tm_u575*.hex
             build-u575/tm_u575*.map
+      - name: Telematics bench package (images rebuilt and compared, procedure, parts, blank results form)
+        run: python tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild
+      - name: Upload telematics bench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: telematics-bench-package
+          path: build/telematics_bench
       - name: Python tests, telematics and reference suites (no controller build)
         # a missing MQTT broker or ARM toolchain is a failure here, not a skip; the controller build is
         # never made in this job (conftest.py refuses it for these suites)

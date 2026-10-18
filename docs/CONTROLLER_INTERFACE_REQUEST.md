@@ -75,13 +75,13 @@ If you prefer that we ask for the data (request and response, "polling") instead
 
 A unit whose firmware only listens can still disturb a bus electrically. What we do about each way it could:
 
-| Risk | What we do | How it is checked (telematics/firmware/BENCH.md section 6) |
+| Risk | What we do | How it is checked (telematics/firmware/BENCH.md section 7) |
 |---|---|---|
-| Our transceiver drives the bus (firmware fault, a stuck pin) | the CAN controller runs in bus-monitoring mode (sends nothing, not even the acknowledge bit); the transceiver's transmitter is disabled in hardware (TJA1051T/3 silent pin held high); the TXD line cannot override it | E1: bus stays recessive at the unit's pins while frames flood the bus, unit running and unit off |
+| Our transceiver drives the bus (firmware fault, a stuck pin) | the CAN controller runs in bus-monitoring mode (sends nothing, not even the acknowledge bit); the transceiver's transmitter is disabled in hardware (TJA1051T/3 silent pin held high); the TXD line cannot override it | E1: our node's own output, not the whole bus (your traffic drives the shared bus dominant, as it should). (a) On an isolated bench bus with no other node, the transmitter's input forced low and high with the silent pin high: CANH-CANL stays recessive, and goes dominant only in the control with the silent pin low. (b) With one sender: every frame ends in an acknowledge error and our TX line stays high, so no dominant bit comes from our node. (c) With an acknowledging node added: the error counters are the same over 10,000 frames with and without our unit |
 | The unit loads the bus when unpowered | transceiver whose data sheet states no bus load when unpowered (TJA1051: "disengages from the bus when not powered up"; SN65HVD230: "unpowered node does not disturb the bus") | E2: no change in error counters or waveform with the unit unpowered; leakage within the data sheet |
 | An extra terminator | the breakout's terminator switched off unless you ask for it | E3: CANH-CANL resistance with and without the unit, bus unpowered (about 60 Ohm for a bus terminated at both ends) |
 | Bus loading and stubs | one more receiver (its input capacitance per the transceiver data sheet) on a stub as short as the harness allows | E4: stub length within what you allow for your bus; your bit rate tells the limit |
-| Ground differences and loops | one ground connection at the point you name (2.7); the unit's own supply is an isolated DC-DC from the pack, so the CAN ground is the only ground link; no USB-connected laptop on the vehicle while it runs | E5 |
+| Ground differences and loops | one ground connection at the point you name (2.7); the unit's own supply is not chosen yet (blocked until the pack's maximum voltage is known, docs/TELEMATICS_BOM.md), and is to be isolated so the CAN ground is the only ground link; no USB-connected laptop on the vehicle while it runs | E5 |
 | Back-feeding your logic supply | the unit takes no supply from your connector | E6 |
 
 Bus load from our unit: zero frames. Your frames are unchanged by our presence.

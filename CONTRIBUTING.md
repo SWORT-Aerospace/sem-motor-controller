@@ -38,7 +38,7 @@ A change to an interface between two of these areas needs both owners' approval 
 ## 5. Hardware and safety
 
 * Nothing is ordered without a dated quote replacing the snapshot in [`hardware/telematics/bom.yaml`](hardware/telematics/bom.yaml) and the team lead's agreement.
-* The telematics unit is connected to the vehicle's CAN bus only after the controller team agrees and the electrical checks of [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) section 6 have passed; it stays receive-only.
+* The telematics unit is connected to the vehicle's CAN bus only after the controller team agrees and the electrical checks of [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) section 7 have passed; it stays receive-only.
 * No board is energised before the design review ([`hardware/review/REVIEW_CHECKLIST.md`](hardware/review/REVIEW_CHECKLIST.md)) is signed. Energised tests follow the staged bring-up checklist and are carried out by qualified members under the lab's safety procedure, never alone.
 * The telematics unit never sends to the controller: no torque request, arming, fault reset or configuration change, and no part in protection or precharge. A change that adds a transmit path to the deployed node or firmware is not accepted (tests check it).
 

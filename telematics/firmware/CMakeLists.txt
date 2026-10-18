@@ -24,7 +24,7 @@ if(NOT TM_GIT_REV)
 endif()
 
 if(NOT TM_TARGET_U575)
-  add_library(tm_portable STATIC ${TM_PORTABLE} platform/host/tm_fakeflash.c)
+  add_library(tm_portable STATIC ${TM_PORTABLE} platform/host/tm_fakeflash.c platform/host/tm_fakew25q.c)
   target_include_directories(tm_portable PUBLIC include platform/host)
   target_compile_options(tm_portable PRIVATE ${TM_WARN} -fsanitize=address,undefined -fno-omit-frame-pointer)
   target_link_options(tm_portable PUBLIC -fsanitize=address,undefined)

@@ -201,13 +201,16 @@ def _cause(db, run_id, v_sig, i_sig, a_us, b_us) -> str:
 
 
 def wheel_distance(db: sqlite3.Connection, run_id: str, channel: str) -> dict:
-    """Distance of one wheel channel: the last distance measurement (counted edges x pitch). After lost edges
-    the value is a lower bound (validity unverified)."""
+    """Distance of one wheel channel: the last distance measurement (counted edges x pitch). After lost edges,
+    or once the channel was suspect (silent while another channel moved), the value is a lower bound (validity
+    unverified). Also counts the channel's speed records without evidence and those found suspect."""
     r = db.execute("SELECT value, validity, t_rx_us FROM measurements WHERE run_id=? AND signal=? AND value IS NOT "
                    "NULL ORDER BY t_rx_us DESC LIMIT 1", (run_id, f"wheel.{channel}.distance")).fetchone()
-    no_ev = db.execute("SELECT COUNT(*) FROM measurements WHERE run_id=? AND signal=? AND validity='no_evidence'",
-                       (run_id, f"wheel.{channel}.speed")).fetchone()[0]
+    no_ev, susp = db.execute("SELECT SUM(validity='no_evidence'), SUM(validity='invalid') FROM measurements WHERE "
+                             "run_id=? AND signal=?", (run_id, f"wheel.{channel}.speed")).fetchone()
+    no_ev, susp = no_ev or 0, susp or 0
     if r is None:
-        return {"channel": channel, "distance_m": None, "lower_bound": None, "no_evidence_records": no_ev, "t_us": None}
+        return {"channel": channel, "distance_m": None, "lower_bound": None, "no_evidence_records": no_ev,
+                "suspect_records": susp, "t_us": None}
     return {"channel": channel, "distance_m": r[0], "lower_bound": r[1] != "valid", "no_evidence_records": no_ev,
-            "t_us": r[2]}
+            "suspect_records": susp, "t_us": r[2]}

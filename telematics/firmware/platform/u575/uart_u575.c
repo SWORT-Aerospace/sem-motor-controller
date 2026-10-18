@@ -21,6 +21,10 @@ void uart_init(void)
     USART1->CR1 = 0u;
     USART1->BRR = 35u;
     USART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+    /* transmitter and receiver acknowledged before first use (ST: UART_CheckIdleState); bounded */
+    for (uint32_t k = 0; k < 100000u && (USART1->ISR & (USART_ISR_TEACK | USART_ISR_REACK)) !=
+                                            (USART_ISR_TEACK | USART_ISR_REACK); k++) {
+    }
 }
 
 void uart_poll(void)

@@ -2,6 +2,7 @@
 import inspect
 import json
 import math
+import pathlib
 
 import pytest
 
@@ -10,7 +11,8 @@ from host.telematics import signals, stlg
 from host.telematics.clocks import LocalClock
 from host.telematics.controller_adapter import SimFixtureAdapter
 from host.telematics.node import NodeConfig, SimLink, TelematicsNode, meta_fields
-from host.telematics.wheel import FLAG_HEARTBEAT, FLAG_LINE_HIGH, EdgeAccumulator, EdgeRecord, WheelConfig, WheelEstimator
+from host.telematics.wheel import (FLAG_HEARTBEAT, FLAG_LINE_HIGH, EdgeAccumulator, EdgeRecord, WheelConfig,
+                                   WheelEstimator, WheelGroup)
 from protocol.generated import semmc_protocol as proto
 
 CFG = WheelConfig(circumference_m=1.6, ppr=8)          # pitch 0.2 m
@@ -54,7 +56,7 @@ def test_a_lost_record_loses_no_distance_but_an_overrun_makes_it_a_lower_bound()
     assert d.validity == "unverified" and "lower bound" in d.provenance
 
 
-def test_no_edge_is_no_evidence_with_a_bound_and_standstill_needs_the_line_held_active():
+def test_no_edge_is_no_evidence_and_a_held_line_never_proves_standstill():
     est = WheelEstimator(CFG, "w")                       # active low: line_high False = magnet under the sensor
     assert _feed(est, [EdgeRecord(50_000, 0, 0, 0, 0, FLAG_LINE_HIGH | FLAG_HEARTBEAT, 0, 0)])[0].validity == \
         "no_evidence"                                    # never an edge: nothing known
@@ -62,11 +64,108 @@ def test_no_edge_is_no_evidence_with_a_bound_and_standstill_needs_the_line_held_
     assert _feed(est, [EdgeRecord(1_050_000, 0, 0, 0, 4, FLAG_LINE_HIGH | FLAG_HEARTBEAT, 2, 0)]) == []  # between edges
     m = _feed(est, [EdgeRecord(2_000_000, 0, 0, 0, 4, FLAG_LINE_HIGH | FLAG_HEARTBEAT, 3, 0)])[0]
     assert m.validity == "no_evidence" and m.value is None and math.isclose(m.upper, 0.2 / 1.0)
-    # line low (magnet held under the sensor) for 2 s after a working sensor: standstill, 0 m/s with the bound
+    assert "only for a working sensor" in m.provenance and "line inactive" in m.provenance
+    # the line held at the active level for a long time after a working sensor: still no evidence, never 0
+    # (a magnet under a stopped wheel, a short to ground and a failed sensor read the same)
     _feed(est, [EdgeRecord(2_100_000, 0, 1, 0, 5, 0, 4, 0)])
-    for k, t in enumerate(range(2_500_000, 4_700_000, 500_000)):   # held active from 2.1 s
-        out = est.feed(EdgeRecord(t, 0, 0, 0, 5, FLAG_HEARTBEAT, 5 + k, 0))
-    assert out[0].validity == "valid" and out[0].value == 0.0 and "standstill" in out[0].provenance
+    outs = [est.feed(EdgeRecord(t, 0, 0, 0, 5, FLAG_HEARTBEAT, 5 + k, 0))
+            for k, t in enumerate(range(2_500_000, 30_000_000, 500_000))]
+    sp = [x for o in outs for x in o if x.signal == "wheel.w.speed"]
+    assert sp and all(x.validity == "no_evidence" and x.value is None for x in sp)
+    assert "line active" in sp[-1].provenance
+
+
+def _group(names=("w0", "w1", "w2"), active_high=False):
+    return WheelGroup(WheelConfig(circumference_m=1.6, ppr=8, active_high=active_high), dict(enumerate(names)))
+
+
+def _drive(g, until_us, period_us, lines, t_from=50_000, step=50_000, accs=None, nexts=None):
+    """Run record periods up to until_us: channel ch has an edge every period_us[ch] (0: none), its line
+    level is lines[ch]; returns (time, channel, state, measurements) per record, as the node does it."""
+    accs = accs if accs is not None else {ch: EdgeAccumulator(ch) for ch in g.names}
+    nexts = nexts if nexts is not None else {ch: t_from for ch in g.names}
+    out = []
+    for t in range(t_from, until_us + 1, step):
+        recs = []
+        for ch, acc in accs.items():
+            while period_us[ch] and nexts[ch] <= t:
+                acc.edge(nexts[ch])
+                nexts[ch] += period_us[ch]
+            recs.append(acc.take(t, line_high=lines[ch]))
+        for r in recs:
+            g.update(r)
+        for r in recs:
+            s, ref = g.classify(r.channel, t)
+            out.append((t, r.channel, s, ref, g.estimate(r, s, ref)))
+    return out, accs, nexts
+
+
+def _speeds(rows, ch, t0=0):
+    return [m for t, c, _s, _r, ms in rows if c == ch and t >= t0 for m in ms if m.signal.endswith(".speed")]
+
+
+def test_stuck_low_while_another_wheel_turns_is_suspect_active():
+    # w0 turns at 5 m/s (40 ms period); w1's signal is shorted to ground (line low = active level, no edges)
+    g = _group()
+    rows, _a, _n = _drive(g, 3_000_000, {0: 40_000, 1: 0, 2: 40_000}, {0: True, 1: False, 2: True})
+    st1 = {t: s for t, c, s, _r, _m in rows if c == 1}
+    assert st1[950_000] == "N" and st1[1_050_000] == "A"              # 1 s and 8 periods: suspect, not before
+    sp = _speeds(rows, 1, 1_050_000)
+    assert sp and all(m.validity == "invalid" and m.value is None and m.upper is None for m in sp)
+    assert "stuck active" in sp[0].provenance and "(w0)" in sp[0].provenance
+    assert g.episodes == {"A": 1, "I": 0}
+    assert all(m.validity == "valid" for m in _speeds(rows, 0, 200_000))
+
+
+def test_disconnected_or_stuck_high_while_another_wheel_turns_is_suspect_inactive():
+    # w2 disconnected from the start (open wire: the pull-up holds the line at the inactive level) and w1 shorted
+    # to the supply (the same level): electrically the same, both suspect inactive
+    g = _group()
+    rows, _a, _n = _drive(g, 2_000_000, {0: 40_000, 1: 0, 2: 0}, {0: True, 1: True, 2: True})
+    assert {c: s for t, c, s, _r, _m in rows if t == 2_000_000} == {0: "M", 1: "I", 2: "I"}
+    sp = _speeds(rows, 2, 1_100_000)
+    assert sp and all(m.validity == "invalid" for m in sp) and "disconnected" in sp[0].provenance
+    # an active-high sensor reads the same levels the other way round
+    g = _group(active_high=True)
+    rows, _a, _n = _drive(g, 2_000_000, {0: 40_000, 1: 0, 2: 0}, {0: False, 1: True, 2: False})
+    assert {c: s for t, c, s, _r, _m in rows if t == 2_000_000} == {0: "M", 1: "A", 2: "I"}
+
+
+def test_disconnection_mid_run_then_recovery():
+    g = _group()
+    per, lines = {0: 50_000, 1: 50_000, 2: 50_000}, {0: True, 1: True, 2: True}
+    rows, accs, nexts = _drive(g, 2_000_000, per, lines)
+    assert all(m.validity == "valid" for m in _speeds(rows, 1, 300_000))
+    per[1] = 0                                                      # w1 pulled off at 2 s: no edges, line high
+    rows2, accs, nexts = _drive(g, 4_000_000, per, lines, t_from=2_050_000, accs=accs, nexts=nexts)
+    st = {t: s for t, c, s, _r, _m in rows2 if c == 1}
+    assert st[2_300_000] == "S"                                     # not yet: could be a slow wheel
+    assert st[3_100_000] == "I"                                     # 1 s of silence while w0 and w2 turn
+    per[1], nexts[1] = 50_000, 4_050_000                            # reconnected
+    rows3, _a, _n = _drive(g, 5_000_000, per, lines, t_from=4_050_000, accs=accs, nexts=nexts)
+    assert {s for t, c, s, _r, _m in rows3 if c == 1 and t >= 4_300_000} == {"M"}
+    assert all(m.validity == "valid" for m in _speeds(rows3, 1, 4_300_000))
+    d = [m for t, c, _s, _r, ms in rows3 if c == 1 for m in ms if m.signal.endswith("distance")][-1]
+    assert d.validity == "unverified" and "channel was suspect" in d.provenance   # edges may be missing
+
+
+def test_everything_stopped_is_silent_with_no_evidence_whatever_the_lines():
+    g = _group()
+    per, lines = {0: 40_000, 1: 40_000, 2: 40_000}, {0: False, 1: True, 2: False}
+    rows, accs, nexts = _drive(g, 1_000_000, per, lines)
+    rows2, _a, _n = _drive(g, 20_000_000, {0: 0, 1: 0, 2: 0}, lines, t_from=1_050_000, accs=accs, nexts=nexts)
+    assert {s for t, c, s, _r, _m in rows2 if t > 2_000_000} == {"S"}
+    sp = [m for ch in range(3) for m in _speeds(rows2, ch, 2_000_000)]
+    assert sp and all(m.validity == "no_evidence" and m.value is None for m in sp)
+    assert g.episodes == {"A": 0, "I": 0}
+
+
+def test_python_rule_equals_the_firmware_constants():
+    import re
+    from host.telematics import wheel
+    h = (pathlib.Path(__file__).resolve().parents[2] / "telematics/firmware/include/tm_wheel.h").read_text()
+    for name in ("MOVING_PERIODS", "MOVING_MIN_US", "SUSPECT_PERIODS", "SUSPECT_MIN_US", "MAX_PERIOD_US"):
+        assert int(re.search(rf"#define TM_WHEEL_{name} (\d+)u", h).group(1)) == getattr(wheel, name), name
 
 
 def _node(tmp_path, **kw):

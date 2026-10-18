@@ -47,6 +47,12 @@ void tm_flashlog_init(tm_flashlog_t *fl, const tm_flash_if_t *io)
 
 bool tm_flashlog_full(const tm_flashlog_t *fl) { return fl->next_slot >= fl->io->slots; }
 
+uint32_t tm_flashlog_free_slots(const tm_flashlog_t *fl)
+{
+    uint32_t used = fl->next_slot + (fl->has_pending ? 1u : 0u);
+    return used >= fl->io->slots ? 0u : fl->io->slots - used;
+}
+
 bool tm_flashlog_ready(const tm_flashlog_t *fl)
 {
     return !fl->has_pending && !fl->erasing_all && !tm_flashlog_full(fl);
@@ -92,6 +98,16 @@ void tm_flashlog_step(tm_flashlog_t *fl)
     }
     if (fl->erasing_all) {
         uint32_t end = io->base + io->slots * TM_SLOT_BYTES;
+        if (!fl->erase_by_page && !fl->chip_erase_started) {
+            if (io->erase_chip(io->ctx) != 0) {
+                fl->write_errors++;
+                fl->erase_by_page = true;               /* fall back to page by page */
+            } else {
+                fl->chip_erase_started = true;
+            }
+            return;
+        }
+        if (fl->chip_erase_started) fl->erase_all_next = end;   /* idle again: the chip erase is done */
         if (fl->erase_all_next < end) {
             if (io->erase(io->ctx, fl->erase_all_next) != 0) fl->write_errors++;
             fl->erase_all_next += io->page_bytes;
@@ -113,8 +129,27 @@ void tm_flashlog_step(tm_flashlog_t *fl)
         return;
     }
     uint32_t a = slot_addr(fl, fl->pend_slot) + fl->pend_off;
-    if (a >= fl->erased_until) {             /* first use of this page: erase it */
+    if (a >= fl->erased_until) {             /* first use of this page: erase it (unless it is blank) */
         uint32_t page = a - a % io->page_bytes;
+        if (io->check_blank) {
+            if (fl->check_page != page + 1u) {          /* +1: 0 is a valid page address, never a marker */
+                fl->check_page = page + 1u;
+                fl->check_off = 0u;
+            }
+            if (fl->check_off < io->page_bytes) {
+                uint8_t buf[256];
+                uint32_t n = io->page_bytes - fl->check_off < sizeof buf ? io->page_bytes - fl->check_off : sizeof buf;
+                if (io->read(io->ctx, page + fl->check_off, buf, n) == 0 && all_ff(buf, n)) {
+                    fl->check_off += n;                 /* one chunk per step: the main loop never waits */
+                    if (fl->check_off >= io->page_bytes) {
+                        fl->erased_until = page + io->page_bytes;
+                        fl->erases_skipped++;
+                    }
+                    return;
+                }
+                fl->check_off = io->page_bytes;         /* not blank (or unreadable): erase it */
+            }
+        }
         if (io->erase(io->ctx, page) != 0) {
             fail_pending(fl);
             return;
@@ -134,4 +169,6 @@ void tm_flashlog_erase_all(tm_flashlog_t *fl)
     fl->has_pending = false;
     fl->erasing_all = true;
     fl->erase_all_next = fl->io->base;
+    fl->erase_by_page = fl->io->erase_chip == 0;
+    fl->chip_erase_started = false;
 }

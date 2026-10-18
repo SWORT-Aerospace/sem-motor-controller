@@ -39,8 +39,9 @@ static bool wait_cccr(uint32_t mask, bool set)
 const char *can_monitor_init(uint32_t bitrate)
 {
     /* nominal bit time in kernel-clock quanta, prescaler 1: at 500 kbit/s 40 tq, sample point 87.5 % */
+    if (bitrate == 0u || KERNEL_HZ % bitrate) return "off: bit rate not reachable";
     uint32_t tq = KERNEL_HZ / bitrate;
-    if (bitrate == 0u || KERNEL_HZ % bitrate || tq < 8u || tq > 256u) return "off: bit rate not reachable";
+    if (tq < 8u || tq > 256u) return "off: bit rate not reachable";
     uint32_t tseg2 = tq / 8u, tseg1 = tq - 1u - tseg2, sjw = tseg2;
     if (!board_pll1q_20mhz()) return "off: no FDCAN kernel clock (needs the LSE-locked MSIS and PLL1)";
     RCC->APB1ENR2 |= RCC_APB1ENR2_FDCAN1EN;

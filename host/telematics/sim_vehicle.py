@@ -13,7 +13,8 @@ What it produces, all in controller ("true") time:
   * ground truth for the tests: distance, controller input energy, battery energy.
 
 Faults the demonstration injects (`Faults`): controller silence, corrupted frames (bad CRC), a message that
-stops (a missing signal), a validity flag cleared, a wheel sensor disconnected, a GNSS outage.
+stops (a missing signal), a validity flag cleared, a wheel sensor disconnected, a wheel signal shorted to
+ground, a GNSS outage.
 """
 from __future__ import annotations
 
@@ -37,7 +38,8 @@ class Faults:
     corrupt: tuple = ()             # ((t0, t1), ...): every frame's CRC byte flipped
     drop_message: tuple = ()        # ((name, t0, t1), ...): that message is not sent
     vbus_invalid: tuple = ()        # ((t0, t1), ...): ctrl_validity.v_vbus cleared
-    wheel_disconnect: tuple = ()    # ((channel, t0, t1), ...): no edges, line idle
+    wheel_disconnect: tuple = ()    # ((channel, t0, t1), ...): no edges, line idle (pulled up)
+    wheel_stuck_low: tuple = ()     # ((channel, t0, t1), ...): signal shorted to ground: no edges, line low
     gnss_outage: tuple = ()         # ((t0, t1), ...)
 
 
@@ -147,15 +149,17 @@ class VehicleSim:
                 self.wheel_k[ch] += 1
                 frac = ((self.wheel_k[ch] * pitch) - d0) / d_step if d_step > 0 else 1.0
                 te = t - dt + frac * dt
-                if not any(w[0] == ch and w[1] <= te < w[2] for w in self.f.wheel_disconnect):
+                if not any(w[0] == ch and w[1] <= te < w[2] for w in self.f.wheel_disconnect + self.f.wheel_stuck_low):
                     out.append((te, ch))
         return out
 
     def line_high(self, ch: int, t: float) -> bool:
         """Sensor line level (open-collector switch with pull-up): low while a magnet is near, high otherwise;
-        high when the sensor is disconnected."""
+        high when the sensor is disconnected, low when the signal is shorted to ground."""
         if any(w[0] == ch and w[1] <= t < w[2] for w in self.f.wheel_disconnect):
             return True
+        if any(w[0] == ch and w[1] <= t < w[2] for w in self.f.wheel_stuck_low):
+            return False
         pitch = self.cfg.wheel_circumference_m / self.cfg.wheel_ppr
         phase = (self.wheel_d[ch] - self.wheel_k[ch] * pitch) / pitch
         return phase > self.cfg.magnet_window

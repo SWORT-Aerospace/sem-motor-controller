@@ -35,7 +35,7 @@ from host.telematics import signals, stlg
 from host.telematics.clocks import LocalClock, UtcEstimator
 from host.telematics.controller_adapter import Frame, RecordIds
 from host.telematics.measurement import LatestTable, checked
-from host.telematics.wheel import EdgeAccumulator, WheelConfig, WheelEstimator
+from host.telematics.wheel import EdgeAccumulator, WheelConfig, WheelGroup
 
 SCHEMA = "sem.telemetry.v4"           # live message produced by this node
 # what the pit accepts: v4 from this node; v1 to v3 from the legacy supervised simulation and older runs
@@ -101,7 +101,8 @@ class TelematicsNode:
         self.c = {k: 0 for k in ("rx_frames", "frames_decoded", "frames_ignored", "frames_unknown", "frames_invalid",
                                  "companion_frames_seen", "log_records", "log_dropped_queue", "log_dropped_storage",
                                  "queue_high_water", "uplink_sent", "uplink_dropped", "uplink_queue_high_water",
-                                 "wheel_records", "wheel_edges_lost", "storage_stall_events")}
+                                 "wheel_records", "wheel_edges_lost", "storage_stall_events",
+                                 "wheel_suspect_active", "wheel_suspect_inactive")}
         self.c["log_queue_capacity"] = cfg.log_queue_capacity
         self.c["uplink_queue_capacity"] = cfg.uplink_queue_capacity
         self.drain_credit = 0.0
@@ -116,8 +117,9 @@ class TelematicsNode:
         self.last_decoded_us: Optional[int] = None
         self.acc = {ch: EdgeAccumulator(ch) for ch in range(len(cfg.wheel_channels))}
         self.line_high = {ch: True for ch in self.acc}
-        self.est = ({ch: WheelEstimator(cfg.wheel, name, self.rid) for ch, name in enumerate(cfg.wheel_channels)}
-                    if cfg.wheel else {})
+        self.wheels = (WheelGroup(cfg.wheel, dict(enumerate(cfg.wheel_channels)), self.rid,
+                                  t0_us=int(round(clock.local(t_start) * 1e6)))
+                       if cfg.wheel else None)
         self.drop_log: list[tuple[float, str, int]] = []    # (time, reason, uplink seq dropped)
         self._stalled = False
         self._enqueue_direct(t_start, stlg.BOOT, stlg.body_boot(boot, 0, reset_cause))
@@ -199,15 +201,25 @@ class TelematicsNode:
     # ---- 2. record task ------------------------------------------------------------------
     def _wheel_records(self, t_true: float) -> None:
         t = self.t_us(t_true)
+        recs = []
         for ch, acc in self.acc.items():
             r = acc.take(t, self.line_high[ch])
             self.c["wheel_records"] += 1
             self.c["wheel_edges_lost"] += r.lost
             self._enqueue_us(r.t_us, stlg.WHEEL_EDGES,
                              stlg.body_wheel_edges(ch, r.flags, r.n, r.span_us, r.total, r.rec_seq, r.lost))
-            if ch in self.est:
-                for m in self.est[ch].feed(r):
-                    self.latest.put(m)
+            recs.append(r)
+        if self.wheels is None:
+            return
+        # as the firmware does: every channel's track first, then each channel against the others
+        for r in recs:
+            self.wheels.update(r)
+        for r in recs:
+            s, ref = self.wheels.classify(r.channel, t)
+            for m in self.wheels.estimate(r, s, ref):
+                self.latest.put(m)
+        self.c["wheel_suspect_active"] = self.wheels.episodes["A"]
+        self.c["wheel_suspect_inactive"] = self.wheels.episodes["I"]
 
     # ---- 3 + 4. writer and uplink -------------------------------------------------------
     def service(self, t_true: float, dt: float) -> None:

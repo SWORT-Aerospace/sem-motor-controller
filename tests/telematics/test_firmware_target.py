@@ -106,3 +106,36 @@ def test_sources_have_no_transmit_path():
     can = (FW / "platform" / "u575" / "can_u575.c").read_text()
     assert "FDCAN_CCCR_MON" in can                                       # bus-monitoring mode
     assert not re.search(r"firmware/(src|include|platform/stm32g4)", (FW / "CMakeLists.txt").read_text())
+
+
+def _body(src: str, signature: str) -> str:
+    start = src.index(signature)
+    return src[start:src.index("\n}\n", start)]
+
+
+def test_register_sequences_follow_st_hal():
+    """The orderings that the audit against ST's HAL v1.6.3 corrected (docs/U575_REGISTER_CHECK.md): what ST's own
+    driver does, kept from regressing. Text checks of the source; they do not show the registers behave so on the
+    part (RM0456, the data sheet and the errata remain unread: T-U5-DOCS)."""
+    u5 = FW / "platform" / "u575"
+    board = (u5 / "board_u575.c").read_text()
+    gpio = _body(board, "static void gpio_mode(")
+    assert gpio.index("AFR[") < gpio.index("g->MODER =")                # alternate function before mode
+    init = _body(board, "void board_init(void)")
+    order = [init.index(k) for k in ("PWR_DBPR_DBP, 10000u", "RCC_BDCR_LSEON", "RCC_BDCR_LSESYSEN",
+                                     "RCC_BDCR_LSESYSRDY", "RCC_CR_MSIPLLSEL", "RCC_CR_MSIPLLEN")]
+    assert order == sorted(order)                                       # LSE for RCC, then MSI PLL mode
+    cap = _body(board, "void board_capture_start(void)")
+    assert cap.index("TIM2->CR1 = TIM_CR1_URS;") < cap.index("TIM_EGR_UG") < cap.index("__DSB()") < cap.index(
+        "TIM2->SR = 0u") < cap.index("TIM_CR1_URS | TIM_CR1_CEN")
+    pll = _body(board, "bool board_pll1q_20mhz(void)")
+    assert pll.index("PWR_VOSR_VOSRDY") < pll.index("PWR_SVMSR_ACTVOSRDY") < pll.index("RCC_CR_PLL1ON")
+    flash = (u5 / "flash_u575.c").read_text()
+    for fn in ("static int f_erase(", "static int f_program("):
+        assert "swapped()" in _body(flash, fn)                          # no erase or program with SWAP_BANK set
+    i2c = _body((u5 / "i2c_u575.c").read_text(), "static void recover(void)")
+    assert "I2C_CR2_STOP" in i2c and "TXDR" in i2c
+    assert "USART_ISR_TEACK" in (u5 / "uart_u575.c").read_text()
+    assert "SPI1->CFG1 & SPI_CFG1_CRCSIZE" in (u5 / "spi_u575.c").read_text()
+    can = _body((u5 / "can_u575.c").read_text(), "const char *can_monitor_init(")
+    assert can.index("bitrate == 0u") < can.index("KERNEL_HZ / bitrate")

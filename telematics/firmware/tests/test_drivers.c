@@ -1,10 +1,11 @@
-/* Drivers against simulated devices: a W25Q128JV command model on the SPI transport, an LSM6DSOX and a
- * TMP117 register model on the I2C transport. The models implement what the drivers rely on (command codes,
+/* Drivers against simulated devices: the W25Q command model (platform/host/tm_fakew25q.c) on the SPI
+ * transport, an LSM6DSOX and a TMP117 register model on the I2C transport. The models implement what the drivers rely on (command codes,
  * status bits, register map) as tm_w25q.h and tm_imu.h state it; they are not the parts. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "tm_fakew25q.h"
 #include "tm_flashlog.h"
 #include "tm_imu.h"
 #include "tm_w25q.h"
@@ -20,86 +21,83 @@ int g_drv_fail, g_drv_n;
         }                                                                        \
     } while (0)
 
-/* ---- W25Q model -------------------------------------------------------------------------------- */
-#define NOR_SIZE (1u << 20)   /* the model is 1 MiB; it reports a 16 MiB id but rejects addresses past 1 MiB */
-static uint8_t nor[NOR_SIZE];
-static int nor_wel, nor_busy_polls, nor_present = 1;
+/* ---- W25Q (platform/host/tm_fakew25q.c) ------------------------------------------------------------ */
+static uint64_t g_t;
+static uint64_t t_now(void) { return g_t; }
 
-static int nor_cmd(const uint8_t *c, uint32_t nc, const uint8_t *tx, uint8_t *rx, uint32_t n)
+static void run_log(tm_flashlog_t *fl, uint32_t max_steps)
 {
-    uint32_t a = nc >= 4 ? ((uint32_t)c[1] << 16 | (uint32_t)c[2] << 8 | c[3]) : 0;
-    switch (c[0]) {
-    case 0x9F:
-        if (rx) {
-            rx[0] = 0;
-            rx[1] = nor_present ? 0xEF : 0xFF;
-            rx[2] = 0x40;
-            rx[3] = 0x18;
-        }
-        return 0;
-    case 0x06: nor_wel = 1; return 0;
-    case 0x05:
-        if (rx) rx[1] = (uint8_t)((nor_busy_polls > 0 ? 1 : 0) | (nor_wel ? 2 : 0));
-        if (nor_busy_polls > 0) nor_busy_polls--;
-        return 0;
-    case 0x20:
-        if (!nor_wel || nor_busy_polls || a + 4096u > NOR_SIZE) return -3;
-        memset(nor + a, 0xFF, 4096);
-        nor_wel = 0;
-        nor_busy_polls = 3;
-        return 0;
-    case 0x02:
-        if (!nor_wel || nor_busy_polls || a + n > NOR_SIZE) return -3;
-        for (uint32_t i = 0; i < n; i++) nor[a + i] &= tx[i];     /* NOR programming clears bits only */
-        nor_wel = 0;
-        nor_busy_polls = 1;
-        return 0;
-    case 0x03:
-        if (a + n > NOR_SIZE) return -3;
-        memcpy(rx, nor + a, n);
-        return 0;
+    for (uint32_t i = 0; i < max_steps && (fl->has_pending || tm_flashlog_erasing(fl)); i++) {
+        g_t += 250u;                                   /* the main loop polls about every 250 us */
+        tm_flashlog_step(fl);
     }
-    return -3;
-}
-
-static int spi_xfer(void *ctx, const uint8_t *tx, uint8_t *rx, uint32_t n)
-{
-    (void)ctx;
-    return nor_cmd(tx, n, 0, rx, n);
-}
-
-static int spi_xfer2(void *ctx, const uint8_t *cmd, uint32_t nc, const uint8_t *tx, uint8_t *rx, uint32_t n)
-{
-    (void)ctx;
-    return nor_cmd(cmd, nc, tx, rx, n);
 }
 
 static void test_w25q(void)
 {
+    static tm_fakew25q_t m;
     static tm_w25q_t d;
     static tm_flashlog_t fl;
     static uint8_t img[TM_SLOT_BYTES];
-    tm_spi_t spi = {.xfer = spi_xfer, .xfer2 = spi_xfer2, .ctx = 0};
+    static uint8_t nor[1u << 20];
+    tm_fakew25q_init(&m, nor, sizeof nor, 0x18u, t_now);            /* reports 16 MiB, models 1 MiB */
     memset(nor, 0x00, sizeof nor);                      /* not erased: the log must erase before writing */
-    nor_present = 0;
-    CHECK(tm_w25q_init(&d, &spi, 0, 16) != 0);           /* no device answers */
-    nor_present = 1;
-    CHECK(tm_w25q_init(&d, &spi, 0, 16) == 0 && d.capacity == (16u << 20) && d.io.prog_bytes == 256u);
+    m.present = false;
+    CHECK(tm_w25q_init(&d, &m.spi, 0, 16) != 0);         /* no device answers */
+    m.present = true;
+    m.jedec[2] = 0x19u;                                  /* 32 MiB: needs 4-byte addresses, refused */
+    CHECK(tm_w25q_init(&d, &m.spi, 0, 0) != 0);
+    m.jedec[0] = 0xC2u;                                  /* another maker's id */
+    m.jedec[2] = 0x18u;
+    CHECK(tm_w25q_init(&d, &m.spi, 0, 0) != 0);
+    m.jedec[0] = 0xEFu;
+    CHECK(tm_w25q_init(&d, &m.spi, 0, 16) == 0 && d.capacity == (16u << 20) && d.io.prog_bytes == 256u);
+    CHECK(d.io.erase_chip == 0);                         /* only 16 of 4096 slots: no chip erase */
     tm_flashlog_init(&fl, &d.io);
     CHECK(fl.next_slot == 16 && tm_flashlog_full(&fl));  /* never-erased (all-zero) storage reads as used */
     memset(nor, 0xFF, sizeof nor);
     tm_flashlog_init(&fl, &d.io);
-    CHECK(fl.next_slot == 0 && fl.erased_until == 0u);
+    CHECK(fl.next_slot == 0 && fl.erased_until == 0u && tm_flashlog_free_slots(&fl) == 16u);
     for (unsigned i = 0; i < sizeof img; i++) img[i] = (uint8_t)(i * 7u + 1u);
     memcpy(img, "STLG", 4);
     for (int slot = 0; slot < 3; slot++) {
         CHECK(tm_flashlog_submit(&fl, img, 1));
-        for (int i = 0; i < 1000 && fl.has_pending; i++) tm_flashlog_step(&fl);
+        run_log(&fl, 100000u);
         CHECK(!fl.has_pending && memcmp(nor + (uint32_t)slot * TM_SLOT_BYTES, img, sizeof img) == 0);
     }
-    CHECK(fl.blocks_written == 3 && fl.write_errors == 0);
+    CHECK(fl.blocks_written == 3 && fl.write_errors == 0 && m.violations == 0);
+    CHECK(m.erases == 0 && fl.erases_skipped == 3u && m.programs == 3u * 16u);   /* blank: no erase needed */
     tm_flashlog_init(&fl, &d.io);
-    CHECK(fl.next_slot == 3 && fl.sessions == 3);
+    CHECK(fl.next_slot == 3 && fl.sessions == 3 && tm_flashlog_free_slots(&fl) == 13u);
+    /* slow device (erase 400 ms, program 3 ms) and a sector that is not blank: it is erased first, and the
+     * same result follows, only later */
+    m.sector_erase_us = 400000u;
+    m.page_program_us = 3000u;
+    memset(nor + 3u * TM_SLOT_BYTES + 100u, 0x00, 8);
+    CHECK(tm_flashlog_submit(&fl, img, 1));
+    uint64_t t0 = g_t;
+    run_log(&fl, 1000000u);
+    CHECK(!fl.has_pending && fl.blocks_written == 1 && m.violations == 0 && g_t - t0 >= 400000u + 16u * 3000u);
+    CHECK(m.erases == 1 && memcmp(nor + 3u * TM_SLOT_BYTES, img, sizeof img) == 0);
+    /* page-by-page erase of the region */
+    tm_flashlog_erase_all(&fl);
+    run_log(&fl, 1000000u);
+    CHECK(!tm_flashlog_erasing(&fl) && fl.next_slot == 0 && nor[0] == 0xFF && m.violations == 0);
+
+    /* a device whose capacity the region covers completely: chip erase (one command, then BUSY until done) */
+    static tm_fakew25q_t m2;
+    static uint8_t small[1u << 20];
+    tm_fakew25q_init(&m2, small, sizeof small, 0x14u, t_now);       /* 1 MiB part (W25Q80 class) */
+    memset(small, 0x5A, sizeof small);
+    CHECK(tm_w25q_init(&d, &m2.spi, 0, 0) == 0 && d.io.slots == 256u && d.io.erase_chip != 0);
+    tm_flashlog_init(&fl, &d.io);
+    tm_flashlog_erase_all(&fl);
+    m2.chip_erase_us = 2000000u;
+    run_log(&fl, 100000u);
+    CHECK(!tm_flashlog_erasing(&fl) && m2.chip_erases == 1 && m2.erases == 0 && small[12345] == 0xFF);
+    CHECK(fl.next_slot == 0 && m2.violations == 0);
+    CHECK(tm_w25q_init(&d, &m2.spi, 4096u, 0) == 0 && d.io.slots == 255u && d.io.erase_chip == 0);
+    CHECK(tm_w25q_init(&d, &m2.spi, 1000u, 0) != 0);    /* base not on a sector */
 }
 
 /* ---- I2C models ---------------------------------------------------------------------------------- */

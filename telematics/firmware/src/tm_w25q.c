@@ -5,6 +5,7 @@
 #define CMD_RDSR1 0x05u
 #define CMD_SE4K 0x20u
 #define CMD_PP 0x02u
+#define CMD_CE 0xC7u
 #define CMD_READ 0x03u
 #define SR1_BUSY 0x01u
 #define SR1_WEL 0x02u
@@ -61,6 +62,14 @@ static int w_program(void *ctx, uint32_t addr, const uint8_t *src, uint32_t n)
     return d->spi->xfer2(d->spi->ctx, c, 4, src, 0, n) ? -1 : 0;
 }
 
+static int w_erase_chip(void *ctx)
+{
+    tm_w25q_t *d = ctx;
+    uint8_t c = CMD_CE;
+    if (wren(d)) return -1;
+    return d->spi->xfer(d->spi->ctx, &c, 0, 1) ? -1 : 0;
+}
+
 static int w_read(void *ctx, uint32_t addr, uint8_t *dst, uint32_t n)
 {
     tm_w25q_t *d = ctx;
@@ -78,10 +87,15 @@ int tm_w25q_init(tm_w25q_t *d, const tm_spi_t *spi, uint32_t base, uint32_t slot
     d->jedec[0] = rx[1];
     d->jedec[1] = rx[2];
     d->jedec[2] = rx[3];
-    if (d->jedec[0] != 0xEFu || d->jedec[2] < 0x14u || d->jedec[2] > 0x19u) return TM_BUS_ERROR;   /* Winbond, 1-32 MiB */
+    /* Winbond, 1 to 16 MiB: the commands here carry 3-byte addresses, so a larger part (code 0x19 and up) would
+     * wrap above 16 MiB onto the start of the log; it is refused until 4-byte addressing is written */
+    if (d->jedec[0] != 0xEFu || d->jedec[2] < 0x14u || d->jedec[2] > 0x18u) return TM_BUS_ERROR;
     d->capacity = 1uL << d->jedec[2];
-    if (base % 4096u || base + slots * TM_SLOT_BYTES > d->capacity) return TM_BUS_ERROR;
+    if (base % 4096u || base >= d->capacity) return TM_BUS_ERROR;
+    if (slots == 0u) slots = (d->capacity - base) / TM_SLOT_BYTES;
+    if (base + slots * TM_SLOT_BYTES > d->capacity) return TM_BUS_ERROR;
     d->io = (tm_flash_if_t){.base = base, .slots = slots, .page_bytes = 4096u, .prog_bytes = 256u, .erase = w_erase,
-                            .program = w_program, .busy = w_busy, .read = w_read, .ctx = d};
+                            .program = w_program, .busy = w_busy, .read = w_read, .check_blank = true,
+                            .erase_chip = base == 0u && slots * TM_SLOT_BYTES == d->capacity ? w_erase_chip : 0, .ctx = d};
     return TM_BUS_OK;
 }

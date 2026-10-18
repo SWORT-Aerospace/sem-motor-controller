@@ -20,7 +20,11 @@ enum {
     TM_CNT_LOG_QUEUE_CAPACITY = 20,
     TM_CNT_STORAGE_WRITE_ERRORS = 22,
     TM_CNT_UPTIME_S = 23,
+    TM_CNT_WHEEL_SUSPECT_ACTIVE = 24,     /* episodes: a channel became suspect with its line active */
+    TM_CNT_WHEEL_SUSPECT_INACTIVE = 25,   /* episodes: suspect with its line inactive (or disconnected) */
+    TM_CNT_LOG_THINNED = 26,              /* records not logged on purpose in sparse logging */
 };
+#define TM_CNT_ITEMS 17u                  /* counters in one COUNTERS2 record (tm_app.c) */
 
 typedef struct {
     uint32_t rx_frames;
@@ -36,6 +40,9 @@ typedef struct {
     uint32_t can_bus_errors;
     uint32_t storage_write_errors;
     uint32_t uptime_s;
+    uint32_t wheel_suspect_active;
+    uint32_t wheel_suspect_inactive;
+    uint32_t log_thinned;
 } tm_counters_t;
 
 #endif

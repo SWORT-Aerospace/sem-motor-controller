@@ -40,9 +40,14 @@ static int f_busy(void *ctx)
     return 0;
 }
 
+/* with the option SWAP_BANK set, 0x08100000 is not bank 2 and BKER no longer names the log's bank: refuse to
+ * erase or program rather than risk the code bank */
+static bool swapped(void) { return (FLASH->OPTR & FLASH_OPTR_SWAP_BANK) != 0u; }
+
 static int f_erase(void *ctx, uint32_t addr)
 {
     (void)ctx;
+    if (swapped()) return -1;
     if (addr < LOG_BASE || addr >= LOG_BASE + LOG_SIZE || (addr - LOG_BASE) % PAGE) return -1;
     if (f_busy(0) != 0) return -1;
     unlock();
@@ -56,7 +61,7 @@ static int f_erase(void *ctx, uint32_t addr)
 static int f_program(void *ctx, uint32_t addr, const uint8_t *src, uint32_t n)
 {
     (void)ctx;
-    if (n != 16u || addr % 16u || addr < LOG_BASE || addr + n > LOG_BASE + LOG_SIZE) return -1;
+    if (swapped() || n != 16u || addr % 16u || addr < LOG_BASE || addr + n > LOG_BASE + LOG_SIZE) return -1;
     if (f_busy(0) != 0) return -1;
     unlock();
     uint32_t w[4];
