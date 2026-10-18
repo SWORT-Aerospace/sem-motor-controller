@@ -13,7 +13,7 @@ Nothing has been purchased, and no line has a dated supplier quote.
 ## Reading the columns
 
 * **Selection status.** No line is "Selected" (requirements and compatibility checked against a primary datasheet): the lines are UNRESOLVED (a rating waits for the battery, motor or harness), CANDIDATE (a part named, its datasheet row still open in [`../selection/DATASHEET_REGISTER.md`](../selection/DATASHEET_REGISTER.md)), design values and typical values to verify, or bench-only items such as test points.
-* **Alternates are leads, not approved substitutes.** No alternate has been checked against a primary document. One is known to be unusable: the STM32G474VCT6 (256 KB flash) cannot hold the current image, whose linker script uses 512 KB with the calibration page at 0x0807F000.
+* **Alternates are leads, not approved substitutes.** No alternate has been checked against a primary document. One needs more than a part swap: the STM32G474VCT6 (256 KB flash) would hold the image, but the current linker layout puts the calibration page at 0x0807F000, beyond its flash, and its other differences are unchecked (`firmware/platform/stm32g4/README.md`, memory map).
 * **No double counting.** Parts inside the telematics PCB assembly line are listed with `in_assembly` and not counted again; the assembly-service line is an alternative to the stencil and consumables lines, not an addition; the revision line is optional.
 * **Protection is not a budget variable.** Every build in `procurement.yaml` contains every controller line; the generator refuses a build that leaves one out.
 

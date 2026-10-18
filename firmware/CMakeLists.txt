@@ -122,7 +122,8 @@ if(SEMMC_TARGET_STM32G474)
     ${G4}/src/uart.c
     ${G4}/src/main.c)
   # semmc_stm32g474: the controller image. semmc_stm32g474_pwmtest: the stage-4 bench image (main.c header).
-  foreach(img semmc_stm32g474 semmc_stm32g474_pwmtest)
+  # semmc_stm32g474_timing: the controller image with a scope marker on the status-LED pin (main.c).
+  foreach(img semmc_stm32g474 semmc_stm32g474_pwmtest semmc_stm32g474_timing)
     add_executable(${img} ${SEMMC_G4_SOURCES})
     set_target_properties(${img} PROPERTIES SUFFIX ".elf")
     target_include_directories(${img} PRIVATE ${G4}/src)
@@ -144,6 +145,7 @@ if(SEMMC_TARGET_STM32G474)
       COMMENT "Target image: ${img}.elf / .bin / .hex (revision ${SEMMC_GIT_REV})")
   endforeach()
   target_compile_definitions(semmc_stm32g474_pwmtest PRIVATE SEMMC_BENCH_PWM_TEST=1)
+  target_compile_definitions(semmc_stm32g474_timing PRIVATE SEMMC_TIMING_MARKER=1)
   # Emulation-only harness: the core and the host plant model with the target compiler and libraries,
   # for instruction counts (tools/emulate_core_timing.py). Not a flashable image.
   add_executable(semmc_core_timing ${G4}/timing/core_timing_harness.c platform/host/sim_plant.c)
@@ -212,7 +214,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
   add_dependencies(test_core_preemption semmc_cal_blobs)
   target_compile_definitions(test_core_preemption PRIVATE SEMMC_SYNTH_BLOB="${SEMMC_CAL_DIR}/synthetic.bin")
   target_link_libraries(test_core_preemption PRIVATE semmc_core)
-  target_link_options(test_core_preemption PRIVATE -Wl,--wrap=mc_prot_evaluate)
+  target_link_options(test_core_preemption PRIVATE -Wl,--wrap=mc_prot_evaluate -Wl,--wrap=mc_arb_step)
   target_include_directories(test_core_preemption PRIVATE tests)
   target_compile_options(test_core_preemption PRIVATE -Wall -Wextra -Werror ${SEMMC_SAN})
   add_test(NAME test_core_preemption COMMAND test_core_preemption WORKING_DIRECTORY ${SEMMC_ROOT})

@@ -89,6 +89,13 @@ bool pwm_outputs_are_on(void) { return (TIM1->BDTR & TIM_BDTR_MOE) != 0u; }
 uint32_t pwm_break_flags(void) { return g_break; }
 bool pwm_counting_down(void) { return (TIM1->CR1 & TIM_CR1_DIR) != 0u; }
 
+uint32_t pwm_ticks_to_peak(void)
+{
+    const uint32_t cnt = TIM1->CNT; /* read before DIR: if the peak passes in between, DIR reports it */
+    if ((TIM1->CR1 & TIM_CR1_DIR) != 0u || cnt >= g_arr) return 0u;
+    return g_arr - cnt;
+}
+
 bool pwm_break_clear(void)
 {
     if (board_break_inputs_active()) return false;

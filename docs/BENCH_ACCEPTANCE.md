@@ -173,6 +173,8 @@ Setup:
 | S4.5 | Trigger on both outputs of each phase high at the same time. | Never. | observation | stop |
 | S4.6 | Pull test point DRV_NFAULT to GND through 1 kohm; measure from that edge to the last PWM output low. Release, then press fault reset. | All six outputs low; they stay low after release until fault reset; bench_read shows break_driver. | [ns] pending: TIM1 break path delay (RM0440, DS12288); digital filter 4 samples = 25 ns is the firmware's part | stop |
 | S4.7 | Same with test point BRK2_N (over-voltage break, BKIN2). | As S4.6; bench_read shows break_overvolt. | [ns] pending: as S4.6 | stop |
+| S4.8 | bench_read over at least 60 s: adc_wait_max_cycles (how long ADC2 and ADC3 finished after ADC1). | A few cycles if the three phase currents are sampled together; a larger value is the sampling skew caused by the ADC3 regular scan. | [cycles] pending: the acceptable skew follows from the current ripple and the amplifier settling (DRV8353 data sheet, RM0440 injected-versus-regular timing) |  |
+| S4.9 | Same reading: slow_overruns and stack_unused_min_bytes. | No slow step longer than its 1 ms period; painted stack left unused. | [count] <= 0 (slow step period 1 ms (firmware/platform/stm32g4/src/timebase.c): an overrun is a missed slow step) | stop |
 
 Stop conditions:
 
@@ -275,6 +277,8 @@ Setup:
 | S7.3 | Current-loop step response at low current (current probe and ctrl_currents). | Tracks the reference without overshoot beyond the tuning target. | [A] <= limits.max_phase_current_A (calibrated phase-current limit) | stop |
 | S7.4 | Phase-current gain against the current probe, per phase. | Residual gain error recorded for the error budget. | [percent] pending: current-sense error budget |  |
 | S7.5 | Fault injection - hall disconnect, phase-sense loss, CAN unplug, brake, dead-man, emergency stop (the host fault list, docs/VALIDATION_PLAN.md section 3). | Each produces the state and torque response in hardware/protection/SHUTDOWN_TRUTH_TABLE.md. | observation | stop |
+| S7.6 | bench_read after each run: fast_late_writes (compare writes after the counter peak). | None; fast_margin_min_ticks and fast_isr_max_cycles recorded as observed maxima. | [count] <= 0 (fast-step deadline: the last compare write before the counter peak (firmware/platform/stm32g4/src/pwm.h)) | stop |
+| S7.7 | With the image semmc_stm32g474_timing: width and period of the marker on the status-LED pin (PE14, high during the fast interrupt), on the oscilloscope, over at least 10 s at each test speed. | One pulse per PWM period; the widest pulse recorded with its operating point. | [us] pending: the required margin below the half period is a review decision; observed maxima are not a worst-case execution time |  |
 
 Stop conditions:
 

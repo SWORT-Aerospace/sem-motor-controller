@@ -26,7 +26,7 @@ rules:
     evidence: snippet
     source: "Mouser 511-STM32G474VET6 cached $11.62@1; Digi-Key cached $12.13@1 (search 2026-10-15)"
     availability: "listed; DK TR variant showed backorder in one snapshot"
-    alternate: "STM32G474VCT6 (same package, 256 KB flash): NOT usable with the current image, whose linker script needs 512 KB (calibration page at 0x0807F000)"
+    alternate: "STM32G474VCT6 (same package, 256 KB flash): the image fits, but the current linker layout puts the calibration page at 0x0807F000, beyond its flash; needs its own layout, and its other differences are unchecked"
   - match: {symbol: "semmc:DRV8353S"}
     mpn: DRV8353SRTAR
     manufacturer: Texas Instruments

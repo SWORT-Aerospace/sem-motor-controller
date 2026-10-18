@@ -47,11 +47,21 @@ hardware-valid. Flashing: [FLASHING.md](FLASHING.md).
 | INA228 battery meter | **no** | - | - | register map not verified; battery voltage missing, precharge never closes |
 | Motor operation | **inhibited** | - | - | needs both items above and a bench-measured calibration |
 
-Emulated timing (`docs/generated/core_timing_emulated.md`, `tools/emulate_core_timing.py`): with current
-control active the core's fast step executes about 1020 instructions on Cortex-M4F, a lower bound of 6.4 us
-at 160 MHz against the 25 us half period at 20 kHz. This is an instruction count in an emulator, not a
-measurement: wait states, pipeline effects and the platform's own interrupt code are not included. The
-board measurement is `g_bench.fast_max_cycles`.
+Timing evidence, in three separate kinds:
+
+* **Emulated instruction counts** (`docs/generated/core_timing_emulated.md`, `tools/emulate_core_timing.py`):
+  with current control active the core's fast step executes about 1020 instructions. Exploratory only:
+  without a validated processor model an instruction count is not a bound on time in either direction (IT
+  folding, wait states, stalls); the platform's own interrupt code is not included.
+* **On-target measurements**, prepared but not yet taken (no board): `g_bench.fast_isr_max_cycles` (the
+  whole fast interrupt), `fast_margin_min_ticks` and `fast_late_writes` (the margin left before the counter
+  peak after the last compare write, which is the actual deadline: `src/pwm.h`), `adc_wait_max_cycles` (skew
+  between the phase-current conversions), `slow_max_cycles` (wall time of the slow step, including the fast
+  interrupts that preempt it), `slow_overruns` and `stack_unused_min_bytes` (stack high-water mark from a
+  painted stack). The `semmc_stm32g474_timing` image also drives the status-LED pin (PE14) high for the whole
+  fast interrupt, for a scope. These give observed maxima under the tested conditions.
+* **Worst-case execution time**: not established. It needs the Cortex-M4 instruction timings, the device's
+  flash and bus timing, and an analysis of every path; observed maxima do not prove it.
 
 ## Structure
 
@@ -106,6 +116,41 @@ ST's X-CUBE-MCSDK is used as a reference only, not as generated control code, un
 evaluation-kit software (Art. 66a) is answered. Register sequences follow ST's HAL/LL sources
 (`STMicroelectronics/stm32g4xx-hal-driver@a6001282`), cited in each driver.
 
+## PWM, ADC and memory review
+
+What the code does, what it was checked against, and what only the reference manual (RM0440), the data sheet
+(DS12288) or the errata (ES0430) can confirm. None of those three has been read
+([`../../../docs/reference/datasheets/README.md`](../../../docs/reference/datasheets/README.md)); ST's own HAL and
+CMSIS sources are used for register encodings only.
+
+| Item | Implementation | Checked against | Still to confirm |
+|---|---|---|---|
+| Clock tree | HSI16 or a 16 MHz crystal / M 4 x N 80 / R 2 = 160 MHz; AHB, APB1, APB2 undivided, so TIM1, TIM2 and TIM6 count at 160 MHz; 4 flash wait states, range-1 boost | ST HAL sequence and CMSIS field widths ([`../../../hardware/timing/clock_tree_alternatives.md`](../../../hardware/timing/clock_tree_alternatives.md)) | PLL input and VCO ranges (the HAL comments disagree; DS12288); wait states at 160 MHz (RM0440) |
+| Timer events | centre-aligned mode 1, RCR = 0, ARR = 160 MHz / (2 f_pwm) (4000 at 20 kHz); update events at the peak and the valley; CCR preload loads at each update; one sampling trigger per period, at the valley | CMSIS fields; ARR encoding by `firmware/tests/test_io.c` | update-event and preload timing in centre-aligned mode (RM0440, TIM1) |
+| ADC trigger, every instance | JEXTSEL = 8 (TIM1_TRGO2), rising edge, on ADC1, ADC2 and ADC3 | ST LL driver `stm32g4xx_ll_adc.h` at `stm32g4xx_hal_driver@a6001282` (SHA-256 `c76242a6b0786d4f`): `LL_ADC_INJ_TRIG_EXT_TIM1_TRGO2 = ADC_JSQR_JEXTSEL_3`, line 1412, with no instance restriction (the restricted triggers carry notes (1) and (2), lines 5382-5383) | RM0440 trigger table |
+| ADC clock and sampling | HCLK / 4 = 40 MHz; injected currents 24.5 cycles, regular slow channels 247.5 cycles; conversion 12.5 cycles at 12 bits (0.925 us for a current sample) | CMSIS fields | maximum ADC clock and the sampling time needed for the 100 ohm / 470 pF filter's source impedance (DS12288); trigger-to-sampling latency (RM0440) |
+| Simultaneous phase samples | three ADCs, same trigger and sampling time; the interrupt waits at most 2 us for ADC2 and ADC3 and records the wait (`g_bench.adc_wait_max_cycles`) | none | ADC3 also runs a continuous regular scan. ST's LL notes describe the injected group interrupting the regular group (lines 2149-2159), but not the delay this adds to the injected start (RM0440). If the measured wait is not a few cycles, the phases are not sampled together: move the slow channels to ADC4/ADC5 or trigger them away from the valley |
+| Current-sense settling | a phase counts as measured only if its low side was on for at least dead time + `inverter.current_sense_settle_s` (`mc_lowside_sample_mask`) | host tests | amplifier settling (DRV8353 data sheet) |
+| Dead time | DTG with CKD = 0, rounded up to the next programmable value (never below the configured one) | `test_io.c` against the encoding formula | DTG ranges and resolution (RM0440) |
+| Break | BKIN = PE15 (DRV_NFAULT), BKIN2 = PC3 (BRK2_N), both active low, digital filter 4 samples; AOE = 0 (latched until software sets MOE); OSSI = OSSR = 1; BDTR in one write with LOCK level 1; system break on core lockup and flash double-ECC error | CMSIS fields | polarity and filter semantics, the AF1/AF2 enable bits, re-arming after a break (RM0440); TIM1 break errata (ES0430) |
+| DMA and memory | `adc_slow` (DMA1 channel 1, DMAMUX request 37) in SRAM1 at 0x2000007C in the current map; CCM SRAM unused; each sample is one aligned 16-bit transfer, so the slow step reads whole samples, and channels of one scan are a few microseconds apart | linker map | DMA access to SRAM1 (RM0440 bus matrix) |
+| Fast-step deadline | the last compare write must complete before the counter peak: T/2 minus the conversion (0.925 us) and the interrupt entry, about 24 us at 20 kHz; on the board `fast_margin_min_ticks` (ticks of 6.25 ns left at the peak) and `fast_late_writes` | derivation in [`src/pwm.h`](src/pwm.h) | trigger and interrupt latency with flash wait states (RM0440, Arm DDI 0439); measured margin on the board |
+
+**Memory map** ([`stm32g474xe_flash.ld`](stm32g474xe_flash.ld)):
+
+* Flash 512 KB from 0x08000000: image region 508 KB, calibration 4 KB at 0x0807F000 (read only by the firmware).
+  0x0807F000 is a multiple of 4 KB, so the calibration occupies whole pages in either bank mode (4 KB pages
+  single-bank, 2 KB dual-bank); the factory bank mode is to be read in RM0440. Sizes are from ST's linker
+  template, to be confirmed in DS12288.
+* SRAM 96 KB from 0x20000000 (SRAM1 80 KB, SRAM2 16 KB); the 32 KB CCM SRAM is unused. Stack at the top
+  (0x20018000), at least 4 KB reserved at link time, painted at start-up and measured in the main loop
+  (`g_bench.stack_unused_min_bytes`); no static stack-depth analysis has been done.
+* This revision uses 49.8 KB of flash and 7.8 KB of RAM.
+* **STM32G474VCT6 (256 KB flash).** The image itself would fit. The current linker layout places the
+  calibration page at 0x0807F000, which a 256 KB part does not have, so that variant needs its own layout with
+  the calibration at the end of its flash, and matching programming instructions. Its other differences from the
+  xE variant (RAM, peripherals, errata) have not been checked (DS12288). It is not an approved alternate.
+
 ## Open platform items
 
 | Item | Needs |
@@ -116,4 +161,4 @@ evaluation-kit software (Art. 66a) is answered. Register sequences follow ST's H
 | IWDG timeout tolerance | DS12288 (LSI accuracy) |
 | Crystal and `SEMMC_HSE_HZ` | board decision (16 MHz proposed) |
 | Output behaviour while the core is halted by a debugger | RM0440 DBGMCU section (confirm the outputs are disabled when TIM1 is frozen) |
-| Fast-step execution time | measurement on the board |
+| Fast-step execution time, deadline margin, phase-sample skew, stack depth | measurement on the board (the `g_bench` fields and the timing image above) |

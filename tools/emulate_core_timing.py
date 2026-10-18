@@ -135,21 +135,26 @@ def report(res: dict, elf: pathlib.Path, ms: int, compiler: str) -> str:
          "target image's), newlib-nano. Run in unicorn (QEMU's Cortex-M4 model) with the synthetic "
          f"calibration and the host plant model: {ms} ms simulated, armed at 100 ms, half throttle from 110 ms. "
          f"Final state: {STATES.get(res['final_state'], res['final_state'])}.", "",
-         "| Step | Calls | Mean instructions | p99 | Max | Lower bound at 160 MHz (max / f) | Period |",
+         "| Step | Calls | Mean instructions | p99 | Max | Max at one instruction per cycle, 160 MHz (not a bound) | Period |",
          "|---|---|---|---|---|---|---|",
          row("fast step, current control active", fp, 50.0),
          row("fast step, outputs off", f, 50.0),
          row("slow step", sl, 1000.0), "",
          "How to read this:", "",
-         "- The lower bound assumes one instruction per cycle, the most a Cortex-M4 issues. The real time is "
-         "longer: flash wait states (4 at 160 MHz, partly hidden by the ART accelerator), branch refills, "
-         "load-use stalls and FPU divide/square-root latencies are not modelled.",
-         "- Counts include instructions skipped by IT blocks (the core still issues them) and a few instructions "
-         "of the harness's call around the measured function.",
+         "- These are exploratory instruction counts. The time column divides the count by the clock "
+         "frequency, as if every instruction took one cycle. That is neither a lower nor an upper bound "
+         "without a validated processor model: the Cortex-M4 can fold an IT instruction into zero cycles, "
+         "and the counts include instructions an IT block skips and a few of the harness's own, while flash "
+         "wait states (4 at 160 MHz, partly hidden by the ART accelerator), branch refills, load-use stalls "
+         "and FPU divide and square-root latencies make the real time longer. Turning counts into a bound "
+         "needs the Cortex-M4 instruction timings (Arm DDI 0439) and the flash and bus timing of the device.",
          "- The platform's own interrupt code (ADC result reads, hall pins, duty writes) is not included.",
-         "- The fast step must finish within half a PWM period (`firmware/platform/stm32g4/src/pwm.h`): 25 us "
-         "at 20 kHz. The measured worst case comes from `g_bench.fast_max_cycles` on the board "
-         "(docs/BENCH_ACCEPTANCE.md, stage 4).", ""]
+         "- Deadline (`firmware/platform/stm32g4/src/pwm.h`): the last compare write must complete before the "
+         "counter peak, half a period after the valley trigger, minus the ADC sampling and conversion time and "
+         "the interrupt entry. On the board, `g_bench.fast_margin_min_ticks` and `fast_late_writes` measure "
+         "that margin directly, `fast_isr_max_cycles` the whole interrupt and `slow_overruns` the slow step "
+         "(docs/BENCH_ACCEPTANCE.md, stage 4). Those are observed maxima, not a proven worst-case execution "
+         "time.", ""]
     return "\n".join(L)
 
 

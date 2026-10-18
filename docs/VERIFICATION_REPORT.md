@@ -203,7 +203,7 @@ A fresh clone of `d7131d5`, x86-64 Linux host: Python 3.13.16, gcc 13.3.0, CMake
 | Python tests | `pytest -rs` with `SEMMC_REQUIRE_MQTT=1`, `SEMMC_REQUIRE_ARM=1` | 290 passed, 0 skipped, 0 failed |
 | demonstrations | `run_host_demo.py`, `run_pit_replay.py`, `run_mqtt_demo.py` | 11/11; report written; 12/12 |
 | Cortex-M4F | portable core; `SEMMC_TARGET_STM32G474=ON` | both link. `semmc_stm32g474.elf`: text 49,400 B, data 96 B, bss 7,672 B. `semmc_stm32g474_pwmtest.elf`: text 49,648 B |
-| emulated core | `emulate_core_timing.py --ms 300` | fast step with current control: at most 1,039 instructions, so at least 6.5 µs at 160 MHz, against the 25 µs half-period. Slow step: at most 1,452 instructions. Instruction counts only, not timing on silicon |
+| emulated core | `emulate_core_timing.py --ms 300` | fast step with current control: at most 1,039 instructions; slow step: at most 1,452 instructions. Exploratory instruction counts only: not timing on silicon, and not a bound on it (corrected 2026-10-18: an earlier version of this row called count / frequency a lower bound, which IT folding contradicts) |
 | hardware checks | `hw_consistency.py`, `pin_type_check.py` | 14 PASS, 0 FAIL, 4 OPEN; 174 nets, 0 findings |
 | release gate | `release_gate.py` | **FAIL**, G1 to G7 all failing (41 UNRESOLVED lines; no footprints; 12 register rows open; no PCB; no local ERC report; reviews unsigned; no hardware-valid configuration). No package built |
 

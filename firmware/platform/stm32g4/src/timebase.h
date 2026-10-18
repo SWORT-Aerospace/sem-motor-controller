@@ -6,6 +6,7 @@
 #ifndef SEMMC_STM32G4_TIMEBASE_H
 #define SEMMC_STM32G4_TIMEBASE_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "semmc/mc_types.h"
@@ -13,6 +14,8 @@
 void timebase_init(void);
 void timebase_start_slow_tick(uint32_t priority);
 uint32_t timebase_us32(void);
+/* True if the next 1 ms tick is already pending: the slow step took longer than its period. */
+bool timebase_slow_tick_pending(void);
 mc_time_us_t timebase_now_us(void); /* call from one context only (the slow step) */
 
 #endif

@@ -23,12 +23,14 @@ import subprocess
 import sys
 import time
 
-FORMAT = "<6I3f5H2x3f2f2f3I"
+FORMAT = "<6I3f5H2x3f2f2f3I6I"
 FIELDS = ["platform_faults", "can_status", "fast_count", "fast_max_cycles", "fast_overruns", "slow_max_cycles",
           "raw_current_avg_a", "raw_current_avg_b", "raw_current_avg_c",
           "raw_vbus", "raw_temp_fet", "raw_temp_motor", "raw_throttle_a", "raw_throttle_b",
           "offsets_measured_a", "offsets_measured_b", "offsets_measured_c",
-          "pedal_frac_a", "pedal_frac_b", "f_pwm_Hz", "deadtime_s", "state", "precharge_state", "inputs"]
+          "pedal_frac_a", "pedal_frac_b", "f_pwm_Hz", "deadtime_s", "state", "precharge_state", "inputs",
+          "fast_isr_max_cycles", "fast_margin_min_ticks", "fast_late_writes", "adc_wait_max_cycles", "slow_overruns",
+          "stack_unused_min_bytes"]
 INPUT_BITS = ["brake", "cancel", "mode_eco", "arm", "fault_reset", "driver_present", "hw_permit",
               "drv_en_gated", "drv_nfault", "ext_wdg_reset", "ina_alert", "break_driver", "break_overvolt",
               "break_system", "outputs_on"]
@@ -36,7 +38,8 @@ PLATFORM_FAULTS = ["gate_driver_not_configured", "battery_meter_not_read", "pwm_
                    "adc_init", "offsets", "enable_path", "precharge", "adc_resolution"]
 STATES = ["BOOT", "SELF_TEST", "DISARMED", "READY", "MANUAL", "ECO_ASSIST", "DERATED", "FAULT_LATCHED"]
 PRECHARGE = ["DISABLED", "WAIT_BATTERY", "CHARGING", "CLOSED", "FAULT"]
-assert struct.calcsize(FORMAT) == 88 and len(FIELDS) == len(struct.unpack(FORMAT, bytes(88)))
+SIZE = struct.calcsize(FORMAT)
+assert SIZE == 112 and len(FIELDS) == len(struct.unpack(FORMAT, bytes(SIZE)))
 
 
 def symbol_address(elf: pathlib.Path, name: str) -> int:
@@ -92,6 +95,11 @@ def decode(raw: bytes) -> dict:
     d["hall_code"] = (d["inputs"] >> 16) & 7
     d["fast_max_us"] = d["fast_max_cycles"] / 160.0
     d["slow_max_us"] = d["slow_max_cycles"] / 160.0
+    d["fast_isr_max_us"] = d["fast_isr_max_cycles"] / 160.0
+    # TIM1 counts at the 160 MHz timer clock; UINT32_MAX means no compare write has been made yet
+    m = d["fast_margin_min_ticks"]
+    d["fast_margin_min_us"] = None if m == 0xFFFFFFFF else m / 160.0
+    d["adc_wait_max_us"] = d["adc_wait_max_cycles"] / 160.0
     return d
 
 
@@ -108,7 +116,7 @@ def main() -> int:
     ocd = OpenOcd(a.host, a.port)
     readings = []
     for i in range(a.samples):
-        d = decode(ocd.read_words(addr, 22))
+        d = decode(ocd.read_words(addr, SIZE // 4))
         d["host_time"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         readings.append(d)
         print(json.dumps({k: d[k] for k in ("host_time", "state_name", "precharge_state_name", "platform_faults_named",

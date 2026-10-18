@@ -165,10 +165,11 @@ def test_startup_comment_names_this_test():
     assert "tests/integration/test_target_firmware.py" in src
 
 
-def test_emulated_fast_step_fits_half_a_pwm_period(image):
-    """Necessary, not sufficient: on the target build the core reaches current control, and its fast
-    step's instruction count (a lower bound on cycles) fits within half a PWM period of the synthetic
-    configuration. The real worst case is measured on the board (g_bench.fast_max_cycles)."""
+def test_emulated_fast_step_instruction_count_regression(image):
+    """Exploratory regression guard, not a timing proof: on the target build the core reaches current
+    control, and its fast step's emulated instruction count stays below the cycle count of half a PWM
+    period of the synthetic configuration. Instructions are not cycles (IT folding, stalls); the deadline
+    is checked on the board (g_bench.fast_margin_min_ticks, fast_late_writes)."""
     pytest.importorskip("unicorn")
     import yaml
 
@@ -192,7 +193,7 @@ def test_bench_reader_layout_matches_the_firmware():
     m = re.search(r"_Static_assert\(sizeof\(bench_view_t\) == (\d+)u", src)
     assert m and int(m.group(1)) == bench_read.struct.calcsize(bench_read.FORMAT)
     assert bench_read.FORMAT in src
-    d = bench_read.decode(bytes(88))
+    d = bench_read.decode(bytes(bench_read.SIZE))
     assert d["state_name"] == "BOOT" and d["platform_faults_named"] == []
 
 
@@ -204,3 +205,32 @@ def test_bench_pwm_image_is_separate_and_marked(image):
     assert bench.exists()
     assert "semmc stm32g474 BENCH PWM TEST " in strings(bench)
     assert "BENCH PWM TEST" not in strings(image)
+
+
+def _function_disassembly(elf, name):
+    dis = subprocess.run(["arm-none-eabi-objdump", "-d", "--no-show-raw-insn", str(elf)], check=True,
+                         capture_output=True, text=True).stdout
+    m = re.search(rf"^[0-9a-f]+ <{name}>:\n(.*?)(?:\n\n|\Z)", dis, re.M | re.S)
+    assert m, name
+    return m.group(1)
+
+
+def test_fast_slow_handoff_compiles_to_ordered_atomics(image):
+    """mc_core.h "Shared state": the release stores (command index, event acknowledgments) and the acquire
+    loads compile to DMB-fenced accesses on the target; plain volatile would not order the buffer writes."""
+    slow = _function_disassembly(image, "mc_core_slow_step")
+    fast = _function_disassembly(image, "mc_core_fast_step")
+    assert len(re.findall(r"\bdmb\b", slow)) >= 3      # index store, two acknowledgments (and the acquire loads)
+    assert len(re.findall(r"\bdmb\b", fast)) >= 1      # index load (acquire) and the event stores (release)
+    src = (ROOT / "firmware/platform/stm32g4/src/main.c").read_text()
+    assert "_Static_assert(PRIO_FAST < PRIO_BREAK && PRIO_BREAK < PRIO_SLOW" in src
+    assert "NVIC_SetPriorityGrouping(NVIC_GROUP_ALL_PREEMPT)" in src
+
+
+def test_timing_marker_image_is_separate_and_marked(image):
+    def strings(p):
+        return subprocess.run(["arm-none-eabi-strings", str(p)], check=True, capture_output=True, text=True).stdout
+    timing = image.parent / "semmc_stm32g474_timing.elf"
+    assert timing.exists()
+    assert "semmc stm32g474 TIMING MARKER " in strings(timing)
+    assert "TIMING MARKER" not in strings(image)

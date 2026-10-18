@@ -33,6 +33,8 @@ void timebase_start_slow_tick(uint32_t priority)
 
 uint32_t timebase_us32(void) { return TIM2->CNT; }
 
+bool timebase_slow_tick_pending(void) { return (TIM6->SR & TIM_SR_UIF) != 0u; }
+
 mc_time_us_t timebase_now_us(void)
 {
     g_now64 = mc_time_extend(g_now64, TIM2->CNT);

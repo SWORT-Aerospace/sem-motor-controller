@@ -264,6 +264,19 @@ stages:
         unit: ns
         limit: {pending: "as S4.6"}
         stop: true
+      - id: S4.8
+        action: "bench_read over at least 60 s: adc_wait_max_cycles (how long ADC2 and ADC3 finished after ADC1)."
+        expect: A few cycles if the three phase currents are sampled together; a larger value is the sampling skew caused by the ADC3 regular scan.
+        kind: measurement
+        unit: cycles
+        limit: {pending: "the acceptable skew follows from the current ripple and the amplifier settling (DRV8353 data sheet, RM0440 injected-versus-regular timing)"}
+      - id: S4.9
+        action: "Same reading: slow_overruns and stack_unused_min_bytes."
+        expect: No slow step longer than its 1 ms period; painted stack left unused.
+        kind: measurement
+        unit: count
+        limit: {max: 0, source: "slow step period 1 ms (firmware/platform/stm32g4/src/timebase.c): an overrun is a missed slow step"}
+        stop: true
     stop_conditions:
       - DRV_EN_GATED not low.
       - Dead time shorter than programmed, or any overlap of complementary outputs.
@@ -432,6 +445,19 @@ stages:
         expect: Each produces the state and torque response in hardware/protection/SHUTDOWN_TRUTH_TABLE.md.
         kind: observation
         stop: true
+      - id: S7.6
+        action: "bench_read after each run: fast_late_writes (compare writes after the counter peak)."
+        expect: None; fast_margin_min_ticks and fast_isr_max_cycles recorded as observed maxima.
+        kind: measurement
+        unit: count
+        limit: {max: 0, source: "fast-step deadline: the last compare write before the counter peak (firmware/platform/stm32g4/src/pwm.h)"}
+        stop: true
+      - id: S7.7
+        action: "With the image semmc_stm32g474_timing: width and period of the marker on the status-LED pin (PE14, high during the fast interrupt), on the oscilloscope, over at least 10 s at each test speed."
+        expect: One pulse per PWM period; the widest pulse recorded with its operating point.
+        kind: measurement
+        unit: us
+        limit: {pending: "the required margin below the half period is a review decision; observed maxima are not a worst-case execution time"}
     stop_conditions:
       - Phase current above limits.max_phase_current_A on the probe.
       - FET temperature above inverter.fet_temp_derate_start_degC.

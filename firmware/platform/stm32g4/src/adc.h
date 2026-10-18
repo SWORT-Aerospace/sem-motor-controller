@@ -31,7 +31,8 @@ extern volatile uint16_t adc_slow[ADC_SLOW_N];
 
 bool adc_init(uint32_t fast_irq_priority);
 /* Read in the fast interrupt. a is ready when it runs; b and c are polled for a bounded time.
- * Returns a bit mask of the phases whose conversion completed this cycle. */
-uint8_t adc_read_currents(uint16_t raw[3]);
+ * Returns a bit mask of the phases whose conversion completed this cycle; *wait_cycles is how long b and c
+ * took after a (CPU cycles). */
+uint8_t adc_read_currents(uint16_t raw[3], uint32_t *wait_cycles);
 
 #endif

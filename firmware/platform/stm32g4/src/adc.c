@@ -98,16 +98,19 @@ bool adc_init(uint32_t fast_irq_priority)
     return true;
 }
 
-uint8_t adc_read_currents(uint16_t raw[3])
+uint8_t adc_read_currents(uint16_t raw[3], uint32_t *wait_cycles)
 {
     uint8_t ok = 0u;
     raw[0] = (uint16_t)ADC1->JDR1;
     ok |= 1u;
-    /* ADC2 and ADC3 started on the same edge with the same sampling time; allow 2 us (320 cycles). */
+    /* ADC2 and ADC3 started on the same edge with the same sampling time; allow 2 us (320 cycles). A wait
+     * longer than a few cycles means the three phases were not sampled together (for example an ADC3 regular
+     * conversion delaying its injected one; RM0440 to confirm), which the caller records. */
     const uint32_t t0 = DWT->CYCCNT;
     while ((ADC2->ISR & ADC_ISR_JEOS) == 0u || (ADC3->ISR & ADC_ISR_JEOS) == 0u) {
         if ((DWT->CYCCNT - t0) > 320u) break;
     }
+    *wait_cycles = DWT->CYCCNT - t0;
     if (ADC2->ISR & ADC_ISR_JEOS) {
         raw[1] = (uint16_t)ADC2->JDR1;
         ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;

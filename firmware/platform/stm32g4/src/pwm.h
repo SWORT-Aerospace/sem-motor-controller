@@ -3,10 +3,13 @@
  * Counting: centre-aligned mode 1, f_pwm = 160 MHz / (2 ARR). Channels 1..3 in PWM mode 2 with
  * preload: the high-side output is active while CNT >= CCR, i.e. centred on the counter peak, and
  * the low-side (complementary) output is centred on the counter valley. CCR = (1 - duty) ARR. New
- * compare values load at the next update event (peak or valley); the fast step writes them after
- * the valley sample, so they take effect at the following peak and the next valley's low-side
- * window is symmetric. The fast step must finish within half a PWM period: pwm_overruns counts the
- * cycles where it did not (the counter was already counting down when the duties were written).
+ * compare values load at the next update event (peak or valley; RCR = 0); the fast step writes them
+ * after the valley sample, so they take effect at the following peak and the next valley's low-side
+ * window is symmetric. Deadline: the LAST compare write must complete before the peak, i.e. within
+ * T/2 of the trigger minus the ADC sampling and conversion time and the interrupt entry; a write after
+ * the peak loads half a period late (and phases written on either side of the peak load in different
+ * half periods). main.c measures the margin left after the write (pwm_ticks_to_peak) and counts late
+ * writes; fast_overruns counts interrupts still running after the peak.
  *
  * Current-sampling trigger: OC4REF in PWM mode 1 with CCR4 = 1 rises one timer tick before the
  * valley; TRGO2 = OC4REF starts the injected conversions of ADC1, ADC2 and ADC3 (adc.c).
@@ -52,5 +55,8 @@ uint32_t pwm_break_flags(void);
 /* Clears the latch only if both break inputs are inactive now. Returns true if cleared. */
 bool pwm_break_clear(void);
 bool pwm_counting_down(void);
+/* Timer ticks left until the counter peak (the next compare load), or 0 if the counter is already counting
+ * down: called right after pwm_write_duty, it is the margin left to the fast step's deadline. */
+uint32_t pwm_ticks_to_peak(void);
 
 #endif

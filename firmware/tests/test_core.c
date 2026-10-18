@@ -346,8 +346,8 @@ static void test_fast_step_reads_published_command_only(void)
     arm();
     SI.driver.throttle = 0.3f;
     run_ms(300);
-    CHECK(C.fast_pub[C.fast_pub_idx].pwm_enable);
-    CHECK(memcmp(&C.fast_pub[C.fast_pub_idx], &C.fast_cmd, sizeof C.fast_cmd) == 0);
+    CHECK(C.fast_pub[atomic_load(&C.fast_pub_idx)].pwm_enable);
+    CHECK(memcmp(&C.fast_pub[atomic_load(&C.fast_pub_idx)], &C.fast_cmd, sizeof C.fast_cmd) == 0);
     /* Corrupt the working copy only: the next fast step still runs on the published command. */
     C.fast_cmd.pwm_enable = false;
     C.fast_cmd.iq_ref_A = 1.0e6f;
@@ -358,18 +358,18 @@ static void test_fast_step_reads_published_command_only(void)
     mc_core_fast_step(&C, &fi, &fo);
     CHECK(fo.pwm_enable);
     CHECK(fabsf(C.iq_meas_A) < PP.max_phase_current_A);
-    /* An overcurrent seen by the fast step is still set when the slow step starts, and the slow step publishes
-     * pwm_enable = false before it clears the flag. */
+    /* An overcurrent seen by the fast step is pending (events != ack) when the slow step starts, and the slow
+     * step publishes pwm_enable = false before it acknowledges the event. */
     P.fault.current_bias_A[0] = 80.0f;
     sim_plant_sense(&P, &DUTY, PWM, &s);
     fi.phase = s.phase;
     mc_core_fast_step(&C, &fi, &fo);
     CHECK(!fo.pwm_enable);
-    CHECK(C.fast_overcurrent);
+    CHECK(atomic_load(&C.fast_oc_events) != atomic_load(&C.fast_oc_ack)); /* pending */
     mc_core_slow_step(&C, T + 1000u, &SI);
     CHECK(C.prot.latched & MC_FAULT_BIT(MC_F_SW_OVERCURRENT));
-    CHECK(!C.fast_pub[C.fast_pub_idx].pwm_enable);
-    CHECK(!C.fast_overcurrent);
+    CHECK(!C.fast_pub[atomic_load(&C.fast_pub_idx)].pwm_enable);
+    CHECK(atomic_load(&C.fast_oc_events) == atomic_load(&C.fast_oc_ack)); /* acknowledged after the publish */
 }
 
 static void test_hardware_build_rejects_synthetic(void)

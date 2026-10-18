@@ -299,6 +299,18 @@ blockers:
     evidence: "commit 1479d16; firmware/tests/test_core_preemption.c."
     unlocks: 0
 
+  - id: C-ACK
+    status: closed
+    title: A repeated fast-loop fault during acknowledgment was erased
+    missing: "Found in the concurrency review: the slow step cleared a fast-loop fault flag it had observed, so a second instance raised between its read and the clear was lost; the handoff relied on volatile and a compiler fence without a stated mechanism."
+    affects: "firmware/src/core/mc_core.c, firmware/include/semmc/mc_core.h"
+    why: "A lost instance means a fault the fast step saw may never be counted; an undocumented handoff cannot be reviewed."
+    done_now: "Single-writer C11 atomic event counters with an acknowledgment stored after the reacting command is published; release and acquire ordering for the command index; the mechanism documented per shared variable."
+    input: "none"
+    closure: "Tests of fault arrival before, during and after the slow step, a repeated instance during acknowledgment and command publication fail on the old behaviour and pass; the image shows DMB-fenced accesses."
+    evidence: "firmware/tests/test_core_preemption.c (5 tests; acknowledging the current count instead of the observed one fails 3 checks); tests/integration/test_target_firmware.py test_fast_slow_handoff_compiles_to_ordered_atomics."
+    unlocks: 0
+
   - id: C-OVHYS
     status: closed
     title: Over-voltage comparator hysteresis undefined

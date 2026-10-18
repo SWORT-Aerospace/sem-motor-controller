@@ -15,16 +15,41 @@
  * is one such binding and the only one implemented. Manual driving never
  * depends on any link.
  *
- * Data handoff slow -> fast: the slow step computes fast_cmd and publishes it
- * into the one of two buffers the fast step is not reading, then switches an
- * index with a single store. The fast step runs in a higher-priority interrupt
- * on the target and preempts the slow step, so it always reads one complete
- * command. Flags the fast step raises (overcurrent, invalid dt) are cleared by
- * the slow step only after it has observed them and published the command
- * that reacts to them.
+ * Shared state between the fast step (current interrupt) and the slow step.
+ * Every shared variable has exactly one writing context. The mechanism, not
+ * "volatile", is what makes it correct:
+ *
+ *   fast_pub[2], fast_pub_idx   slow writes, fast reads. The slow step fills
+ *       the buffer the index does not select, then stores the index with
+ *       release ordering; the fast step loads it with acquire ordering. On
+ *       the target the fast step runs in an interrupt the slow step cannot
+ *       preempt (PRIO_FAST < PRIO_SLOW, platform/stm32g4/src/main.c), so a
+ *       fast step that starts after the index store reads the whole new
+ *       buffer before the slow step runs again, and the buffer the slow step
+ *       writes next is never being read.
+ *   fast_oc_events, fast_dt_events   fast writes (+1 per fast step that saw a
+ *       software overcurrent / an invalid dt), slow reads.
+ *   fast_oc_ack, fast_dt_ack   slow writes, fast reads: the event count the
+ *       slow step has reacted to, stored only after it has published the
+ *       command that reacts (a latched fault withdraws pwm_enable). The fast
+ *       step keeps the outputs off while events != ack. An event that
+ *       arrives while the slow step is acknowledging raises the count past
+ *       the ack and is seen by the next slow step: none is erased.
+ *   current_invalid_run   fast writes, slow reads.
+ *
+ * These are C11 atomics: word-sized and lock-free on Cortex-M4
+ * (ATOMIC_INT_LOCK_FREE == 2; checked below), so each load and store is
+ * single-copy atomic, and release/acquire orders the buffer writes before
+ * the index store (GCC emits DMB on ARMv7-M; tests/integration/
+ * test_target_firmware.py checks the image). Values read only for
+ * telemetry or plausibility (id/iq measured, the phase-current struct, hall
+ * times) are written by the fast step word by word; a slow-step read may
+ * combine words from two fast steps, which those uses tolerate.
  */
 #ifndef SEMMC_MC_CORE_H
 #define SEMMC_MC_CORE_H
+
+#include <stdatomic.h>
 
 #include "semmc/mc_config.h"
 #include "semmc/mc_control.h"
@@ -33,6 +58,8 @@
 #include "semmc/mc_protection.h"
 #include "semmc/mc_state_machine.h"
 #include "semmc/mc_types.h"
+
+_Static_assert(ATOMIC_INT_LOCK_FREE == 2, "fast/slow handoff needs lock-free word atomics");
 
 #define MC_FW_MAJOR 0u
 #define MC_FW_MINOR 1u
@@ -160,11 +187,11 @@ typedef struct {
     /* fast loop */
     mc_fast_cmd_t fast_cmd;          /* latest command computed by the slow step */
     mc_fast_cmd_t fast_pub[2];       /* published copies; the fast step reads fast_pub[fast_pub_idx] */
-    volatile uint8_t fast_pub_idx;
-    bool fast_pwm_was_enabled;
-    volatile bool fast_overcurrent;
-    volatile bool fast_dt_invalid;
-    uint32_t current_invalid_run;  /* consecutive fast steps without a valid current sample */
+    atomic_uint fast_pub_idx;        /* shared: see "Shared state" above */
+    bool fast_pwm_was_enabled;       /* fast step only */
+    atomic_uint fast_oc_events, fast_dt_events; /* written by the fast step only */
+    atomic_uint fast_oc_ack, fast_dt_ack;       /* written by the slow step only */
+    atomic_uint current_invalid_run; /* consecutive fast steps without a valid current sample; fast writes */
     bool link_down;            /* transport reports the link unusable (CAN: bus-off) */
     /* time */
     mc_time_us_t now_us;

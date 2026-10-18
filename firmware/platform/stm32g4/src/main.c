@@ -1,10 +1,18 @@
 /* STM32G474 controller firmware: start-up, the current interrupt (fast step), the 1 kHz slow step.
  *
- * Contexts and priorities (lower number preempts higher):
+ * Contexts and priorities (lower number preempts higher; all four priority bits are preemption bits):
  *   0  ADC1_2   fast step at the PWM rate: currents, hall code, mc_core_fast_step, duties
  *   1  TIM1_BRK records which break input cleared the outputs (the hardware already did)
  *   3  TIM6     slow step at 1 kHz: inputs, precharge, CAN, mc_core_slow_step, watchdogs
  *   -  main     sleeps (WFI)
+ * The fast/slow data handoff relies on the slow step never preempting the fast step (mc_core.h, "Shared
+ * state"): checked below at compile time.
+ *
+ * Fast-step deadline (pwm.h): sampling triggers at the counter valley; the compare values the fast step
+ * writes load at the next update event, the counter peak, half a period later. The last compare write must
+ * therefore complete before the peak: T/2 minus the ADC sampling and conversion time and the interrupt entry.
+ * g_bench.fast_margin_min_ticks is the smallest timer-tick distance to the peak seen after that write, and
+ * fast_late_writes counts writes made after it; these are the on-target evidence, observed maxima only.
  *
  * What this revision does NOT drive, and why (docs/BLOCKERS.md):
  *   - the gate driver: the DRV8353 SPI register settings (gate current, VDS trip level, CSA gain) are
@@ -50,6 +58,20 @@
 #define PRIO_FAST 0u
 #define PRIO_BREAK 1u
 #define PRIO_SLOW 3u
+_Static_assert(PRIO_FAST < PRIO_BREAK && PRIO_BREAK < PRIO_SLOW && PRIO_SLOW < (1u << __NVIC_PRIO_BITS),
+               "the fast step must preempt the slow step (mc_core.h, Shared state)");
+#define NVIC_GROUP_ALL_PREEMPT 3u /* PRIGROUP 3: the 4 implemented bits are all preemption priority */
+
+#if defined(SEMMC_TIMING_MARKER)
+/* Timing image: the status-LED pin (PE14) is high while the fast-step interrupt runs, for a scope. */
+#define MARK_FAST_ON() (GPIOE->BSRR = 1u << BOARD_LED_STATUS_PIN)
+#define MARK_FAST_OFF() (GPIOE->BSRR = 1u << (BOARD_LED_STATUS_PIN + 16u))
+#define TIMING_MARKER true
+#else
+#define MARK_FAST_ON() ((void)0)
+#define MARK_FAST_OFF() ((void)0)
+#define TIMING_MARKER false
+#endif
 
 /* With no configured PWM frequency TIM1 still runs, outputs permanently off, so that the phase-current
  * ADC readings can be taken on the bench (offset calibration needs them before a calibration exists).
@@ -64,6 +86,9 @@
 #if defined(SEMMC_BENCH_PWM_TEST)
 #define BENCH_PWM_TEST true
 #define IMAGE_NAME "semmc stm32g474 BENCH PWM TEST "
+#elif defined(SEMMC_TIMING_MARKER)
+#define BENCH_PWM_TEST false
+#define IMAGE_NAME "semmc stm32g474 TIMING MARKER "
 #else
 #define BENCH_PWM_TEST false
 #define IMAGE_NAME "semmc stm32g474 "
@@ -96,6 +121,12 @@ typedef struct {
     uint32_t state;                /* mc_state_t */
     uint32_t precharge_state;      /* mc_pc_state_t */
     uint32_t inputs;               /* BENCH_IN_* bits, sampled by the slow step */
+    uint32_t fast_isr_max_cycles;  /* whole fast interrupt, first to last instruction (not the entry latency) */
+    uint32_t fast_margin_min_ticks; /* smallest TIM1 ticks left to the peak after the last compare write */
+    uint32_t fast_late_writes;     /* compare writes made after the peak (the deadline was missed) */
+    uint32_t adc_wait_max_cycles;  /* longest wait for ADC2/ADC3 after ADC1 finished: sampling skew evidence */
+    uint32_t slow_overruns;        /* slow steps that ended with the next 1 ms tick already pending */
+    uint32_t stack_unused_min_bytes; /* painted stack never written so far (high-water mark), main loop */
 } bench_view_t;
 
 enum {
@@ -107,8 +138,8 @@ enum {
     /* bits 16..18: hall code (A, B, C) */
 };
 
-/* tools/bench_read.py decodes this layout ("<6I3f5H2x3f2f2f3I", 88 bytes); keep both in step. */
-_Static_assert(sizeof(bench_view_t) == 88u, "bench_view_t layout changed: update tools/bench_read.py");
+/* tools/bench_read.py decodes this layout ("<6I3f5H2x3f2f2f3I6I", 112 bytes); keep both in step. */
+_Static_assert(sizeof(bench_view_t) == 112u, "bench_view_t layout changed: update tools/bench_read.py");
 volatile bench_view_t g_bench __attribute__((used));
 
 static mc_core_t g_core;
@@ -150,16 +181,28 @@ static uint8_t hall_code(void)
 }
 
 /* ------------------------------------------------------------------ fast step */
+static void fast_isr_end(uint32_t c_entry)
+{
+    const uint32_t cyc = DWT->CYCCNT - c_entry;
+    if (cyc > g_bench.fast_isr_max_cycles) g_bench.fast_isr_max_cycles = cyc;
+    MARK_FAST_OFF();
+}
+
 void ADC1_2_IRQHandler(void)
 {
+    const uint32_t c_entry = DWT->CYCCNT;
+    MARK_FAST_ON();
     if ((ADC1->ISR & ADC_ISR_JEOS) == 0u) {
         ADC1->ISR = ADC_ISR_OVR | ADC_ISR_EOC | ADC_ISR_EOS;
+        MARK_FAST_OFF();
         return;
     }
     ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
     const uint32_t c0 = DWT->CYCCNT;
     uint16_t raw[3] = {0u, 0u, 0u};
-    const uint8_t done = adc_read_currents(raw);
+    uint32_t wait = 0u;
+    const uint8_t done = adc_read_currents(raw, &wait);
+    if (wait > g_bench.adc_wait_max_cycles) g_bench.adc_wait_max_cycles = wait;
     for (int k = 0; k < 3; k++) {
         g_bench.raw_current_avg[k] += ((float)raw[k] - g_bench.raw_current_avg[k]) * (1.0f / 256.0f);
     }
@@ -171,6 +214,7 @@ void ADC1_2_IRQHandler(void)
         if (!BENCH_PWM_TEST) pwm_outputs_off();
         g_last_cyc = c0;
         g_bench.fast_count++;
+        fast_isr_end(c_entry);
         return;
     }
 
@@ -194,6 +238,12 @@ void ADC1_2_IRQHandler(void)
     const bool allow = out.pwm_enable && GATE_DRIVER_CONFIGURED && board_drv_enable_commanded() && !in.hw_trip;
     if (allow) {
         pwm_write_duty(&out.duty);
+        const uint32_t left = pwm_ticks_to_peak(); /* 0 if the peak has passed: the duties load half a period late */
+        if (left == 0u) {
+            g_bench.fast_late_writes++;
+        } else if (left < g_bench.fast_margin_min_ticks) {
+            g_bench.fast_margin_min_ticks = left;
+        }
         /* The new compare values load at the next counter peak. Turning the outputs on now would run
          * the rest of this half period on the old values (all low sides on at the first start), so
          * the outputs come on one cycle later, when the requested duties are in the active registers. */
@@ -214,6 +264,7 @@ void ADC1_2_IRQHandler(void)
     const uint32_t cyc = DWT->CYCCNT - c0;
     if (cyc > g_bench.fast_max_cycles) g_bench.fast_max_cycles = cyc;
     g_bench.fast_count++;
+    fast_isr_end(c_entry);
 }
 
 /* ------------------------------------------------------------------ slow step */
@@ -325,15 +376,40 @@ void TIM6_DAC_IRQHandler(void)
                      ((brk & PWM_BREAK_SYSTEM) ? BENCH_IN_BREAK_SYSTEM : 0u) |
                      (pwm_outputs_are_on() ? BENCH_IN_OUTPUTS_ON : 0u) | ((uint32_t)hall_code() << 16u);
     board_set_led_fault(st == MC_ST_FAULT_LATCHED);
-    board_set_led_status(((g_ms / (st >= MC_ST_READY && st != MC_ST_FAULT_LATCHED ? 125u : 500u)) & 1u) != 0u);
+    if (!TIMING_MARKER) {
+        board_set_led_status(((g_ms / (st >= MC_ST_READY && st != MC_ST_FAULT_LATCHED ? 125u : 500u)) & 1u) != 0u);
+    }
 
     /* Watchdogs: this step ran, and the current loop has run since the previous kick. */
     if (g_bench.fast_count != g_fast_at_kick) {
         watchdog_kick();
         g_fast_at_kick = g_bench.fast_count;
     }
-    const uint32_t cyc = DWT->CYCCNT - c0;
+    const uint32_t cyc = DWT->CYCCNT - c0; /* wall time: includes the fast interrupts that preempted it */
     if (cyc > g_bench.slow_max_cycles) g_bench.slow_max_cycles = cyc;
+    if (timebase_slow_tick_pending()) g_bench.slow_overruns++;
+}
+
+/* ------------------------------------------------------------------ stack high-water mark */
+#define STACK_PAINT 0x5AA5A55Au
+extern uint32_t _stack_limit;
+
+/* Fills the unused stack below the current stack pointer, before interrupts are enabled. */
+static void stack_paint(void)
+{
+    volatile uint32_t *p = &_stack_limit;
+    const uint32_t *sp = (const uint32_t *)__get_MSP();
+    while (p < sp - 16) *p++ = STACK_PAINT; /* keep 64 bytes below the live frame */
+}
+
+/* Bytes from the stack limit up to the deepest word ever written. Run in the main loop (lowest priority). */
+static void stack_measure(void)
+{
+    const volatile uint32_t *p = &_stack_limit;
+    const uint32_t *sp = (const uint32_t *)__get_MSP();
+    uint32_t n = 0u;
+    while (p + n < sp && p[n] == STACK_PAINT) n++;
+    if (n * 4u < g_bench.stack_unused_min_bytes) g_bench.stack_unused_min_bytes = n * 4u;
 }
 
 /* ------------------------------------------------------------------ start-up */
@@ -403,6 +479,10 @@ static void measure_offsets(void)
 int main(void)
 {
     board_gpio_init(); /* outputs to their safe levels first, at the 16 MHz reset clock */
+    NVIC_SetPriorityGrouping(NVIC_GROUP_ALL_PREEMPT);
+    g_bench.fast_margin_min_ticks = UINT32_MAX;
+    g_bench.stack_unused_min_bytes = UINT32_MAX;
+    stack_paint();
     watchdog_start();
     g_reset_cause = watchdog_reset_cause();
     event_log_init();
@@ -470,7 +550,11 @@ int main(void)
         for (;;) {
             if (pwm_break_flags() == 0u && !pwm_outputs_are_on()) pwm_outputs_on();
             __WFI();
+            stack_measure();
         }
     }
-    for (;;) __WFI();
+    for (;;) {
+        __WFI();
+        stack_measure();
+    }
 }

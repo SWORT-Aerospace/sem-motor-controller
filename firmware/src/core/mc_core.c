@@ -62,6 +62,12 @@ static void force_tx(mc_core_t *c, uint32_t id)
 bool mc_core_init(mc_core_t *c, const uint8_t *cal_blob, size_t cal_len, mc_build_kind_t build, uint16_t boot_id)
 {
     memset(c, 0, sizeof(*c));
+    atomic_init(&c->fast_pub_idx, 0u);
+    atomic_init(&c->fast_oc_events, 0u);
+    atomic_init(&c->fast_dt_events, 0u);
+    atomic_init(&c->fast_oc_ack, 0u);
+    atomic_init(&c->fast_dt_ack, 0u);
+    atomic_init(&c->current_invalid_run, 0u);
     c->build = build;
     c->boot_id = boot_id;
     mc_cfg_report_t rep;
@@ -260,8 +266,12 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     pi.hw_overvoltage = in->hw_overvoltage;
     pi.gate_driver_fault = in->gate_driver_fault;
     pi.watchdog_fault = in->watchdog_fault;
-    pi.fast_overcurrent = c->fast_overcurrent;
-    pi.fast_dt_invalid = c->fast_dt_invalid;
+    /* Fast-step events not yet reacted to. Read once here; the ack stored after the publish below is this
+     * value, so an event the fast step adds after this read stays pending for the next slow step. */
+    const unsigned oc_events = atomic_load_explicit(&c->fast_oc_events, memory_order_acquire);
+    const unsigned dt_events = atomic_load_explicit(&c->fast_dt_events, memory_order_acquire);
+    pi.fast_overcurrent = oc_events != atomic_load_explicit(&c->fast_oc_ack, memory_order_relaxed);
+    pi.fast_dt_invalid = dt_events != atomic_load_explicit(&c->fast_dt_ack, memory_order_relaxed);
     pi.vbus_V = in->vbus_V;
     pi.vbus_val = vbus_val;
     pi.t_fet_degC = in->t_fet_degC;
@@ -270,7 +280,8 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     pi.t_motor_val = c->t_motor_val;
     pi.speed_mech_rad_s = c->speed_mech_rad_s;
     pi.hall_invalid = c->hall.invalid;
-    pi.current_sense_invalid = c->current_invalid_run >= MC_CURRENT_INVALID_LIMIT;
+    pi.current_sense_invalid =
+        atomic_load_explicit(&c->current_invalid_run, memory_order_relaxed) >= MC_CURRENT_INVALID_LIMIT;
     pi.throttle_valid = in->driver.throttle_valid;
     /* Stall / stuck-hall plausibility: a large q current with no hall edge
      * for MC_STALL_TIME_S means either a blocked rotor or a hall sensor stuck
@@ -359,19 +370,27 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
                               c->sm.state == MC_ST_DERATED);
     c->fast_cmd.iq_ref_A = c->fast_cmd.pwm_enable ? c->arb.iq_ref_A : 0.0f;
     c->fast_cmd.id_ref_A = c->fast_cmd.pwm_enable ? c->arb.id_ref_A : 0.0f;
-    /* Publish to the fast step: fill the buffer it is not reading, then switch the index with one store.
-     * On the target the fast step preempts this function, so it always sees one complete command. */
+    /* Publish to the fast step: fill the buffer the index does not select, then store the index (release).
+     * Only then acknowledge the events read above (a latched fault has already withdrawn pwm_enable). */
     {
-        const uint8_t next = (uint8_t)(1u - c->fast_pub_idx);
+        const unsigned next = 1u - atomic_load_explicit(&c->fast_pub_idx, memory_order_relaxed);
         c->fast_pub[next] = c->fast_cmd;
-        atomic_signal_fence(memory_order_release);
-        c->fast_pub_idx = next;
+        atomic_store_explicit(&c->fast_pub_idx, next, memory_order_release);
     }
-    /* Clear the fast-step flags only after the command above is published (a latched fault has already
-     * withdrawn pwm_enable), and only those this step observed: a flag the fast step sets after the read
-     * at the top of this function stays set for the next slow step instead of being lost. */
-    if (pi.fast_overcurrent) c->fast_overcurrent = false;
-    if (pi.fast_dt_invalid) c->fast_dt_invalid = false;
+    atomic_store_explicit(&c->fast_oc_ack, oc_events, memory_order_release);
+    atomic_store_explicit(&c->fast_dt_ack, dt_events, memory_order_release);
+}
+
+/* Fast step only: count one event (single writer, so load + store is enough; release orders it after the
+ * data the fast step wrote before it). */
+static void fast_event(atomic_uint *ev)
+{
+    atomic_store_explicit(ev, atomic_load_explicit(ev, memory_order_relaxed) + 1u, memory_order_release);
+}
+
+static bool fast_pending(const atomic_uint *ev, const atomic_uint *ack)
+{
+    return atomic_load_explicit(ev, memory_order_relaxed) != atomic_load_explicit(ack, memory_order_acquire);
 }
 
 /* ---------------------------------------------------------------- fast step */
@@ -383,7 +402,7 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
 
     const float dt = in->dt;
     const bool dt_ok = mc_isfinite(dt) && dt > 0.0f && dt <= c->foc.dt_max_s;
-    if (!dt_ok) c->fast_dt_invalid = true;
+    if (!dt_ok) fast_event(&c->fast_dt_events);
 
     c->theta_e = mc_hall_update(&c->hall, in->hall_code, dt_ok ? dt : 0.0f);
     mc_currents_resolve(&in->phase, &c->pc);
@@ -391,16 +410,20 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
     /* Software overcurrent: any phase, measured or reconstructed. Acts in this
      * interrupt (outputs off now) and latches in the next slow step. */
     if (c->pc.valid) {
+        bool oc = false;
         for (int k = 0; k < 3; k++) {
-            if (mc_absf(c->pc.i[k]) > c->p.sw_overcurrent_A) c->fast_overcurrent = true;
+            if (mc_absf(c->pc.i[k]) > c->p.sw_overcurrent_A) oc = true;
         }
+        if (oc) fast_event(&c->fast_oc_events);
     }
-    const mc_fast_cmd_t cmd = c->fast_pub[c->fast_pub_idx];
-    const bool enable = cmd.pwm_enable && dt_ok && !in->hw_trip && !c->fast_overcurrent && !c->fast_dt_invalid;
+    const mc_fast_cmd_t cmd = c->fast_pub[atomic_load_explicit(&c->fast_pub_idx, memory_order_acquire)];
+    const bool enable = cmd.pwm_enable && dt_ok && !in->hw_trip && !fast_pending(&c->fast_oc_events, &c->fast_oc_ack) &&
+                        !fast_pending(&c->fast_dt_events, &c->fast_dt_ack);
+    const unsigned run = atomic_load_explicit(&c->current_invalid_run, memory_order_relaxed);
     if (enable && !c->pc.valid) {
-        if (c->current_invalid_run < UINT32_MAX) c->current_invalid_run++;
+        if (run < UINT32_MAX) atomic_store_explicit(&c->current_invalid_run, run + 1u, memory_order_relaxed);
     } else if (c->pc.valid) {
-        c->current_invalid_run = 0u;
+        atomic_store_explicit(&c->current_invalid_run, 0u, memory_order_relaxed);
     }
     if (!enable || !c->pc.valid) {
         mc_foc_reset(&c->foc);

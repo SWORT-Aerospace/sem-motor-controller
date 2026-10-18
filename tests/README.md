@@ -88,7 +88,7 @@ A clean checkout therefore needs no manual build before `pytest`, only cmake and
 | `kicad-cli` (KiCad) | `test_schematic_connectivity_matches_intent` in `test_hardware_tools.py` | skipped with "kicad-cli not installed" |
 | cantools | `test_dbc.py` | whole file skipped (`pytest.importorskip`) |
 | arm-none-eabi-gcc | `test_target_firmware.py` | skipped with the reason; with `SEMMC_REQUIRE_ARM=1` (set in CI) a failure |
-| unicorn | `test_emulated_fast_step_fits_half_a_pwm_period` | skipped (`pytest.importorskip`) |
+| unicorn | `test_emulated_fast_step_instruction_count_regression` | skipped (`pytest.importorskip`) |
 | pinned CSIA core (`python3 tools/fetch_csia.py`) | `test_csia_adapter.py`, `test_host_demo.py`, the tests of `test_shadow_replay.py` and `test_pit_energy.py` that run the pit replay (two and one), the MQTT demonstration tests | **fail** with `ImportError: pinned CSIA core not found`; they are not skipped |
 | cmake or a C compiler | every test that uses `build_dir`, `host_exe`, `cfgcheck_exe` or `synthetic_blob`, and the hardware-configure tests of `test_config_parity.py` | error or fail |
 
