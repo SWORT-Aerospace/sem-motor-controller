@@ -292,7 +292,7 @@ items:
     blocked_by: modem variant, connector, mounting
     evidence: "docs/TELEMETRY_CANDIDATES.md#lte-a7672"
   - id: local_storage
-    item: Local log storage (SPI NOR; microSD an option), if not included in the PCB assembly
+    item: Local log storage (microSD card and socket), if not included in the PCB assembly
     purpose: The complete on-vehicle record (STLG log)
     category: telemetry
     qty: 1

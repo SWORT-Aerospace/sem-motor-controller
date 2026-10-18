@@ -289,3 +289,43 @@ Linker note: both images warn that newlib's `nosys` stubs `_close`, `_lseek`, `_
 * Anything about the real controller's frames: it is simulated; its team has not answered [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md).
 * Vehicle energy: every number above comes from simulation.
 
+
+## 10. v0.7: engineering findings on SWORT-Aerospace/sem-motor-controller#6 (2026-10-18)
+
+Review of `b7d3b89`, six findings. **Nothing was flashed, connected, energised, measured or ordered.** The controller work stays deferred, CSIA stays shadow-only, and the frozen evaluation files are unchanged (`tests/telematics/test_energy_and_shadow_scope.py` checks them by hash).
+
+### 10.1 What changed in code, and the test behind each change
+
+| Finding | Change | Shown by |
+|---|---|---|
+| 1. A held-low Hall input proved standstill | One integer rule in C (`tm_wheel.c`) and Python (`wheel.py`): no edge is `no_evidence`, never 0; a channel silent while another moves is suspect, A (stuck active) or I (stuck inactive or disconnected), its speed `invalid`; COUNTERS2 ids 24 and 25 count episodes; BENCH.md B6 rewritten | `test_wheel_node_pit.py` (stuck low, stuck high, disconnection and recovery, active-high sensor, constants equal); `test_firmware_host.py` (the firmware's states equal the Python rule); `test_tm.c`; demonstration check 6 |
+| 2. CAN check E1 asked a shared bus to stay recessive | E1 tests our node's output: (a) isolated bus, TX forced low and high with the silent pin high, and a control with it low; (b) acknowledge errors at a lone sender and our TX high; (c) error counters with and without our node | `test_telematics_bench.py` (E1 text); CONTROLLER_INTERFACE_REQUEST section 5 |
+| 3. An assumed 13S pack in component conclusions; TVS clamp above the DC-DC input | The assumption removed; the SMBJ58A and SKMW15G-05 pair rejected (93.6 V clamp at 6.4 A above 75 V); the vehicle power connection blocked while `battery_max_V` is null, refused by the BOM tool; blocker T-VEH-PWR | `test_telematics_bom.py::test_no_assumed_pack_and_the_vehicle_supply_stays_blocked` |
+| 4. BOM listed DS18B20 while the firmware drives TMP117 | The bench configuration is exactly the parts the firmware drives (W25Q128JV, ISM330DHCX, TMP117, CAN Pal), each line naming its driver and an identifier the tool finds in it; DS18B20 and microSD are options in no total; female/male jumpers, a 120 Ohm and a scope added so the procedure needs no substitution | `test_telematics_bom.py::test_every_bench_sensor_and_storage_part_has_its_firmware_driver`; `test_telematics_bench.py` (every bench line used by the procedure, every procedure part on the BOM) |
+| 5. External storage not integrated; recording duration unknown; the 75 min overflow test could lose its evidence | W25Q NOR in the images (JEDEC id selects it; 1 to 16 MiB, a part needing 4-byte addresses refused), blank check, chip erase, `DUMP <first> <last>`; sparse logging at the reserve (wheel and counters every 10 s, `EVENT` code 2, `log_thinned`); a bus model of the NOR for host tests; durations measured with the firmware's code ([`generated/telematics_storage.md`](generated/telematics_storage.md)); the status capture names the slot at the overflow | `test_drivers.c` (35 checks); `test_firmware_host.py` (NOR log equal to internal flash, worst-case NOR timing, restart and erase, sparse logging across 2^32 us, status lines as overflow evidence, B7 on the NOR with a ranged dump, durations current) |
+| 6. U575 register code not verified against ST's documents | Compared line by line with ST's HAL v1.6.3; one defect (LSE started without LSESYSEN before MSI PLL mode) and nine risks corrected to ST's sequence ([`U575_REGISTER_CHECK.md`](U575_REGISTER_CHECK.md)); silicon revision and the SRAM_RST state in the banner. RM0456, DS13737 and ES0499 still unread (st.com refused here): T-U5-DOCS stays open | `test_firmware_target.py::test_register_sequences_follow_st_hal` (orderings, from the source); the target images link |
+
+The bench package: `tools/telematics_bench.py` renders BENCH.md from `telematics/bench/bench.yaml` after checking every pin against the line of firmware that sets it up, every quoted console text against the firmware, the parts against the BOM and the durations against the measured ones; `package` writes the images with a SHA-256 manifest, the connection and parts lists, the commands, `tools/uart_capture.py` and a blank results form, and `--rebuild` compares the hashes of a second build. CI builds and uploads it (`telematics-bench-package`).
+
+### 10.2 Fresh-clone verification of `8c53ff9`
+
+Clone of the pushed branch into an empty directory; same tools as 9.2.
+
+| Check | Result |
+|---|---|
+| Generated files current: `blockers.py`, `telematics_bom.py`, `telematics_bench.py render`, `gen_procurement.py`, `gen_protocol.py`, `gen_dbc.py`, `wheel_sensor_check.py` (`--check`); `check_links.py` | all exit 0; **`scope.py --check` failed**: `docs/generated/scope.md` had been rendered before the two new register-check pages were added. Fixed in the next commit |
+| Firmware unit tests (ASan, UBSan) | 468 checks and 35 driver checks, 0 failed |
+| Recording durations | `telematics_storage.py --check`: current |
+| Target images | `tm_u575.elf` 20,344 B flash, 65,552 B RAM; `tm_u575_can.elf` 21,372 B flash, 65,560 B RAM |
+| Bench package | 14 files; revision `8c53ff94bf29`; valid for a recorded run; all six image files rebuilt in a new directory with identical SHA-256. `tm_u575.bin` `a0ee3636c31c056ec025a83933db14462623a0924db92c86723d763b2ead13a3`, `tm_u575_can.bin` `4261eb3f55bf5cf530a3dc9b0c8519133d120575566639d751cdada672c16e15` (images from a later commit differ only in the revision string they carry; their own MANIFEST.json gives their hashes) |
+| Demonstration through Mosquitto | 9/9 checks |
+| Telematics and reference suites (working tree at `8c53ff9`, `SEMMC_REQUIRE_MQTT=1 SEMMC_REQUIRE_ARM=1`, no controller build) | 156 passed, 0 skipped |
+| Controller suite (`pytest -m controller`) | first run 1 failed: `tests/hardware/test_procurement.py` pins the v0.6 line name "Local log storage (microSD card and socket)", which this change had renamed; the name was restored (its candidate and requirement now name the NOR) and the suite passes: 216 passed |
+
+### 10.3 Still depending on the physical world
+
+* Every bench step B0 to B12 and every electrical check E1 to E6: the package is ready and its results form is blank. Nothing in it is bench-verified.
+* The NUCLEO positions of PD0 and PD1 and the CAN Pal's pin labels (UM2861 and the CAN Pal's silkscreen; B0).
+* The register behaviour that only RM0456, DS13737 and ES0499 settle ([`U575_REGISTER_CHECK.md`](U575_REGISTER_CHECK.md) section 3), and the W25Q128JV data sheet's command set, pinout and timings (B1 shows the JEDEC id).
+* The battery's maximum voltage, without which no vehicle supply part can be chosen (T-VEH-PWR, B-BAT-V); the vehicle power connection stays blocked.
+* The controller's bus, frames and frame rate (T-CTRL-IF), which decide how long the NOR holds a full-rate vehicle log (T-STORAGE).
