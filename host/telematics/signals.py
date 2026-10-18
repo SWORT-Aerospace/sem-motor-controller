@@ -1,5 +1,8 @@
 """Signal registry: identity, unit, role and plausible range of every quantity the telematics unit reports.
 
+The registry is read from the canonical schema, telematics/schema/telemetry_schema.yaml, which also holds each
+signal's source, encoding, rate, timestamp, freshness, invalid and missing semantics and lineage.
+
 A measurement (measurement.py) names one of these signals. The registry is the single list that the node,
 the controller adapters, the pit validation and the energy analysis share, so a unit or a range is defined
 once. Signals that come from the external motor controller are `origin: controller`; the controller team
@@ -24,6 +27,9 @@ from __future__ import annotations
 
 import dataclasses
 import fnmatch
+import pathlib
+
+import yaml
 
 ROLES = ("energy_essential", "energy_total", "diagnostic_optional", "motion", "environment")
 
@@ -40,54 +46,21 @@ class Signal:
     description: str
 
 
-REGISTRY: tuple[Signal, ...] = (
-    # ---- external controller (through an adapter); every one may be absent
-    Signal("ctrl.dc_voltage", "V", "controller", "energy_essential", 0.0, 100.0, 0.3,
-           "DC voltage at the controller input"),
-    Signal("ctrl.dc_current", "A", "controller", "energy_essential", -400.0, 400.0, 0.3,
-           "DC current into the controller input, positive when the battery discharges"),
-    Signal("ctrl.dc_power", "W", "controller", "diagnostic_optional", -20000.0, 20000.0, 0.5,
-           "DC input power as the controller computes it"),
-    Signal("ctrl.energy_counter", "J", "controller", "diagnostic_optional", -1e9, 1e9, 0.5,
-           "energy integrated by the controller since its own reset"),
-    Signal("ctrl.energy_integrated_time", "s", "controller", "diagnostic_optional", 0.0, 1e6, 0.5,
-           "time the controller's energy counter has integrated"),
-    Signal("ctrl.energy_gap_time", "s", "controller", "diagnostic_optional", 0.0, 1e6, 0.5,
-           "time the controller's energy counter could not integrate"),
-    Signal("ctrl.motor_speed", "rad/s", "controller", "diagnostic_optional", -2000.0, 2000.0, 0.3,
-           "mechanical rotor speed"),
-    Signal("ctrl.phase_current_q", "A", "controller", "diagnostic_optional", -400.0, 400.0, 0.3,
-           "q-axis phase current"),
-    Signal("ctrl.phase_current_d", "A", "controller", "diagnostic_optional", -400.0, 400.0, 0.3,
-           "d-axis phase current"),
-    Signal("ctrl.kcl_residual", "A", "controller", "diagnostic_optional", -50.0, 50.0, 0.3,
-           "sum of the three measured phase currents"),
-    Signal("ctrl.torque_reference", "N*m", "controller", "diagnostic_optional", -200.0, 200.0, 0.3,
-           "torque the controller is applying as its reference"),
-    Signal("ctrl.fet_temp", "degC", "controller", "diagnostic_optional", -55.0, 200.0, 1.0,
-           "power-stage temperature"),
-    Signal("ctrl.motor_temp", "degC", "controller", "diagnostic_optional", -55.0, 200.0, 1.0,
-           "motor winding or case temperature"),
-    Signal("ctrl.state", "1", "controller", "diagnostic_optional", 0.0, 255.0, 0.5,
-           "controller state code (meaning defined by the controller team)"),
-    Signal("ctrl.fault_code", "1", "controller", "diagnostic_optional", 0.0, 255.0, 3.0,
-           "controller fault code (meaning defined by the controller team)"),
-    # ---- the unit's own sensors
-    Signal("wheel.*.speed", "m/s", "telematics", "motion", 0.0, 60.0, 0.3,
-           "wheel speed from Hall-switch edge periods"),
-    Signal("wheel.*.distance", "m", "telematics", "motion", 0.0, 1e7, 1.0,
-           "distance from counted Hall-switch edges since the unit started"),
-    Signal("gnss.speed", "m/s", "telematics", "motion", 0.0, 60.0, 0.5, "GNSS ground speed"),
-    Signal("gnss.speed_acc", "m/s", "telematics", "motion", 0.0, 100.0, 0.5, "GNSS speed accuracy estimate"),
-    Signal("gnss.num_sv", "1", "telematics", "motion", 0.0, 255.0, 0.5, "satellites used in the fix"),
-    Signal("imu.ax", "m/s^2", "telematics", "motion", -160.0, 160.0, 0.1, "longitudinal acceleration"),
-    Signal("imu.gz", "rad/s", "telematics", "motion", -35.0, 35.0, 0.1, "yaw rate"),
-    Signal("temp.*", "degC", "telematics", "environment", -55.0, 200.0, 3.0, "temperature probe"),
-    Signal("batt.voltage", "V", "telematics", "energy_total", 0.0, 100.0, 0.3,
-           "battery terminal voltage (battery-side monitor, optional hardware)"),
-    Signal("batt.current", "A", "telematics", "energy_total", -400.0, 400.0, 0.3,
-           "battery current, positive on discharge (battery-side monitor, optional hardware)"),
-)
+SCHEMA_PATH = pathlib.Path(__file__).resolve().parents[2] / "telematics" / "schema" / "telemetry_schema.yaml"
+
+
+def _load() -> tuple[Signal, ...]:
+    """The registry is the `signals` list of the canonical schema (telematics/schema/telemetry_schema.yaml)."""
+    doc = yaml.safe_load(SCHEMA_PATH.read_text())
+    out = []
+    for e in doc["signals"]:
+        lo, hi = e["range"]
+        out.append(Signal(e["id"], str(e["unit"]), e["origin"], e["role"], float(lo), float(hi), float(e["stale_s"]),
+                          e["description"]))
+    return tuple(out)
+
+
+REGISTRY: tuple[Signal, ...] = _load()
 
 
 def _registry_id() -> str:

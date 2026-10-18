@@ -40,6 +40,8 @@ typedef struct {
     const char *run_prefix;                /* run ids are <run_prefix>-B<boot>; 0: the unit id (each storage
                                               counts its own boots, so each needs its own prefix) */
     const char *firmware;                  /* image name and revision */
+    const char *kind;                      /* what produced the log, for its evidence label: the target says
+                                            * BENCH, the host simulator HOST SIMULATION; 0 gives UNKNOWN */
     const char *clock_source;              /* what the 1 us timebase runs from, with its accuracy class */
     const char *storage;                   /* e.g. "internal flash bank 2" */
     uint32_t reset_flags;

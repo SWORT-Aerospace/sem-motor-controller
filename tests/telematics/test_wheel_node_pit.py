@@ -189,7 +189,9 @@ def test_node_logs_raw_frames_and_reports_missing_as_null(tmp_path):
     data, _s, _i = proto.encode("ctrl_motion", {"speed_mech_rad_s": 10.0, "iq_A": 1.0, "vbus_V": 48.0}, 0)
     for k in range(60):                                  # more frames than the queue holds before the writer runs
         node.on_can(0.001 * k, proto.MESSAGES["ctrl_motion"]["id"], data)
-    assert node.c["log_dropped_queue"] == 60 + 1 - 40 and node.c["queue_high_water"] == 40
+    # frames may fill the queue only up to its own-record reserve (1/8: 5 of 40): BOOT + 34 frames, 26 counted
+    assert node.c["can_not_logged"] == 60 - 34 and node.c["queue_high_water"] == 35
+    assert node.c["log_dropped_queue"] == 0 and node.c["rx_frames"] == 60
     node.service(0.5, 0.5)
     msg = node.message(0.5)
     m, why = ingest.validate_live(json.dumps(msg).encode())
@@ -201,8 +203,10 @@ def test_node_logs_raw_frames_and_reports_missing_as_null(tmp_path):
     _meta, recs, rep = stlg.read(w.path)
     kinds = [r[3] for r in recs]
     assert kinds[0] == stlg.BOOT and stlg.CAN2 in kinds and kinds[-1] == stlg.COUNTERS2
-    # 21 frames, then the record task's wheel record, found the queue full before the writer ran
-    assert recs[-1][4]["log_dropped_queue"] == node.c["log_dropped_queue"] == 22
+    # the record task's wheel records found room in the reserve: none of the unit's own records was dropped
+    assert recs[-1][4]["log_dropped_queue"] == node.c["log_dropped_queue"] == 0
+    assert recs[-1][4]["can_not_logged"] == 26 and sum(1 for k in kinds if k == stlg.CAN2) == 34
+    assert any(k == stlg.WHEEL_EDGES for k in kinds)
     assert recs[-1][4]["log_records"] == len(recs)
 
 

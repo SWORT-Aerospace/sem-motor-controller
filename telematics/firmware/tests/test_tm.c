@@ -292,6 +292,43 @@ static void test_app(void)
     CHECK(tm_app_status(&app, s, sizeof s) > 20u && strncmp(s, "TM t=", 5) == 0);
 }
 
+/* CAN noninterference, receive side: a fully loaded 500 kbit/s bus (4,000 frames per second, ids and lengths
+ * random, some longer than a classic frame) during a 0.4 s storage stall. The unit only counts and logs: frames
+ * beyond the queue's own-record reserve are counted as not logged, frames beyond the receive ring as overrun, and
+ * no wheel or counters record of the unit is lost. (There is no transmit path to test: tm_can has none.) */
+static void test_can_flood(void)
+{
+    static tm_fakeflash_t ff;
+    static tm_app_t app;
+    static uint8_t mem[128u * TM_SLOT_BYTES];                      /* room for the whole flood: no sparse logging */
+    memset(mem, 0xFF, sizeof mem);
+    g_now = 0u;
+    tm_fakeflash_init(&ff, mem, sizeof mem, 8192u, 16u, now_us);
+    ff.stall_t0 = 1000000u;
+    ff.stall_t1 = 1400000u;
+    tm_platform_t pf = {.now_us = now_us, .line_high = line_high, .mask_capture = mask, .storage = &ff.io};
+    tm_app_info_t info = {.unit_id = "F", .firmware = "test", .clock_source = "test", .storage = "ram",
+                          .reset_flags = TM_RST_PIN, .reset_cause = "PIN"};
+    tm_app_init(&app, &pf, &info);
+    uint32_t pushed = 0u, refused = 0u, rnd = 12345u;
+    for (uint64_t t = 250u; t <= 2000000u; t += 250u) {
+        g_now = t;
+        if (t % 10000u == 0u) tm_app_wheel_edge(&app, 0, t);
+        tm_can_frame_t f = {.t_us = t, .len = 8u};
+        rnd = rnd * 1103515245u + 12345u;
+        f.id_flags = (rnd >> 8) & 0x7FFu;
+        f.len = (uint8_t)((rnd >> 20) % 70u);                       /* 0 to 69 bytes: malformed for a classic bus */
+        memset(f.data, (int)(rnd & 0xFFu), sizeof f.data);
+        if (tm_app_can_frame(&app, &f)) pushed++; else refused++;  /* one frame every 250 us */
+        tm_app_poll(&app);
+    }
+    CHECK(pushed + refused == 8000u && app.can.overrun == refused);
+    CHECK(app.c.rx_frames == pushed);
+    CHECK(app.c.can_not_logged > 0u);                                /* the stall made the flood exceed the log */
+    CHECK(app.q.dropped == 0u && !app.sparse);                       /* no record of the unit's own was lost */
+    CHECK(app.c.wheel_records >= 3u * 39u && app.c.wheel_records <= 3u * 40u);   /* one per channel every 50 ms */
+}
+
 void test_drivers(void);
 extern int g_drv_fail;
 
@@ -355,6 +392,7 @@ int main(void)
     test_reset();
     test_flashlog();
     test_app();
+    test_can_flood();
     test_drivers();
     printf("%d checks, %d failed\n", g_n, g_fail);
     return (g_fail || g_drv_fail) ? 1 : 0;

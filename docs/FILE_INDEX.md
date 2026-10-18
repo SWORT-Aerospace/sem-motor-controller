@@ -287,6 +287,11 @@ Paths are relative to the repository root. `__init__.py` files and `__pycache__/
 | `host/telematics/clocks.py` | Clock-domain models of the simulation (controller time, drifting telematics clock, GNSS PPS edges) and the estimator that maps telematics time to UTC with quality `pps`, `holdover` or `none`. |
 | `host/telematics/sensors.py` | Synthetic wheel Hall (counts per window), GNSS and IMU sensors of the legacy supervised demonstrations, with injectable wheel dropouts and GNSS outages. |
 | `host/telematics/mqtt_link.py` | Drop-in uplink over a real MQTT broker (paho-mqtt, QoS 1, bounded client buffer) that records hand-over and broker acknowledgement per sequence number. |
+| `host/telematics/evidence.py` | Evidence states (VALID, SOURCE_UNVERIFIED, OUT_OF_RANGE, TIMING_UNCERTAIN, STALE, MISSING, INVALID, UNSUPPORTED, UNKNOWN) from a measurement at a given time, with lineage; which signals a configuration supports; only VALID is admissible. |
+| `host/telematics/timing.py` | Receive timing per evidence stream: sequence gaps, duplicates, reordering, wrap, ambiguous silences, late arrivals, bursts, jitter, backwards receive time, latency variation, and the wait bound of a frame after a stall. |
+| `host/telematics/lineage.py` | Raw sources, parameters and shared paths (power, ground, bus, clock, recorder) of every value and derived quantity; independence of two witnesses with shared paths as caveats. |
+| `host/telematics/context.py` | Vehicle context (STARTUP, STOPPED, LAUNCH, CRUISE, COAST, UNKNOWN) from admissible evidence only; BRAKE and READY reported as not determinable; PROVISIONAL thresholds. |
+| `host/telematics/sim_session.py` | SIMULATION FIXTURE: one simulated drive with chosen faults, power cuts, CAN delays or stalls, storage stalls and link outages, logged by the receive-only node; used by the protocols' simulated pre-check and the evidence tests. |
 
 ### host/pit/
 
@@ -297,6 +302,17 @@ Paths are relative to the repository root. `__init__.py` files and `__pycache__/
 | `host/pit/shadow_replay.py` | Shadow replay of the frozen B1, R3v and CSIA2 monitors over one stored run, with run classification, input coverage, attribution episodes and insufficient-evidence notes; writes `report.md`, `report.json`, `timeline.csv` and has no command path. |
 | `host/pit/csia_replay.py` | Rebuilds the monitors' input samples from a run's decoded signals (shared with the shadow replay) and replays the frozen v1 CSIA adapter with host timing figures. |
 | `host/pit/energy.py` | Energy from valid, aligned V x I at the controller input and at the battery, with missing intervals, their causes and a bound; distance from wheel edges; the earlier energy per distance from the controller's counter; used by `tools/run_pit_replay.py` and the demonstration. |
+| `host/pit/queries.py` | Evidence queries: time-aligned signals with their states, intervals of missing, stale or invalid evidence, event windows with receipts and stream timing, pre/post statistics of admissible values. |
+| `host/pit/advisory.py` | ADVISORY energy for people: rolling Wh/km, energy by speed band, nominal remaining energy (48 V x 10 Ah, team-reported) and a cruise-band suggestion, each refusing a number without admissible evidence. |
+
+### host/assurance/
+
+| File | What it does |
+|---|---|
+| `host/assurance/witnesses.py` | Cross-domain witness relations (families A, B, D) with declared contexts, parameters, PROVISIONAL tolerances and candidate causes; results CONSISTENT, INCONSISTENT, INAPPLICABLE, INSUFFICIENT_EVIDENCE. |
+| `host/assurance/verdicts.py` | Advisory conclusions SUPPORTED, AMBIGUOUS, UNSUPPORTED; localization only with two independent agreeing witnesses; common cause (family C) supported only with direct disturbance evidence; receipts and their completeness check; no fault label. |
+| `host/assurance/review.py` | Shadow evidence review of one stored run: evidence per tick, context, relations, conclusions, receipts at every change, common-cause events from the log's own disturbance evidence. |
+| `host/assurance/csia_boundary.py` | The CSIA shadow boundary: only VALID evidence reaches the frozen CSIA adapter, no invented inputs, trust numbers withheld, output SUPPORTED, AMBIGUOUS or UNSUPPORTED. |
 
 ### host/telemetry_adapter/
 
@@ -383,6 +399,8 @@ Paths are relative to the repository root. Every parameter set in this directory
 |---|---|
 | `hardware/README.md` | Entry point to the hardware: the telematics BOM, then the deferred motor-controller draft (sheets, important files, what is confirmed and unresolved, checks, generated files, limitations). |
 | `hardware/telematics/bom.yaml` | Telematics bill of materials, configurations A and B: every line with quantity, price range, dated source and decision; `tools/telematics_bom.py` renders `docs/TELEMATICS_BOM.md`. |
+| `telematics/schema/telemetry_schema.yaml` | Canonical telemetry schema: sources with their shared paths, every signal's contract (unit, encoding, scaling, rate, timestamp source, freshness, invalid semantics, quality flag, lineage), evidence states, derived quantities, vehicle parameters, Hall semantics, contexts; the signal registry is built from it. |
+| `research/vehicle_validation/README.md` | Vehicle-validation protocols EXP-01 to EXP-04 (wheel-speed corruption, effort versus response, shared power disturbance, timing degradation) with ground truth, falsifiers, run sheet and negative-results policy; none run physically. |
 
 ### `hardware/bom/`
 
@@ -500,6 +518,12 @@ Paths are relative to the repository root. Every parameter set in this directory
 | `tools/telematics_bench.py` | Renders `telematics/firmware/BENCH.md` from `telematics/bench/bench.yaml` after checking it against the firmware sources, the BOM and the measured durations (`render --check`); `package` builds the bench package: images with SHA-256 manifest and revision, procedure, CONNECTIONS.csv, PARTS.csv, blank results form, `uart_capture.py`; `--rebuild` checks the images rebuild identically. |
 | `tools/uart_capture.py` | Console capture for the bench: a serial terminal (standard library, termios) that writes the bytes received to a file, sends typed or given commands, and stops on a text, a duration or end of input. |
 | `tools/telematics_storage.py` | Measures the log's seconds per slot with the firmware's own code in the host simulator for each record mix and writes the recording durations on internal flash and the NOR (`docs/generated/telematics_storage.md`); `--check` reports stale files. |
+| `tools/telematics_schema.py` | Checks `telematics/schema/telemetry_schema.yaml` against the protocol, the adapter, the firmware's record types and the registry hash, and renders `docs/TELEMETRY_SCHEMA.md`; `--check` reports a failed check or a stale page. |
+| `tools/run_evidence_review.py` | Runs the shadow evidence review on one run of a pit database and writes its JSON and Markdown summary; parameters the log lacks are UNSUPPORTED unless given with their source. |
+| `tools/run_vehicle_experiment.py` | Simulated pre-check of the vehicle-validation protocols EXP-01 to EXP-04: known disturbances through the whole chain, each protocol's signature, falsifier and limitations checked; SIMULATED. |
+| `tools/run_bench_chain.py` | The pulse-to-database chain against a known pulse train: in the firmware's host build (SIMULATED), or on a log read from the board with the generator's rate (BENCH); checks C1 to C7. |
+| `tools/pit_query.py` | Command line for the evidence queries (runs, aligned, gaps, events, window, prepost); a value that was not admissible prints as its state. |
+| `tools/claims.py` | Checks `docs/claims.yaml` (labels against tests, files and run records) and scans the telematics docs for overclaiming; renders `docs/CLAIMS.md`. |
 | `tools/telematics_bom.py` | Renders the telematics BOM and its totals from `hardware/telematics/bom.yaml`; `--check` reports a stale file. |
 | `tools/scope.py` | Renders `docs/scope.yaml` (module and test-suite classification) as `docs/generated/scope.md`; `--check` reports stale or unclassified files. |
 | `tools/run_host_demo.py` | End-to-end host demonstration of the controller core, telematics node model, local log, simulated uplink, pit storage, offline import and pit-side replays, with pass/fail checks. |
@@ -598,6 +622,13 @@ Paths are relative to the repository root. Every test runs on a host against syn
 | `tests/telematics/test_telematics_bom.py` | Telematics BOM: totals are sums of their own lines and options are in none, unknown prices stay unknown, no controller part and every line has a source, no assumed pack and the vehicle supply blocked, every bench sensor and storage part has its firmware driver, the page is current. |
 | `tests/telematics/test_telematics_bench.py` | Bench package: the procedure is current and consistent, validation catches drift from the firmware and the BOM, the steps say what the findings require (B6, E1, B7), the package's hashes, parts, connections and blank form, refusal of images from another revision, the console capture over a pseudo-terminal, real images rebuilt with identical hashes. |
 | `tests/telematics/test_energy_and_shadow_scope.py` | Shadow relationships without their inputs disabled and reported; a vehicle report ignores simulator fields; energy boundaries stated; frozen CSIA evaluation files unchanged and the R3v result kept. |
+| `tests/telematics/test_receive_only_boundary.py` | The receive-only boundary: no production telematics code reaches controller authority, opens a CAN socket or calls the frame encoder (with a planted negative control); no transmit API; adapters turn any frame into measurements only; the firmware CAN driver has no transmit function. |
+| `tests/telematics/test_evidence_model.py` | Schema consistency and versioning, evidence states, Hall missing versus zero, invalid temperature, stream timing (gap, duplicate, reorder, wrap, late, burst, wait bound, ambiguous silence, stale, missing), record time monotonicity, lineage, context. |
+| `tests/telematics/test_witnesses_and_verdicts.py` | Relation discipline (contexts, admission, timing, parameters), ambiguity and localization, common cause and exoneration, receipt completeness and the problems it detects, no fault labels. |
+| `tests/telematics/test_evidence_pipeline.py` | The chain on simulated sessions: evidence rows with raw bytes, complete receipts, data class never assumed, logging through a network outage, a storage stall as a recorder event, a CAN flood keeping the unit's own records, the protocols' simulated pre-check. |
+| `tests/telematics/test_pit_queries_advisory.py` | Pit queries and their command line, advisory energy labels and refusals, the host pulse-to-database chain, the CSIA boundary's gate. |
+| `tests/telematics/test_claims_and_docs.py` | The claims register (labels against evidence, physical labels refused without a run sheet), the overclaim scan, the README's boundary statement, the audit sections, the hardware open items, the protocols' ground truth and falsifiers with no physical record. |
+| `tests/hardware_required/test_bench_board.py` | HARDWARE_REQUIRED (skipped unless SEMMC_HARDWARE=1): a board's log through the pulse-to-database chain against the generator's rate. |
 
 ### tests/fault_injection/
 

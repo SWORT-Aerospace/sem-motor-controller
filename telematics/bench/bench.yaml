@@ -111,6 +111,8 @@ commands:
   export_programmer: "STM32_Programmer_CLI -c port=SWD -r 0x08100000 0x100000 dump.bin     # internal flash only (the NOR is not memory-mapped)"
   import: "python3 tools/telematics_import.py --uart-capture capture_B<n>.txt --db bench.sqlite --out bench/B<n> --wheel-circumference <m> --wheel-ppr 1 --source \"bench B<n>: generator\""
   status: "python3 tools/telematics_import.py --status-capture capture_B<n>.txt --out bench/B<n>"
+  chain: "python3 tools/run_bench_chain.py --uart-capture capture_B<n>.txt --pulse-hz <Hz> --circumference <m> --ppr 1 --out bench/B<n>_chain"
+  query: "python3 tools/pit_query.py --db bench/B<n>_chain/pit.sqlite gaps --run <run_id> --signal wheel.wheel_0.speed"
   never: "Do not mass-erase: on internal storage that also erases the log. ERASE YES on the console clears the log on purpose."
 
 steps:
@@ -162,7 +164,9 @@ steps:
       (PROVISIONAL: 1 us capture over 100 ms is 10 ppm; the LSE-trimmed timebase is expected at ppm level, the
       untrimmed MSI is not characterised here); distance = edges x 0.1 m; after the stop "no_evidence", never 0;
       wheel_1 and wheel_2 speed "invalid" ("suspect: ... disconnected") while wheel_0 ran.
-    record: [mean speed and its deviation, distance against edges, validity counts per channel, the speed plot]
+    record: [mean speed and its deviation, distance against edges, validity counts per channel, the speed plot,
+             the commands.chain result (C2 and C5 to C7 with --pulse-hz 100 --circumference 0.1) and the commands.query
+             listing (the stop shows as UNKNOWN, never as 0)]
   - id: B5
     title: Rates
     do: "1 Hz, 10 Hz, 1 kHz and 5 kHz into wheel_0, 20 s each; import with --wheel-circumference 0.01 (1 kHz reads 10 m/s)."

@@ -28,9 +28,21 @@ from tools import scope  # noqa: E402
 _SCOPE = scope.load()
 
 
+# Test kinds, besides the suite. `integration`: a test that builds firmware, runs a broker or simulates whole
+# sessions (CI job integration-tests); the rest are unit tests (CI job unit-tests). `hardware_required`: a test that
+# needs the board on the bench; skipped unless SEMMC_HARDWARE=1, never run in cloud CI.
+INTEGRATION_PATHS = ("tests/integration/", "tests/telematics/test_telematics_demo.py",
+                     "tests/telematics/test_evidence_pipeline.py", "tests/telematics/test_firmware_host.py",
+                     "tests/telematics/test_firmware_target.py", "tests/telematics/test_telematics_bench.py")
+INTEGRATION_FIXTURES = {"telematics_build", "mosquitto", "images", "experiments", "in_process"}
+
+
 def pytest_configure(config):
     for s, meaning in _SCOPE["suites"].items():
         config.addinivalue_line("markers", f"{s}: {meaning} (docs/scope.yaml)")
+    config.addinivalue_line("markers", "integration: builds firmware, runs a broker or simulates whole sessions")
+    config.addinivalue_line("markers", "hardware_required: HARDWARE_REQUIRED, needs the board on the bench "
+                                       "(SEMMC_HARDWARE=1); never run in cloud CI")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -40,6 +52,11 @@ def pytest_collection_modifyitems(config, items):
         if suite not in _SCOPE["suites"]:
             raise pytest.UsageError(f"{rel}: no suite in docs/scope.yaml")
         item.add_marker(getattr(pytest.mark, suite))
+        if rel.startswith(INTEGRATION_PATHS) or INTEGRATION_FIXTURES & set(getattr(item, "fixturenames", ())):
+            item.add_marker(pytest.mark.integration)
+        if item.get_closest_marker("hardware_required") and os.environ.get("SEMMC_HARDWARE") != "1":
+            item.add_marker(pytest.mark.skip(reason="HARDWARE_REQUIRED: needs the board on the bench; set "
+                                                    "SEMMC_HARDWARE=1 and the variables the test names"))
         needs = sorted(CONTROLLER_FIXTURES & set(getattr(item, "fixturenames", ())))
         if suite != "controller" and needs:
             raise pytest.UsageError(f"{item.nodeid} is in the {suite} suite but uses {needs} (the controller build): "

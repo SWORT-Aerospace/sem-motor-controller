@@ -1,0 +1,563 @@
+# Canonical telemetry source and field contract of the telematics unit (single source).
+#
+# host/telematics/signals.py builds its registry (unit, range, stale time) from the `signals` list below, so the
+# node, the adapters, the pit and the analyses read one definition. tools/telematics_schema.py --check validates
+# this file against the code it describes: the semmc fixture encodings against protocol/protocol.yaml, the STLG
+# record types against host/telematics/stlg.py and telematics/firmware/include/tm_stlg.h, the evidence-state
+# mapping against host/telematics/measurement.py, the lineage references against the sources, and the registry
+# hash against what live messages already carry. It renders docs/TELEMETRY_SCHEMA.md.
+#
+# Evidence labels: a value marked PROVISIONAL is an assumption to replace with a measurement or the controller
+# team's figure. Every controller signal is UNVERIFIED: the controller team has not stated its frames (T-CTRL-IF);
+# the semmc encodings are our simulation fixture.
+
+schema: sem.telematics.schema
+schema_version: 1
+registry_id: reg-cbac7dc42d28          # = host/telematics/signals.REGISTRY_ID; changes only with id, unit or range
+
+# ------------------------------------------------------------------------------------------------ evidence states
+# Every measurement maps to exactly one state. Only VALID is admissible as evidence for a cross-domain witness;
+# every other state is recorded with its reason and never turned into 0, false or a bare NaN.
+evidence_states:
+  VALID:             {admissible: true,  meaning: "decoded, in range, confirmed by the source's validity flag when it has one, fresh"}
+  SOURCE_UNVERIFIED: {admissible: false, meaning: "in range but not confirmed: the source's validity flag is missing or stale, or the value is a bound (distance after lost edges)"}
+  OUT_OF_RANGE:      {admissible: false, meaning: "outside the plausible range below: kept as evidence, value withheld"}
+  TIMING_UNCERTAIN:  {admissible: false, meaning: "a valid value whose time is not known well enough for the use at hand (uncertainty or source timing beyond the consumer's tolerance)"}
+  STALE:             {admissible: false, meaning: "the last value is older than its freshness threshold"}
+  MISSING:           {admissible: false, meaning: "a supported signal that has not been received (since start or in the interval)"}
+  INVALID:           {admissible: false, meaning: "the source marked it invalid (flag, sentinel), the frame failed its check, or a plausibility rule rejected it (suspect wheel channel)"}
+  UNSUPPORTED:       {admissible: false, meaning: "this configuration cannot provide the signal (no adapter mapping, hardware not fitted, parameter unknown)"}
+  UNKNOWN:           {admissible: false, meaning: "the source is present but the quantity cannot be determined (wheel with no edge: not standstill, not motion); an upper bound may be kept"}
+
+# measurement validity (host/telematics/measurement.py VALIDITY) and live-summary q -> state
+validity_to_state:
+  valid: VALID
+  unverified: SOURCE_UNVERIFIED
+  out_of_range: OUT_OF_RANGE
+  invalid: INVALID
+  decode_error: INVALID
+  no_evidence: UNKNOWN
+  stale: STALE
+  missing: MISSING
+
+# ------------------------------------------------------------------------------------------------ sources
+# A source is one physical origin of evidence and its path into the unit. `depends_on` lists the shared paths a
+# common-cause event could take (power, ground, bus, clock): two signals that share one are not independent
+# witnesses of each other for faults on that path. Every source reaches the log through the unit's own
+# acquisition and storage (`unit:recorder`), which the unit supply feeds.
+sources:
+  controller:
+    physical: "the external motor controller (another team's); its sensors and estimates are its own"
+    transport: "CAN broadcast received by FDCAN1 in bus-monitoring mode (tm_u575_can image, PD0/PD1); on the host, host/telematics/controller_adapter.py"
+    producer_timestamp: "none in the semmc fixture; a DBC gives one only if the mapping names a time signal"
+    receive_timestamp: "telematics receive time (FDCAN1 interrupt, TIM2 clock, 1 us)"
+    sequence: "semmc: 8-bit counter per message (byte 1); DBC: the counter signal the mapping names, its width in the mapping"
+    depends_on: [power:controller_supply, bus:vehicle_can, ground:vehicle_can_ground, unit:recorder]
+    status: UNVERIFIED
+  wheel:
+    physical: "Hall switch at each wheel, one edge per magnet pass (part, supply and magnet count open: B-DRIVETRAIN)"
+    transport: "TIM2 input capture CH4/CH3/CH1 on PA3/PA2/PA0, falling edge, 2 us filter, 1 us resolution, 64-bit time"
+    producer_timestamp: "the capture time of each edge (TIM2): a time taken at the unit's input pin"
+    receive_timestamp: "the record time (last edge, or the heartbeat time)"
+    sequence: "16-bit record counter per channel in every WHEEL_EDGES record"
+    depends_on: [power:sensor_supply, ground:unit_ground, clock:tim2, unit:recorder]
+    status: HOST-TESTED
+  imu:
+    physical: "ISM330DHCX (bench) or LSM6DSOX, 6-axis"
+    transport: "I2C1 PB8/PB9, polled at 100 Hz by the main loop"
+    producer_timestamp: "none: the read time in the TIM2 clock"
+    receive_timestamp: "the read time"
+    sequence: none
+    depends_on: [power:unit_3v3, ground:unit_ground, bus:i2c1, clock:tim2, unit:recorder]
+    status: HOST-TESTED
+  temp:
+    physical: "TMP117 at 0x48 to 0x4B on the bench; the vehicle's temperature sensors are open (docs/HARDWARE_OPEN_ITEMS.md); the analysis is sensor-agnostic"
+    transport: "I2C1, polled at 1 Hz per channel; TEMP records with a per-sample status"
+    producer_timestamp: "none: the read time"
+    receive_timestamp: "the read time"
+    sequence: none
+    depends_on: [power:unit_3v3, ground:unit_ground, bus:i2c1, clock:tim2, unit:recorder]
+    status: HOST-TESTED
+  gnss:
+    physical: "GNSS receiver with PPS (NEO-M9N class; not on the target yet)"
+    transport: "UART and a PPS capture input (host model only)"
+    producer_timestamp: "the receiver's fix time; PPS edges map the unit's clock to UTC"
+    receive_timestamp: "the read time"
+    sequence: none
+    depends_on: [power:unit_5v, ground:unit_ground, antenna:gnss, unit:recorder]
+    status: SIMULATED
+  batt:
+    physical: "battery-side voltage and current monitor (optional hardware, not chosen)"
+    transport: "host model only (STLG BATT)"
+    producer_timestamp: none
+    receive_timestamp: "the read time"
+    sequence: none
+    depends_on: [power:unit_3v3, ground:unit_ground, unit:recorder]
+    status: SIMULATED
+  unit:
+    physical: "the telematics unit itself: reset cause, boot count, counters"
+    transport: "BOOT and COUNTERS2 records"
+    producer_timestamp: "the unit's clock"
+    receive_timestamp: "the record time"
+    sequence: "boot count; STLG block sequence"
+    depends_on: [power:unit_supply, ground:unit_ground, unit:recorder]
+    status: HOST-TESTED
+
+# the unit's own power tree, for common-cause reasoning (bench: USB; vehicle supply blocked, T-VEH-PWR)
+shared_paths:
+  unit:recorder: {feeds: [], evidence_of_disturbance: ["the session ends without a final counters record", "the next session's reset cause is a brown-out or power-on reset", "the counters show records or frames the unit could not log (log_dropped_queue, log_dropped_storage, can_not_logged)"]}
+  power:unit_supply: {feeds: [power:unit_5v, power:unit_3v3, unit:recorder], evidence_of_disturbance: ["BOOT reset cause BOR or POR", "a gap in the unit's records"]}
+  power:unit_5v: {feeds: [], evidence_of_disturbance: ["GNSS records stop together with other 5 V loads"]}
+  power:unit_3v3: {feeds: [power:sensor_supply], evidence_of_disturbance: ["IMU and TMP117 reads fail together", "BOOT reset cause BOR"]}
+  power:sensor_supply: {feeds: [], evidence_of_disturbance: ["every wheel channel silent or stuck together"]}
+  bus:i2c1: {feeds: [], evidence_of_disturbance: ["IMU and TEMP reads fail together while wheel capture continues"]}
+  bus:vehicle_can: {feeds: [], evidence_of_disturbance: ["every controller message stops together", "FDCAN error counters rise"]}
+  clock:tim2: {feeds: [], evidence_of_disturbance: ["record time not monotonic", "status-line time jumps"]}
+
+# ------------------------------------------------------------------------------------------------ signals
+# For each signal: physical source, transport and encoding, scaling, expected rate, timestamp source, freshness
+# (stale_s), invalid, missing, startup and stale semantics, quality flag, measured or derived, and lineage (the
+# raw source items it comes from, and the parameters a derivation needs).
+signals:
+  # ---- external controller, through an adapter; every one may be absent (UNSUPPORTED when not mapped)
+  - id: ctrl.dc_voltage
+    unit: V
+    origin: controller
+    role: energy_essential
+    range: [0.0, 100.0]
+    stale_s: 0.3
+    description: "DC voltage at the controller input"
+    physical: "the controller's DC-link voltage measurement"
+    kind: measured
+    encoding: {semmc: {message: ctrl_motion, field: vbus_V, scale: 0.01, invalid_raw: 65535}, dbc: "per mapping file"}
+    expected_rate_hz: 100          # semmc fixture period; PROVISIONAL
+    timestamp: receive
+    quality_flag: "ctrl_validity.v_vbus (semmc); DBC: the mapping's validity signal"
+    lineage: {raw: [controller:dc_voltage_sensor]}
+  - id: ctrl.dc_current
+    unit: A
+    origin: controller
+    role: energy_essential
+    range: [-400.0, 400.0]
+    stale_s: 0.3
+    description: "DC current into the controller input, positive when the battery discharges"
+    physical: "the controller's DC current measurement"
+    kind: measured
+    encoding: {semmc: {message: ctrl_currents, field: ibatt_A, scale: 0.01, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: "ctrl_validity.v_ibatt (semmc)"
+    lineage: {raw: [controller:dc_current_sensor]}
+  - id: ctrl.dc_power
+    unit: W
+    origin: controller
+    role: diagnostic_optional
+    range: [-20000.0, 20000.0]
+    stale_s: 0.5
+    description: "DC input power as the controller computes it"
+    physical: "computed by the controller from its own voltage and current"
+    kind: derived
+    encoding: {semmc: {message: ctrl_energy, field: p_batt_W, scale: 1.0, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:dc_voltage_sensor, controller:dc_current_sensor], derivation: "the controller's own V x I"}
+  - id: ctrl.energy_counter
+    unit: J
+    origin: controller
+    role: diagnostic_optional
+    range: [-1.0e+9, 1.0e+9]
+    stale_s: 0.5
+    description: "energy integrated by the controller since its own reset"
+    physical: "integrated by the controller"
+    kind: derived
+    encoding: {semmc: {message: ctrl_energy, field: energy_J, scale: 0.1, invalid_raw: 4294967295}, dbc: "per mapping file"}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: "ctrl_energy_quality (integrated and gap time)"
+    lineage: {raw: [controller:dc_voltage_sensor, controller:dc_current_sensor], derivation: "the controller's integral of V x I"}
+  - id: ctrl.energy_integrated_time
+    unit: s
+    origin: controller
+    role: diagnostic_optional
+    range: [0.0, 1.0e+6]
+    stale_s: 0.5
+    description: "time the controller's energy counter has integrated"
+    physical: "the controller's counter"
+    kind: derived
+    encoding: {semmc: {message: ctrl_energy_quality, field: integrated_s, scale: 0.01, invalid_raw: 16777215}, dbc: "per mapping file"}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:energy_integrator]}
+  - id: ctrl.energy_gap_time
+    unit: s
+    origin: controller
+    role: diagnostic_optional
+    range: [0.0, 1.0e+6]
+    stale_s: 0.5
+    description: "time the controller's energy counter could not integrate"
+    physical: "the controller's counter"
+    kind: derived
+    encoding: {semmc: {message: ctrl_energy_quality, field: gap_s, scale: 0.01, invalid_raw: 16777215}, dbc: "per mapping file"}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:energy_integrator]}
+  - id: ctrl.motor_speed
+    unit: rad/s
+    origin: controller
+    role: diagnostic_optional
+    range: [-2000.0, 2000.0]
+    stale_s: 0.3
+    description: "mechanical rotor speed"
+    physical: "the controller's rotor speed estimate (Hall, encoder or sensorless: not stated)"
+    kind: measured
+    encoding: {semmc: {message: ctrl_motion, field: speed_mech_rad_s, scale: 0.05, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: "ctrl_validity.v_speed (semmc)"
+    lineage: {raw: [controller:rotor_position_sensor]}
+  - id: ctrl.phase_current_q
+    unit: A
+    origin: controller
+    role: diagnostic_optional
+    range: [-400.0, 400.0]
+    stale_s: 0.3
+    description: "q-axis phase current"
+    physical: "the controller's phase current measurement, transformed"
+    kind: derived
+    encoding: {semmc: {message: ctrl_motion, field: iq_A, scale: 0.01, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:phase_current_sensors, controller:rotor_position_sensor], derivation: "the controller's Park transform"}
+  - id: ctrl.phase_current_d
+    unit: A
+    origin: controller
+    role: diagnostic_optional
+    range: [-400.0, 400.0]
+    stale_s: 0.3
+    description: "d-axis phase current"
+    physical: "the controller's phase current measurement, transformed"
+    kind: derived
+    encoding: {semmc: {message: ctrl_currents, field: id_A, scale: 0.01, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:phase_current_sensors, controller:rotor_position_sensor], derivation: "the controller's Park transform"}
+  - id: ctrl.kcl_residual
+    unit: A
+    origin: controller
+    role: diagnostic_optional
+    range: [-50.0, 50.0]
+    stale_s: 0.3
+    description: "sum of the three measured phase currents"
+    physical: "the controller's three phase current measurements"
+    kind: derived
+    encoding: {semmc: {message: ctrl_currents, field: kcl_residual_A, scale: 0.1, invalid_raw: -128, available_flag: kcl_available}, dbc: "per mapping file"}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: "ctrl_currents.kcl_available (semmc): not available is INVALID"
+    lineage: {raw: [controller:phase_current_sensors], derivation: "ia + ib + ic"}
+  - id: ctrl.torque_reference
+    unit: N*m
+    origin: controller
+    role: diagnostic_optional
+    range: [-200.0, 200.0]
+    stale_s: 0.3
+    description: "torque the controller is applying as its reference"
+    physical: "the controller's internal reference (received only; never set by this unit)"
+    kind: derived
+    encoding: {semmc: {message: ctrl_cmd_trace, field: accepted_Nm, scale: 0.002, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 50
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:torque_reference], derivation: "the controller's own decision"}
+  - id: ctrl.fet_temp
+    unit: degC
+    origin: controller
+    role: diagnostic_optional
+    range: [-55.0, 200.0]
+    stale_s: 1.0
+    description: "power-stage temperature"
+    physical: "the controller's power-stage sensor"
+    kind: measured
+    encoding: {semmc: {message: ctrl_thermal, field: t_fet_degC, scale: 0.1, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: "ctrl_validity.v_t_fet (semmc)"
+    lineage: {raw: [controller:fet_temp_sensor]}
+  - id: ctrl.motor_temp
+    unit: degC
+    origin: controller
+    role: diagnostic_optional
+    range: [-55.0, 200.0]
+    stale_s: 1.0
+    description: "motor winding or case temperature"
+    physical: "the controller's motor temperature input"
+    kind: measured
+    encoding: {semmc: {message: ctrl_thermal, field: t_motor_degC, scale: 0.1, invalid_raw: -32768}, dbc: "per mapping file"}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: "ctrl_validity.v_t_motor (semmc)"
+    lineage: {raw: [controller:motor_temp_sensor]}
+  - id: ctrl.state
+    unit: "1"
+    origin: controller
+    role: diagnostic_optional
+    range: [0.0, 255.0]
+    stale_s: 0.5
+    description: "controller state code (meaning defined by the controller team)"
+    physical: "the controller's state machine"
+    kind: derived
+    encoding: {semmc: {message: ctrl_status, field: state}, dbc: "per mapping file"}
+    expected_rate_hz: 50
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:state_machine]}
+  - id: ctrl.fault_code
+    unit: "1"
+    origin: controller
+    role: diagnostic_optional
+    range: [0.0, 255.0]
+    stale_s: 3.0
+    description: "controller fault code (meaning defined by the controller team)"
+    physical: "the controller's fault record"
+    kind: derived
+    encoding: {semmc: {message: ctrl_fault, field: first_fault}, dbc: "per mapping file"}
+    expected_rate_hz: 1
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: [controller:state_machine]}
+  # ---- the unit's own sensors
+  - id: wheel.*.speed
+    unit: m/s
+    origin: telematics
+    role: motion
+    range: [0.0, 60.0]
+    stale_s: 0.3
+    description: "wheel speed from Hall-switch edge periods"
+    physical: "Hall switch edges at one wheel"
+    kind: derived
+    encoding: {stlg: {record: WHEEL_EDGES, fields: "channel u8, flags u8 (line, overrun, heartbeat), edges u16, span_us u32, total u32, record counter u16, lost u16"}}
+    expected_rate_hz: 20           # one record per channel every 50 ms (a heartbeat without edges)
+    timestamp: producer            # edge capture times; the sample time is the middle of the edge interval
+    quality_flag: "the plausibility state of the channel (hall section): suspect is INVALID"
+    lineage: {raw: ["wheel:edges"], parameters: [wheel.circumference_m, wheel.ppr], derivation: "n x pitch / dt over complete edge intervals"}
+  - id: wheel.*.distance
+    unit: m
+    origin: telematics
+    role: motion
+    range: [0.0, 1.0e+7]
+    stale_s: 1.0
+    description: "distance from counted Hall-switch edges since the unit started"
+    physical: "Hall switch edges at one wheel"
+    kind: derived
+    encoding: {stlg: {record: WHEEL_EDGES, fields: "total u32 (cumulative edges)"}}
+    expected_rate_hz: 20
+    timestamp: producer
+    quality_flag: "edges lost to overrun or a suspect period make it a lower bound (SOURCE_UNVERIFIED)"
+    lineage: {raw: ["wheel:edges"], parameters: [wheel.circumference_m, wheel.ppr], derivation: "pitch x total edges"}
+  - id: gnss.speed
+    unit: m/s
+    origin: telematics
+    role: motion
+    range: [0.0, 60.0]
+    stale_s: 0.5
+    description: "GNSS ground speed"
+    physical: "GNSS receiver"
+    kind: measured
+    encoding: {stlg: {record: GNSS, fields: "speed f32, speed accuracy f32, satellites u8, fix u8"}}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: "fix type and speed accuracy"
+    lineage: {raw: ["gnss:receiver"]}
+  - id: gnss.speed_acc
+    unit: m/s
+    origin: telematics
+    role: motion
+    range: [0.0, 100.0]
+    stale_s: 0.5
+    description: "GNSS speed accuracy estimate"
+    physical: "GNSS receiver"
+    kind: measured
+    encoding: {stlg: {record: GNSS, fields: "speed accuracy f32"}}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: ["gnss:receiver"]}
+  - id: gnss.num_sv
+    unit: "1"
+    origin: telematics
+    role: motion
+    range: [0.0, 255.0]
+    stale_s: 0.5
+    description: "satellites used in the fix"
+    physical: "GNSS receiver"
+    kind: measured
+    encoding: {stlg: {record: GNSS, fields: "satellites u8"}}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: ["gnss:receiver"]}
+  - id: imu.ax
+    unit: m/s^2
+    origin: telematics
+    role: motion
+    range: [-160.0, 160.0]
+    stale_s: 0.1
+    description: "longitudinal acceleration"
+    physical: "IMU accelerometer, the axis the mounting makes longitudinal (sensor x on the bench)"
+    kind: measured
+    encoding: {stlg: {record: IMU, fields: "ax f32, gz f32"}}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: ["imu:accelerometer"]}
+  - id: imu.gz
+    unit: rad/s
+    origin: telematics
+    role: motion
+    range: [-35.0, 35.0]
+    stale_s: 0.1
+    description: "yaw rate"
+    physical: "IMU gyroscope, the axis the mounting makes vertical"
+    kind: measured
+    encoding: {stlg: {record: IMU, fields: "gz f32"}}
+    expected_rate_hz: 100
+    timestamp: receive
+    quality_flag: none
+    lineage: {raw: ["imu:gyroscope"]}
+  - id: temp.*
+    unit: degC
+    origin: telematics
+    role: environment
+    range: [-55.0, 200.0]
+    stale_s: 3.0
+    description: "temperature probe"
+    physical: "the unit's temperature sensor on that channel (TMP117 on the bench)"
+    kind: measured
+    encoding: {stlg: {record: TEMP, fields: "channel u8, status u8 (0 ok, 1 CRC error, 2 timeout, 3 out of range, 4 bus error), centi-degC i16 (-32768 invalid)"}}
+    expected_rate_hz: 1
+    timestamp: receive
+    quality_flag: "the record's status byte: not 0 is INVALID"
+    lineage: {raw: ["temp:sensor"]}
+  - id: batt.voltage
+    unit: V
+    origin: telematics
+    role: energy_total
+    range: [0.0, 100.0]
+    stale_s: 0.3
+    description: "battery terminal voltage (battery-side monitor, optional hardware)"
+    physical: "battery-side monitor"
+    kind: measured
+    encoding: {stlg: {record: BATT, fields: "status u8, volts f32, amps f32"}}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: "the record's status byte"
+    lineage: {raw: ["batt:voltage_sense"]}
+  - id: batt.current
+    unit: A
+    origin: telematics
+    role: energy_total
+    range: [-400.0, 400.0]
+    stale_s: 0.3
+    description: "battery current, positive on discharge (battery-side monitor, optional hardware)"
+    physical: "battery-side monitor"
+    kind: measured
+    encoding: {stlg: {record: BATT, fields: "amps f32"}}
+    expected_rate_hz: 10
+    timestamp: receive
+    quality_flag: "the record's status byte"
+    lineage: {raw: ["batt:current_sense"]}
+
+# semantics shared by every signal (the per-signal fields above refine them)
+semantics:
+  startup: "MISSING until the first sample; never a default value"
+  stale: "after stale_s without a sample the live value is withheld and the state is STALE"
+  missing: "a supported signal not received: MISSING, value null; never 0"
+  unsupported: "a signal the configuration cannot provide (no adapter mapping, hardware not fitted, a parameter unknown): UNSUPPORTED, never MISSING"
+  invalid: "INVALID with the reason (flag, sentinel, check, plausibility rule); value withheld"
+
+# derived quantities computed at the pit or by witnesses (not live signals); their lineage makes independence
+# explicit: two values are independent witnesses only if their raw sources and shared paths differ
+derived:
+  - id: power.controller_input
+    unit: W
+    derivation: "ctrl.dc_voltage x ctrl.dc_current, aligned within 20 ms (host/pit/energy.py)"
+    lineage: {raw: [controller:dc_voltage_sensor, controller:dc_current_sensor]}
+  - id: power.battery
+    unit: W
+    derivation: "batt.voltage x batt.current"
+    lineage: {raw: ["batt:voltage_sense", "batt:current_sense"]}
+  - id: speed.from_motor
+    unit: m/s
+    derivation: "ctrl.motor_speed x wheel radius / gear ratio, only while the drivetrain transmits torque (freewheel)"
+    lineage: {raw: [controller:rotor_position_sensor], parameters: [drivetrain.gear_ratio, wheel.circumference_m]}
+  - id: accel.from_wheel
+    unit: m/s^2
+    derivation: "difference of the median admissible wheel speed over about 1 s, timed at the middle of that window"
+    lineage: {raw: ["wheel:edges"], parameters: [wheel.circumference_m, wheel.ppr]}
+  - id: accel.from_imu
+    unit: m/s^2
+    derivation: "mean of the admissible imu.ax samples over the same window as accel.from_wheel"
+    lineage: {raw: ["imu:accelerometer"]}
+  - id: energy.per_distance
+    unit: Wh/km
+    derivation: "controller-input energy over wheel distance"
+    lineage: {raw: [controller:dc_voltage_sensor, controller:dc_current_sensor, "wheel:edges"], parameters: [wheel.circumference_m, wheel.ppr]}
+
+# vehicle parameters that derivations need; UNSUPPORTED until stated with a source
+parameters:
+  wheel.circumference_m: {source: "B-DRIVETRAIN (vehicle team)", status: unknown}
+  wheel.ppr: {source: "magnets per wheel (vehicle team)", status: unknown}
+  drivetrain.gear_ratio: {source: "B-DRIVETRAIN", status: unknown}
+  drivetrain.freewheel: {source: "B-DRIVETRAIN", status: unknown}
+  vehicle.coast_decel_mps2: {source: "a coast-down test on the vehicle (research/vehicle_validation/EXP-02)", status: unknown}
+
+# ------------------------------------------------------------------------------------------------ Hall input
+hall:
+  valid_pulse: "a falling edge that passes the 2 us input filter (TIM2 ICxF = 8 samples at 4 MHz) and is captured with its time"
+  impossible_interval: "an edge interval whose speed (pitch / interval) is above the plausible range (60 m/s): OUT_OF_RANGE, value withheld; edges closer than the filter are not captured"
+  zero_speed: "never concluded from the Hall channel alone: a held line cannot prove standstill (magnet under the sensor, short, failed sensor); standstill needs a source that can measure zero (vehicle context STOPPED)"
+  no_edge: "the channel reports but no edge came for longer than 3 periods: UNKNOWN (no_evidence) with the bound v < pitch / dt, which holds only for a working sensor"
+  missing_sensor: "a channel that never produced an edge: state N; its speed is UNKNOWN while no other channel moves, INVALID once another moves (suspect)"
+  stale_sensor: "records stop arriving (record counter gap, or no record within stale_s): STALE; lost records are counted"
+  disconnected_or_stuck_inactive: "silent for 8 periods and 1 s of a moving channel with the line at its inactive level: state I, speed INVALID, later distance a lower bound"
+  stuck_active: "the same with the line at its active level: state A (short to ground, failed sensor, magnet stuck)"
+  rule: "the same integer rule in telematics/firmware/src/tm_wheel.c and host/telematics/wheel.py (tests: test_wheel_node_pit.py, test_firmware_host.py)"
+
+# ------------------------------------------------------------------------------------------------ contexts
+# Vehicle context from the available signals (host/telematics/context.py). A context the signals cannot show is
+# not guessed: it is reported as not determinable with the reason. Thresholds are PROVISIONAL.
+contexts:
+  STARTUP: {needs: [], rule: "the first seconds after boot, or until any motion evidence is VALID"}
+  STOPPED: {needs: [gnss.speed], alternatively: [ctrl.motor_speed], rule: "a source that can measure zero says |v| below the stop threshold; the Hall channel alone never shows STOPPED"}
+  LAUNCH: {needs: [any_speed, propulsion_effort], rule: "speed below the launch ceiling and rising, with propulsion effort"}
+  CRUISE: {needs: [any_speed], rule: "speed above the low-speed floor and |dv/dt| below the cruise band"}
+  COAST: {needs: [any_speed, propulsion_effort], rule: "speed above the floor, no propulsion effort, decelerating"}
+  BRAKE: {needs: [brake_signal], rule: "not determinable: no brake signal is received; deceleration alone cannot tell braking from grade or drag"}
+  READY: {needs: [ctrl.state with the controller team's state meanings], rule: "not determinable until the controller team defines its state codes"}
+
+# ------------------------------------------------------------------------------------------------ evidence record
+# One canonical record per assessed value (pit view `evidence_records`, host/telematics/evidence.py `Evidence`).
+evidence_record:
+  fields:
+    run_id: "session (unit and boot)"
+    record_id: "local record identifier (measurements table)"
+    t_rx_us: "receive or capture time, telematics clock"
+    t_sample_us: "sample time when the source gives one, else null"
+    t_unc_us: "bound on the timestamp error, or null"
+    source: "source id (sources above)"
+    provenance: "adapter or driver, message and field"
+    signal: "registry signal"
+    raw: "the raw field or record as logged (hex), so the conversion can be checked"
+    value: "engineering value in the registry unit, or null"
+    unit: "registry unit"
+    state: "evidence state"
+    reason: "why the state is not VALID, or null"
+    seq: "source sequence when the source has one"
+    age_us: "age at assessment"
+    context: "vehicle context at the sample time"
+    schema_version: "this file's schema_version"

@@ -59,6 +59,7 @@ static void start(uint32_t reset_flags, const char *cause)
     tm_app_info_t info = {.unit_id = "HOSTSIM-000000000000000000000000",
                           .run_prefix = g_is_nor ? "HOSTSIM-000000000000000000000000-NOR" : 0,
                           .firmware = "tm_hostsim (portable application on the host)",
+                          .kind = "HOST SIMULATION - the portable firmware code on a computer; not hardware",
                           .clock_source = "simulated, exact",
                           .storage = g_is_nor ? "RAM model of a W25Q NOR on SPI1" : "RAM model of internal flash bank 2",
                           .reset_flags = reset_flags, .reset_cause = cause, .can_enabled = true,

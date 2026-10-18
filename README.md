@@ -4,7 +4,9 @@ Telematics for our Shell Eco-marathon battery-electric vehicle: the unit that me
 
 **Scope (v0.7).** The motor controller is built by another team. This repository's deliverable is the telematics unit and the pit software. Our earlier motor-controller work (controller core, STM32G474 port, power-stage schematic) is kept as deferred controller development and is not on the telematics path ([`docs/scope.yaml`](docs/scope.yaml), [`docs/generated/scope.md`](docs/generated/scope.md)).
 
-**The unit only listens.** It sends nothing to the controller: no torque request, no arming, no fault reset, no configuration change, and it takes no part in protection or precharge. Optimisation is offline analysis or advice to the driver; there is no automatic speed control.
+**This repository implements vehicle telemetry and evidence analysis. It has no propulsion authority. CSIA integration is shadow/advisory only.**
+
+**The unit only listens.** It sends nothing to the controller: no torque request, no arming, no fault reset, no configuration change, and it takes no part in protection or precharge. Optimisation is offline analysis or advice to the driver; there is no automatic speed control. The boundary is enforced by tests, not only by convention ([`tests/telematics/test_receive_only_boundary.py`](tests/telematics/test_receive_only_boundary.py)).
 
 New to the project: read section 1, then pick the next step in section 6. Team workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -35,7 +37,24 @@ flowchart LR
 
 The arrow from the controller is the only connection to it, and it points one way. What crosses it is whatever the controller already broadcasts; what we ask the controller team for is in [`docs/CONTROLLER_INTERFACE_REQUEST.md`](docs/CONTROLLER_INTERFACE_REQUEST.md). Until they answer, our own CAN message set (`semmc`, [`protocol/`](protocol/README.md)) is a simulation fixture for tests, not an interface anyone has agreed to.
 
-Every value becomes a measurement with its source, signal identity and unit, receive time, sample time when the source gives one (never invented), timestamp uncertainty, the source's own sequence counter when it has one, validity and provenance ([`host/telematics/measurement.py`](host/telematics/measurement.py), [`host/telematics/signals.py`](host/telematics/signals.py)). A missing or stale value is reported as missing or stale, never as zero.
+Every value becomes a measurement with its source, signal identity and unit, receive time, sample time when the source gives one (never invented), timestamp uncertainty, the source's own sequence counter when it has one, validity and provenance ([`host/telematics/measurement.py`](host/telematics/measurement.py)). A missing or stale value is reported as missing or stale, never as zero.
+
+### Evidence, not just data
+
+```text
+evidence producers        controller broadcast, wheel edges, IMU, temperature, GNSS
+  -> qualified evidence   one state per value; only VALID is admissible
+  -> vehicle context      STARTUP, STOPPED, LAUNCH, CRUISE, COAST, UNKNOWN (BRAKE, READY: not determinable)
+  -> witnesses            cross-domain relations, each only in its declared contexts
+  -> advisory output      SUPPORTED, AMBIGUOUS, UNSUPPORTED, each with a receipt; nothing reaches the controller
+```
+
+* **One contract per signal** ([`telematics/schema/telemetry_schema.yaml`](telematics/schema/telemetry_schema.yaml), page [`docs/TELEMETRY_SCHEMA.md`](docs/TELEMETRY_SCHEMA.md)): physical source, transport, unit, encoding and scaling, expected rate, timestamp source, freshness, invalid and startup semantics, quality flag, lineage, measured or derived. The signal registry is built from it and `tools/telematics_schema.py --check` holds it to the protocol, the adapter and the firmware's records.
+* **Evidence states** ([`host/telematics/evidence.py`](host/telematics/evidence.py)): VALID, SOURCE_UNVERIFIED, OUT_OF_RANGE, TIMING_UNCERTAIN, STALE, MISSING, INVALID, UNSUPPORTED, UNKNOWN. A wheel without edges is UNKNOWN with an upper bound, never 0 m/s.
+* **Timing per stream** ([`timing.py`](host/telematics/timing.py)): gaps, duplicates, reordering, wrap, late arrivals, bursts, and a frame's wait bound after a stall, so a delayed value is TIMING_UNCERTAIN instead of compared as fresh.
+* **Lineage** ([`lineage.py`](host/telematics/lineage.py)): which raw sources, parameters and shared paths (power, ground, bus, clock, recorder) a value depends on. Two values from one sensor are one witness.
+* **Witnesses and verdicts** ([`host/assurance/`](host/assurance/__init__.py)): wheel against GNSS, wheel pairs, motor through the drivetrain against the wheel, IMU against the wheel derivative, effort against response, thermal rates, and common cause across sources. An inconsistency is AMBIGUOUS with its candidate causes; no conclusion names a fault; a common cause is SUPPORTED only with direct evidence of a disturbance. Every conclusion has a receipt that answers "why did the system say this?" from the logged evidence (`tools/run_evidence_review.py`).
+* **Claims** carry a label: SIMULATED, HOST-TESTED, BENCH-TESTED, HIL-TESTED or VEHICLE-TESTED ([`docs/CLAIMS.md`](docs/CLAIMS.md)). Today nothing is above HOST-TESTED. The bench and vehicle protocols that would raise them are in [`research/vehicle_validation/`](research/vehicle_validation/README.md), with independent ground truth and falsification criteria, and a simulated pre-check (`tools/run_vehicle_experiment.py`).
 
 ## 2. Status
 
@@ -45,7 +64,8 @@ Every value becomes a measurement with its source, signal identity and unit, rec
 | Firmware for the NUCLEO-U575ZI-Q: wheel capture (1 µs, 64-bit across timer overflow), no edge never read as 0, stuck or disconnected sensors flagged against the other wheels, bounded queue, STLG log on a W25Q NOR (internal flash when none answers) with sparse logging once only a reserve is left, restart reasons, counters; FDCAN1 receive-only in bus-monitoring mode; IMU and TMP117 on I2C | portable code: unit tests under sanitizers, byte-for-byte equal to the Python reference; images link and their structure is checked ([`telematics/firmware/`](telematics/firmware/README.md)) | the host simulator runs the firmware's own code against scripted inputs | **no: never flashed; no connection bench-verified** |
 | Log import, pit validation (`sem.telemetry.v4`), SQLite with idempotent re-import, speed and distance from edge timing, energy from valid aligned V x I at two boundaries, data-quality report | yes ([`host/pit/`](host/README.md), [`tools/telematics_import.py`](tools/telematics_import.py)) | | no vehicle data yet |
 | End-to-end demonstration: controller silence, invalid frames, a missing signal, a storage stall, a broker outage, a telematics restart | 9 checks pass through a real local Mosquitto broker ([`docs/generated/telematics_demo/summary.md`](docs/generated/telematics_demo/summary.md)) | all inputs simulated | no |
-| Shadow-mode monitors R3v and CSIA2 | yes, on pit data, with relationships disabled when an input is missing | | no |
+| Evidence model: schema, states, stream timing, lineage, context; shadow evidence review with witnesses, verdicts and receipts; pit queries; advisory energy | yes ([`host/telematics/`](host/README.md), [`host/assurance/`](host/assurance/__init__.py), [`host/pit/`](host/README.md)) | the four vehicle-validation protocols pass their simulated pre-check | no |
+| Shadow-mode monitors R3v and CSIA2; CSIA boundary (only VALID evidence in, trust numbers withheld, advisory verdicts out) | yes, on pit data, with relationships disabled when an input is missing | | no |
 | GNSS + PPS, LTE modem, on-target uplink | host model only | | no |
 
 **Bench-tested:** nothing yet. The first physical test is the bench package of section 6, step 2.
@@ -65,6 +85,12 @@ cmake -S telematics/firmware -B build-u575 -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRe
 cmake --build build-u575                                      # tm_u575.elf/.bin/.hex and tm_u575_can.*
 python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild   # bench package
 python3 tools/telematics_import.py dump.bin --db pit.sqlite --out build/bench_import   # a log read from the board
+python3 tools/telematics_schema.py --check                    # the signal contract against the code
+python3 tools/run_evidence_review.py --db pit.sqlite --run <run_id> --out build/evidence_review   # shadow review
+python3 tools/pit_query.py --db pit.sqlite gaps --run <run_id> --signal ctrl.dc_voltage           # evidence queries
+python3 tools/run_bench_chain.py --out build/bench_chain       # pulse -> capture -> log -> decoder -> DB -> query
+python3 tools/run_vehicle_experiment.py --out build/vehicle_experiments   # protocols' simulated pre-check
+python3 tools/claims.py --check                                # every claim's label against its evidence
 ```
 
 Flashing and reading the log back: [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) section 5 (commands) and the bench package it builds (section 2). The deferred controller work has its own suite and CI job (`python3 -m pytest -m controller`, [`firmware/README.md`](firmware/README.md)); the legacy supervised simulations run only with `--legacy-supervised`.
@@ -97,7 +123,7 @@ Every row is taken from ST's board files and is **not verified on a board**; lev
 ## 6. Next steps (critical path)
 
 1. **Interface agreement and telemetry hardware selection.** Send [`docs/CONTROLLER_INTERFACE_REQUEST.md`](docs/CONTROLLER_INTERFACE_REQUEST.md) to the controller team; quote the bench parts; the vehicle supply waits for the battery's maximum voltage.
-2. **Embedded acquisition and local log.** The next physical test is the bench package (`python3 tools/telematics_bench.py package`, also a CI artifact): steps B0 to B12 of [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md), from flashing `tm_u575.bin` and a 100 Hz square wave on PA3 to the stuck-sensor checks (B6), 75 min across the timer overflow on the NOR (B7) and CAN receive (B11), each written on the package's blank results form.
+2. **Embedded acquisition and local log.** The next physical test is the bench package (`python3 tools/telematics_bench.py package`, also a CI artifact): steps B0 to B12 of [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md), from flashing `tm_u575.bin` and a 100 Hz square wave on PA3 to the stuck-sensor checks (B6), 75 min across the timer overflow on the NOR (B7) and CAN receive (B11), each written on the package's blank results form. The log read back after B3 goes through the whole pulse-to-database chain with the generator's rate as ground truth: `python3 tools/run_bench_chain.py --dump dump.bin --pulse-hz 100`.
 3. **Bench integration.** The CAN receive image against a USB-CAN adapter, then the controller team's recording through the DBC adapter, then the electrical checks E1 to E6.
 4. **Remote uplink.** The modem on the target (configuration B).
 5. **Vehicle data and analysis.** Energy at both boundaries, coast-down, the shadow monitors on measured data.
@@ -106,4 +132,4 @@ Controller items (power-stage parts, precharge, footprints, the current loop) do
 
 ## Documentation
 
-Index of every document, with current and historical ones labelled: [`docs/README.md`](docs/README.md). Interfaces: [`docs/ICD.md`](docs/ICD.md) (the telematics unit's interfaces), [`docs/TELEMETRY_INTEGRATION.md`](docs/TELEMETRY_INTEGRATION.md) (signals, energy, shadow mode), [`docs/TELEMETRY_EMBEDDED_PORT.md`](docs/TELEMETRY_EMBEDDED_PORT.md) (firmware status by function). Energy methods and the worked example: [`docs/ENERGY_METHODS.md`](docs/ENERGY_METHODS.md). Verification record: [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md). All files by folder: [`docs/FILE_INDEX.md`](docs/FILE_INDEX.md).
+Index of every document, with current and historical ones labelled: [`docs/README.md`](docs/README.md). Where the repository stands: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md); open hardware items: [`docs/HARDWARE_OPEN_ITEMS.md`](docs/HARDWARE_OPEN_ITEMS.md); claims and their labels: [`docs/CLAIMS.md`](docs/CLAIMS.md). Interfaces: [`docs/ICD.md`](docs/ICD.md) (the telematics unit's interfaces), [`docs/TELEMETRY_INTEGRATION.md`](docs/TELEMETRY_INTEGRATION.md) (signals, energy, shadow mode), [`docs/TELEMETRY_EMBEDDED_PORT.md`](docs/TELEMETRY_EMBEDDED_PORT.md) (firmware status by function). Energy methods and the worked example: [`docs/ENERGY_METHODS.md`](docs/ENERGY_METHODS.md). Verification record: [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md). All files by folder: [`docs/FILE_INDEX.md`](docs/FILE_INDEX.md).

@@ -10,7 +10,9 @@ Tasks, in priority order, as the firmware (telematics/firmware) has them:
   1. Receive (interrupt): every CAN frame is timestamped in the telematics clock and queued for the log
      as raw bytes (STLG CAN2), then decoded by the controller adapter into measurements for the live
      summary; every wheel edge is timestamped by the capture timer. The log queue is bounded: when it is
-     full the record is dropped and counted. Receive never waits.
+     full the record is dropped and counted. CAN records may not take its last `log_queue_own_reserve`
+     slots, so a bus flood cannot push the unit's own records out (frames beyond it: can_not_logged).
+     Receive never waits.
   2. Record task, every `wheel_record_period_s`: one WHEEL_EDGES record per channel (a heartbeat when the
      channel had no edge), so silence is logged.
   3. Log writer: moves queued records into STLG blocks at a bounded rate; a storage stall (injected)
@@ -47,6 +49,8 @@ CONTROLLER_LIVE = ("ctrl.dc_voltage", "ctrl.dc_current", "ctrl.dc_power", "ctrl.
 @dataclasses.dataclass
 class NodeConfig:
     log_queue_capacity: int = 512        # records waiting for the log writer
+    log_queue_own_reserve: int = 64      # slots CAN records may not take, at most 1/8 of the queue (the firmware
+                                         # keeps TM_QUEUE_OWN_RESERVE = 32 of 256)
     log_drain_per_s: float = 4000.0      # records per second the writer moves to storage
     storage_bytes: int = 16 * 1024 * 1024  # SPI NOR flash of the telematics bill of materials (16 MB)
     uplink_period_s: float = 0.5         # 2 Hz
@@ -102,7 +106,7 @@ class TelematicsNode:
                                  "companion_frames_seen", "log_records", "log_dropped_queue", "log_dropped_storage",
                                  "queue_high_water", "uplink_sent", "uplink_dropped", "uplink_queue_high_water",
                                  "wheel_records", "wheel_edges_lost", "storage_stall_events",
-                                 "wheel_suspect_active", "wheel_suspect_inactive")}
+                                 "wheel_suspect_active", "wheel_suspect_inactive", "can_not_logged")}
         self.c["log_queue_capacity"] = cfg.log_queue_capacity
         self.c["uplink_queue_capacity"] = cfg.uplink_queue_capacity
         self.drain_credit = 0.0
@@ -149,7 +153,11 @@ class TelematicsNode:
     def on_can(self, t_true: float, can_id: int, data: bytes, extended: bool = False, fd: bool = False) -> None:
         t = self.t_us(t_true)
         self.c["rx_frames"] += 1
-        self._enqueue_us(t, stlg.CAN2, stlg.body_can2(can_id, data, extended, fd))   # raw evidence first
+        if len(self.q) >= self.cfg.log_queue_capacity - min(self.cfg.log_queue_own_reserve,
+                                                             self.cfg.log_queue_capacity // 8):
+            self.c["can_not_logged"] += 1         # the rest of the queue is kept for the unit's own records
+        else:
+            self._enqueue_us(t, stlg.CAN2, stlg.body_can2(can_id, data, extended, fd))   # raw evidence first
         res = self.adapter.decode(t, Frame(can_id, bytes(data), extended, fd))
         self.c["frames_unknown" if res.kind == "unknown_id" else "frames_" + res.kind] += 1
         self.c["companion_frames_seen"] = getattr(self.adapter, "companion_frames", 0)

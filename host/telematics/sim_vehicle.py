@@ -14,7 +14,8 @@ What it produces, all in controller ("true") time:
 
 Faults the demonstration injects (`Faults`): controller silence, corrupted frames (bad CRC), a message that
 stops (a missing signal), a validity flag cleared, a wheel sensor disconnected, a wheel signal shorted to
-ground, a GNSS outage.
+ground, a GNSS outage. For the simulated pre-checks of the vehicle-validation protocols
+(research/vehicle_validation/): a wheel channel with a scaled edge rate, an extra drag force, an IMU offset.
 """
 from __future__ import annotations
 
@@ -41,6 +42,11 @@ class Faults:
     wheel_disconnect: tuple = ()    # ((channel, t0, t1), ...): no edges, line idle (pulled up)
     wheel_stuck_low: tuple = ()     # ((channel, t0, t1), ...): signal shorted to ground: no edges, line low
     gnss_outage: tuple = ()         # ((t0, t1), ...)
+    wheel_scale: tuple = ()         # ((channel, t0, t1, factor), ...): edges at factor x the true rate (a wrong
+                                    # circumference, extra magnets or noise edges): plausible but wrong speed
+    extra_drag: tuple = ()          # ((t0, t1, newtons), ...): a real load the driver model does not know of (a
+                                    # dragging brake): the vehicle slows although propulsion power is applied
+    imu_offset: tuple = ()          # ((t0, t1, m/s^2), ...): the IMU's longitudinal axis reads off by this much
 
 
 def _in(t, windows) -> bool:
@@ -110,7 +116,8 @@ class VehicleSim:
         f_res = resistive_force(self.p, self.v) if self.v > 0 else 0.0
         a_cmd = max(-0.4, min(0.6, 0.8 * (target - self.v)))
         f_trac = max(0.0, self.p.mass_kg * a_cmd + f_res) if target > 0 else 0.0   # no regeneration
-        a = (f_trac - f_res) / self.p.mass_kg if self.v > 0 or f_trac > f_res else 0.0
+        f_extra = sum(w[2] for w in self.f.extra_drag if w[0] <= t < w[1]) if self.v > 0 else 0.0
+        a = (f_trac - f_res - f_extra) / self.p.mass_kg if self.v > 0 or f_trac > f_res + f_extra else 0.0
         if target == 0.0 and self.v > 0:
             a = -0.6                                                              # driver brakes
         v_new = max(0.0, self.v + a * dt)
@@ -144,10 +151,12 @@ class VehicleSim:
         out = []
         for ch in range(c.wheel_channels):
             d0 = self.wheel_d[ch]
-            self.wheel_d[ch] = d0 + d_step
+            k = next((w[3] for w in self.f.wheel_scale if w[0] == ch and w[1] <= t < w[2]), 1.0)
+            step = d_step * k
+            self.wheel_d[ch] = d0 + step
             while (self.wheel_k[ch] + 1) * pitch <= self.wheel_d[ch]:
                 self.wheel_k[ch] += 1
-                frac = ((self.wheel_k[ch] * pitch) - d0) / d_step if d_step > 0 else 1.0
+                frac = ((self.wheel_k[ch] * pitch) - d0) / step if step > 0 else 1.0
                 te = t - dt + frac * dt
                 if not any(w[0] == ch and w[1] <= te < w[2] for w in self.f.wheel_disconnect + self.f.wheel_stuck_low):
                     out.append((te, ch))
@@ -219,7 +228,8 @@ class VehicleSim:
                 out.append(("gnss", (max(0.0, self.v + self.rng.normal(0, 0.05)), 0.08, 12, True)))
             self.next_gnss += 0.1
         while self.next_imu <= t + 1e-9:
-            out.append(("imu", (self.ax + self.rng.normal(0, 0.05), self.rng.normal(0, 0.005))))
+            off = sum(w[2] for w in self.f.imu_offset if w[0] <= self.next_imu < w[1])
+            out.append(("imu", (self.ax + off + self.rng.normal(0, 0.05), self.rng.normal(0, 0.005))))
             self.next_imu += 0.01
         while self.next_temp <= t + 1e-9:
             for ch, base in enumerate((24.0 + 0.002 * self.e_batt_J / 100, 24.0 + (self.t_motor - 25.0) * 0.6, 24.0)):

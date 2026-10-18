@@ -23,8 +23,9 @@ enum {
     TM_CNT_WHEEL_SUSPECT_ACTIVE = 24,     /* episodes: a channel became suspect with its line active */
     TM_CNT_WHEEL_SUSPECT_INACTIVE = 25,   /* episodes: suspect with its line inactive (or disconnected) */
     TM_CNT_LOG_THINNED = 26,              /* records not logged on purpose in sparse logging */
+    TM_CNT_CAN_NOT_LOGGED = 27,           /* frames received but not logged: the queue's own-record reserve was reached */
 };
-#define TM_CNT_ITEMS 17u                  /* counters in one COUNTERS2 record (tm_app.c) */
+#define TM_CNT_ITEMS 18u                  /* counters in one COUNTERS2 record (tm_app.c) */
 
 typedef struct {
     uint32_t rx_frames;
@@ -43,6 +44,7 @@ typedef struct {
     uint32_t wheel_suspect_active;
     uint32_t wheel_suspect_inactive;
     uint32_t log_thinned;
+    uint32_t can_not_logged;
 } tm_counters_t;
 
 #endif

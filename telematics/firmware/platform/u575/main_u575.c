@@ -208,6 +208,8 @@ int main(void)
                         .storage = g_log};
     tm_app_info_t info = {.unit_id = uid, .run_prefix = nor_ok ? uid_nor : uid,
                           .firmware = (TM_ENABLE_CAN ? "tm_u575_can " TM_GIT_REV : "tm_u575 " TM_GIT_REV),
+                          .kind = "BENCH - telematics firmware on a NUCLEO-U575ZI-Q; not a vehicle run unless the "
+                                  "bench record says so",
                           .clock_source = clock, .storage = store,
                           .reset_flags = g_board.reset_flags, .reset_cause = cause, .can_enabled = TM_ENABLE_CAN,
                           .wheel_circumference_mm = 0u, .wheel_ppr = 0u, .wheel_active_high = false,

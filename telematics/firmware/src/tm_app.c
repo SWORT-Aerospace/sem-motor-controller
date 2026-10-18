@@ -32,6 +32,7 @@ static void counters_body(const tm_counters_t *c, uint8_t *out, uint32_t *len)
         {TM_CNT_WHEEL_SUSPECT_ACTIVE, c->wheel_suspect_active},
         {TM_CNT_WHEEL_SUSPECT_INACTIVE, c->wheel_suspect_inactive},
         {TM_CNT_LOG_THINNED, c->log_thinned},
+        {TM_CNT_CAN_NOT_LOGGED, c->can_not_logged},
     };
     const uint32_t n = sizeof items / sizeof items[0];
     _Static_assert(sizeof items / sizeof items[0] == TM_CNT_ITEMS, "TM_CNT_ITEMS out of date");
@@ -87,13 +88,15 @@ void tm_app_init(tm_app_t *app, const tm_platform_t *pf, const tm_app_info_t *in
         app->meta, sizeof app->meta,
         "{\"boot\":%lu,\"clock\":{\"domain\":\"telematics\",\"source\":\"%s\",\"unit\":\"us\",\"utc_from\":\"none: no GNSS "
         "in this image\"},\"controller_adapter\":{\"id\":\"%s\"},\"firmware\":\"%s\",\"format\":{\"block_payload_bytes\":%u,"
-        "\"name\":\"STLG\",\"slot_bytes\":%u,\"version\":1},\"kind\":\"BENCH - telematics firmware on a NUCLEO-U575ZI-Q; "
-        "not a vehicle run unless the bench record says so\",\"reset\":{\"cause\":\"%s\",\"flags\":%lu},\"run_id\":\"%s-B%04lu\","
+        "\"name\":\"STLG\",\"slot_bytes\":%u,\"version\":1},\"kind\":\"%s\",\"reset\":{\"cause\":\"%s\",\"flags\":%lu},"
+        "\"run_id\":\"%s-B%04lu\","
         "\"sensors\":{\"imu\":\"%s\",\"temp_channels\":%s,\"wheel_active_high\":%s,\"wheel_channels\":{\"0\":\"wheel_0\",\"1\":\"wheel_1\","
         "\"2\":\"wheel_2\"},\"wheel_circumference_m\":%s,\"wheel_ppr\":%s,\"wheel_record_period_s\":0.%03lu},\"storage\":\"%s\","
         "\"transmits\":\"nothing: receive-only firmware%s\",\"unit_id\":\"%s\"}",
         (unsigned long)app->boot, info->clock_source, info->can_enabled ? "semmc-sim-fixture" : "none", info->firmware,
-        (unsigned)TM_BLOCK_PAYLOAD, (unsigned)TM_SLOT_BYTES, info->reset_cause, (unsigned long)info->reset_flags,
+        (unsigned)TM_BLOCK_PAYLOAD, (unsigned)TM_SLOT_BYTES,
+        info->kind ? info->kind : "UNKNOWN - the platform did not state what produced this log", info->reset_cause,
+        (unsigned long)info->reset_flags,
         info->run_prefix ? info->run_prefix : info->unit_id, (unsigned long)app->boot, info->imu ? info->imu : "none",
         info->temp_channels_json ? info->temp_channels_json : "{}", info->wheel_active_high ? "true" : "false", circ, ppr,
         (unsigned long)(TM_WHEEL_RECORD_PERIOD_US / 1000u), info->storage,
@@ -159,6 +162,8 @@ void tm_app_poll(tm_app_t *app)
         app->c.rx_frames++;
         if (app->sparse)
             app->c.log_thinned++;
+        else if (tm_queue_count(&app->q) >= TM_QUEUE_LEN - TM_QUEUE_OWN_RESERVE)
+            app->c.can_not_logged++;          /* the rest of the queue is kept for the unit's own records */
         else
             (void)tm_queue_push(&app->q, f.t_us, TM_REC_CAN2, body, 5u + len);
     }

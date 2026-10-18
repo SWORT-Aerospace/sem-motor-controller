@@ -69,7 +69,7 @@ COUNTER2_IDS = {
     14: "wheel_edges_lost", 15: "wheel_records", 16: "storage_blocks_written", 17: "storage_stall_events",
     18: "can_rx_overrun", 19: "can_bus_errors", 20: "log_queue_capacity", 21: "uplink_queue_capacity",
     22: "storage_write_errors", 23: "uptime_s", 24: "wheel_suspect_active", 25: "wheel_suspect_inactive",
-    26: "log_thinned",
+    26: "log_thinned", 27: "can_not_logged",
 }
 COUNTER2_BY_NAME = {v: k for k, v in COUNTER2_IDS.items()}
 CAN2_EXT, CAN2_FD, CAN2_BRS = 1 << 31, 1 << 30, 1 << 29

@@ -25,14 +25,16 @@ Rules:
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import math
 import pathlib
 import sqlite3
 
 from host.telematics import stlg
-from host.telematics import controller_adapter, measurement, signals
+from host.telematics import controller_adapter, evidence, measurement, signals
 from host.telematics.node import SCHEMAS_ACCEPTED
+from host.telematics.timing import StreamTiming
 from host.telematics.wheel import EdgeRecord, WheelConfig, WheelGroup
 from protocol.generated import semmc_protocol as proto
 
@@ -64,6 +66,24 @@ CREATE TABLE IF NOT EXISTS imports (run_id TEXT NOT NULL, source TEXT NOT NULL, 
 CREATE TABLE IF NOT EXISTS rx (
   rx INTEGER PRIMARY KEY AUTOINCREMENT, received_s REAL NOT NULL, topic TEXT NOT NULL, dup_flag INTEGER,
   outcome TEXT NOT NULL, run_id TEXT, seq INTEGER, reason TEXT);
+CREATE TABLE IF NOT EXISTS evidence (
+  run_id TEXT NOT NULL, record_id INTEGER NOT NULL, t_ref_us INTEGER NOT NULL, state TEXT NOT NULL, reason TEXT,
+  schema_version INTEGER NOT NULL, context TEXT, PRIMARY KEY (run_id, record_id));
+CREATE TABLE IF NOT EXISTS raw_records (run_id TEXT NOT NULL, block INTEGER NOT NULL, idx INTEGER NOT NULL,
+  raw TEXT NOT NULL, PRIMARY KEY (run_id, block, idx));
+CREATE VIEW IF NOT EXISTS evidence_records AS
+  SELECT m.run_id, m.record_id, m.t_rx_us, m.t_sample_us, m.t_unc_us, m.source, m.provenance, m.signal, r.raw,
+         m.value, m.unit, e.state, e.reason, m.source_seq AS seq, e.context, e.schema_version, m.utc, m.upper
+  FROM measurements m JOIN evidence e ON e.run_id = m.run_id AND e.record_id = m.record_id
+  LEFT JOIN raw_records r ON r.run_id = m.run_id AND r.block = m.block AND r.idx = m.idx;
+CREATE TABLE IF NOT EXISTS source_timing (run_id TEXT NOT NULL, stream TEXT NOT NULL, report_json TEXT NOT NULL,
+  PRIMARY KEY (run_id, stream));
+CREATE TABLE IF NOT EXISTS receipts (
+  run_id TEXT NOT NULL, t_us INTEGER NOT NULL, kind TEXT NOT NULL, subject TEXT NOT NULL, verdict TEXT NOT NULL,
+  context TEXT, receipt_json TEXT NOT NULL, PRIMARY KEY (run_id, t_us, kind, subject));
+CREATE TABLE IF NOT EXISTS receipt_snapshots (run_id TEXT NOT NULL, t_us INTEGER NOT NULL, snapshot_json TEXT NOT NULL,
+  PRIMARY KEY (run_id, t_us));
+CREATE INDEX IF NOT EXISTS evidence_by_time ON evidence (run_id, t_ref_us);
 """
 
 # controller states of the semmc protocol (simulation fixture), for v1 to v3 messages of the legacy simulation;
@@ -94,6 +114,9 @@ RANGES = {"speed_mech_rad_s": (-1000.0, 1000.0), "iq_A": (-200.0, 200.0), "vbus_
 
 
 WHEEL_RANGE_MPS = (0.0, 60.0)
+# bounds on how far a sample's true time can be from its read time, ASSUMED until measured on the bench: a GNSS
+# navigation solution's latency, one IMU output period at 100 Hz, one temperature conversion period
+T_UNC_ASSUMED_US = {"gnss": 100_000, "imu": 10_000, "temp": 1_000_000}
 # plausibility bounds of a live temperature, wider than the -55..125 degC of common digital probes and NTCs;
 # PROVISIONAL until the probe part is selected. A value outside them is rejected as corrupted.
 TEMP_RANGE_DEGC = (-55.0, 200.0)
@@ -374,7 +397,16 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
            "records": rr.records, "new_records": 0, "frames_bad_crc": 0, "frames": {}, "utc_quality": {},
            "adapter": adapter.id, "boot": None, "last_counters": None, "final_counters": False,
            "wheel_lost_records": 0, "wheel_lost_edges": 0, "measurements": 0, "validity": {}}
-    rows, sig, meas = [], [], []
+    rows, sig, meas, evid, raws = [], [], [], [], []
+    streams: dict[str, StreamTiming] = {}
+    sver = evidence.schema()["schema_version"]
+    rec_period = sens.get("wheel_record_period_s") or 0.05
+
+    def stream(name: str, period_s, seq_bits=None) -> StreamTiming:
+        if name not in streams:
+            streams[name] = StreamTiming(name, None if not period_s else int(round(period_s * 1e6)), seq_bits)
+        return streams[name]
+
     for n_rec, (blk, idx, t, rtype, f) in enumerate(recs):
         u, q = utc_of(t)
         rep["utc_quality"][q] = rep["utc_quality"].get(q, 0) + 1
@@ -391,6 +423,16 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
                                         res.detail if res.kind == "invalid" else "unknown_id")
             made = res.measurements
             seq = made[0].source_seq if made else None
+            pm = proto.MESSAGES.get(msg) if adapter.id == controller_adapter.SimFixtureAdapter.id and msg else None
+            arr = stream(f"can:{msg or hex(can_id)}", pm["period_s"] if pm else None,
+                         8 if pm is not None else None).observe(t, seq)
+            if arr.wait_bound_us is not None:
+                # arrived late or in the burst after a late frame: it may have waited since the previous in-time
+                # frame, so its receive time bounds its sample time only that well
+                made = [dataclasses.replace(m, t_unc_us=max(m.t_unc_us or 0, arr.wait_bound_us),
+                                            provenance=f"{m.provenance} (arrived {'late' if arr.late else 'in a burst'}"
+                                                       f": may have waited up to {arr.wait_bound_us} us)")
+                        for m in made]
             if res.kind == "invalid" and res.detail == "bad_crc":
                 rep["frames_bad_crc"] += 1
             if adapter.id != controller_adapter.SimFixtureAdapter.id:
@@ -426,32 +468,41 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
                 for m in made:
                     if m.signal.endswith(".speed") and m.usable:
                         sig.append((run_id, blk, idx, name, t, u, m.value, None, "telematics"))
+            stream(f"wheel:{name}", rec_period, 16).observe(t, f["rec_seq"])
             status = "heartbeat" if f["n"] == 0 else "edges"
         elif rtype == stlg.TEMP:
             # an invalid reading is stored as NULL with the record kept, so a missing value is visible
             name = tchan.get(f["channel"], str(f["channel"]))
             sig.append((run_id, blk, idx, "temp_" + name, t, u, f["deg_c"], None, "telematics"))
             status = f["status"]
+            stream(f"temp:{name}", 1.0).observe(t)
             made = [measurement.checked(_rid(blk, idx, 0), "temp", f"temp.{name}", f["deg_c"], "degC", t,
-                                        provenance=f"temp-probe:ch{f['channel']} {f['status']}",
+                                        t_unc_us=T_UNC_ASSUMED_US["temp"],
+                                        provenance=f"temp-probe:ch{f['channel']} {f['status']} (time bound ASSUMED)",
                                         invalid=f["deg_c"] is None)]
         elif rtype == stlg.GNSS:
             v = f["speed_mps"] if f["fix"] and math.isfinite(f["speed_mps"]) else None
+            stream("gnss", 0.1).observe(t)
             sig.append((run_id, blk, idx, "gnss", t, u, v, None, "gnss"))
             sig.append((run_id, blk, idx, "gnss_sacc", t, u, f["sacc_mps"] if f["fix"] else None, None, "gnss"))
             sig.append((run_id, blk, idx, "gnss_num_sv", t, u, float(f["num_sv"]), None, "gnss"))
-            made = [measurement.checked(_rid(blk, idx, 0), "gnss", "gnss.speed", v, "m/s", t, provenance="gnss",
-                                        invalid=v is None),
+            tu, gp = T_UNC_ASSUMED_US["gnss"], "gnss (time bound ASSUMED)"
+            made = [measurement.checked(_rid(blk, idx, 0), "gnss", "gnss.speed", v, "m/s", t, t_unc_us=tu,
+                                        provenance=gp, invalid=v is None),
                     measurement.checked(_rid(blk, idx, 1), "gnss", "gnss.speed_acc",
-                                        f["sacc_mps"] if f["fix"] else None, "m/s", t, provenance="gnss",
+                                        f["sacc_mps"] if f["fix"] else None, "m/s", t, t_unc_us=tu, provenance=gp,
                                         invalid=not f["fix"]),
-                    measurement.checked(_rid(blk, idx, 2), "gnss", "gnss.num_sv", f["num_sv"], "1", t,
-                                        provenance="gnss")]
+                    measurement.checked(_rid(blk, idx, 2), "gnss", "gnss.num_sv", f["num_sv"], "1", t, t_unc_us=tu,
+                                        provenance=gp)]
         elif rtype == stlg.IMU:
+            stream("imu", 0.01).observe(t)
             sig.append((run_id, blk, idx, "imu_ax", t, u, f["ax_mps2"], None, "imu"))
             sig.append((run_id, blk, idx, "imu_gz", t, u, f["gz_rad_s"], None, "imu"))
-            made = [measurement.checked(_rid(blk, idx, 0), "imu", "imu.ax", f["ax_mps2"], "m/s^2", t, provenance="imu"),
-                    measurement.checked(_rid(blk, idx, 1), "imu", "imu.gz", f["gz_rad_s"], "rad/s", t, provenance="imu")]
+            tu, ip = T_UNC_ASSUMED_US["imu"], "imu (time bound ASSUMED)"
+            made = [measurement.checked(_rid(blk, idx, 0), "imu", "imu.ax", f["ax_mps2"], "m/s^2", t, t_unc_us=tu,
+                                        provenance=ip),
+                    measurement.checked(_rid(blk, idx, 1), "imu", "imu.gz", f["gz_rad_s"], "rad/s", t, t_unc_us=tu,
+                                        provenance=ip)]
         elif rtype == stlg.BATT:
             status = f["status"]
             made = [measurement.checked(_rid(blk, idx, k2), "batt", sig, f[fld], unit, t,
@@ -466,15 +517,22 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
         elif rtype == stlg.BOOT:
             rep["boot"] = f
             t_boot = t
+        if made:
+            raws.append((run_id, blk, idx, f["data"].hex() if rtype in (stlg.CAN, stlg.CAN2) else json.dumps(
+                {k: (v.hex() if isinstance(v, bytes) else v) for k, v in f.items()}, sort_keys=True, default=str)))
         for m in made:
             meas.append(_meas_row(run_id, blk, idx, m, u, q))
             rep["validity"][m.validity] = rep["validity"].get(m.validity, 0) + 1
+            st = evidence.state_of(m.validity)
+            evid.append((run_id, m.record_id, m.t_ref_us, st,
+                         None if st == "VALID" else f"{m.validity}: {m.provenance}", sver, None))
         rows.append((run_id, blk, idx, t, u, q, rtype, can_id, msg, seq, status))
     for est in (wheels.est.values() if wheels else ()):
         rep["wheel_lost_records"] += est.lost_records
         rep["wheel_lost_edges"] += est.lost_edges
     rep["wheel_suspect_episodes"] = dict(wheels.episodes) if wheels else {"A": 0, "I": 0}
     rep["measurements"] = len(meas)
+    rep["timing"] = {k: v.report() for k, v in sorted(streams.items())}
     lc = rep["last_counters"]
     if lc and "log_records" in lc:
         # every record the unit wrote before its last counters record must be in the file; with an orderly
@@ -494,6 +552,10 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
     before = db.total_changes
     db.executemany("INSERT OR IGNORE INTO measurements VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", meas)
     rep["new_measurements"] = db.total_changes - before
+    db.executemany("INSERT OR IGNORE INTO evidence VALUES (?,?,?,?,?,?,?)", evid)
+    db.executemany("INSERT OR IGNORE INTO raw_records VALUES (?,?,?,?)", raws)
+    db.executemany("INSERT OR IGNORE INTO source_timing VALUES (?,?,?)",
+                   [(run_id, k, json.dumps(v, sort_keys=True)) for k, v in rep["timing"].items()])
     db.execute("INSERT INTO imports VALUES (?,?,?)", (run_id, str(path.name), json.dumps(rep, sort_keys=True)))
     db.commit()
     return rep

@@ -34,7 +34,10 @@ modules:
   host/telematics/: telematics
   host/telematics/sim_vehicle.py: reference        # simulation fixture (external controller stand-in)
   host/telematics/sensors.py: reference            # synthetic sensors of the legacy demonstration
+  host/telematics/sim_session.py: reference        # simulation fixture: one simulated drive with chosen faults
   host/pit/: telematics
+  host/assurance/: telematics                      # shadow evidence review: witnesses, verdicts, receipts
+  research/vehicle_validation/: telematics          # vehicle-validation protocols (none run physically)
   host/vcu_bridge/: reference
   telematics/: telematics
   tests/README.md: telematics
@@ -56,6 +59,12 @@ modules:
   tools/bus_load.py: telematics
   tools/can_bit_timing.py: telematics
   tools/telematics_budget.py: telematics
+  tools/telematics_schema.py: telematics
+  tools/run_evidence_review.py: telematics
+  tools/run_vehicle_experiment.py: telematics
+  tools/run_bench_chain.py: telematics
+  tools/pit_query.py: telematics
+  tools/claims.py: telematics
   docs/README.md: telematics
   docs/FILE_INDEX.md: telematics
   docs/scope.yaml: telematics
@@ -84,6 +93,11 @@ modules:
   docs/VERIFICATION_REPORT.md: telematics
   docs/OPEN_PARAMETERS.md: telematics
   docs/PROCUREMENT.md: telematics
+  docs/CURRENT_STATE.md: telematics
+  docs/TELEMETRY_SCHEMA.md: telematics
+  docs/HARDWARE_OPEN_ITEMS.md: telematics
+  docs/CLAIMS.md: telematics
+  docs/claims.yaml: telematics
   docs/BUDGET.md: controller                        # the v0.6 controller board budget (historical)
   docs/generated/: reference
   docs/generated/telematics_demo/: telematics
@@ -144,6 +158,7 @@ modules:
 tests:
   # telematics delivery
   tests/telematics/: telematics
+  tests/hardware_required/: telematics              # HARDWARE_REQUIRED: skipped unless SEMMC_HARDWARE=1
   tests/integration/test_docs.py: telematics
   tests/integration/test_pit_energy.py: telematics
   tests/integration/test_shadow_replay.py: telematics

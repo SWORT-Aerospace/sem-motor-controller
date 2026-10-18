@@ -16,15 +16,15 @@
           "full_rate_s": 8292,
           "reserve": 32,
           "slots": 4096,
-          "sparse_s": 8296,
-          "total_s": 16588
+          "sparse_s": 8000,
+          "total_s": 16292
         },
         "internal flash bank 2": {
           "full_rate_s": 455,
           "reserve": 32,
           "slots": 256,
-          "sparse_s": 8296,
-          "total_s": 8751
+          "sparse_s": 8000,
+          "total_s": 8455
         }
       },
       "temp_hz": 0
@@ -40,15 +40,15 @@
           "full_rate_s": 5804,
           "reserve": 32,
           "slots": 4096,
-          "sparse_s": 8296,
-          "total_s": 14101
+          "sparse_s": 8000,
+          "total_s": 13804
         },
         "internal flash bank 2": {
           "full_rate_s": 319,
           "reserve": 32,
           "slots": 256,
-          "sparse_s": 8296,
-          "total_s": 8615
+          "sparse_s": 8000,
+          "total_s": 8319
         }
       },
       "temp_hz": 1
@@ -64,20 +64,20 @@
           "full_rate_s": 1600,
           "reserve": 32,
           "slots": 4096,
-          "sparse_s": 8296,
-          "total_s": 9896
+          "sparse_s": 8000,
+          "total_s": 9600
         },
         "internal flash bank 2": {
           "full_rate_s": 88,
           "reserve": 32,
           "slots": 256,
-          "sparse_s": 8296,
-          "total_s": 8384
+          "sparse_s": 8000,
+          "total_s": 8088
         }
       },
       "temp_hz": 3
     }
   ],
-  "sparse_seconds_per_slot": 259.3,
+  "sparse_seconds_per_slot": 250.0,
   "timer_overflow_s": 4295.0
 }

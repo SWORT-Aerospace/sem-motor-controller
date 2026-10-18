@@ -14,7 +14,7 @@ Every test belongs to one suite, set in [`../docs/scope.yaml`](../docs/scope.yam
 | `reference` | `python3 -m pytest -m reference` | models, the semmc fixture codecs and DBC, the frozen CSIA evaluation, the MATH_SPEC examples | never |
 | `controller` | `python3 -m pytest -m controller` | the deferred controller development: the C core through its host build, the STM32G474 image, the hardware draft, the legacy supervised simulations | yes |
 
-CI runs the first two in the job `telematics` (with `SEMMC_BUILD_DIR` pointing nowhere, and checks that nothing was built) and the third in the job `controller`.
+Two markers cut across the suites (`conftest.py`): `integration` for tests that build firmware, run a broker or simulate whole sessions, and `hardware_required` (HARDWARE_REQUIRED) for tests that need the board on the bench ([`hardware_required/`](hardware_required/test_bench_board.py)); those are skipped unless `SEMMC_HARDWARE=1` and never run in CI. CI runs the first two suites in the jobs `unit-tests` (`-m "(telematics or reference) and not integration and not hardware_required"`) and `integration-tests` (`-m "(telematics or reference) and integration and not hardware_required"`), both with `SEMMC_BUILD_DIR` pointing nowhere and a check that nothing was built, and the third in the job `controller`.
 
 The telematics tests (`tests/telematics/`):
 
@@ -27,6 +27,12 @@ The telematics tests (`tests/telematics/`):
 | [telematics/test_firmware_target.py](telematics/test_firmware_target.py) | the NUCLEO-U575ZI-Q images: vector table against ST's interrupt list, nothing in the log bank, no controller symbols, no CAN transmit path |
 | [telematics/test_energy_and_shadow_scope.py](telematics/test_energy_and_shadow_scope.py) | shadow relationships disabled without their inputs, simulator fields ignored in a vehicle report, the energy boundaries, the frozen evaluation files by hash |
 | [telematics/test_telematics_bom.py](telematics/test_telematics_bom.py) | the BOM totals are sums of their own lines and options are in none, unknown prices stay unknown, no controller part, every line sourced, no assumed pack and the vehicle supply blocked, every bench sensor and storage part has its firmware driver, the page current |
+| [telematics/test_receive_only_boundary.py](telematics/test_receive_only_boundary.py) | the receive-only boundary: import graph and AST scan of every production telematics file with a planted negative control, no transmit API, adapter fuzzing, the firmware CAN driver |
+| [telematics/test_evidence_model.py](telematics/test_evidence_model.py) | schema and registry hash, changed contracts refused, evidence states, Hall missing versus zero, invalid temperature, stream timing cases, record time monotonicity, lineage, context |
+| [telematics/test_witnesses_and_verdicts.py](telematics/test_witnesses_and_verdicts.py) | relations only in their contexts and on admissible, aligned inputs; ambiguity, localization, common cause, receipts, no fault labels |
+| [telematics/test_evidence_pipeline.py](telematics/test_evidence_pipeline.py) | simulated sessions through import and review: evidence rows, receipts, data class, network outage, storage stall, CAN flood, the protocols' simulated pre-check |
+| [telematics/test_claims_and_docs.py](telematics/test_claims_and_docs.py) | the claims register and its refusals, the overclaim scan, the README's boundary statement, the audit and hardware pages, the protocols' structure |
+| [telematics/test_pit_queries_advisory.py](telematics/test_pit_queries_advisory.py) | pit queries and their command line, advisory energy, the host pulse-to-database chain, the CSIA boundary |
 | [telematics/test_telematics_bench.py](telematics/test_telematics_bench.py) | the bench procedure current and consistent with the firmware and the BOM; drift caught; B6, B7 and E1 say what they must; the package's hashes, parts, connections and blank form; images from another revision refused; the console capture over a pseudo-terminal; real images rebuilt with identical hashes |
 
 ## 1. What the directory contains

@@ -135,7 +135,7 @@ Steps in order; each step's capture file is named `capture_B<n>.txt`. Write ever
 
 - **Do.** DUMP on the console (still capturing), then commands.import with --wheel-circumference 0.1 (0.1 m per edge: 100 Hz reads 10.0 m/s, inside the 0 to 60 m/s plausibility range).
 - **Expect.** wheel_0 speed 10.000 m/s while the generator ran, the deviation within the generator's accuracy plus 0.1 % (PROVISIONAL: 1 us capture over 100 ms is 10 ppm; the LSE-trimmed timebase is expected at ppm level, the untrimmed MSI is not characterised here); distance = edges x 0.1 m; after the stop "no_evidence", never 0; wheel_1 and wheel_2 speed "invalid" ("suspect: ... disconnected") while wheel_0 ran.
-- **Record.** mean speed and its deviation; distance against edges; validity counts per channel; the speed plot.
+- **Record.** mean speed and its deviation; distance against edges; validity counts per channel; the speed plot; the commands.chain result (C2 and C5 to C7 with --pulse-hz 100 --circumference 0.1) and the commands.query listing (the stop shows as UNKNOWN; never as 0).
 
 ### B5. Rates
 

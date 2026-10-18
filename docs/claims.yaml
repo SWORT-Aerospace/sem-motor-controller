@@ -1,0 +1,172 @@
+# Claims register of the telematics evidence platform (tools/claims.py renders docs/CLAIMS.md and checks it).
+#
+# Every claim has one label, the strongest its evidence supports:
+#   SIMULATED       shown on simulated data (host/telematics/sim_vehicle.py, sim_session.py): the analysis on
+#                   synthetic drives
+#   HOST-TESTED     shown by tests of the code on a computer, with synthetic or recorded inputs (Python, or the
+#                   firmware's portable C code in the host build); not the target hardware
+#   BENCH-TESTED    shown on the NUCLEO-U575ZI-Q (or the unit) on a bench, with a filled run sheet
+#   HIL-TESTED      shown with the unit connected to real controller hardware or a hardware-in-the-loop rig
+#   VEHICLE-TESTED  shown on the vehicle, with a filled run sheet and independent ground truth
+#
+# tools/claims.py --check refuses: an unknown label; a test or file that does not exist; a BENCH, HIL or VEHICLE
+# label without a record file under research/vehicle_validation/records/ or telematics/bench/results/ whose data class
+# matches; a statement that says "validated", "proven", "vehicle-ready" or "race-ready".
+labels: [SIMULATED, HOST-TESTED, BENCH-TESTED, HIL-TESTED, VEHICLE-TESTED]
+
+claims:
+  - id: C-RX-ONLY
+    statement: "No production telematics code can transmit a CAN frame or command propulsion: no transmit API in the node, adapters, assurance or firmware CAN driver; FDCAN1 configured in bus-monitoring mode; no import path to the out-of-scope controller-authority modules"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_receive_only_boundary.py::test_production_code_is_listed_and_reaches_no_controller_authority,
+              tests/telematics/test_receive_only_boundary.py::test_production_code_opens_no_can_socket_and_calls_no_frame_encoder,
+              tests/telematics/test_receive_only_boundary.py::test_the_boundary_scan_catches_a_planted_transmit_path,
+              tests/telematics/test_receive_only_boundary.py::test_firmware_can_driver_has_no_transmit_function,
+              tests/telematics/test_firmware_target.py::test_sources_have_no_transmit_path]
+    not_shown: "the transceiver's electrical behaviour on the vehicle bus (BENCH.md E1 to E6)"
+  - id: C-SCHEMA
+    statement: "Every registry signal has one machine-readable contract (source, transport, unit, encoding, scaling, rate, timestamp source, freshness, invalid semantics, quality flag, lineage), checked against the protocol, the adapter and the firmware's record types; the registry hash of live messages is unchanged"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_schema_is_consistent_with_the_code_and_keeps_the_registry_hash,
+              tests/telematics/test_evidence_model.py::test_schema_check_catches_a_changed_contract]
+      files: [telematics/schema/telemetry_schema.yaml, tools/telematics_schema.py]
+  - id: C-STATES
+    statement: "Every value has exactly one evidence state; missing, stale, unsupported, invalid, out of range, unverified and timing-uncertain values are distinct and never become 0, false or a bare NaN; only VALID is admissible"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_missing_unsupported_stale_and_timing_are_distinct_and_never_zero,
+              tests/telematics/test_evidence_model.py::test_invalid_temperature_is_invalid_and_out_of_range_is_withheld]
+  - id: C-HALL
+    statement: "A wheel channel without edges reports UNKNOWN with an upper bound, never 0 m/s; a held line never shows standstill; a channel silent while another moves becomes INVALID (suspect); the C firmware and the Python reference apply the same rule"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_hall_no_edge_is_unknown_with_a_bound_not_zero,
+              tests/telematics/test_wheel_node_pit.py::test_no_edge_is_no_evidence_and_a_held_line_never_proves_standstill,
+              tests/telematics/test_firmware_host.py::test_wheel_plausibility_equals_the_python_rule]
+    not_shown: "the real Hall sensor's output stage and the TIM2 capture on the board (BENCH.md B1 to B6)"
+  - id: C-TIMING
+    statement: "Per stream: duplicates, gaps, reordering, counter wrap, ambiguous long silences, late arrivals, bursts and backwards receive time are counted; a late or burst frame's timestamp bound is widened by how long it may have waited"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_timing_in_order_gap_duplicate_reorder_and_wrap,
+              tests/telematics/test_evidence_model.py::test_timing_late_burst_and_wait_bound,
+              tests/telematics/test_evidence_model.py::test_timing_long_silence_is_ambiguous_not_a_small_gap]
+    not_shown: "a constant added latency (observable only with a producer timestamp: EXP-04 limitation)"
+  - id: C-LINEAGE
+    statement: "Every value and derived quantity names its raw sources, parameters and shared paths; two values from one raw source are never counted as two witnesses; shared paths are reported as caveats"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_lineage_separates_same_source_from_shared_path]
+  - id: C-CONTEXT
+    statement: "The vehicle context (STARTUP, STOPPED, LAUNCH, CRUISE, COAST, UNKNOWN) comes from admissible evidence only; STOPPED needs a source that can measure zero; BRAKE and READY are reported as not determinable"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_context_needs_admissible_evidence_and_never_guesses_brake,
+              tests/telematics/test_evidence_model.py::test_motor_speed_shows_stopped_only_without_a_freewheel]
+  - id: C-WITNESS
+    statement: "Each cross-domain relation is evaluated only in its declared contexts, only on admissible, time-aligned inputs and known parameters; otherwise INAPPLICABLE or INSUFFICIENT_EVIDENCE with every rejected input and its state"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_witnesses_and_verdicts.py::test_a_non_admissible_input_gives_insufficient_evidence_with_its_state_kept,
+              tests/telematics/test_witnesses_and_verdicts.py::test_unknown_parameters_and_unsimultaneous_inputs_are_not_compared,
+              tests/telematics/test_witnesses_and_verdicts.py::test_mode_dependent_validity_of_the_drivetrain_relation]
+  - id: C-NO-FAULT-LABEL
+    statement: "No conclusion names a fault; an inconsistency is AMBIGUOUS with its candidate causes; localization needs two witnesses independent of the subject and of each other that agree"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_witnesses_and_verdicts.py::test_an_inconsistency_is_ambiguous_with_its_candidates_and_never_a_fault,
+              tests/telematics/test_witnesses_and_verdicts.py::test_localization_needs_two_independent_witnesses_that_agree]
+  - id: C-COMMON-CAUSE
+    statement: "A simultaneous loss of evidence is a SUPPORTED common cause only with direct disturbance evidence on a shared path; a source that kept working exonerates the paths it shares"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_witnesses_and_verdicts.py::test_simultaneous_loss_is_supported_only_with_direct_disturbance_evidence,
+              tests/telematics/test_witnesses_and_verdicts.py::test_a_source_that_kept_working_exonerates_the_paths_it_shares]
+  - id: C-RECEIPTS
+    statement: "Every stored conclusion has a receipt with the values, times, states, context, relation results and rejections it rests on, marked advisory and with its data class; a receipt that lacks any of these is detected"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_witnesses_and_verdicts.py::test_a_receipt_answers_why_and_is_complete,
+              tests/telematics/test_evidence_pipeline.py::test_review_receipts_are_complete_and_the_data_class_is_never_vehicle_by_default]
+  - id: C-EXP01-SIM
+    statement: "On simulated drives the analysis localizes a corrupted wheel-speed path and reports no inconsistency for a real slowdown"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_exp01_separates_a_corrupted_wheel_from_a_real_slowdown]
+      files: [research/vehicle_validation/EXP-01_wheel_speed_corruption.md]
+  - id: C-EXP02-SIM
+    statement: "On simulated drives a real drag gives A1 inconsistent with B4 consistent, and an IMU offset gives B4 inconsistent; A1 cannot see the offset below its effort floor"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_simulated_protocol_prechecks_pass_and_say_so]
+      files: [research/vehicle_validation/EXP-02_motor_effort_response.md]
+  - id: C-EXP03-SIM
+    statement: "On simulated drives a unit power cut is a supported shared-path event and two independent simultaneous losses stay ambiguous"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_simulated_protocol_prechecks_pass_and_say_so]
+      files: [research/vehicle_validation/EXP-03_shared_power_disturbance.md]
+  - id: C-EXP04-SIM
+    statement: "On simulated drives a CAN stall is visible in the stream timing and makes released values timing-uncertain, with no false inconsistency; a constant latency is not observable"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_simulated_protocol_prechecks_pass_and_say_so]
+      files: [research/vehicle_validation/EXP-04_timing_degradation.md]
+  - id: C-LOG-OUTAGE
+    statement: "Acquisition and local logging continue through a total network outage; the pit can review the run from the log alone"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_local_logging_continues_through_a_network_outage]
+    not_shown: "a real LTE modem and broker on the vehicle"
+  - id: C-STORAGE
+    statement: "A storage stall or a full storage drops records only by counting them; a restart without shutdown is detected at import; the review treats counted drops as recorder disturbance evidence"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_a_storage_stall_is_counted_and_reviewed_as_a_recorder_event,
+              tests/telematics/test_firmware_host.py::test_full_storage_refuses_blocks_and_counts_them,
+              tests/telematics/test_firmware_host.py::test_flash_image_imports_with_speed_distance_restart_and_accounting]
+    not_shown: "the W25Q128JV's real timing on SPI1 (BENCH.md B8 to B10)"
+  - id: C-CAN-FLOOD
+    statement: "Under a fully loaded bus during a storage stall, the unit's own wheel and counters records keep their place in the log queue; frames beyond the reserve and beyond the receive ring are counted, never silently lost"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_pipeline.py::test_flood_of_frames_keeps_the_units_own_records,
+              tests/telematics/test_firmware_host.py::test_unit_tests_pass]
+      files: [telematics/firmware/tests/test_tm.c]
+    not_shown: "interrupt latency and FDCAN behaviour on the board under a real flood"
+  - id: C-BENCH-CHAIN
+    statement: "The pulse-to-database chain (pulse, capture time, record, log, decoder, evidence row, query) reproduces a known pulse train exactly in the firmware's host build"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_bench_chain_host_mode_passes]
+      files: [tools/run_bench_chain.py]
+    not_shown: "the same chain on the NUCLEO-U575ZI-Q (run tools/run_bench_chain.py --dump after BENCH.md B1 to B3)"
+  - id: C-PIT-QUERIES
+    statement: "The pit answers time-aligned signals, intervals of missing or stale evidence, event windows and pre/post windows with each value's evidence state"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_aligned_rows_carry_states_and_never_fill_a_gap,
+              tests/telematics/test_pit_queries_advisory.py::test_intervals_list_missing_and_invalid_spans,
+              tests/telematics/test_pit_queries_advisory.py::test_window_and_pre_post]
+  - id: C-ADVISORY-ENERGY
+    statement: "Rolling Wh/km, energy by speed band, nominal remaining energy and a cruise-band suggestion are advisory outputs for people, labelled with their basis, and refuse to give a number without admissible evidence"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_advisory_energy_is_labelled_and_refuses_without_evidence,
+              tests/telematics/test_pit_queries_advisory.py::test_advisory_module_has_no_way_to_reach_the_vehicle]
+  - id: C-CSIA-BOUNDARY
+    statement: "Only VALID evidence reaches the CSIA shadow adapter; no torque request, grade or KCL input is invented; its trust numbers are withheld; its output is SUPPORTED, AMBIGUOUS or UNSUPPORTED"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_boundary_passes_only_valid_evidence_and_withholds_trust]
+    not_shown: "that the frozen CSIA adapter is accurate: on simulated nominal drives it reports unattributed disagreements our relations do not (the documented evaluation favours R3v)"
+  - id: C-FIRMWARE-TARGET
+    statement: "The telematics firmware builds and links for the NUCLEO-U575ZI-Q"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_firmware_target.py::test_vector_table_matches_st_interrupt_list,
+              tests/telematics/test_firmware_target.py::test_layout_leaves_the_log_bank_free_and_has_no_controller_code,
+              tests/telematics/test_firmware_target.py::test_register_sequences_follow_st_hal]
+    not_shown: "that it runs on the board: it has never been flashed (T-BENCH1)"
