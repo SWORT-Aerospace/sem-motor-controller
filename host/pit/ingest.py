@@ -448,8 +448,10 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
         # shutdown that record is the last one and counts itself
         rep["accounting"] = {"records_in_file": rr.records, "unit_log_records": lc["log_records"],
                              "dropped_queue": lc.get("log_dropped_queue"), "dropped_storage": lc.get("log_dropped_storage"),
-                             "missing_from_file": max(0, lc["log_records"] - rr.records) if rep["final_counters"] else
-                             max(0, lc["log_records"] - (lc["record"] + 1)),
+                             # records the unit moved into blocks that the storage then refused are in
+                             # dropped_storage, not in the file
+                             "missing_from_file": max(0, lc["log_records"] - (lc.get("log_dropped_storage") or 0)
+                                                      - (rr.records if rep["final_counters"] else lc["record"] + 1)),
                              "after_last_counters": "none (orderly close)" if rep["final_counters"] else
                              "unknown: the session ended without a final counters record (restart or power loss)"}
     before = db.total_changes

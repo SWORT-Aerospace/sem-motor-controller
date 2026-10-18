@@ -54,6 +54,7 @@ from typing import Iterator
 MAGIC = b"STLG"
 VERSION = 1
 BLOCK_BYTES = 4096 - 20          # payload per block; the 20-byte block header fills the 4 KiB sector
+BASE_SLACK_US = 1_000_000        # block base this far before its first record (writers; readers do not care)
 REC_HDR = struct.Struct("<BBI")
 BLK_HDR = struct.Struct("<2sIQHI")
 
@@ -210,14 +211,15 @@ class Writer:
 
     def add(self, t_us: int, rtype: int, body: bytes) -> None:
         if self.base_us is None:
-            self.base_us = t_us
+            self.base_us = max(0, t_us - BASE_SLACK_US)
         dt = t_us - self.base_us
-        # Records keep receive order; a timestamp before the block base (or too far
-        # after it, or a full block) starts a new block.
+        # Records keep receive order, which is not strictly time order (a wheel record carries the time of
+        # its last edge); the block base lies BASE_SLACK_US before the first record so that a slightly older
+        # record still fits. A record before the base (or too far after it, or a full block) starts a new block.
         if dt < 0 or dt >= 1 << 32 or len(self.buf) + REC_HDR.size + len(body) > BLOCK_BYTES:
             self.flush()
-            self.base_us = t_us
-            dt = 0
+            self.base_us = max(0, t_us - BASE_SLACK_US)
+            dt = t_us - self.base_us
         self.buf += REC_HDR.pack(rtype, len(body), dt) + body
         self.n_in_buf += 1
 

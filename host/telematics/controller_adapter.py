@@ -218,8 +218,25 @@ class DbcAdapter:
         return AdapterResult("decoded", out, msg.name)
 
 
+class NullAdapter:
+    """No controller adapter: the log was recorded without CAN reception (every frame is unknown)."""
+    id = "none"
+    status = "no controller reception in this log"
+
+    def __init__(self, record_id: Optional[RecordIds] = None):
+        self.rid = record_id or RecordIds()
+
+    def describe(self) -> dict:
+        return {"id": self.id, "status": self.status}
+
+    def decode(self, t_rx_us: int, f: Frame) -> AdapterResult:
+        return AdapterResult("unknown_id", [], detail="no adapter")
+
+
 def from_meta(desc: dict, mapping_dir: Optional[pathlib.Path] = None, record_id: Optional[RecordIds] = None):
     """Rebuild the adapter a log names in its metadata (`controller_adapter`), for the pit import."""
+    if desc.get("id") == NullAdapter.id:
+        return NullAdapter(record_id)
     if desc.get("id") == SimFixtureAdapter.id:
         return SimFixtureAdapter(record_id)
     if desc.get("mapping") and mapping_dir is not None:

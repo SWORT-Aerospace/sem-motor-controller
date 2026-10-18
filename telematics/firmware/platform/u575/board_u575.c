@@ -1,0 +1,174 @@
+#include "board_u575.h"
+
+#include "stm32u5xx.h"
+#include "tm_time.h"
+
+board_state_t g_board;
+volatile uint32_t g_tim2_hi;
+
+/* kept across a reset without power loss (linker section .noinit) */
+static struct {
+    uint32_t magic;
+    uint32_t code;
+} g_fault __attribute__((section(".noinit")));
+#define FAULT_MAGIC 0x54414C54u
+
+void board_record_fault(uint32_t code)
+{
+    g_fault.magic = FAULT_MAGIC;
+    g_fault.code = code;
+    /* the independent watchdog, no longer refreshed, resets the MCU */
+}
+
+static void gpio_mode(GPIO_TypeDef *g, uint32_t pin, uint32_t mode, uint32_t af, uint32_t pull, bool open_drain)
+{
+    g->MODER = (g->MODER & ~(3uL << (2u * pin))) | (mode << (2u * pin));
+    g->OTYPER = (g->OTYPER & ~(1uL << pin)) | ((open_drain ? 1uL : 0uL) << pin);
+    g->PUPDR = (g->PUPDR & ~(3uL << (2u * pin))) | (pull << (2u * pin));
+    g->OSPEEDR = (g->OSPEEDR & ~(3uL << (2u * pin))) | (1uL << (2u * pin));   /* medium */
+    volatile uint32_t *afr = &g->AFR[pin / 8u];
+    *afr = (*afr & ~(0xFuL << (4u * (pin % 8u)))) | (af << (4u * (pin % 8u)));
+}
+#define MODE_IN 0u
+#define MODE_OUT 1u
+#define MODE_AF 2u
+#define PULL_NONE 0u
+#define PULL_UP 1u
+
+void board_gpio_af(GPIO_TypeDef *g, uint32_t pin, uint32_t af, bool pull_up, bool open_drain);
+void board_gpio_af(GPIO_TypeDef *g, uint32_t pin, uint32_t af, bool pull_up, bool open_drain)
+{
+    gpio_mode(g, pin, MODE_AF, af, pull_up ? PULL_UP : PULL_NONE, open_drain);
+}
+
+void board_gpio_out(GPIO_TypeDef *g, uint32_t pin, bool high);
+void board_gpio_out(GPIO_TypeDef *g, uint32_t pin, bool high)
+{
+    g->BSRR = high ? (1uL << pin) : (1uL << (pin + 16u));
+    gpio_mode(g, pin, MODE_OUT, 0u, PULL_NONE, false);
+}
+
+static bool wait_set(volatile uint32_t *reg, uint32_t mask, uint32_t loops)
+{
+    while (loops--)
+        if (*reg & mask) return true;
+    return false;
+}
+
+static void watchdog_start(void)
+{
+    /* IWDG on the LSI (32 kHz nominal): prescaler /64, reload 1000: about 2 s */
+    IWDG->KR = 0xCCCCu;
+    IWDG->KR = 0x5555u;
+    IWDG->PR = 4u;
+    IWDG->RLR = 1000u;
+    for (uint32_t i = 0; i < 100000u && IWDG->SR != 0u; i++) {
+    }
+    IWDG->KR = 0xAAAAu;
+}
+
+void board_kick_watchdog(void) { IWDG->KR = 0xAAAAu; }
+
+void board_init(void)
+{
+    g_board.reset_flags = RCC->CSR;
+    RCC->CSR |= RCC_CSR_RMVF;
+    g_board.last_fault = (g_fault.magic == FAULT_MAGIC) ? g_fault.code : FAULT_NONE;
+    g_fault.magic = 0u;
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_GPIOAEN | RCC_AHB2ENR1_GPIOBEN | RCC_AHB2ENR1_GPIOCEN | RCC_AHB2ENR1_GPIODEN;
+    RCC->AHB3ENR |= RCC_AHB3ENR_PWREN;
+    (void)RCC->AHB3ENR;
+    board_gpio_out(GPIOC, 7u, false);   /* LD1 green */
+    board_gpio_out(GPIOB, 7u, false);   /* LD2 blue */
+    /* LSE (32.768 kHz crystal of the Nucleo; its fitting is to be confirmed in UM2861) and MSIS locked to it.
+     * The LSE can take seconds to start: wait a bounded time, then run untrimmed. */
+    PWR->DBPR |= PWR_DBPR_DBP;
+    RCC->BDCR |= RCC_BDCR_LSEON;
+    g_board.lse_ok = wait_set(&RCC->BDCR, RCC_BDCR_LSERDY, 3000000u);
+    if (g_board.lse_ok) {
+        RCC->CR |= RCC_CR_MSIPLLSEL;    /* PLL mode on MSIS */
+        RCC->CR |= RCC_CR_MSIPLLEN;
+    }
+    watchdog_start();
+}
+
+void board_led(int which, bool on)
+{
+    if (which == 0) GPIOC->BSRR = on ? (1uL << 7) : (1uL << 23);
+    else GPIOB->BSRR = on ? (1uL << 7) : (1uL << 23);
+}
+
+uint64_t board_now_us(void)
+{
+    uint32_t pm = __get_PRIMASK();
+    __disable_irq();
+    uint32_t c = TIM2->CNT;
+    bool ovf = (TIM2->SR & TIM_SR_UIF) != 0u;
+    uint32_t hi = g_tim2_hi;
+    __set_PRIMASK(pm);
+    return tm_time_extend(hi, c, ovf);
+}
+
+/* wheel channel -> (GPIOA pin) */
+static const uint8_t WHEEL_PIN[3] = {3u, 2u, 0u};
+
+bool board_wheel_line_high(uint8_t ch) { return ch < 3u && (GPIOA->IDR & (1uL << WHEEL_PIN[ch])) != 0u; }
+
+void board_mask_capture(bool masked)
+{
+    if (masked) NVIC_DisableIRQ(TIM2_IRQn);
+    else NVIC_EnableIRQ(TIM2_IRQn);
+}
+
+void board_capture_start(void)
+{
+    for (unsigned i = 0; i < 3u; i++) board_gpio_af(GPIOA, WHEEL_PIN[i], 1u, true, false);   /* AF1 TIM2, pull-up */
+    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
+    (void)RCC->APB1ENR1;
+    TIM2->CR1 = 0u;
+    TIM2->PSC = SystemCoreClock / 1000000u - 1u;    /* 1 MHz: APB1 prescaler 1 after reset */
+    TIM2->ARR = 0xFFFFFFFFu;
+    /* CCxS = 01 (input from its own pin), ICxF = 0011 (8 samples at the timer clock: 2 us at 4 MHz) */
+    TIM2->CCMR1 = (1uL << TIM_CCMR1_CC1S_Pos) | (3uL << TIM_CCMR1_IC1F_Pos);
+    TIM2->CCMR2 = (1uL << TIM_CCMR2_CC3S_Pos) | (3uL << TIM_CCMR2_IC3F_Pos) | (1uL << TIM_CCMR2_CC4S_Pos) |
+                  (3uL << TIM_CCMR2_IC4F_Pos);
+    /* falling edge (CCxP = 1, CCxNP = 0): an open-collector Hall switch pulls low when a magnet arrives */
+    TIM2->CCER = TIM_CCER_CC1E | TIM_CCER_CC1P | TIM_CCER_CC3E | TIM_CCER_CC3P | TIM_CCER_CC4E | TIM_CCER_CC4P;
+    TIM2->EGR = TIM_EGR_UG;                         /* load the prescaler */
+    TIM2->SR = 0u;
+    g_tim2_hi = 0u;
+    TIM2->DIER = TIM_DIER_CC1IE | TIM_DIER_CC3IE | TIM_DIER_CC4IE | TIM_DIER_UIE;
+    NVIC_SetPriority(TIM2_IRQn, 1u);
+    NVIC_EnableIRQ(TIM2_IRQn);
+    TIM2->CR1 = TIM_CR1_CEN;
+}
+
+void board_unit_id(char *out, unsigned cap)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    const volatile uint32_t *uid = (const volatile uint32_t *)UID_BASE;
+    const char *p = "U575-";
+    unsigned n = 0;
+    while (*p && n + 1u < cap) out[n++] = *p++;
+    for (int w = 2; w >= 0; w--)
+        for (int k = 28; k >= 0 && n + 1u < cap; k -= 4) out[n++] = hex[(uid[w] >> k) & 0xFu];
+    out[n] = '\0';
+}
+
+bool board_pll1q_20mhz(void)
+{
+    /* FDCAN kernel clock 20 MHz from PLL1Q: MSIS 4 MHz / M 1 x N 40 = 160 MHz VCO, / Q 8. CAN needs an accurate
+     * clock: only with the LSE-locked MSIS. Voltage range 3 first (range 4 after reset; the PLL limits per
+     * range are to be checked in RM0456). */
+    if (!g_board.lse_ok) return false;
+    PWR->VOSR = (PWR->VOSR & ~PWR_VOSR_VOS) | (1uL << PWR_VOSR_VOS_Pos);
+    if (!wait_set(&PWR->VOSR, PWR_VOSR_VOSRDY, 100000u)) return false;
+    RCC->PLL1CFGR = (1uL << RCC_PLL1CFGR_PLL1SRC_Pos) | (0uL << RCC_PLL1CFGR_PLL1RGE_Pos) |
+                    (0uL << RCC_PLL1CFGR_PLL1M_Pos) | RCC_PLL1CFGR_PLL1QEN;
+    RCC->PLL1DIVR = (39uL << RCC_PLL1DIVR_PLL1N_Pos) | (1uL << RCC_PLL1DIVR_PLL1P_Pos) |
+                    (7uL << RCC_PLL1DIVR_PLL1Q_Pos) | (1uL << RCC_PLL1DIVR_PLL1R_Pos);
+    RCC->CR |= RCC_CR_PLL1ON;
+    if (!wait_set(&RCC->CR, RCC_CR_PLL1RDY, 100000u)) return false;
+    RCC->CCIPR1 = (RCC->CCIPR1 & ~RCC_CCIPR1_FDCANSEL) | (1uL << RCC_CCIPR1_FDCANSEL_Pos);   /* 01: PLL1Q */
+    return true;
+}
