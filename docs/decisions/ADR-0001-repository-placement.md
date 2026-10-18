@@ -1,6 +1,6 @@
-# ADR-0001 — Project placement
+# ADR-0001: Project placement
 
-**Context.** The request asked for the project "inside of SWORT Aerospace". This session can push only to `andrefp-co/swort` (the SWORT website deploy repository), on branch `claude/nice-bell-98hxr2`. Creating a new remote repository in the SWORT-Aerospace organization was not explicitly authorized, and the CSIA research repository must not be reorganized.
+**Context.** The request asked for the project "inside of SWORT Aerospace". The development tooling could push only to `andrefp-co/swort` (the SWORT website deploy repository), on branch `claude/nice-bell-98hxr2`. Creating a new remote repository in the SWORT-Aerospace organization was not explicitly authorized, and the CSIA research repository must not be reorganized.
 
 **Decision.** Build a self-contained project at `sem-motor-controller/` inside `andrefp-co/swort` on the feature branch. Nothing outside that directory is modified. CSIA is consumed as a **pinned external dependency** (`third_party/csia-trust-layer.lock`, fetched into the git-ignored `.deps/`), never vendored.
 

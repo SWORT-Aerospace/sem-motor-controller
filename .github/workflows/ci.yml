@@ -1,9 +1,9 @@
-# CI for sem-motor-controller. NOTE: GitHub only runs workflows from a
-# repository ROOT. While this project lives in a subdirectory of another
-# repository this file is inert; it becomes active once the directory is
-# split into its own repository (ADR-0001).
+# CI for sem-motor-controller (repository root of SWORT-Aerospace/sem-motor-controller).
+# Host tests only: nothing here touches hardware.
 name: ci
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   host:
     runs-on: ubuntu-24.04
@@ -13,13 +13,40 @@ jobs:
         with:
           python-version: "3.13"
       - name: Toolchain
-        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi
+        # kicad + kicad-symbols: the schematic connectivity gate needs kicad-cli and the symbol library;
+        # without them tests/hardware skips that gate instead of running it. KiCad 8 from the KiCad
+        # project's PPA in both jobs, so the connectivity gate and the ERC use the same release.
+        # mosquitto: the MQTT broker for the telemetry pipeline tests (Ubuntu 24.04 package, 2.0.18).
+        # gcc-arm-none-eabi + libnewlib-arm-none-eabi: the STM32G474 target image.
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-8.0-releases
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi kicad kicad-symbols mosquitto
+          kicad-cli version
+          arm-none-eabi-gcc --version | head -1
+          /usr/sbin/mosquitto -h | head -1
       - name: Python deps (pinned)
         run: pip install -r requirements.txt
+      - name: KiCad symbol libraries 8.0.9 (pinned, SHA-256 checked; used by the generator and the ERC)
+        run: python tools/fetch_kicad_symbols.py
+      - name: KiCad footprints 8.0.9 used by the assignment (pinned, SHA-256 checked)
+        run: python tools/check_footprints.py --fetch
       - name: Generated files are current
         run: |
           python tools/gen_config.py --check
           python tools/gen_protocol.py --check
+          python tools/gen_dbc.py --check
+          python tools/gen_procurement.py --check
+          python tools/gen_board_pins.py --check
+          python tools/blockers.py --check
+          python tools/check_datasheets.py --check
+          python tools/ov_trip_worst_case.py --check
+          python tools/check_footprints.py --check
+          python tools/bench_package.py --doc --check
+          python tools/acceptance.py render --check
+          python tools/wheel_sensor_check.py --check
+          python tools/coastdown_sensitivity.py --check
+          python tools/check_links.py
       - name: Fetch pinned CSIA core
         run: python tools/fetch_csia.py
       - name: Configs validate as expected
@@ -31,15 +58,94 @@ jobs:
           cmake -S firmware -B build -G Ninja
           cmake --build build
           ctest --test-dir build --output-on-failure
+      - name: Schematic connectivity gate (KiCad netlist vs intended nets; not an ERC)
+        run: |
+          python tools/gen_kicad_schematic.py --check
+          # the committed schematic, symbols and draft BOM must equal the generator's output
+          # (semmc.net and CONNECTIVITY_CHECK.md are excluded: kicad-cli writes them with its version, an
+          # export date and an absolute path; CI's copies are uploaded below)
+          git diff --exit-code -- hardware/kicad hardware/bom/BOM_draft.csv ':!hardware/kicad/semmc.net' ':!hardware/kicad/CONNECTIVITY_CHECK.md'
+      - name: Upload connectivity record (KiCad 8.0.9)
+        uses: actions/upload-artifact@v4
+        with:
+          name: connectivity-check
+          path: |
+            hardware/kicad/CONNECTIVITY_CHECK.md
+            hardware/kicad/semmc.net
       - name: Python tests
-        run: python -m pytest
-      - name: Portable core cross-compile (Cortex-M4F, compile check only)
+        # a missing MQTT broker or ARM toolchain is a failure here, not a skip
+        env:
+          SEMMC_REQUIRE_MQTT: "1"
+          SEMMC_REQUIRE_ARM: "1"
+        run: python -m pytest -rs
+      - name: Host demonstrations (simulated uplink; real Mosquitto broker; shadow replay)
+        run: |
+          python tools/run_host_demo.py --out build/host_demo
+          python tools/run_mqtt_demo.py --out build/mqtt_demo
+          python tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay
+      - name: Portable core cross-compile (Cortex-M4F, size per module)
         run: |
           cmake -S firmware -B build-arm -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_PORTABLE_ONLY=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
           cmake --build build-arm
           arm-none-eabi-size -t build-arm/libsemmc_core.a
+      - name: STM32G474 target image (linked; not run on hardware here)
+        run: |
+          cmake -S firmware -B build-g4 -G Ninja -DCMAKE_TOOLCHAIN_FILE=$PWD/firmware/cmake/arm-none-eabi-cortex-m4f.cmake -DSEMMC_TARGET_STM32G474=ON -DSEMMC_SANITIZE=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
+          cmake --build build-g4
+          sha256sum build-g4/semmc_stm32g474.elf build-g4/semmc_stm32g474.bin build-g4/semmc_stm32g474.hex
+          python tools/emulate_core_timing.py --elf build-g4/semmc_core_timing.elf --blob build/cal/synthetic.bin --ms 300
+      - name: Upload target image
+        uses: actions/upload-artifact@v4
+        with:
+          name: semmc-stm32g474-image
+          path: |
+            build-g4/semmc_stm32g474.elf
+            build-g4/semmc_stm32g474.bin
+            build-g4/semmc_stm32g474.hex
+            build-g4/semmc_stm32g474.map
+      - name: Bench package (images, procedures, templates, scripts, checks, manifest; nothing flashed)
+        run: python tools/bench_package.py --images build-g4 --board UNASSIGNED --out build/bench_package
+      - name: Upload bench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-package
+          path: build/bench_package
       - name: Synthetic studies (quick)
         run: |
           python tools/run_optimization.py --quick
           python tools/run_electrical_calcs.py
           python tools/run_csia_study.py
+  erc:
+    # Real KiCad ERC on the committed draft schematic. Ubuntu 24.04 ships KiCad 7,
+    # whose kicad-cli has no `sch erc`; KiCad 8 comes from the KiCad project's PPA.
+    # The report is uploaded whatever the result; the job fails on any ERC error.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: KiCad 8 (ppa:kicad/kicad-8.0-releases)
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-8.0-releases
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kicad kicad-symbols
+          kicad-cli version
+      - name: KiCad symbol libraries 8.0.9 (the copy the schematic was generated from)
+        run: python tools/fetch_kicad_symbols.py
+      - name: KiCad footprints 8.0.9 used by the assignment (the ERC resolves each symbol's footprint)
+        run: |
+          pip install -r requirements.txt
+          python tools/check_footprints.py --fetch
+      - name: ERC
+        run: bash tools/run_kicad_erc.sh
+      - name: Upload ERC report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erc-report
+          path: hardware/kicad/ERC_REPORT.*
+      - name: Summary (fails on any ERC error)
+        run: python tools/erc_summary.py hardware/kicad/ERC_REPORT.json --fail-on-errors
+      - name: ERC record (fails if the committed record for these inputs disagrees with this run)
+        run: python tools/erc_record.py check --report hardware/kicad/ERC_REPORT.json

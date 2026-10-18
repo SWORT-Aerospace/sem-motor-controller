@@ -3,8 +3,8 @@
 
     python3 tools/pin_type_check.py   -> hardware/kicad/PIN_TYPE_CHECK.md
 
-KiCad 7 has no command-line ERC, and installing KiCad 8+ was not possible in
-this environment. This tool applies a subset of ERC-style pin-type rules to
+KiCad 7 has no command-line ERC; the real ERC runs with KiCad 8 or newer
+(`tools/run_kicad_erc.sh`, the CI `erc` job). This tool applies a subset of ERC-style pin-type rules to
 `hardware/kicad/semmc.net`, which KiCad itself exported (so connectivity and
 pin types are KiCad's, not the generator's). It does not replace a real ERC:
 KiCad's ERC also checks label/sheet-pin consistency, the full pin-conflict
@@ -83,9 +83,9 @@ def main() -> int:
     for rule, sev, *_ in f:
         counts[rule] = counts.get(rule, 0) + 1
     L = ["# Pin-type rule check on the KiCad-exported netlist (generated; NOT a KiCad ERC)", "",
-         "> `tools/pin_type_check.py` on `hardware/kicad/semmc.net` (exported by kicad-cli 7.0.11 from the draft). "
-         "Connectivity and pin types are KiCad's. **This is not an ERC**: a real ERC (KiCad 8+, "
-         "`tools/run_kicad_erc.sh`) was not possible in this environment and remains a blocker. "
+         "> `tools/pin_type_check.py` on `hardware/kicad/semmc.net` (exported by `kicad-cli` from the draft). "
+         "Connectivity and pin types are KiCad's. **This is not an ERC**: the KiCad ERC runs separately with KiCad 8 "
+         "or newer (`tools/run_kicad_erc.sh`, the CI `erc` job; results in `docs/VERIFICATION_REPORT.md`). "
          "Neither check shows that the circuit is electrically correct; that needs review and measurement.", "",
          f"Nets checked: {len(nets)}. Rails with a PWR_FLAG (read from the sheets): "
          f"{', '.join(f'`{n}`' for n in sorted(flagged)) or 'none'}. Findings: {len(f)} "

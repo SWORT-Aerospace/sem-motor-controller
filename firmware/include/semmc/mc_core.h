@@ -15,13 +15,41 @@
  * is one such binding and the only one implemented. Manual driving never
  * depends on any link.
  *
- * Data handoff slow -> fast is a single struct written by the slow step and
- * read by the fast step; on the target this must be done with a sequence
- * lock or with the fast ISR masked for the copy (documented in
- * firmware/platform/stm32g4/README.md). The host simulation is single-threaded.
+ * Shared state between the fast step (current interrupt) and the slow step.
+ * Every shared variable has exactly one writing context. The mechanism, not
+ * "volatile", is what makes it correct:
+ *
+ *   fast_pub[2], fast_pub_idx   slow writes, fast reads. The slow step fills
+ *       the buffer the index does not select, then stores the index with
+ *       release ordering; the fast step loads it with acquire ordering. On
+ *       the target the fast step runs in an interrupt the slow step cannot
+ *       preempt (PRIO_FAST < PRIO_SLOW, platform/stm32g4/src/main.c), so a
+ *       fast step that starts after the index store reads the whole new
+ *       buffer before the slow step runs again, and the buffer the slow step
+ *       writes next is never being read.
+ *   fast_oc_events, fast_dt_events   fast writes (+1 per fast step that saw a
+ *       software overcurrent / an invalid dt), slow reads.
+ *   fast_oc_ack, fast_dt_ack   slow writes, fast reads: the event count the
+ *       slow step has reacted to, stored only after it has published the
+ *       command that reacts (a latched fault withdraws pwm_enable). The fast
+ *       step keeps the outputs off while events != ack. An event that
+ *       arrives while the slow step is acknowledging raises the count past
+ *       the ack and is seen by the next slow step: none is erased.
+ *   current_invalid_run   fast writes, slow reads.
+ *
+ * These are C11 atomics: word-sized and lock-free on Cortex-M4
+ * (ATOMIC_INT_LOCK_FREE == 2; checked below), so each load and store is
+ * single-copy atomic, and release/acquire orders the buffer writes before
+ * the index store (GCC emits DMB on ARMv7-M; tests/integration/
+ * test_target_firmware.py checks the image). Values read only for
+ * telemetry or plausibility (id/iq measured, the phase-current struct, hall
+ * times) are written by the fast step word by word; a slow-step read may
+ * combine words from two fast steps, which those uses tolerate.
  */
 #ifndef SEMMC_MC_CORE_H
 #define SEMMC_MC_CORE_H
+
+#include <stdatomic.h>
 
 #include "semmc/mc_config.h"
 #include "semmc/mc_control.h"
@@ -31,10 +59,16 @@
 #include "semmc/mc_state_machine.h"
 #include "semmc/mc_types.h"
 
+_Static_assert(ATOMIC_INT_LOCK_FREE == 2, "fast/slow handoff needs lock-free word atomics");
+
 #define MC_FW_MAJOR 0u
 #define MC_FW_MINOR 1u
 
 #define MC_CLOCK_DOMAIN_COMPANION 1u
+/* Longest slow-step interval that is integrated into energy_J; a longer interval
+ * (a stalled or late slow step) is counted in energy_gap_s instead of being
+ * integrated as one rectangle of the latest power. */
+#define MC_ENERGY_MAX_DT_S 0.02f
 
 typedef enum { MC_SUP_LINK_NONE = 0, MC_SUP_LINK_HELLO = 1, MC_SUP_LINK_ESTABLISHED = 2, MC_SUP_LINK_LOST = 3 } mc_sup_link_t;
 
@@ -110,6 +144,7 @@ typedef struct {
     mc_csia_shadow_t csia;
     /* supervisor */
     mc_sup_session_t sess;
+    uint32_t tags_issued;      /* session tags issued since boot; survives session resets */
     mc_fresh_t fr_req, fr_limits, fr_hello;
     mc_supervisor_input_t sup;
     /* Double-buffered supervisor bounds: [0] = newest committed set, [1] = the
@@ -138,8 +173,11 @@ typedef struct {
     float id_meas_A, iq_meas_A;
     mc_phase_currents_t pc;
     float p_batt_W;
-    double energy_J;           /* battery-side, integrated in the slow step */
+    double energy_J;           /* controller input (bus shunt), integrated in the slow step */
+    double energy_integrated_s; /* time covered by energy_J */
+    double energy_gap_s;       /* time NOT integrated: invalid V or I, or update interval > MC_ENERGY_MAX_DT_S */
     float slow_vbus_V;
+    mc_validity_t slow_vbus_val; /* platform flags + finiteness; telemetry reports it as is */
     float slow_ibatt_A;
     mc_validity_t slow_ibatt_val;
     float t_fet_degC, t_motor_degC;
@@ -147,11 +185,13 @@ typedef struct {
     mc_driver_inputs_t last_driver;
     uint8_t reset_reason;
     /* fast loop */
-    mc_fast_cmd_t fast_cmd;
-    bool fast_pwm_was_enabled;
-    volatile bool fast_overcurrent;
-    volatile bool fast_dt_invalid;
-    uint32_t current_invalid_run;  /* consecutive fast steps without a valid current sample */
+    mc_fast_cmd_t fast_cmd;          /* latest command computed by the slow step */
+    mc_fast_cmd_t fast_pub[2];       /* published copies; the fast step reads fast_pub[fast_pub_idx] */
+    atomic_uint fast_pub_idx;        /* shared: see "Shared state" above */
+    bool fast_pwm_was_enabled;       /* fast step only */
+    atomic_uint fast_oc_events, fast_dt_events; /* written by the fast step only */
+    atomic_uint fast_oc_ack, fast_dt_ack;       /* written by the slow step only */
+    atomic_uint current_invalid_run; /* consecutive fast steps without a valid current sample; fast writes */
     bool link_down;            /* transport reports the link unusable (CAN: bus-off) */
     /* time */
     mc_time_us_t now_us;

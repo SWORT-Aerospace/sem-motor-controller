@@ -1,4 +1,4 @@
-# ADR-0002 — MCU baseline
+# ADR-0002: MCU baseline
 
 **Options evaluated (once).**
 

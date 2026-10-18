@@ -12,6 +12,33 @@
  * a reordered (older) frame, or a new frame that carries the same cached
  * sample (timestamp did not advance) never renews validity.
  *
+ * Ordering: a frame must carry a sequence number newer than the highest one
+ * seen within the last max_age (accepted or not), so a frame re-sent from
+ * earlier is REORDERED_OLD even after the tracker has gone stale; an exact
+ * re-delivery of the last frame seen (same sequence and source time) is a
+ * DUPLICATE at any time.
+ *
+ * Timing plausibility: the tracker keeps the LAG of the last accepted sample,
+ * i.e. how much older it was on arrival than the reference (the
+ * freshest-arriving accepted sample), allowing MC_FRESH_DRIFT_PPM of relative
+ * clock drift. A new sample's lag is
+ *     lag = lag_prev + (local advance) - (source advance) - drift allowance
+ * which telescopes over accepted samples, so delay cannot accumulate in steps
+ * that are each inside the tolerance.
+ *   lag > max_time_skew:  older than the reference by more than the tolerance
+ *                         (delayed or cached): rejected.
+ *   |lag| <= max_time_skew: accepted; a fresher sample becomes the reference.
+ *   lag < -max_time_skew: either the reference itself was a delayed sample
+ *                         (e.g. the first one of a session) or the source
+ *                         clock jumped. The sample is rejected and kept as a
+ *                         candidate; the next sample that is consistent with
+ *                         the candidate re-anchors the reference and is
+ *                         accepted. One corrupted source time therefore cannot
+ *                         move the reference, and a delayed reference costs
+ *                         one frame, not a lock-out.
+ * Re-anchoring only ever moves the reference towards FRESHER samples, so it
+ * cannot make delayed or replayed data acceptable.
+ *
  * Wraparound: u8 sequence and u16 timestamp use serial-number arithmetic
  * (RFC 1982 style signed difference). Ambiguity after long gaps is resolved
  * by requiring a resynchronisation when the tracker is already stale.
@@ -23,6 +50,9 @@
 
 /* u16 ms source time is unambiguous for gaps below half its period (32.7 s). */
 #define MC_FRESH_UNAMBIGUOUS_US 30000000u
+/* Relative drift allowed between source and local clocks, parts per million of
+ * elapsed local time (2 %: covers an uncalibrated RC oscillator on either side). */
+#define MC_FRESH_DRIFT_PPM 20000
 
 typedef enum {
     MC_RX_ACCEPTED_NEW = 0,       /* renews validity */
@@ -33,7 +63,7 @@ typedef enum {
     MC_RX_REPEATED_SAMPLE,        /* newer sequence but source time did not advance: ignored */
     MC_RX_SESSION_CHANGED,        /* new session id: history reset, sample accepted as FIRST */
     MC_RX_CLOCK_DOMAIN_MISMATCH,  /* rejected */
-    MC_RX_TIME_DISCONTINUITY,     /* source time jumped implausibly vs local time: rejected */
+    MC_RX_TIME_DISCONTINUITY,     /* source time inconsistent with local time (delayed or jumped): rejected */
     MC_RX_INTEGRITY_FAIL          /* recorded by caller after CRC/format failure */
 } mc_rx_result_t;
 
@@ -50,6 +80,15 @@ typedef struct {
     uint8_t last_seq;
     uint16_t last_src_ms;
     mc_time_us_t last_new_rx_us;  /* local receive time of the last NEW sample */
+    int32_t lag_us;               /* lag of the last accepted sample behind the reference (>= 0) */
+    bool have_cand;               /* rejected forward sample that may re-anchor the reference */
+    mc_time_us_t cand_rx_us;
+    uint16_t cand_src_ms;
+    bool have_seen;               /* last frame seen, accepted or not: for exact duplicates */
+    uint8_t seen_seq;
+    uint16_t seen_src_ms;
+    uint8_t floor_seq;            /* highest sequence seen within max_age (ordering floor) */
+    mc_time_us_t floor_rx_us;
     bool session_new;             /* set on first sample of a session until cleared by consumer */
     /* counters (saturating) */
     uint16_t n_new, n_dup, n_old, n_repeat, n_lost, n_session_changes, n_rejected, n_integrity;

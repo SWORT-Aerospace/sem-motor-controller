@@ -14,8 +14,7 @@ hardware/interfaces/pin_allocation_<package>.csv.
 LIMITS (stated in the output): this checks signal availability and pin
 uniqueness only. It does not check alternate-function numbers, ADC fast/slow
 channel timing, OPAMP/COMP internal routing, clock trees, the errata sheet, or
-PCB escape - those need CubeMX/datasheet review (st.com was not reachable from
-this environment).
+PCB escape - those need CubeMX/datasheet review.
 """
 from __future__ import annotations
 
@@ -35,7 +34,7 @@ RESERVED = {"PA13": "SWDIO", "PA14": "SWCLK", "PB3": "SWO (debug trace)", "PF0-O
 
 # Pins kept to slow GPIO duty: PC13 is in the backup domain with limited drive
 # strength/speed on STM32 parts (recalled, NOT verified here against DS12288 -
-# st.com unreachable). Never used for PWM, SPI or CAN.
+# not yet checked against the datasheet). Never used for PWM, SPI or CAN.
 SLOW_ONLY = {"PC13"}
 
 # (function, regex on signal name, group key or None, note)
@@ -47,14 +46,14 @@ REQUIRED = [
     ("PWM_C_HI", r"^TIM1_CH3$", None, "INHC"),
     ("PWM_C_LO", r"^TIM1_CH3N$", None, "INLC"),
     ("PWM_BREAK", r"^TIM1_BKIN$", None, "hardware trip input: gate-driver nFAULT (open drain, active low)"),
-    ("PWM_BREAK2", r"^TIM1_BKIN2$", None, "hardware trip input: independent bus/phase over-current comparator"),
+    ("PWM_BREAK2", r"^TIM1_BKIN2$", None, "hardware trip input: independent bus over-voltage comparator (open drain, wired-OR; a dedicated over-current comparator is an open option)"),
     # Phase currents: three DIFFERENT ADCs started by the same TIM1 trigger, so
     # the three samples are taken at the same instant (ADC1+ADC2 dual-
     # simultaneous injected, ADC3/4/5 injected on the same TIM1 TRGO2 edge).
     # v0.1 put phase C on ADC1 as a second injected rank, one conversion
     # (~15 ADC clocks) after phase A. IN1..IN5 are required because they are
     # recalled to be the direct "fast" channels on STM32G4 (RM0440, NOT
-    # verified here: st.com unreachable).
+    # verified here against the datasheet).
     ("ISENSE_A", r"^ADC1_IN[1-5]$", None, "CSA A -> ADC1 fast channel (dual simultaneous with ADC2: proposed)"),
     ("ISENSE_B", r"^ADC2_IN[1-5]$", None, "CSA B -> ADC2 fast channel"),
     ("ISENSE_C", r"^ADC[345]_IN[1-5]$", None, "CSA C -> ADC3/4/5 fast channel, same TIM1 trigger edge"),

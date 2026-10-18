@@ -1,4 +1,4 @@
-# SEM motor-controller CAN contract — SINGLE SOURCE OF TRUTH.
+# SEM motor-controller CAN contract: SINGLE SOURCE OF TRUTH.
 # tools/gen_protocol.py generates matching C and Python codecs and golden
 # vectors from this file. Generated files carry the schema hash; CI fails if
 # they are stale.
@@ -23,7 +23,7 @@
 protocol:
   name: semmc
   major: 1
-  minor: 0
+  minor: 1   # 1.1: additive ctrl_energy_quality (0x323); every 1.0 message unchanged
   nominal_bitrate: 500000
   frame_format: classic_8byte
 
@@ -202,6 +202,19 @@ messages:
       - {name: v_sup_limits, start: 56, width: 4, kind: raw}
       - {name: v_hall,       start: 60, width: 4, kind: raw}
 
+  - name: ctrl_energy_quality
+    id: 0x323
+    sender: controller
+    period_s: 0.1
+    description: >
+      Completeness of ctrl_energy.energy_J. integrated_s is the time over which
+      battery power was integrated; gap_s is the time NOT integrated because
+      battery current or bus voltage was invalid, or because an update interval
+      exceeded the integration limit. energy_J is complete only while gap_s is 0.
+    fields:
+      - {name: integrated_s, start: 16, width: 24, kind: scaled, scale: 0.01, offset: 0, min: 0, max: 167772.14, unit: s, invalid: 16777215}
+      - {name: gap_s,        start: 40, width: 24, kind: scaled, scale: 0.01, offset: 0, min: 0, max: 167772.14, unit: s, invalid: 16777215}
+
   - name: csia_advisory
     id: 0x328
     sender: companion
@@ -254,6 +267,7 @@ vectors:
   - {msg: ctrl_energy,    seq: 8,   values: {energy_J: 123456.7, p_batt_W: -45}}
   - {msg: ctrl_thermal,   seq: 9,   values: {t_fet_degC: 61.3, t_motor_degC: .nan, derate: 0.5, derate_reasons: 8}}
   - {msg: ctrl_validity,  seq: 10,  values: {v_speed: 0, v_ia: 0, v_ib: 0, v_ic: 0, v_vbus: 0, v_ibatt: 1, v_t_fet: 0, v_t_motor: 4, v_throttle: 0, v_sup_req: 2, v_sup_limits: 0, v_hall: 0}}
+  - {msg: ctrl_energy_quality, seq: 14, values: {integrated_s: 1234.56, gap_s: 0.3}}
   - {msg: ctrl_fault,     seq: 11,  values: {latched: 0x000024, first_fault: 2, reset_reason: 1, fault_count: 2}}
   - {msg: csia_advisory,  seq: 12,  values: {trust: 0.8, mode: 0, observability: 2, monitor_ok: true, evidence_fresh: false, reserved: 0, evidence_mask: 0x05, explanation: 17, src_time_ms: 4321}}
   - {msg: ctrl_identity,  seq: 13,  values: {proto_major: 1, proto_minor: 0, fw_major: 0, fw_minor: 1, cal_version: 1, cal_provenance: 1, build_is_sim: true, hw_rev: 0}}

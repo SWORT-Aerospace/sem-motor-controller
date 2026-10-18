@@ -1,0 +1,373 @@
+# Blocker-to-evidence register (single source). docs/BLOCKERS.md is generated from this file by
+# tools/blockers.py; tools/acceptance.py reads the status of the blockers that acceptance steps name.
+#
+# Each entry: the specific missing fact or implementation, what it affects, why it matters, what is done now,
+# the exact external input, the closure criterion, and the evidence once closed. `unlocks` counts the open
+# design items, BOM lines, configuration values and acceptance steps that wait for it (ordering only).
+schema: semmc.blockers.v1
+
+battery_as_reported: "Team-reported: 48 V nominal, 10 Ah. Not datasheet-verified. The maximum charged voltage, minimum cut-off voltage, current capability, chemistry and BMS limits are NOT inferred from it."
+
+# The short list. `audience: physical` groups are the seven requests to the physical team, documents and photos
+# first, in this order; none asks them for register values or MCU details. `audience: documentation` is the
+# primary-document request (PDF uploads or network access), for whoever can provide it. Entries with group "team"
+# are decisions or work inside the team.
+groups:
+  - id: P1
+    audience: physical
+    title: Battery and BMS
+    request: "Battery and BMS model numbers, a photo of the battery label, and the battery and BMS datasheets (maximum charge voltage, minimum cut-off, cell count, continuous and peak discharge current, charge current limit, short-circuit trip)."
+  - id: P2
+    audience: physical
+    title: Motor
+    request: "Motor model number, nameplate photo, motor datasheet, and photos of the motor's phase, hall and temperature connectors."
+  - id: P3
+    audience: physical
+    title: Drivetrain
+    request: "Wheel circumference (or tyre size), the gear or chain ratio between motor and wheel, whether there is a freewheel, and the vehicle mass with driver."
+  - id: P4
+    audience: physical
+    title: Controls and safety
+    request: "Pedal model and datasheet, the brake and other switch types (normally open or closed), how the emergency stop, dead-man and safety loop are wired and at what voltage, and a photo of the dashboard controls."
+  - id: P5
+    audience: physical
+    title: Vehicle CAN bus
+    request: "If the vehicle has a CAN bus: the nodes on it, bit rate, classic or FD, the identifier block for the motor controller, and where it is terminated. If no bus exists yet, this is a team design decision: whether the controller needs one and what else would sit on it."
+  - id: P6
+    audience: physical
+    title: Mechanics and harness
+    request: "Photos and part numbers of the mating connectors (battery, motor, halls, motor temperature, driver controls, CAN), and photos and dimensions of where the controller mounts, including any metal plate that can serve as a heatsink."
+  - id: P7
+    audience: physical
+    title: Event
+    request: "The event name and the official rule PDF of the edition that applies."
+  - id: D1
+    audience: documentation
+    title: Primary documents (PDF upload or network access)
+    request: "The PDFs listed in docs/reference/datasheets/README.md committed to docs/reference/datasheets/, or ti.com, st.com, nxp.com, analog.com and onsemi.com added to this environment's allowed domains. Not a physical-team task."
+
+blockers:
+  - id: B-BAT-V
+    status: open
+    group: P1
+    title: Battery maximum and minimum voltage
+    missing: "Maximum charged pack voltage V_bat,max and minimum (BMS cut-off) voltage V_bat,min are unavailable; only 48 V nominal is reported."
+    affects: "MOSFET V_DS class and DC-link capacitor voltage rating (sheets 02, 03); TVS stand-off and clamp, fuse voltage, precharge resistor energy, bypass FET V_DS and Zener current (sheet 01); over-voltage trip divider (sheet 02); LM5164 UVLO divider and input capacitors (sheet 12); config battery.*, limits.overvoltage_trip_V, limits.undervoltage_trip_V, limits.undervoltage_derate_V."
+    why: "Every power-path rating is written as a multiple of V_bat,max; a 48 V nominal pack can charge well above 48 V depending on chemistry and cell count, so no voltage class can be chosen safely from the nominal."
+    done_now: "Rating rules written against V_bat,max (hardware/review/DESIGN_REVIEW.md items 2, 3, 6, 8); over-voltage comparator topology and hysteresis fixed; firmware reads every threshold from the calibration and refuses to run without it."
+    input: "Battery model number and label photo; battery and BMS datasheets giving maximum charge voltage, minimum discharge cut-off voltage and cell count."
+    closure: "docs/INPUT_SHEET.md battery items filled with document and page; config battery.* and voltage limits filled; the divider, UVLO and voltage-class parts selected."
+    unlocks: 24
+
+  - id: B-BAT-I
+    status: open
+    group: P1
+    title: Battery and BMS current limits
+    missing: "Continuous and peak discharge current, regenerative charge current limit, BMS short-circuit response; 10 Ah is a capacity, not a current."
+    affects: "Fuse rating and breaking capacity, bus shunt and INA228 range, battery connector J101 and cable (sheet 01); config limits.battery_current_limit_A; regeneration policy."
+    why: "The fuse must clear a fault the BMS does not, and the bus shunt must cover the real current range for the energy measurement."
+    done_now: "Rating rules recorded; the controller limits battery current from the calibration only."
+    input: "BMS datasheet: continuous and peak discharge current, charge current limit, short-circuit trip and its delay."
+    closure: "Values in docs/INPUT_SHEET.md with source; fuse, shunt and connector selected."
+    unlocks: 8
+
+  - id: B-MOTOR
+    status: open
+    group: P2
+    title: Motor data
+    missing: "Motor model, continuous and peak phase current, pole pairs, phase resistance and inductance, flux linkage or K_v, hall output type and supply, temperature sensor type."
+    affects: "MOSFET current rating, phase shunts, CSA gain, DC-link ripple current (sheets 02, 03, 05); hall supply jumper and pull-ups (sheet 09); motor temperature bias (sheet 07); connectors J301, J701, J901; config motor.*, limits.max_phase_current_A, inverter.hw_overcurrent_trip_A."
+    why: "The power stage is sized from the motor's currents, and the current controller and hall commutation need its parameters."
+    done_now: "Envelope calculations over a current range; firmware handles any pole count and hall table from the calibration."
+    input: "Motor model number and nameplate photo; motor datasheet; the hall connector and sensor connector photos."
+    closure: "docs/INPUT_SHEET.md motor items filled with sources; config motor.* marked datasheet or measured."
+    unlocks: 22
+
+  - id: B-DRIVETRAIN
+    status: open
+    group: P3
+    title: Drivetrain and vehicle mass
+    missing: "Wheel circumference, gear ratio, freewheel present or not, and the vehicle mass with driver (config vehicle.wheel_circumference_m, vehicle.gear_ratio, vehicle.freewheel_present, vehicle.mass_with_driver_kg: null)."
+    affects: "Vehicle speed from the hall period and the wheel-speed cross-check; the motor speed at the event's top speed (current and voltage headroom); coasting behaviour (without a freewheel the spinning motor's back-EMF reaches the link); the energy model and the speed-hold policy; the hardware-valid calibration (all four are required for a hardware build)."
+    why: "The controller works in motor quantities; every vehicle-level limit and the energy strategy go through these four numbers."
+    done_now: "Parameters defined with plausibility bounds and required for hardware; the host plant runs on synthetic values."
+    input: "The four values, with a photo of the tyre sidewall or the wheel and of the sprockets or gearbox plate."
+    closure: "Values entered in the vehicle calibration and checked by tools/config_tool.py; wheel-speed sensor scaling recomputed."
+    unlocks: 6
+
+  - id: B-DRV
+    status: open
+    group: D1
+    title: DRV8353 gate-driver datasheet
+    missing: "TI DRV8353 datasheet (SLVSDY6x) not read: pin numbers, operating limits, SPI register map, IDRIVE, VDS trip levels and deglitch, CSA gain/offset/settling, input pull-downs, behaviour with ENABLE low."
+    affects: "U401 symbol (placeholder pins) and its footprint (sheet 04); the mc_drv835x_desc_t and settings the firmware passes (none in this revision) and GATE_DRIVER_CONFIGURED (firmware/platform/stm32g4/src/main.c); the SPI1 transport; acceptance S5.7, S7, S8."
+    why: "Without the pinout no footprint or layout of the gate drive is possible; without the register map the firmware cannot enable the driver, so the motor cannot be driven."
+    done_now: "Placeholder symbol marked; nFAULT break path verified; the six gate-signal pull-downs fitted. Driver logic written and host-tested against an invented register map (firmware/src/io/mc_drv835x.c, firmware/tests/test_drivers.c): wake only after the bypass closes, wake wait, configuration with read-back under a mask, clear-fault written with the register's configured value, status and nFAULT supervision, one register re-read per step while ready, clear only on request. Linked in the image with no description, so it stays UNVERIFIED and DRV_ENABLE stays low."
+    input: "The SLVSDY6 PDF committed to docs/reference/datasheets/, or network access to ti.com for this environment."
+    closure: "DATASHEET_REGISTER.md row filled with revision and pages; U401 renumbered and pin-checked; a verified mc_drv835x_desc_t citing its tables, the settings from the design review, the SPI1 transport, and acceptance S5.7 passed."
+    unlocks: 15
+
+  - id: B-INA
+    status: open
+    group: D1
+    title: INA228 register map
+    missing: "TI INA228 datasheet not read: register addresses, shunt calibration, VBUS and current scaling, conversion timing."
+    affects: "The mc_ina228_desc_t and settings the firmware passes (none in this revision), so battery-side voltage and current are missing and the start-up sequence never closes the bypass; the I2C1 transport; controller energy measurement; acceptance S6.3 to S6.5."
+    why: "The precharge bypass may only close when the link voltage is compared with the battery-side voltage, which this meter provides."
+    done_now: "Precharge state machine with timeout and post-close failure detection implemented and host-tested. Driver logic written and host-tested against an invented register map (firmware/src/io/mc_ina228.c): reset, identity, configuration read-back, SHUNT_CAL range check, conversion-ready polling, sample age and validity kept apart from bus success, bounded re-initialisation. Start-up sequence (mc_startup.c) closes the bypass only on fresh samples and only when the link reading agrees with the resistor current. Linked with no description: UNVERIFIED."
+    input: "The INA228 PDF committed to docs/reference/datasheets/, or network access to ti.com."
+    closure: "A verified mc_ina228_desc_t citing its tables, host-tested against the datasheet's register examples, the I2C1 transport, the five power.* start-up parameters set, and acceptance S6.3 passed."
+    unlocks: 6
+
+  - id: B-ST-DOCS
+    status: open
+    group: D1
+    title: STM32G474 datasheet, reference manual and errata
+    missing: "ST DS12288, RM0440 and ES0430 not read: ADC clock limit and sampling time vs source impedance, HSI16 and LSI tolerances, VDDA limits, 5 V tolerance of the hall and switch pins, break-path delay, dead-time insertion rule, comparator blanking, output state while halted by a debugger, LQFP-100 package drawing."
+    affects: "ADC sampling times (src/adc.c), IWDG timeout tolerance (src/watchdog.c), MCU footprint, acceptance limits S3.5, S4.3, S4.6; the internal-comparator overcurrent option (DESIGN_REVIEW.md item 5)."
+    why: "Several firmware timing values are marked assumptions until these documents confirm them, and the MCU footprint needs the package drawing."
+    done_now: "Register sequences and pins verified against ST's CMSIS, HAL/LL sources and pin database; assumptions tagged."
+    input: "DS12288, RM0440 and ES0430 PDFs in docs/reference/datasheets/, or network access to st.com."
+    closure: "Register rows filled; the [A] values in src/adc.c and src/watchdog.c replaced or confirmed."
+    unlocks: 9
+
+  - id: B-PART-DOCS
+    status: open
+    group: D1
+    title: Datasheets of the other candidate parts
+    missing: "MAX6369 (SET0..2 timeout table, start-up delay), TJA1051 (VCC/VIO ranges), LM5164 (VFB, RON equation), TLV755P, TLV7041 (input range), TL431 (minimum cathode current), PC817, NUP2105L."
+    affects: "Watchdog strap timing (sheet 08), +5V divider, buck design (sheet 12), OV comparator bias (sheet 02), acceptance limits S2.3, S3.3, S3.6."
+    why: "Each fixes a value now tagged TYPICAL or recalled."
+    done_now: "Pin functions cross-checked with the KiCad 8.0.9 library; values tagged."
+    input: "The PDFs in docs/reference/datasheets/, or network access to ti.com, nxp.com, analog.com, onsemi.com."
+    closure: "DATASHEET_REGISTER.md rows filled; TYPICAL values confirmed or changed."
+    unlocks: 8
+
+  - id: B-OVTRIP
+    status: open
+    group: D1
+    title: Over-voltage trip not verified at its worst case
+    missing: "Device bounds for the trip network: TL431 reference tolerance, drift and minimum cathode current; TLV7041 offset, bias current, output low voltage, output leakage, internal hysteresis and minimum supply; TLV75533 output accuracy; PC3 leakage (DS12288). Also V_bat,max, the regeneration margin and the lowest stress rating, which set the divider and the pass criteria."
+    affects: "hardware/kicad/02_dc_link.kicad_sch (U201, U202, R202 to R208); acceptance S6.6; the TL431 and TLV7041 BOM lines."
+    why: "The trip is the only over-voltage protection that does not depend on firmware. Its nominal thresholds (+0.79 % and -2.50 % of the set point) say nothing about where it trips with real parts, or whether it releases above the full-charge voltage."
+    done_now: "Node equations and an all-corners evaluation in tools/ov_trip_worst_case.py, with every input in hardware/calculations/ov_trip_inputs.yaml (null where unknown). Resistor-only spread computed: trip +0.57 % to +1.00 %, release -2.74 % to -2.26 % of the set point (1 % network, 0.1 % divider). The device terms and the criteria are pending; the tool reports the full worst case only when every bound exists."
+    input: "The TL431, TLV7041 and TLV75533 data sheets (docs/reference/datasheets/README.md, priorities 7 and 8) and the battery documents (request P1)."
+    closure: "Every input bounded from a cited table, the full worst case computed, the three criteria in ov_trip_worst_case.md met, and acceptance S6.6 measured within the computed range."
+    unlocks: 4
+
+  - id: B-CAN
+    status: open
+    group: P5
+    title: Vehicle CAN bus
+    missing: "Bit rate, classic CAN or CAN FD, the identifier block for this controller (supervision.can_id_base), the other nodes and the termination positions."
+    affects: "Crystal decision (16 MHz proposed), supervision.can_bitrate_bps and can_id_base, termination jumpers (sheet 11), acceptance S9."
+    why: "The firmware keeps CAN off until the bit rate and crystal are known; supervised ECO mode needs the bus."
+    done_now: "Bit timing computed and host-tested for 125 k to 1 Mbit/s on a 16 MHz kernel; FDCAN driver with hardware filter and bus-off recovery; the controller drives manually without CAN."
+    input: "The vehicle team's bus description: nodes, bit rate, frame format, identifier allocation, where the bus is terminated."
+    closure: "docs/ICD.md section 2 confirmed; calibration values set; crystal selected; acceptance S9.1 passed."
+    unlocks: 7
+
+  - id: B-HARNESS
+    status: open
+    group: P6
+    title: Connectors and harness
+    missing: "Connector families and pinouts for J101 (battery), J301 (motor phases), J701 (motor temperature), J901 (halls), J1001 (driver controls), J1101 (CAN)."
+    affects: "Footprints, board outline and connector placement (hardware/layout/PRE_LAYOUT.md); docs/ICD.md section 11."
+    why: "The layout cannot start without the connector footprints and their positions on the board edge."
+    done_now: "Signals assigned to generic connector pins; current requirements per connector stated."
+    input: "Photos of the vehicle's mating connectors with part numbers, or the harness drawing."
+    closure: "ICD section 11 complete; connector symbols and footprints chosen."
+    unlocks: 6
+
+  - id: B-LOOP
+    status: open
+    group: P4
+    title: Safety loop and emergency stop wiring
+    missing: "Safety-loop voltage and current, and how the emergency stop and dead-man are wired into it."
+    affects: "PC817 LED series resistor (sheet 10); HW_PERMIT behaviour; acceptance S6.7."
+    why: "HW_PERMIT gates the driver enable in hardware; the optocoupler must be driven correctly by the loop."
+    done_now: "Topology verified (consistency PR7); firmware senses HW_PERMIT."
+    input: "The vehicle's safety-loop schematic or a description with voltage and connector."
+    closure: "LED resistor selected; acceptance S6.7 passed."
+    unlocks: 2
+
+  - id: B-PEDAL
+    status: open
+    group: P4
+    title: Pedal and switch hardware
+    missing: "Pedal sensor model (one or two tracks, output range, supply), brake switch contact type, mode/arm/dead-man switch types."
+    affects: "Throttle divider (sheet 10), config controls.*, controls.brake_switch."
+    why: "The pedal plausibility check needs two tracks and their end points; a normally-open brake switch fails unsafe on a broken wire."
+    done_now: "Two-track plausibility and the brake switch type are calibration values; the divider accepts a 0-5 V track."
+    input: "Pedal model number and datasheet; photos of the switches and their connectors."
+    closure: "config controls.* filled from acceptance S5.1 to S5.4."
+    unlocks: 4
+
+  - id: B-NTC
+    status: open
+    group: P4
+    title: Temperature sensors
+    missing: "Power-stage NTC part number (R25, beta, tolerance) and the motor's temperature sensor type."
+    affects: "config sensing.*; the motor temperature bias resistor (sheet 07); derate and trip temperatures."
+    why: "Without a sensor model the temperature is reported missing and the controller derates."
+    done_now: "NTC conversion with open/short detection implemented and host-tested."
+    input: "Choice of NTC (team) and the motor datasheet's sensor type."
+    closure: "config sensing.* filled; acceptance S5.6 passed."
+    unlocks: 4
+
+  - id: B-MECH
+    status: open
+    group: P6
+    title: Board outline, mounting and cooling
+    missing: "Space and mounting points for the controller in the vehicle, enclosure, heatsink or cold-plate approach, cable entry directions."
+    affects: "Board outline, mounting holes, MOSFET placement and thermal path (hardware/layout/PRE_LAYOUT.md)."
+    why: "The layout and the thermal design start from the outline and the cooling path."
+    done_now: "Pre-layout requirements written; the electrical constraints that do not depend on the outline listed."
+    input: "Photos and dimensions of the controller's location in the vehicle; whether a metal plate is available as a heatsink."
+    closure: "Outline, mounting and thermal approach recorded in PRE_LAYOUT.md."
+    unlocks: 5
+
+  - id: B-ASSY
+    status: open
+    group: team
+    title: Assembly process and copper weight
+    missing: "Hand assembly or a PCBA service; outer copper weight; the fabricator's design rules."
+    affects: "Footprint variants, solder-paste stencil, clearances and current capacity in the layout; budget lines for fabrication and assembly."
+    why: "Fine-pitch parts (LQFP-100, WQFN-40) and power copper depend on the process."
+    done_now: "Both options priced as ranges (docs/BUDGET.md)."
+    input: "Team decision and the chosen fabricator's capability sheet."
+    closure: "Recorded in PRE_LAYOUT.md; budget lines updated with a quote."
+    unlocks: 4
+
+  - id: B-RULES
+    status: open
+    group: P7
+    title: Event and rule edition
+    missing: "The event, season and the governing Chapter I edition (2026 read from a third-party copy; a 2027 edition listed but not read)."
+    affects: "Discharge requirements, purpose-built controller and kit-software rule (ADR-0009), joulemeter placement, telemetry power."
+    why: "Several design choices follow rule articles that must be checked against the edition that applies."
+    done_now: "docs/RULES_COMPLIANCE.md against the 2026 text."
+    input: "Event name and the official rule PDF of the applicable edition."
+    closure: "RULES_COMPLIANCE.md updated against that edition."
+    unlocks: 3
+
+  - id: B-QUOTE
+    status: open
+    group: team
+    title: Live prices
+    missing: "Live distributor and fabricator quotes (the snapshots are dated web-search values and allowances)."
+    affects: "docs/BUDGET.md ranges and the $500 and $1,000 scenarios."
+    why: "The budget cannot be shown feasible while the ranges straddle the limits."
+    done_now: "Priced ranges with evidence class and date per line; three builds (controller only, plus local logging, full scope) evaluated against $500 and $1,000 with and without the development equipment (docs/PROCUREMENT.md); the controller-only build is fully estimated (312 to 834 USD with the equipment owned) and the other two have 8 and 19 unpriced lines."
+    input: "Quotes for the BOM and the PCB from the team's chosen suppliers (distributor sites are not reachable from this environment)."
+    closure: "pricing.yaml lines updated with quote references; tools/price_bom.py rerun."
+    unlocks: 3
+
+  - id: B-VEH
+    status: open
+    group: team
+    title: Vehicle test readiness
+    missing: "A board that passed stages S1 to S9, and the vehicle available with its safety systems."
+    affects: "Acceptance S10."
+    why: "Vehicle tests follow bench acceptance only."
+    done_now: "Procedures written."
+    input: "Bench acceptance results of the board."
+    closure: "S1 to S9 records pass for that board."
+    unlocks: 1
+
+  # ---------------------------------------------------------------- closed in this revision
+  - id: C-ERC
+    status: closed
+    title: KiCad ERC never run
+    missing: "Earlier status: the schematic had only a connectivity check."
+    affects: "hardware/kicad"
+    why: "The ERC checks pin types, unconnected pins and library consistency."
+    done_now: "CI job erc runs kicad-cli sch erc on every push."
+    input: "none"
+    closure: "ERC runs in CI with no error, and every warning is reviewed."
+    evidence: "CI run 39070286030 (commit 76f4cfc): KiCad 8.0.9, 0 errors, 9 warnings, each reviewed in hardware/review/DESIGN_REVIEW.md (library-version differences, no pin, type or net change). After generating from the pinned 8.0.9 libraries: CI run 39078886365 (commit 40b3dfa, schematic unchanged since a9a378c): KiCad 8.0.9, 0 errors, 0 warnings."
+    unlocks: 0
+
+  - id: C-PLATFORM
+    status: closed
+    title: No STM32 platform layer, no target image
+    missing: "Earlier status: only an ARM compile of the portable core."
+    affects: "firmware/platform/stm32g4"
+    why: "No firmware could be flashed to a board."
+    done_now: "Startup, linker script, clock, PWM, ADC, CAN, watchdogs, calibration store and main loop; linked image."
+    input: "none"
+    closure: "A linked image builds in CI and its structure is checked."
+    evidence: "commit c3f716b; semmc_stm32g474.elf/.bin/.hex built in CI (artifact semmc-stm32g474-image); tests/integration/test_target_firmware.py (vector table against ST's IRQn_Type, memory layout, no double precision on the current-interrupt path, fault handlers reach the safe state). Not run on hardware."
+    unlocks: 0
+
+  - id: C-MQTT
+    status: closed
+    title: Flaky MQTT timing check
+    missing: "The demo's step-timing check failed on a single scheduling stall of a shared CI runner."
+    affects: "tools/run_mqtt_demo.py"
+    why: "A flaky check hides real regressions."
+    done_now: "Criterion now targets blocking behaviour: p99 below a quarter of the period and at most one step in 200 over it, per phase; a negative test with a blocking uplink fails it."
+    input: "none"
+    closure: "GitHub-hosted CI passes on the fix."
+    evidence: "commit 76f4cfc; CI runs 39070286030 and 39070288670 passed (all phases 0 steps over the period)."
+    unlocks: 0
+
+  - id: C-PINAF
+    status: closed
+    title: MCU alternate functions unverified
+    missing: "Pin alternate-function numbers had no check against ST's data."
+    affects: "firmware/platform/stm32g4/src/board_pins_generated.h"
+    why: "A wrong AF number silently disconnects a peripheral from its pin."
+    done_now: "tools/gen_board_pins.py checks every pin, position and AF; CI runs it with --check."
+    input: "none"
+    closure: "0 errors against STM32_open_pin_data."
+    evidence: "docs/generated/pin_af_verification.md: 45 functions, 0 errors (ST STM32_open_pin_data@7d1f1514)."
+    unlocks: 0
+
+  - id: C-RACE
+    status: closed
+    title: Fast-loop overcurrent could be lost on the target
+    missing: "Found in this revision: the slow step cleared the fast-loop flags after reading them, so an overcurrent raised in between was erased."
+    affects: "firmware/src/core/mc_core.c"
+    why: "A lost overcurrent never latches and the outputs could re-enable."
+    done_now: "Flags cleared only when observed and after the reacting command is published; the command is double-buffered."
+    input: "none"
+    closure: "A deterministic preemption test fails on the old code and passes on the new."
+    evidence: "commit 1479d16; firmware/tests/test_core_preemption.c."
+    unlocks: 0
+
+  - id: C-ACK
+    status: closed
+    title: A repeated fast-loop fault during acknowledgment was erased
+    missing: "Found in the concurrency review: the slow step cleared a fast-loop fault flag it had observed, so a second instance raised between its read and the clear was lost; the handoff relied on volatile and a compiler fence without a stated mechanism."
+    affects: "firmware/src/core/mc_core.c, firmware/include/semmc/mc_core.h"
+    why: "A lost instance means a fault the fast step saw may never be counted; an undocumented handoff cannot be reviewed."
+    done_now: "Single-writer C11 atomic event counters with an acknowledgment stored after the reacting command is published; release and acquire ordering for the command index; the mechanism documented per shared variable."
+    input: "none"
+    closure: "Tests of fault arrival before, during and after the slow step, a repeated instance during acknowledgment and command publication fail on the old behaviour and pass; the image shows DMB-fenced accesses."
+    evidence: "firmware/tests/test_core_preemption.c (5 tests; acknowledging the current count instead of the observed one fails 3 checks); tests/integration/test_target_firmware.py test_fast_slow_handoff_compiles_to_ordered_atomics."
+    unlocks: 0
+
+  - id: C-OVHYS
+    status: closed
+    title: Over-voltage comparator hysteresis undefined
+    missing: "Found in this revision: the hysteresis resistor acted on the TL431's low-impedance node."
+    affects: "hardware/kicad/02_dc_link.kicad_sch"
+    why: "The trip could chatter or the reference could collapse."
+    done_now: "10 k series input resistor and 390 k hysteresis resistor; TL431 bias 1.7 mA. This closed the topology defect only; the worst-case thresholds are B-OVTRIP."
+    input: "none"
+    closure: "Schematic changed and connectivity re-checked."
+    evidence: "commit a9a378c; hardware/review/DESIGN_REVIEW.md item 6; CONNECTIVITY_CHECK.md 136 nets, 0 problems; CI run 39078886365 (connectivity gate and drift check on KiCad 8.0.9, ERC 0 errors, 0 warnings)."
+    unlocks: 0
+
+  - id: C-KICAD
+    status: closed
+    title: Two KiCad versions in the project
+    missing: "The schematic embedded KiCad 7.0.11 library symbols while the ERC ran KiCad 8.0.9."
+    affects: ".github/workflows/ci.yml, tools/gen_kicad_schematic.py, tools/run_kicad_erc.sh"
+    why: "Library differences appeared as ERC warnings and the two CI jobs checked different releases."
+    done_now: "KiCad 8 in both jobs; generator and ERC read the same pinned 8.0.9 libraries."
+    input: "none"
+    closure: "Both jobs on KiCad 8.0.9 with the pinned libraries."
+    evidence: "commit a9a378c; tools/fetch_kicad_symbols.py (SHA-256 pinned); CI run 39078886365 (commit 40b3dfa): both jobs on KiCad 8.0.9, the generator's output equals the committed schematic, ERC 0 errors, 0 warnings."
+    unlocks: 0

@@ -1,8 +1,7 @@
 # Pricing evidence for the draft BOM (consumed by tools/price_bom.py).
 #
 # NOTHING HERE IS A QUOTE AND NOTHING HAS BEEN PURCHASED.
-# Distributor and manufacturer sites were unreachable from the build
-# environment (proxy 403), so prices come from web-search result snapshots of
+# No supplier quote has been obtained yet, so prices come from web-search result snapshots of
 # distributor pages, retrieved 2026-10-15. Those snapshots are UNDATED caches:
 # re-check every line on the live page before any order.
 #
@@ -18,6 +17,8 @@ rules:
   # ---------------------------------------------------------------- ICs with an exact candidate MPN
   - match: {symbol: "MCU_ST_STM32G4:STM32G474VETx"}
     mpn: STM32G474VET6
+    manufacturer: STMicroelectronics
+    datasheet: "ST DS12288 (register row open: not read)"
     package: LQFP-100 14x14
     low: 11.62
     high: 12.13
@@ -25,9 +26,11 @@ rules:
     evidence: snippet
     source: "Mouser 511-STM32G474VET6 cached $11.62@1; Digi-Key cached $12.13@1 (search 2026-10-15)"
     availability: "listed; DK TR variant showed backorder in one snapshot"
-    alternate: STM32G474VCT6 (256 kB flash, same pinout)
+    alternate: "STM32G474VCT6 (same package, 256 KB flash): the image fits, but the current linker layout puts the calibration page at 0x0807F000, beyond its flash; needs its own layout, and its other differences are unchecked"
   - match: {symbol: "semmc:DRV8353S"}
     mpn: DRV8353SRTAR
+    manufacturer: Texas Instruments
+    datasheet: "TI SLVSDY6 (register row open: not read)"
     package: WQFN-40 (RTA)
     low: 4.98
     high: 5.66
@@ -38,6 +41,8 @@ rules:
     alternate: DRV8353SRTAT (250-pc reel, DK stocked $5.00@1) or DRV8353RS (integrated buck, 48-pin)
   - match: {symbol: "semmc:INA228"}
     mpn: INA228AIDGSR
+    manufacturer: Texas Instruments
+    datasheet: "TI INA228 datasheet (register row open: not read)"
     package: VSSOP-10 (DGS)
     low: 4.21
     high: 6.05
@@ -48,6 +53,8 @@ rules:
     alternate: INA229 (SPI) or INA238 (16-bit) - verify footprint
   - match: {symbol: "Interface_CAN_LIN:TJA1051T-3"}
     mpn: TJA1051T/3/1J
+    manufacturer: NXP
+    datasheet: "NXP TJA1051 product data sheet (register row open: not read)"
     package: SO-8
     low: 1.43
     high: 1.63
@@ -58,6 +65,8 @@ rules:
     alternate: TCAN1042VDRQ1 (pin-compatible class - verify)
   - match: {symbol: "Regulator_Switching:LM5164DDA"}
     mpn: LM5164DDAR
+    manufacturer: Texas Instruments
+    datasheet: "TI SNVSAU4 (register row open: not read)"
     package: SO-8 PowerPAD (DDA)
     low: 1.96
     high: 4.19
@@ -68,6 +77,8 @@ rules:
     alternate: LM5164QDDARQ1 (automotive)
   - match: {symbol: "Power_Supervisor:MAX6369"}
     mpn: MAX6369KA+T
+    manufacturer: Analog Devices (Maxim)
+    datasheet: "MAX6369-MAX6374 datasheet (register row open: not read)"
     package: SOT-23-8
     low: 2.0
     high: 5.0
@@ -76,18 +87,20 @@ rules:
     source: "not quoted"
     availability: unknown
     alternate: TPS3431 / STWD100 (pin-incompatible)
-  - {match: {symbol: "Comparator:TLV7041DBV"}, mpn: "TLV7041DBVR", package: "SOT-23-5", low: 0.4, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV3691}
-  - {match: {symbol: "Reference_Voltage:TL431DBZ"}, mpn: TL431BIDBZR, package: SOT-23-3, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: LM4041}
-  - {match: {symbol: "74xGxx:74LVC1G08"}, mpn: SN74LVC1G08DBVR, package: SOT-23-5, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: 74AHC1G08}
-  - {match: {symbol: "Regulator_Linear:TLV75533PDBV"}, mpn: TLV75533PDBVR, package: SOT-23-5, low: 0.15, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV75733P}
+  - {match: {symbol: "Comparator:TLV7041DBV"}, mpn: "TLV7041DBVR", manufacturer: "Texas Instruments", datasheet: "TI TLV7041 datasheet (register row open: not read)", package: "SOT-23-5", low: 0.4, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV3691}
+  - {match: {symbol: "Reference_Voltage:TL431DBZ"}, mpn: TL431BIDBZR, manufacturer: "Texas Instruments", datasheet: "TI TL431 datasheet (register row open: not read)", package: SOT-23-3, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: LM4041}
+  - {match: {symbol: "74xGxx:74LVC1G08"}, mpn: SN74LVC1G08DBVR, manufacturer: "Texas Instruments", datasheet: "not in the register", package: SOT-23-5, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: 74AHC1G08}
+  - {match: {symbol: "Regulator_Linear:TLV75533PDBV"}, mpn: TLV75533PDBVR, manufacturer: "Texas Instruments", datasheet: "TI TLV755P datasheet (register row open: not read)", package: SOT-23-5, low: 0.15, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TLV75733P}
   - {match: {symbol: "Isolator:PC817"}, mpn: "PC817X2NSZ9F (or equivalent)", package: DIP-4/SMD-4, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: EL817}
-  - {match: {symbol: "Power_Protection:NUP2105L"}, mpn: NUP2105LT1G, package: SOT-23, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: PESD2CAN}
+  - {match: {symbol: "Power_Protection:NUP2105L"}, mpn: NUP2105LT1G, manufacturer: "onsemi", datasheet: "not in the register", package: SOT-23, low: 0.2, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: PESD2CAN}
   - {match: {symbol: "Diode:ESD9B"}, mpn: "ESD9B5.0ST5G / ESD9B3.3ST5G", package: SOD-923, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown, alternate: TPD1E10B06}
-  - {match: {symbol: "Device:D_Schottky"}, mpn: BAT54, package: SOT-23, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:D_Schottky"}, mpn: "BAT54-class Schottky in SOD-323 (MPN to confirm)", package: SOD-323, low: 0.05, high: 0.3, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - {match: {symbol: "Device:Crystal_GND24"}, mpn: "HSE crystal, frequency UNSELECTED (8-40 MHz class, 3225; CL/tolerance to select)", package: 3225, low: 0.3, high: 1.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   # ---------------------------------------------------------------- rating-dependent lines (representative pricing)
   - match: {symbol: "Device:Q_NMOS_GDS"}
     mpn: "UNRESOLVED (representative: CSD19536KTT 100 V D2PAK)"
+    manufacturer: Texas Instruments (representative)
+    datasheet: "TI CSD19536KTT datasheet (register row open: not read)"
     package: "D2PAK class (UNRESOLVED)"
     low: 5.27
     high: 7.85
@@ -100,6 +113,8 @@ rules:
   - {match: {symbol: "Device:Q_NMOS_GSD"}, mpn: "UNRESOLVED 100 V small-signal N-FET (e.g. BSS123 class)", package: SOT-23, low: 0.1, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - match: {symbol: "Device:R_Shunt"}
     mpn: "UNRESOLVED (representative: WSK2512 1 mOhm 4-terminal)"
+    manufacturer: Vishay (representative)
+    datasheet: "Vishay WSK2512 datasheet (register row open: not read)"
     package: "2512 4-terminal (UNRESOLVED value)"
     low: 1.7
     high: 4.0
@@ -120,12 +135,16 @@ rules:
   - {match: {symbol: "Device:Fuse"}, mpn: "UNRESOLVED (rating from BMS/harness)", package: "UNRESOLVED", low: 2.0, high: 8.0, supplier: "-", evidence: allowance, source: "not quoted (fuse + holder)", availability: unknown}
   - {match: {symbol: "Device:D_TVS"}, mpn: "UNRESOLVED (V_standoff >= V_bat,max)", package: "SMC class", low: 0.5, high: 2.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - {match: {symbol: "semmc:RPP_BLOCK"}, mpn: "UNRESOLVED (ideal-diode controller + N-FETs, or none)", package: "UNRESOLVED", low: 0.0, high: 10.0, supplier: "-", evidence: allowance, source: "not quoted; 0 if harness keying is chosen", availability: unknown}
-  - {match: {symbol: "Device:L"}, mpn: "UNRESOLVED buck inductor", package: "SMD power inductor", low: 0.3, high: 1.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:L$"}, mpn: "UNRESOLVED buck inductor", package: "SMD power inductor", low: 0.3, high: 1.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:C$", value: "UNRESOLVED load"}, mpn: "C0G 0603, value from the selected crystal's C_L", package: "0603", low: 0.02, high: 0.10, min_line_low: 0.10, min_line_high: 1.00, supplier: "-", evidence: allowance, source: "not quoted", availability: n/a}
+  - {match: {symbol: "Device:C$", value: "^22uF$"}, mpn: "22 uF X7R 1206, >= 10 V", package: "1206", low: 0.08, high: 0.40, min_line_low: 0.20, min_line_high: 1.00, supplier: "-", evidence: allowance, source: "not quoted", availability: n/a}
+  - {match: {symbol: "Device:C$", value: "^4.7uF$"}, mpn: "4.7 uF X7R 0805, >= 10 V", package: "0805", low: 0.03, high: 0.20, min_line_low: 0.10, min_line_high: 1.00, supplier: "-", evidence: allowance, source: "not quoted", availability: n/a}
   - {match: {symbol: "Device:C", value: "100V|UNRESOLVED"}, mpn: "UNRESOLVED >=100 V X7R MLCC (1206/1210)", package: "1206/1210", low: 0.2, high: 0.8, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   # ---------------------------------------------------------------- connectors (board side)
   - {match: {symbol: "Connector_Generic:Conn_01x02", value: BATTERY_IN}, mpn: "UNRESOLVED (e.g. Amass XT90 PCB or screw terminal; rating pending)", package: "UNRESOLVED", low: 2.5, high: 6.0, supplier: hobby/distributor, evidence: allowance, source: "XT90 2 pairs $4.95 (BuddyRC, valid to 2026-09-10, snapshot)", availability: unknown}
   - {match: {symbol: "Connector_Generic:Conn_01x03", value: MOTOR_PHASES}, mpn: "UNRESOLVED (e.g. Amass MR60 or 3x 4 mm bullet; rating pending)", package: "UNRESOLVED", low: 3.0, high: 8.0, supplier: hobby/distributor, evidence: allowance, source: "MR60 set $2.99 (RaceDayQuads snapshot)", availability: unknown}
   - {match: {symbol: "Connector:Conn_ARM_JTAG_SWD_10"}, mpn: "2x5 1.27 mm SMD header (e.g. FTSH-105-01)", package: 2x05 1.27mm, low: 1.0, high: 4.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Connector_Generic:Conn_01x03", value: "UART"}, mpn: "1x03 2.54 mm pin header (bench, not fitted for competition)", package: "1x03 2.54 mm", low: 0.05, high: 0.30, supplier: "-", evidence: allowance, source: "not quoted", availability: n/a}
   - {match: {symbol: "Connector_Generic:"}, mpn: "UNRESOLVED (harness family: JST-XH / Molex Micro-Fit, to agree with vehicle team)", package: "UNRESOLVED", low: 0.5, high: 3.0, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - {match: {symbol: "Connector:TestPoint"}, mpn: "test pad or loop", package: pad, low: 0.0, high: 0.3, supplier: "-", evidence: allowance, source: "pad = free", availability: n/a}
   - {match: {symbol: "Jumper:"}, mpn: "solder jumper (copper)", package: pad, low: 0.0, high: 0.0, supplier: n/a, evidence: allowance, source: "PCB copper", availability: n/a}
@@ -133,7 +152,11 @@ rules:
   # ---------------------------------------------------------------- small passives / misc
   - {match: {symbol: "Device:Thermistor_NTC"}, mpn: "10k NTC 0603 (B to select)", package: "0603", low: 0.05, high: 0.4, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - {match: {symbol: "Device:Polyfuse"}, mpn: "PTC resettable fuse (hold current to select)", package: "1206/1812", low: 0.1, high: 0.6, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
-  - {match: {symbol: "Device:LED|Device:FerriteBead|Device:D_Zener|Switch:SW_Push"}, mpn: "generic (0603 LED / 0603 bead / SOD-123 zener / SMD tact)", package: "0603/SOD-123/SMD", low: 0.05, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Switch:SW_Push"}, mpn: "6 x 6 mm SMD tactile switch (C&K PTS645 series footprint)", package: "6 x 6 mm SMD tactile", low: 0.10, high: 0.50, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:D_Zener"}, mpn: "12 V Zener, SOD-123", package: "SOD-123", low: 0.05, high: 0.30, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:LED"}, mpn: "0603 LED", package: "0603", low: 0.05, high: 0.30, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:FerriteBead"}, mpn: "0603 ferrite bead, 600 R at 100 MHz", package: "0603", low: 0.03, high: 0.20, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
+  - {match: {symbol: "Device:LED|Device:FerriteBead|Device:D_Zener"}, mpn: "generic (0603 LED / 0603 bead / SOD-123 zener)", package: "0603/SOD-123", low: 0.05, high: 0.5, supplier: "-", evidence: allowance, source: "not quoted", availability: unknown}
   - {match: {symbol: "Device:R|Device:C"}, mpn: "generic 0603 (1 % R / X7R C)", package: "0603", low: 0.01, high: 0.10, min_line_low: 0.10, min_line_high: 1.00, supplier: "-", evidence: allowance, source: "not quoted (cut-tape strips of 10-25)", availability: n/a}
 
 # --------------------------------------------------------------------- non-component items
@@ -162,9 +185,30 @@ project_items:
 equipment:
   - {item: "SWD programmer (STLINK-V3MINIE)", low: 14, high: 44, evidence: snippet, source: "Cytech ref $14.04; Farnell IE EUR 12.51 incl. VAT; Waveshare GBP 37.58 (snapshots)"}
   - {item: "USB-CAN adapter (CANable-class, candleLight firmware)", low: 30, high: 60, evidence: allowance, source: "not quoted"}
-  - {item: "Current-limited bench supply (>= 60 V or series-able, CC mode)", low: 60, high: 200, evidence: allowance, source: "not quoted"}
+  - {item: "Current-limited bench supply (output above V_bat,max, unknown; or series-able; CC mode)", low: 60, high: 200, evidence: allowance, source: "not quoted"}
   - {item: "Oscilloscope >= 100 MHz, 4 ch (+ differential probe for the switch node)", low: 0, high: 0, evidence: allowance, source: "assumed borrowed from the lab: NOT in the budget; a differential probe can cost more than this whole budget"}
   - {item: "Bench DMM x2, clamp/current probe", low: 0, high: 60, evidence: allowance, source: "assumed owned; clamp meter if not"}
+
+# Telemetry and recording lines of hardware/bom/procurement.yaml (referenced there as pricing: telemetry/<item>).
+# Search-result snapshots of distributor pages, retrieved 2026-10-18: not quotes; re-check on the live page.
+telemetry:
+  - {item: "NUCLEO-U575ZI-Q", low: 24.15, high: 25.36, evidence: snippet, source: "Future Electronics US $24.15 and $25.36 at qty 1 (two snapshots); Digi-Key 497-NUCLEO-U575ZI-Q-ND shows a 99-week factory lead time, stock not shown (search 2026-10-18)"}
+  - {item: "CAN transceiver on an adapter", low: 2.0, high: 8.0, evidence: allowance, source: "TJA1051T/3,118 chip $0.84 to $1.23 (Newark snapshot, search 2026-10-18) plus an adapter board and connector, not quoted"}
+  - {item: "Wheel Hall switch", low: 1.0, high: 5.0, evidence: representative, source: "DRV5023AJQDBZR $0.44 to $0.89 (aggregator snapshot of Mouser, Digi-Key, Newark, search 2026-10-18) plus carrier and potting, not quoted; the sensor waits for the wheel geometry"}
+  - {item: "Wheel magnets", low: 3.0, high: 15.0, evidence: allowance, source: "6 x 3 mm N52 discs: EUR 0.55 each (Tinytronics), GBP 3.29 per 10 (eBay) (snapshots 2026-10-18); count and mounting wait for the wheel geometry"}
+  - {item: "microSD socket and card", low: 12.5, high: 64.0, evidence: snippet, source: "Adafruit 254 breakout $7.50; card from a consumer card (allowance $5) to Kingston SDCIT2/8GBCP industrial pSLC $55.73 (Future Electronics snapshot) (search 2026-10-18)"}
+  - {item: "Telemetry DC-DC", low: 12.0, high: 18.0, evidence: representative, source: "RECOM R-78HB5.0-0.5 (9 to 72 V in, 5 V 0.5 A) about $12.27 to $17 (Findchips, Digi-Key /W variant snapshots, search 2026-10-18); its input range must cover V_bat,max and transients (B-BAT-V)"}
+  - {item: "Telemetry harness", low: 10.0, high: 30.0, evidence: allowance, source: "not quoted"}
+  - {item: "Telemetry shipping and tax", low: 10.0, high: 25.0, evidence: allowance, source: "not quoted"}
+  - {item: "GNSS receiver", low: 30.0, high: 76.5, evidence: snippet, source: "SparkFun GPS-15733 NEO-M9N breakout $76.50 (SparkFun and Digi-Key US, 24 in stock, snapshot); the bare module on a board is the low end, allowance (search 2026-10-18)"}
+  - {item: "GNSS antenna", low: 15.0, high: 28.0, evidence: snippet, source: "Adafruit 960 active 28 dB SMA antenna $21.50 at 1-9; Jameco $27.75 (snapshots 2026-10-18)"}
+  - {item: "LTE modem", low: 13.5, high: 22.6, evidence: snippet, source: "SIMCom A7672E: TME $13.50, Digi-Key LASE $17.90 and FASE $22.62 at qty 1 (aggregator snapshots 2026-10-18); the regional variant waits for the event country"}
+  - {item: "LTE antenna", low: 8.0, high: 28.0, evidence: snippet, source: "700-2700 MHz SMA male: MikroE 3371 GBP 6.64, Teltonika PR1CS450 $11.00, Pulse WA700/2700SMA $27.20 (snapshots 2026-10-18)"}
+  - {item: "SIM and data plan", low: 1.0, high: 40.0, evidence: snippet, source: "1NCE IoT Lifetime Flat $1 for 500 MB over 10 years; Hologram $3 per SIM, $1 per month and $0.03 per MB, about $34 for 1 GB in one month (pricing pages, snapshots 2026-10-18); the volume waits for the uplink rate and event length"}
+  - {item: "MQTT broker hosting", low: 0.0, high: 30.0, evidence: allowance, source: "$0 with a tunnel to the pit computer; a small hosted server for a few months, not quoted"}
+  - {item: "IMU", low: 20.0, high: 26.0, evidence: snippet, source: "SparkFun SEN-19764 ISM330DHCX breakout $25.50; Adafruit ISM330DHCX GBP 19.20 (snapshots 2026-10-18)"}
+  - {item: "Temperature probes", low: 6.0, high: 22.0, evidence: snippet, source: "DS18B20 waterproof probe $5.50 each (Konnected); 5-pack $10.95 plus $10.49 shipping (Fruugo) (snapshots 2026-10-18)"}
+  - {item: "Driver display", low: 5.0, high: 30.0, evidence: allowance, source: "LED bar burn / coast, not quoted; the display type is a team decision"}
 
 spares:
   # extra units per scenario (most likely to be damaged during bring-up)

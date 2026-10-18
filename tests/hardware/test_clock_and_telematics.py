@@ -47,6 +47,6 @@ def test_controller_frame_rate_and_flash_fill_time():
     rows = tb.semmc_rates()
     f_ctrl = sum(f for _n, _i, s, f in rows if s == "controller")
     f_sup = sum(f for _n, _i, s, f in rows if s != "controller")
-    assert round(f_ctrl) == 384 and round(f_sup) == 72
+    assert round(f_ctrl) == 394 and round(f_sup) == 72   # protocol 1.1: + ctrl_energy_quality at 10 Hz
     t_fill = tb.FLASH_B * tb.FLASH_USABLE / ((f_ctrl + f_sup) * tb.REC_CAN_B)
     assert 16 * 60 < t_fill < 18 * 60          # ~17 min: a 40 min attempt does not fit at full rate

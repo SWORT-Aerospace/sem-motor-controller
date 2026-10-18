@@ -8,7 +8,7 @@
 The motor's phase current and the battery voltage are UNKNOWN, so both studies
 are envelopes over the plausible range rather than a single design point.
 Tags: [S] value from a web-search snippet of a manufacturer page (the primary
-datasheet could not be opened here), [R] recalled, [A] assumption, [D] design
+datasheet not yet read), [R] recalled, [A] assumption, [D] design
 choice. Nothing is a measurement.
 """
 from __future__ import annotations
@@ -83,7 +83,7 @@ def write_budget():
     L_ = ["# Phase-current sense error budget (generated)", "",
           "> `tools/hardware_calcs.py`. The full-scale current depends on the UNKNOWN motor peak current, so the "
           "budget is tabulated over plausible full-scale values and CSA gains. Component values: [S] = web-search "
-          "snippet (the primary datasheet could not be opened), [R] = recalled, [A] = assumption to verify, [D] = "
+          "snippet (the primary datasheet not yet read), [R] = recalled, [A] = assumption to verify, [D] = "
           "design choice. **Not a measurement.**", "",
           "Topology: three low-side shunts, gate-driver-integrated CSAs biased at VREF/2, ratiometric with the ADC "
           "reference (+3V3A). Full scale: G·R·I_fs = VREF/2 − headroom.", "",

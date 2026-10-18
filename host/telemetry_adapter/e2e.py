@@ -34,6 +34,7 @@ class Scenario:
     io_events: list[Event] = dataclasses.field(default_factory=list)
     on_step: Optional[Callable[[float, Supervisor, "HostController"], None]] = None
     advisory: Optional[Callable[[float, Supervisor], Optional[bytes]]] = None
+    policy: Optional[Callable] = None          # default: speed hold at target_mps
 
 
 @dataclasses.dataclass
@@ -52,8 +53,8 @@ def run(scn: Scenario, build_dir: pathlib.Path, outdir: pathlib.Path) -> RunResu
     cal = build_dir / "cal" / "synthetic.bin"
     hc = HostController(build_dir / "semmc_host", cal, outdir / "e2e.csv", outdir / "e2e_tx.log", decimate=10)
     sup = Supervisor(SupervisorConfig(max_torque_Nm=cfg["limits"]["max_motor_torque_Nm"]),
-                     speed_hold_policy(scn.target_mps, 1.5, cfg["vehicle"]["wheel_circumference_m"],
-                                       cfg["vehicle"]["gear_ratio"], cfg["limits"]["max_motor_torque_Nm"]))
+                     scn.policy or speed_hold_policy(scn.target_mps, 1.5, cfg["vehicle"]["wheel_circumference_m"],
+                                                     cfg["vehicle"]["gear_ratio"], cfg["limits"]["max_motor_torque_Nm"]))
     pending = sorted([io_event(0, arm=False, throttle=0.0, eco=False),
                       io_event(int(scn.arm_at_s * 1e6), arm=True),
                       io_event(int(scn.eco_at_s * 1e6), eco=True)] + scn.io_events, key=lambda e: e.t_us)

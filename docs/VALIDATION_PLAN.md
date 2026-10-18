@@ -21,7 +21,7 @@
 | Physical phase-current response | the measured phase current follows the reference and stays within `max_phase_current_A` and the hardware trip, including transients | **bench only**: current probe on phase leads, current-loop step tests (stages 4–5) |
 | Battery-input current | the DC current drawn from the supply or battery | supply readout, INA228, series DMM (stages 2–6) |
 
-A bench-supply current limit bounds only the battery-input current; it does not establish a phase-current limit (`hardware/bringup/BENCH_BRINGUP_CHECKLIST.md`, which also covers DC-link stored energy and body-diode regeneration).
+A bench-supply current limit bounds only the battery-input current; it does not establish a phase-current limit (`docs/BENCH_ACCEPTANCE.md`, which also covers DC-link stored energy and body-diode regeneration).
 
 | Stage | Purpose | Entry criteria | Key checks | Exit evidence |
 |---|---|---|---|---|

@@ -1,0 +1,192 @@
+{
+ "broker": "mosquitto version 2.0.18",
+ "checks": [
+  {
+   "detail": "broker killed at 40.0 s, client saw the disconnect 1 ms later (wall); broker restarted at 60.0 s, client reconnected 0.96 s later (wall), i.e. 1.9 s of controller time",
+   "id": "broker_outage_detected_and_recovered",
+   "pass": true
+  },
+  {
+   "detail": "supervisor requests/s while the broker was unreachable [50]; ECO_ASSIST in 2192/2192 steps; telematics service step (log writer + uplink) wall time p99/max: normal 0.36/0.84 ms, 0 of 4000 steps over the period, broker_down 0.09/0.17 ms, 0 of 2000 steps over the period, after_broker 0.43/2.74 ms, 0 of 1500 steps over the period, pit_down 0.45/0.73 ms, 0 of 1000 steps over the period, after_pit 0.44/0.82 ms, 0 of 3501 steps over the period (supervisor period 20 ms; pass: p99 below a quarter of the period and at most one step in 200 over it, per phase)",
+   "id": "control_and_uplink_unaffected_by_broker_outage",
+   "pass": true
+  },
+  {
+   "detail": "records written 71885 = imported 71885 (286 blocks ok, 0 corrupt, 0 sequence gaps); log queue and storage drops 0/0; CAN records per second while the broker was down 454-464, before it 444-464",
+   "id": "local_log_complete_during_broker_outage",
+   "pass": true
+  },
+  {
+   "detail": "backlog high water 30/30; dropped on the car 15 (counter) = 15 (sequence numbers 79..93); none of them reached the pit",
+   "id": "uplink_backlog_bounded_and_drops_counted",
+   "pass": true
+  },
+  {
+   "detail": "published 240: stored at pit 225, dropped on car (queue full) 15, never acknowledged by broker 0, acknowledged by broker, not at pit 0, never handed to the link 0",
+   "id": "every_sequence_number_accounted",
+   "pass": true
+  },
+  {
+   "detail": "33 messages stored with replayed=true, equal to the backlog messages sent after reconnection",
+   "id": "replayed_messages_flagged",
+   "pass": true
+  },
+  {
+   "detail": "4 malformed messages published, 4 rejected with reasons ['ctrl.vbus_V=9999.0 outside [0.0, 100.0]', 'field seq missing or not an integer', 'not JSON (JSONDecodeError)', 'wrong or missing schema']; none stored",
+   "id": "invalid_messages_rejected_before_storage",
+   "pass": true
+  },
+  {
+   "detail": "1 duplicate receipts (the injected copy of seq 0; MQTT DUP flag set on 0); re-ingesting all 225 stored payloads added 0 rows",
+   "id": "duplicates_ignored_and_ingest_idempotent",
+   "pass": true
+  },
+  {
+   "detail": "20 car messages published while the pit service was down (75-85 s): all stored after it reconnected (session resumed 2 time(s))",
+   "id": "pit_restart_without_loss",
+   "pass": true
+  },
+  {
+   "detail": "live values (schema sem.telemetry.v3) compared with the latest logged record: 675 wheel speeds, 0 differ, 0 null (no fresh window); 672 probe temperatures, 0 differ, 3 null (no fresh valid sample); a valid sem.telemetry.v1 message from another producer was stored as v1: True",
+   "id": "live_wheel_and_temperature_match_log_and_v1_still_accepted",
+   "pass": true
+  },
+  {
+   "detail": "car time t_local_ms increases with seq: True; UTC quality {'none': 3, 'pps': 205, 'holdover': 17}; 15 messages in the GNSS outage carry utc_q=holdover, gnss speed null, fix false; pit receive time recorded for all; generation-to-storage delay (wall clock) live median 3 ms, max 5.14 s; replayed max 7.5 s",
+   "id": "timestamps_and_missing_data_explicit",
+   "pass": true
+  },
+  {
+   "detail": "R3v and CSIA2 replayed in shadow mode over 1200 ticks of the imported log; no faults were injected, so the report lists attributions without scoring them (R3v 0, CSIA2 0 episodes); report pit_replay/report.md",
+   "id": "pit_shadow_replay_reports_missing_ground_truth",
+   "pass": true
+  }
+ ],
+ "classes": {
+  "acknowledged by broker, not at pit": 0,
+  "dropped on car (queue full)": 15,
+  "never acknowledged by broker": 0,
+  "never handed to the link": 0,
+  "stored at pit": 225
+ },
+ "counters": {
+  "log_dropped_queue": 0,
+  "log_dropped_storage": 0,
+  "log_records": 71885,
+  "queue_high_water": 18,
+  "rx_frames": 47292,
+  "supervisor_overruns": 0,
+  "uplink_dropped": 15,
+  "uplink_sent": 225
+ },
+ "duration_s": 120.0,
+ "import": {
+  "block_seq_gaps": 0,
+  "blocks_corrupt": 0,
+  "blocks_ok": 286,
+  "frames_bad_crc": 0,
+  "new_records": 71885,
+  "records": 71885,
+  "run_id": "HOSTMQTT-0001",
+  "truncated_tail_bytes": 0,
+  "utc_quality": {
+   "holdover": 7029,
+   "pps": 64856
+  }
+ },
+ "kind": "HOST SOFTWARE with a real local MQTT broker (not vehicle firmware)",
+ "link_events": [
+  [
+   -0.525,
+   "connect",
+   "Success"
+  ],
+  [
+   19.998,
+   "disconnect",
+   "Unspecified error"
+  ],
+  [
+   31.004,
+   "connect",
+   "Success"
+  ],
+  [
+   60.084,
+   "disconnect",
+   "Normal disconnection"
+  ]
+ ],
+ "loop_late_s": 0.018277566001415835,
+ "pace": 2.0,
+ "paho_mqtt": "2.1.0",
+ "pit_events": [
+  [
+   "start",
+   "{\"host\": \"127.0.0.1\", \"port\": 52305, \"topic\": \"sem/car/telemetry\"}"
+  ],
+  [
+   "connect",
+   "Success; session_present=False"
+  ],
+  [
+   "disconnect",
+   "Unspecified error"
+  ],
+  [
+   "connect",
+   "Success; session_present=True"
+  ],
+  [
+   "start",
+   "{\"host\": \"127.0.0.1\", \"port\": 52305, \"topic\": \"sem/car/telemetry\"}"
+  ],
+  [
+   "connect",
+   "Success; session_present=True"
+  ],
+  [
+   "disconnect",
+   "Normal disconnection"
+  ],
+  [
+   "stop",
+   "{\"stored\": 91, \"duplicate\": 0, \"rejected\": 0}"
+  ]
+ ],
+ "pit_exit_code": 0,
+ "published": 240,
+ "repo_commit": "aec2e726edb55001b24c5ff5c2e94a05cd98739f",
+ "run_id": "HOSTMQTT-0001",
+ "scenario": {
+  "broker_down": [
+   40.0,
+   60.0
+  ],
+  "gnss_out": [
+   90.0,
+   100.0
+  ],
+  "inject_duplicate": 20.0,
+  "inject_invalid": 15.0,
+  "pit_down": [
+   75.0,
+   85.0
+  ]
+ },
+ "service_ms_max": {
+  "after_broker": 2.7354599988029804,
+  "after_pit": 0.8168289987224853,
+  "broker_down": 0.16845299978740513,
+  "normal": 0.8389199992961949,
+  "pit_down": 0.7268589997693198
+ },
+ "service_ms_p99": {
+  "after_broker": 0.4269239998393459,
+  "after_pit": 0.4366350003692787,
+  "broker_down": 0.09416200009582099,
+  "normal": 0.36022799940838013,
+  "pit_down": 0.4514110005402472
+ },
+ "working_tree_dirty": false
+}

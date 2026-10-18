@@ -1,0 +1,162 @@
+# Primary documents the controller design needs, in the order they unblock work.
+# Source of docs/reference/datasheets/README.md (tools/check_datasheets.py renders it; CI runs --check).
+#
+# To deliver a document: put the PDF in this folder under the `file` name given (or any name, then set `file`),
+# run `python3 tools/check_datasheets.py --record`, which writes its SHA-256 and size here, and type the revision
+# and date printed on the document's cover into `received`. A document counts as received only with all four.
+# official_url: the manufacturer's page; "unverified" means it could not be opened from the build environment
+# (the manufacturers' sites are refused by its network policy), so the address is the expected one, not checked.
+schema: sem.datasheets.v1
+documents:
+  - id: DRV8353
+    priority: 1
+    manufacturer: Texas Instruments
+    part: DRV8353SRTAR (SPI variant, WQFN-40 RTA package)
+    document: DRV835x three-phase smart gate driver data sheet, SLVSDY6 (latest revision)
+    official_url: https://www.ti.com/product/DRV8353   # unverified
+    file: ti-slvsdy6-drv835x.pdf
+    unlocks: >-
+      Pin numbering and exposed pad of the RTA package (symbol and footprint); supply and logic levels; ENABLE and
+      sleep behaviour and whether the current-sense amplifiers work in each state; wake-up and configuration timing;
+      SPI framing and the register map; PWM input modes; IDRIVE and TDRIVE gate-drive settings; VDS monitor
+      thresholds, deglitch and fault response; fault status and clearing. Closes B-DRV.
+    received: null
+  - id: INA228
+    priority: 2
+    manufacturer: Texas Instruments
+    part: INA228AIDGSR (VSSOP-10 DGS)
+    document: INA228 85-V, 20-bit power/energy/charge monitor with I2C interface, data sheet (latest revision)
+    official_url: https://www.ti.com/product/INA228   # unverified
+    file: ti-ina228.pdf
+    unlocks: >-
+      Bus and shunt input ranges and LSBs; register byte order and signed fields; SHUNT_CAL equation; conversion,
+      averaging and data-ready timing; ALERT configuration; reset and power-on behaviour; I2C address table;
+      package drawing. Closes B-INA (battery-side voltage for the precharge).
+    received: null
+  - id: DS12288
+    priority: 3
+    manufacturer: STMicroelectronics
+    part: STM32G474VET6 (LQFP-100, 512 KB flash)
+    document: STM32G474xB/xC/xE data sheet, DS12288 (latest revision)
+    official_url: https://www.st.com/en/microcontrollers-microprocessors/stm32g474ve.html   # unverified
+    file: st-ds12288-stm32g474.pdf
+    unlocks: >-
+      Supply ranges; 5 V-tolerant pins; PLL input and VCO ranges (the HAL comments conflict with recalled values);
+      ADC sampling time against source impedance; FDCAN kernel-clock limit; LSI tolerance (watchdog timeout);
+      LQFP-100 package drawing (footprint dimensions); memory sizes per variant (xB, xC, xE). Closes B-ST-DOCS
+      together with RM0440 and ES0430.
+    received: null
+  - id: RM0440
+    priority: 3
+    manufacturer: STMicroelectronics
+    part: STM32G4 series
+    document: STM32G4 series reference manual, RM0440 (latest revision)
+    official_url: https://www.st.com/resource/en/reference_manual/rm0440-stm32g4-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf   # unverified
+    file: st-rm0440-stm32g4.pdf
+    unlocks: >-
+      TIM1 centre-aligned update events, repetition counter, preload and BDTR (dead time, break filters, polarity,
+      latching, restart); TIM1 break sources including COMPx routing (TIM1_AF1/AF2); ADC injected triggers per
+      instance and their simultaneity; ADC clock and conversion timing; DMA and DMAMUX request mapping and which
+      memories DMA can reach (CCM SRAM); flash bank modes, page size and option bytes; IWDG; FDCAN.
+    received: null
+  - id: ES0430
+    priority: 3
+    manufacturer: STMicroelectronics
+    part: STM32G471/473/474/483/484 devices
+    document: Errata sheet ES0430 (latest revision)
+    official_url: https://www.st.com/en/microcontrollers-microprocessors/stm32g474ve.html#documentation   # unverified
+    file: st-es0430-stm32g47x-errata.pdf
+    unlocks: Device limitations affecting TIM1 break, ADC, DMA, FDCAN, flash and the watchdogs.
+    received: null
+  - id: PM0214
+    priority: 3
+    manufacturer: STMicroelectronics
+    part: Cortex-M4 based STM32 devices
+    document: STM32 Cortex-M4 MCUs and MPUs programming manual, PM0214
+    official_url: https://www.st.com/resource/en/programming_manual/pm0214-stm32-cortexm4-mcus-and-mpus-programming-manual-stmicroelectronics.pdf   # unverified
+    file: st-pm0214-cortex-m4.pdf
+    unlocks: NVIC priority grouping, exception entry and tail-chaining, DMB/DSB semantics, DWT cycle counter use.
+    received: null
+  - id: ARM-DDI0439
+    priority: 3
+    manufacturer: Arm
+    part: Cortex-M4 processor
+    document: Cortex-M4 Technical Reference Manual, Arm DDI 0439 (instruction timing)
+    official_url: https://developer.arm.com/documentation/ddi0439/   # unverified
+    file: arm-ddi0439-cortex-m4-trm.pdf
+    unlocks: >-
+      The instruction cycle timings needed before an emulated instruction count can be turned into a bounded
+      execution time (IT folding, load and branch timing, FPU latencies).
+    received: null
+  - id: LM5164
+    priority: 4
+    manufacturer: Texas Instruments
+    part: LM5164DDAR (SO-8 PowerPAD DDA)
+    document: LM5164 100-V input, 1-A synchronous buck converter data sheet, SNVSAU4 (latest revision)
+    official_url: https://www.ti.com/product/LM5164   # unverified
+    file: ti-snvsau4-lm5164.pdf
+    unlocks: VIN limits, UVLO and RON design equations, minimum on and off times, BST and soft start, exposed-pad drawing.
+    received: null
+  - id: MAX6369
+    priority: 5
+    manufacturer: Analog Devices (Maxim Integrated)
+    part: MAX6369KA+T (SOT-23-8)
+    document: MAX6369-MAX6374 pin-selectable watchdog timers data sheet
+    official_url: https://www.analog.com/en/products/max6369.html   # unverified
+    file: adi-max6369-max6374.pdf
+    unlocks: SET0-SET2 timeout table and tolerances, startup delay, WDO output type and timing, SOT-23-8 drawing.
+    received: null
+  - id: TJA1051
+    priority: 6
+    manufacturer: NXP
+    part: TJA1051T/3/1J (SO-8, VIO pin variant)
+    document: TJA1051 high-speed CAN transceiver product data sheet (latest revision)
+    official_url: https://www.nxp.com/part/TJA1051T/3   # unverified
+    file: nxp-tja1051.pdf
+    unlocks: VIO range, TXD dominant time-out, silent-mode pin, CANH/CANL limits, SO-8 drawing.
+    received: null
+  - id: TLV755P
+    priority: 7
+    manufacturer: Texas Instruments
+    part: TLV75533PDBVR (SOT-23-5 DBV)
+    document: TLV755P 500-mA low-dropout regulator data sheet (latest revision)
+    official_url: https://www.ti.com/product/TLV755P   # unverified
+    file: ti-tlv755p.pdf
+    unlocks: input range, dropout, output-capacitor stability range, SOT-23-5 pinout and drawing.
+    received: null
+  - id: TLV7041
+    priority: 8
+    manufacturer: Texas Instruments
+    part: TLV7041DBVR (SOT-23-5 DBV)
+    document: TLV7041 nanopower comparator data sheet (latest revision)
+    official_url: https://www.ti.com/product/TLV7041   # unverified
+    file: ti-tlv7041.pdf
+    unlocks: input offset and hysteresis, input common-mode range, output type and sink current, propagation delay, pinout; the worst-case over-voltage thresholds (B-OVTRIP).
+    received: null
+  - id: TL431
+    priority: 8
+    manufacturer: Texas Instruments
+    part: TL431BIDBZR (SOT-23-3 DBZ, B grade)
+    document: TL431, TL432 adjustable shunt regulator data sheet (latest revision)
+    official_url: https://www.ti.com/product/TL431   # unverified
+    file: ti-tl431.pdf
+    unlocks: reference tolerance of the B grade over temperature, minimum cathode current, stability boundary against load capacitance, DBZ pinout; the worst-case over-voltage thresholds (B-OVTRIP).
+    received: null
+  - id: SN74LVC1G08
+    priority: 9
+    manufacturer: Texas Instruments
+    part: SN74LVC1G08DBVR (SOT-23-5)
+    document: SN74LVC1G08 single 2-input AND gate data sheet
+    official_url: https://www.ti.com/product/SN74LVC1G08   # unverified
+    file: ti-sn74lvc1g08.pdf
+    unlocks: power-off and partial-power-down input behaviour (the gate-enable path at power-up), pinout.
+    received: null
+  - id: POWER-STAGE
+    priority: 9
+    manufacturer: as selected
+    part: MOSFETs, phase and bus shunts, bulk and ceramic DC-link capacitors, TVS, fuse, precharge resistor and bypass FET
+    document: the data sheet of each part once its rating is chosen (needs the battery and motor inputs first)
+    official_url: n/a
+    file: null
+    unlocks: losses, gate charge, SOA, pulse ratings and footprints of the power stage.
+    received: null

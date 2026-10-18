@@ -294,3 +294,19 @@ def test_pace_correction_bounded_and_effective(short_track, pmap):
     yes = simulate(short_track, heavy, SyntheticPhysicsMap(heavy), ctrl_p, sim)
     assert yes.time_s < no.time_s
     assert yes.time_s <= 270.0
+
+
+def test_vectorised_resistive_force_equals_scalar_form():
+    """resistive_force_np is documented as identical to resistive_force: check it term by term over speeds, grades,
+    winds, curvature and the coupled-motor drag."""
+    import numpy as np
+    from models.vehicle.longitudinal import SYNTHETIC_VEHICLE as P, resistive_force, resistive_force_np
+    v = np.array([0.0, 1e-7, 0.5, 3.0, 7.0, 12.0])
+    for grade in (0.0, 0.01, -0.02):
+        for wind in (0.0, 2.0, -3.0):
+            for curv in (0.0, 0.02):
+                for coupled in (False, True):
+                    vec = resistive_force_np(P, v, grade=grade, wind=wind, curvature=curv, motor_coupled_unpowered=coupled)
+                    ref = [resistive_force(P, float(x), grade=grade, wind=wind, curvature=curv,
+                                           motor_coupled_unpowered=coupled) for x in v]
+                    assert np.allclose(vec, ref, rtol=1e-12, atol=1e-12)

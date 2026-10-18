@@ -1,0 +1,601 @@
+# Project procurement: the one authoritative source for the README budget table and docs/PROCUREMENT.md.
+# Generate both with `python3 tools/gen_procurement.py`; CI runs `--check`.
+#
+# Two kinds of cost, never mixed:
+#   * unit_cost_usd: a dated quote or listing. Needs price.supplier, price.date (YYYY-MM-DD) and price.reference.
+#   * estimate: a reference into the motor-controller pricing (docs/generated/budget.json, written by
+#     tools/price_bom.py from hardware/bom/BOM_draft.csv and hardware/bom/pricing.yaml). The generator copies the
+#     low-high range from there, so the numbers live in one place. An estimate is not a quote.
+#       budget: <field>                  a field of the scenario named in `estimate_scenario`
+#       budget: <field>/<item prefix>    one entry of an item list in that scenario
+#       budget: <field>@<scenario>       the same field from another scenario
+#       pricing: equipment/<item prefix> one bring-up equipment entry of pricing.yaml
+# Rules enforced by the generator (it refuses the file otherwise):
+#   * status Ordered or Received needs order_evidence (order number, receipt);
+#   * `in_assembly: true` marks a part inside the telematics PCB assembly line; it is not counted again;
+#   * `optional: true` lines and `not_budgeted` lines are listed but kept out of the subtotals;
+#   * unknown quantities and costs stay null and print as TBD, never as zero.
+# Nothing here has been ordered, and no line has a dated quote yet: the telemetry estimates are search-result
+# snapshots of distributor pages (hardware/bom/pricing.yaml, telemetry), not quotes.
+schema: sem.procurement.v2
+updated: "2026-10-18"
+currency: USD
+statuses: [Candidate, Selected, Ordered, Received, Blocked]
+estimate_scenario: S1 one functional prototype
+budget:
+  overall_usd: [500, 1000]
+  scope: unconfirmed
+  note: >-
+    The project budget is about $500 to $1,000. Which of the lines below it has to cover (controller only, or
+    controller, telemetry, wiring and tools) is unconfirmed.
+categories:
+  controller: Motor controller (board parts, heatsink, enclosure)
+  telemetry: Telemetry and sensors
+  shared: Shared power, connectors and wiring
+  fabrication: Fabrication and assembly
+  shipping_tax: Shipping and tax
+  spares_revision: Spares and another board revision
+  development: Development equipment
+  recurring: Recurring connectivity
+  contingency: Contingency
+items:
+  # ---------------------------------------------------------------- motor controller (from the priced draft BOM)
+  - id: mc_parts
+    item: Controller board parts, one board
+    purpose: Every component on the draft motor-controller schematic (122 BOM lines)
+    category: controller
+    qty: 1
+    unit: set
+    estimate: {budget: parts}
+    status: Blocked
+    candidate: hardware/bom/BOM_priced.csv (draft schematic; rating-dependent parts are representatives, not selections)
+    requirement: Ratings of the MOSFETs, shunts, bulk capacitors, fuse and TVS follow the battery and motor, not the 48 V nominal alone.
+    blocked_by: maximum and minimum pack voltage, discharge and regenerative current limits (battery and BMS datasheets); design review
+    evidence: "docs/BUDGET.md"
+  - id: mc_spares
+    item: Spare parts for bring-up
+    purpose: Replacements for the parts most likely to be damaged (MOSFETs, gate driver, shunts, TVS, fuses, CAN transceiver, MCU)
+    category: spares_revision
+    qty: 1
+    unit: set
+    estimate: {budget: spares}
+    status: Blocked
+    candidate: spares list in hardware/bom/pricing.yaml
+    requirement: Same part numbers as the board parts.
+    blocked_by: the board parts line
+    evidence: "docs/BUDGET.md"
+  - id: mc_pcb
+    item: Controller PCB fabrication (5 boards, 4-layer, 2 oz outer copper)
+    purpose: Bare boards for the motor controller
+    category: fabrication
+    qty: 1
+    unit: order
+    estimate: {budget: controller_items/PCB fabrication}
+    status: Blocked
+    candidate: null
+    requirement: A reviewed layout. None exists; the schematic has no footprints.
+    blocked_by: footprints, layout and the stage-0 design review (hardware/review/REVIEW_CHECKLIST.md)
+    evidence: "docs/BUDGET.md"
+  - id: mc_pcb_shipping
+    item: Controller PCB shipping
+    purpose: Delivery of the boards
+    category: shipping_tax
+    qty: 1
+    unit: order
+    estimate: {budget: controller_items/PCB shipping}
+    status: Blocked
+    candidate: null
+    requirement: From the fabrication quote.
+    blocked_by: the PCB line
+    evidence: "docs/BUDGET.md"
+  - id: mc_stencil
+    item: Solder-paste stencil
+    purpose: Hand assembly of the fine-pitch parts
+    category: fabrication
+    qty: 1
+    unit: order
+    estimate: {budget: controller_items/Stencil}
+    status: Blocked
+    candidate: null
+    requirement: Matches the final layout.
+    blocked_by: the PCB line
+    evidence: "docs/BUDGET.md"
+  - id: mc_consumables
+    item: Assembly consumables (paste, flux, wick)
+    purpose: Board assembly
+    category: fabrication
+    qty: 1
+    unit: set
+    estimate: {budget: controller_items/Assembly consumables}
+    status: Candidate
+    candidate: null
+    requirement: Lead-free or leaded paste matched to the team's reflow method.
+    blocked_by: null
+    evidence: "docs/BUDGET.md"
+  - id: mc_assembly_service
+    item: Controller PCB assembly service (alternative to hand assembly)
+    purpose: Machine placement and reflow of the controller board by the fabricator
+    category: fabrication
+    qty: 1
+    unit: order
+    optional: true
+    unit_cost_usd: null
+    status: Blocked
+    candidate: null
+    requirement: >-
+      Replaces the stencil and consumables lines, not added to them; if the assembler also sources the parts, its
+      parts price replaces the board-parts line. Needs footprints, a layout and the assembler's part library.
+    blocked_by: hand assembly or an assembly service (team decision in the input sheet; register B-ASSY)
+    evidence: "docs/BLOCKERS.md#b-assy"
+  - id: mc_thermal
+    item: Thermal interface, heatsink plate and fasteners
+    purpose: Carries the power-stage losses away from the MOSFETs
+    category: controller
+    qty: 1
+    unit: set
+    estimate: {budget: controller_items/Thermal interface}
+    status: Blocked
+    candidate: null
+    requirement: Sized from the loss estimate at the real current and the mounting in the vehicle.
+    blocked_by: motor and battery current; mounting location
+    evidence: "docs/BUDGET.md"
+  - id: mc_tax
+    item: Tax and shipping on the controller parts
+    purpose: Distributor shipping and import tax on the two parts lines above
+    category: shipping_tax
+    qty: 1
+    unit: order
+    estimate: {budget: shipping_tax}
+    status: Blocked
+    candidate: null
+    requirement: From the distributor quote and the delivery country.
+    blocked_by: quotes
+    evidence: "docs/BUDGET.md"
+  - id: mc_enclosure
+    item: Controller enclosure and mounting
+    purpose: Holds and protects the controller in the vehicle
+    category: controller
+    qty: 1
+    unit: set
+    estimate: {budget: incremental_items/Enclosure}
+    status: Blocked
+    candidate: printed or folded aluminium
+    requirement: Fits the mounting location; connections visible and accessible (Article 57k).
+    blocked_by: mounting location in the vehicle
+    evidence: "docs/BUDGET.md"
+  - id: mc_revision
+    item: Second controller board revision
+    purpose: One more PCB order, shipping, stencil and changed parts if the first board needs a respin
+    category: spares_revision
+    qty: 1
+    unit: set
+    optional: true
+    estimate: {budget: "revision_allowance@S1R one prototype + one revision"}
+    status: Candidate
+    candidate: revision allowance in hardware/bom/pricing.yaml (scenario S1R)
+    requirement: Only if bring-up of the first board finds a layout defect.
+    blocked_by: first-board bring-up
+    evidence: "docs/BUDGET.md"
+  # ---------------------------------------------------------------- telemetry and sensors
+  - id: telematics_pcb
+    item: Telematics PCB fabrication and assembly
+    purpose: The vehicle telemetry unit (MCU, GNSS, modem, IMU, flash per the team's proposal)
+    category: fabrication
+    qty: null
+    unit_cost_usd: null
+    status: Blocked
+    candidate: The team's telematics board (STM32U575, NEO-M9N, A7672, MC3419, NOR flash, BQ25622E per the proposal)
+    requirement: >-
+      Board files are needed for a quote (bk4000tg_kicad.zip, telemetry.pdf: not received). The proposal's BQ25622E
+      charger implies an on-board battery; Article 57b forbids an accessory battery on a Battery Electric vehicle.
+      Enclosure transparent or with a transparent cover (Article 57j).
+    blocked_by: telematics board files; battery arrangement under Article 57b
+    evidence: "docs/RULES_COMPLIANCE.md"
+  - id: wheel_hall
+    item: Wheel-speed Hall sensor
+    purpose: Wheel pulses for vehicle speed and distance
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Wheel Hall switch"}
+    status: Blocked
+    candidate: "Team reference DRV5032: rejected for wheel speed (sampled; misses magnet passes at speed). Comparison: DRV5023-Q1 (continuous), not selected"
+    requirement: Quantity 1 here (one wheel sensor in the minimum and recording builds). A continuous (non-sampled) Hall switch; quantity = instrumented wheels (the ICD has three provisional channels).
+    blocked_by: maximum vehicle speed, wheel circumference, magnet count and geometry, which wheels are instrumented
+    evidence: "docs/generated/wheel_sensor_check.md"
+  - id: wheel_magnets
+    item: Wheel magnets and mounting hardware
+    purpose: Targets for the wheel-speed sensor
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Wheel magnets"}
+    status: Blocked
+    candidate: null
+    requirement: Quantity 1 here (one set for one instrumented wheel). Field above the switch operate point across the air gap; magnet count per wheel from the speed resolution needed.
+    blocked_by: wheel and hub geometry, sensor choice
+    evidence: "docs/generated/wheel_sensor_check.md"
+  - id: imu
+    item: 6-axis IMU
+    purpose: Longitudinal acceleration and yaw rate for analysis (not control)
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/IMU"}
+    status: Candidate
+    candidate: "LSM6DSV or ISM330DHCX (team references); MC3419 from the board proposal has no gyroscope"
+    in_assembly: null
+    requirement: >-
+      Offset calibration at rest is required: a 12 mg offset equals a 1.2 % grade error.
+    blocked_by: mounting location, temperature range, whether the PCB assembly already carries an IMU
+    evidence: "docs/TELEMETRY_CANDIDATES.md#imu"
+  - id: temperature
+    item: Temperature sensors/probes
+    purpose: Slow temperatures for logging (battery surface, motor case, ambient)
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Temperature probes"}
+    status: Candidate
+    candidate: DS18B20 (team reference)
+    requirement: Logging only. Not for power-stage protection (750 ms conversion at 12 bit); the controller keeps its own thermal protection. No log record type yet (docs/ICD.md section 8).
+    blocked_by: measurement points and count
+    evidence: "docs/TELEMETRY_CANDIDATES.md#ds18b20"
+  - id: gnss
+    item: GNSS receiver/module, if not included in the PCB assembly
+    purpose: Position, speed and the PPS time reference
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/GNSS receiver"}
+    status: Blocked
+    candidate: NEO-M9N (board proposal)
+    in_assembly: null
+    requirement: L1 multi-constellation, PPS output for time alignment; 2.7-3.6 V.
+    blocked_by: whether the telematics PCB assembly includes it (board files not received)
+    evidence: "docs/TELEMETRY_CANDIDATES.md#gnss-neo-m9n"
+  - id: gnss_antenna
+    item: Active GNSS antenna
+    purpose: Sky view for the GNSS receiver
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/GNSS antenna"}
+    status: Blocked
+    candidate: null
+    requirement: L1 band (GPS/QZSS L1C/A, GLONASS L1OF, Galileo E1, BeiDou B1I); supply from the receiver's VCC_RF (VCC - 0.1 V, at most 50 mA); external gain at most 30 dB; mounted with sky view through non-conductive bodywork.
+    blocked_by: antenna connector on the carrier board; mounting position
+    evidence: "docs/TELEMETRY_CANDIDATES.md#gnss-neo-m9n"
+  - id: lte_modem
+    item: LTE modem, if not included in the PCB assembly
+    purpose: Live summary to the pit over MQTT
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/LTE modem"}
+    status: Blocked
+    candidate: SIMCom A7672 (board proposal); variant by region (A7672E, A7672SA, A7672S)
+    in_assembly: null
+    requirement: LTE Cat-1 bands of the event country's operator; MQTT client in the modem firmware.
+    blocked_by: event country and operator; whether the PCB assembly includes it
+    evidence: "docs/TELEMETRY_CANDIDATES.md#lte-a7672"
+  - id: lte_antenna
+    item: LTE antenna
+    purpose: Cellular link for the modem
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/LTE antenna"}
+    status: Blocked
+    candidate: null
+    requirement: Covers the chosen variant's LTE bands; 50 ohm; one main antenna (the A7672X has no diversity input).
+    blocked_by: modem variant, connector, mounting
+    evidence: "docs/TELEMETRY_CANDIDATES.md#lte-a7672"
+  - id: local_storage
+    item: Local log storage (microSD card and socket), if not included in the PCB assembly
+    purpose: The complete on-vehicle record (STLG log)
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/microSD socket and card"}
+    status: Candidate
+    candidate: microSD (optional in the proposal) in addition to the proposal's 8 MB NOR flash
+    in_assembly: null
+    requirement: >-
+      At least 9.35 KiB/s sustained with erase time (host demonstration rate); a 40-minute attempt needs about 22 MB,
+      and the 8 MB flash alone lasts 14.6 minutes. Behaviour on power loss during a write to be checked on the bench.
+    blocked_by: whether the PCB assembly has a card socket (board files not received)
+    evidence: "docs/ICD.md#9-storage-queues-and-drop-reporting"
+  - id: can_xcvr
+    item: CAN transceiver/interface, if not included in the PCB assembly
+    purpose: Connects the telemetry unit to the vehicle CAN bus
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/CAN transceiver on an adapter"}
+    status: Blocked
+    candidate: null
+    in_assembly: null
+    requirement: Classic CAN 2.0B or CAN FD per the vehicle bus; 3.3 V logic for the STM32U575 FDCAN1. The Nucleo needs one for bench work too.
+    blocked_by: vehicle bus type and bit rate (input sheet item 5); whether the PCB assembly includes it
+    evidence: "docs/ICD.md"
+  - id: display
+    item: Driver display
+    purpose: Shows the driver speed, mode and advisories
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Driver display"}
+    status: Blocked
+    candidate: "LED bar \"burn / coast\" (optional in the proposal), or an unmodified self-contained device"
+    requirement: >-
+      Power arrangement under Article 57i: a built-in battery only if the display is unmodified and self-contained;
+      otherwise powered from the vehicle system through the joulemeter. A separate battery for a display is not an
+      approved purchase.
+    blocked_by: display type decision
+    evidence: "docs/RULES_COMPLIANCE.md"
+  - id: steering
+    item: Optional steering-angle sensor
+    purpose: Steering angle for analysis
+    category: telemetry
+    qty: 1
+    unit_cost_usd: null
+    status: Blocked
+    optional: true
+    candidate: AS5600 (team reference), single-turn, needs a diametric magnet on the axis
+    requirement: Measured angle range within one turn at the mounting point; magnet 0.5-3 mm air gap, axis displacement at most 0.25 mm (6 mm magnet).
+    blocked_by: steering geometry (lock-to-lock angle at the mounting point, mounting)
+    evidence: "docs/TELEMETRY_CANDIDATES.md#as5600"
+  - id: shipping
+    item: Shipping and tax on the telemetry lines
+    purpose: Delivery and import tax
+    category: shipping_tax
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Telemetry shipping and tax"}
+    status: Blocked
+    candidate: null
+    requirement: From the supplier quotes.
+    blocked_by: quotes
+    evidence: null
+  # ---------------------------------------------------------------- shared power, connectors and wiring
+  - id: power_connectors
+    item: Battery and motor mating connectors
+    purpose: High-current connections between battery, controller and motor
+    category: shared
+    qty: 1
+    unit: set
+    estimate: {budget: incremental_items/Battery and motor}
+    status: Blocked
+    candidate: XT90 pair, MR60 or bullets (representative)
+    requirement: Rated for the pack's maximum voltage and current; must match the battery's own connector.
+    blocked_by: battery connector type and current (battery datasheet, label photo)
+    evidence: "docs/BUDGET.md"
+  - id: signal_connectors
+    item: Controller signal connectors and crimp terminals
+    purpose: Driver controls, Hall, CAN and temperature connections at the controller
+    category: shared
+    qty: 1
+    unit: set
+    estimate: {budget: incremental_items/Signal connectors}
+    status: Blocked
+    candidate: null
+    requirement: No splices; connections visible and accessible (Article 57k).
+    blocked_by: connector pinouts (input sheet item 6)
+    evidence: "docs/BUDGET.md"
+  - id: wire
+    item: Wire, heat-shrink and sleeving
+    purpose: Power wiring (10-12 AWG), signal multicore and CAN twisted pair
+    category: shared
+    qty: 1
+    unit: set
+    estimate: {budget: incremental_items/Wire}
+    status: Blocked
+    candidate: null
+    requirement: Gauge from the fused current; lengths from the vehicle layout.
+    blocked_by: harness plan and fuse rating
+    evidence: "docs/BUDGET.md"
+  - id: harness
+    item: Telemetry harness (sensor cables and connectors)
+    purpose: Wheel, temperature, GNSS and LTE antenna, display and CAN cables to the telemetry unit
+    category: shared
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Telemetry harness"}
+    status: Blocked
+    candidate: null
+    requirement: Not covered by the controller signal-connector line above. No splices; connections visible and accessible (Article 57k).
+    blocked_by: harness plan and connector pinouts (input sheet item 6)
+    evidence: "docs/RULES_COMPLIANCE.md"
+  - id: dcdc
+    item: Protected DC-DC supply for the telemetry unit, if not included in the PCB assembly
+    purpose: Regulated low voltage from the propulsion battery for the telemetry unit, sensors and modem
+    category: shared
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/Telemetry DC-DC"}
+    status: Blocked
+    candidate: null
+    in_assembly: null
+    requirement: >-
+      From the propulsion battery, downstream of the joulemeter (Articles 56d, 57b). Input rating from the maximum pack
+      voltage with transients and margin, not from the 48 V nominal; modem supply 3.4-4.2 V with peaks up to 2 A
+      at maximum 2G transmit power (A7672X Hardware Design V1.04 p. 26); fused (Article 57g).
+    blocked_by: maximum pack voltage and transients (battery datasheet); whether the PCB assembly includes it
+    evidence: "docs/BATTERY.md"
+  # ---------------------------------------------------------------- development equipment (bench only)
+  - id: nucleo
+    item: NUCLEO-U575ZI-Q development board
+    purpose: Bench development of the telemetry firmware before the telematics board exists
+    category: development
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/NUCLEO-U575ZI-Q"}
+    status: Candidate
+    candidate: NUCLEO-U575ZI-Q (STM32U575ZIT6Q), the MCU named in the telematics proposal
+    requirement: Needs an external CAN transceiver (none on the board) and a 5 V supply.
+    blocked_by: null
+    evidence: "docs/TELEMETRY_CANDIDATES.md#nucleo-u575zi-q"
+  - id: bench_load
+    item: Bench dummy load, power resistors and bench harness
+    purpose: Loads the controller's supply stages on the bench before a motor is connected
+    category: development
+    qty: 1
+    unit: set
+    estimate: {budget: incremental_items/Bench dummy load}
+    status: Blocked
+    candidate: null
+    requirement: Power rating from the bring-up stage limits (docs/BENCH_ACCEPTANCE.md).
+    blocked_by: reviewed controller design
+    evidence: "docs/BUDGET.md"
+  - id: swd
+    item: SWD programmer, only if not owned
+    purpose: Flashing and debugging both MCUs
+    category: development
+    qty: 1
+    estimate: {pricing: equipment/SWD programmer}
+    status: Candidate
+    candidate: STLINK-V3MINIE
+    requirement: SWD with a 3.3 V target. The Nucleo has an on-board ST-LINK.
+    blocked_by: null
+    evidence: "docs/BUDGET.md"
+  - id: usb_can
+    item: USB-CAN adapter, only if not owned
+    purpose: Bench CAN with a simulated controller or BMS (stage 3 of the implementation plan)
+    category: development
+    qty: 1
+    estimate: {pricing: equipment/USB-CAN adapter}
+    status: Candidate
+    candidate: CANable-class adapter with candleLight firmware
+    requirement: Bit rate and frame type of the vehicle bus; works with Linux SocketCAN.
+    blocked_by: vehicle bus type and bit rate (input sheet item 5)
+    evidence: "docs/BUDGET.md"
+  - id: bench_supply
+    item: Current-limited bench supply, only if not owned
+    purpose: Powers the controller during staged bring-up with a current limit
+    category: development
+    qty: 1
+    estimate: {pricing: equipment/Current-limited bench supply}
+    status: Blocked
+    candidate: null
+    requirement: Output above the maximum pack voltage (or two in series), constant-current mode.
+    blocked_by: maximum pack voltage (battery datasheet)
+    evidence: "docs/BUDGET.md"
+  - id: scope
+    item: Oscilloscope (100 MHz or more, 4 channels) and differential probe
+    purpose: Switch-node, gate and timing measurements during bring-up
+    category: development
+    qty: 1
+    not_budgeted: assumed borrowed from the lab; a differential probe can cost more than the whole budget
+    status: Blocked
+    candidate: null
+    requirement: Needed before the power stage switches at more than the lowest bring-up voltage.
+    blocked_by: lab access confirmed
+    evidence: "docs/BUDGET.md"
+  - id: dmm
+    item: Bench multimeters and clamp meter, only if not owned
+    purpose: Voltage, current and continuity checks
+    category: development
+    qty: 1
+    estimate: {pricing: equipment/Bench DMM}
+    status: Candidate
+    candidate: null
+    requirement: Two meters; a clamp meter if the team has none (the low end assumes all are owned).
+    blocked_by: null
+    evidence: "docs/BUDGET.md"
+  # ---------------------------------------------------------------- recurring connectivity
+  - id: sim
+    item: SIM card and data plan
+    purpose: Mobile data for the live summary at the event and in testing
+    category: recurring
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/SIM and data plan"}
+    status: Blocked
+    candidate: null
+    requirement: Coverage at the event; about 0.5 to 7.7 MB per 40-minute attempt at 1 to 5 Hz (docs/COMBINED_ARCHITECTURE.md).
+    blocked_by: event country, operator, modem variant
+    evidence: "docs/TELEMETRY_CANDIDATES.md#lte-a7672"
+  - id: broker_hosting
+    item: Internet-reachable MQTT broker
+    purpose: The point the modem publishes to and the pit subscribes from
+    category: recurring
+    qty: 1
+    unit_cost_usd: null
+    estimate: {pricing: "telemetry/MQTT broker hosting"}
+    status: Blocked
+    candidate: Mosquitto on a hosted server, or a tunnel to the pit computer
+    requirement: >-
+      Reachable from the operator's network; TLS and per-client credentials; message persistence. A pit laptop
+      on venue Wi-Fi is normally not reachable from a mobile network (docs/MQTT_SETUP.md).
+    blocked_by: hosting decision and event network
+    evidence: "docs/MQTT_SETUP.md"
+  # ---------------------------------------------------------------- contingency
+  - id: contingency
+    item: Contingency
+    purpose: Price changes, breakage and missed items
+    category: contingency
+    qty: null
+    unit_cost_usd: null
+    status: Blocked
+    candidate: null
+    requirement: Not set; to be agreed with the team lead once lines are priced.
+    blocked_by: priced lines and an agreed policy
+    evidence: null
+
+# Build scenarios evaluated against the budget by tools/gen_procurement.py. Every build includes every line of the
+# controller category (the generator refuses a build that drops one), so protection is never traded for budget.
+# `minimum` is the agreed minimum scope (protection and local recording); `controller_only` is shown below it for
+# comparison only. Each deferred group is costed in docs/PROCUREMENT.md, so adding an option back has a price.
+# Equipment lines are reported separately: the team may already own them.
+builds:
+  - id: controller_only
+    title: Controller only (below the minimum, no recording)
+    goal: >-
+      One controller board assembled, bench-accepted and driven in the vehicle with the existing driver controls, and
+      nothing else. Shown for comparison: it records nothing, so it does not meet the agreed minimum.
+    capability: >-
+      Drives the motor with every protection of the controller; no record of a run beyond the controller's fault
+      event log.
+    includes: [mc_parts, mc_thermal, mc_enclosure, mc_pcb, mc_stencil, mc_consumables, mc_pcb_shipping, mc_tax,
+               mc_spares, power_connectors, signal_connectors, wire, bench_load]
+    equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
+    deferred:
+      - {lines: [nucleo, wheel_hall, wheel_magnets, can_xcvr, local_storage, dcdc, harness, shipping],
+         effect: "no local recording: no wheel-speed distance, no energy log; energy per distance only from rotor speed, and only while the motor is rigidly coupled"}
+      - {lines: [telematics_pcb], effect: "no telematics board"}
+      - {lines: [gnss, gnss_antenna, imu, temperature, steering],
+         effect: "no position, UTC alignment, grade or slow temperatures"}
+      - {lines: [lte_modem, lte_antenna, sim, broker_hosting],
+         effect: "no live data at the pit"}
+      - {lines: [display], effect: "no driver display"}
+      - {lines: [mc_revision], effect: "a design error needs a new budget decision"}
+  - id: minimum
+    title: Minimum build (controller protection and local recording)
+    goal: >-
+      The agreed minimum: the whole controller with its protection, plus a development-board recorder on the CAN link
+      with one wheel sensor and local storage, so every run's essential energy-accounting signals
+      (docs/TELEMETRY_INTEGRATION.md 3) are recorded on the vehicle. LTE, display and steering are optional.
+    capability: >-
+      Drives the motor with every protection; records battery voltage and current, energy, motor and wheel speed,
+      temperatures and the controller state on the vehicle, read out after the run.
+    includes: [mc_parts, mc_thermal, mc_enclosure, mc_pcb, mc_stencil, mc_consumables, mc_pcb_shipping, mc_tax,
+               mc_spares, power_connectors, signal_connectors, wire, bench_load, nucleo, wheel_hall, wheel_magnets,
+               can_xcvr, local_storage, dcdc, harness, shipping]
+    equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
+    deferred:
+      - {lines: [telematics_pcb], effect: "the development board is mounted instead of the telematics PCB"}
+      - {lines: [gnss, gnss_antenna, imu, temperature, steering],
+         effect: "no position, UTC alignment, grade or slow temperatures; steering is optional"}
+      - {lines: [lte_modem, lte_antenna, sim, broker_hosting], effect: "no live data at the pit (optional)"}
+      - {lines: [display], effect: "no driver display (optional)"}
+      - {lines: [mc_revision], effect: "a design error needs a new budget decision"}
+  - id: full
+    title: Full scope
+    goal: Every counted line of this file.
+    capability: >-
+      The minimum plus the telematics board, position and timing, grade, slow temperatures, steering angle, live data
+      at the pit and a driver display, and a second controller revision.
+    includes: all
+    equipment_if_not_owned: [swd, usb_can, bench_supply, dmm]
+    deferred: []

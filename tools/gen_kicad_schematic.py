@@ -7,9 +7,12 @@
 DRAFT - NOT FOR FABRICATION. The schematic captures the functional design
 (docs/HARDWARE_ARCHITECTURE.md). Every value that depends on the unknown motor,
 battery, harness or event rules is written as UNRESOLVED; every part whose
-pinout could not be checked against a primary datasheet in this environment
-carries Pin_check = UNVERIFIED. No PCB, footprint assignment, Gerber or
-fabrication BOM is produced from this.
+pinout has not yet been checked against a primary datasheet
+carries Pin_check = UNVERIFIED. Footprints come from the hand-maintained
+assignment in hardware/footprints/assignments.yaml (checked by
+tools/check_footprints.py); a part whose footprint waits for a rating, a
+connector, a data sheet or a pinout has none. No PCB, Gerber or fabrication
+BOM is produced from this.
 
 Connectivity is made with labels placed exactly on pin connection points
 (local labels inside a sheet, hierarchical labels + sheet pins between sheets,
@@ -22,25 +25,33 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
-import datetime
+import os
 import pathlib
 import re
 import subprocess
 import sys
 import uuid as uuidlib
 
+import yaml
 from kiutils.items.common import Effects, Font, Justify, PageSettings, Position, Property, TitleBlock
 from kiutils.items.schitems import (GlobalLabel, HierarchicalLabel, HierarchicalPin, HierarchicalSheet,
                                     HierarchicalSheetInstance, LocalLabel, NoConnect, SchematicSymbol,
                                     SymbolInstance, Text)
 from kiutils.schematic import Schematic
 from kiutils.symbol import SymbolLib
+from kiutils.utils.sexpr import parse_sexp
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "hardware" / "kicad"
-LIBDIR = pathlib.Path("/usr/share/kicad/symbols")
+# KiCad symbol libraries at the project's KiCad release (8.0.9), fetched and SHA-256 checked by
+# tools/fetch_kicad_symbols.py. The ERC reads the same copy (tools/run_kicad_erc.sh), so the symbols embedded
+# in the schematic are the ones it compares them with. SEMMC_KICAD_SYMBOL_DIR overrides the location.
+LIBDIR = pathlib.Path(os.environ.get("SEMMC_KICAD_SYMBOL_DIR", ROOT / "build" / "kicad-symbols-8.0.9"))
 PROJECT = "semmc"
 REV = "D0.2-draft"
+# Date of revision REV, changed together with it. Not the generation date: regenerating the
+# same revision must reproduce the committed files byte for byte (the CI drift gate).
+REV_DATE = "2026-10-15"
 NS = uuidlib.UUID("6f1d2c1e-5e3a-4c55-9a77-5e3b0c0f0a11")
 
 POWER = {"VBAT_PROT", "VDC", "PGND", "GND", "+5V", "+3V3", "+3V3A"}
@@ -51,6 +62,15 @@ UNVERIFIED = {"Pin_check": "UNVERIFIED (pinout not checked against a primary dat
 MCU_NET = {"PWM_BREAK": "DRV_NFAULT", "PWM_BREAK2": "BRK2_N", "DRV_ENABLE": "MCU_DRV_EN",
            "OUTPUT_ENABLE_FEEDBACK": "DRV_EN_GATED", "ESTOP_CHAIN_SENSE": "HW_PERMIT",
            "EXT_WDG_RST_SENSE": "WDG_RST_N", "EXT_WDG_WDI": "WDG_WDI"}
+
+
+FOOTPRINTS = ROOT / "hardware" / "footprints" / "assignments.yaml"
+
+
+def footprint_map() -> dict:
+    """Reference -> footprint (library:name) for the parts that have one assigned."""
+    data = yaml.safe_load(FOOTPRINTS.read_text())
+    return {r: e["footprint"] for e in data["lines"] if e.get("footprint") for r in e["refs"]}
 
 
 def uid(*parts) -> str:
@@ -67,6 +87,7 @@ class P:
         self.props = {k: v for k, v in self.props.items() if v}
         self.dnp = dnp
         self.ref = ""
+        self.footprint = ""
 
 
 def R(value, a, b, **kw):
@@ -111,6 +132,7 @@ def sheets(mcu_map: dict) -> list:
         P("Q", "Device", "Q_NMOS_GSD", f"{U} small-signal N-FET", {"1": "PRECHG_EN", "2": "GND", "3": "PRE_D"},
           status=U, rating="V_DS >= 1.25 x V_bat,max (drain sees the battery when off)"),
         R("100k", "PRECHG_EN", "GND", status="design value", rating="bypass OFF while the MCU is in reset"),
+        TP("PRECHG_EN"),
         # ERC markers: these rails are driven through a connector, inductor, ferrite bead or switch, which
         # KiCad cannot see as a power source. Not components (no BOM line, no footprint).
         *[P("#FLG", "power", "PWR_FLAG", "PWR_FLAG", {"1": n}, status="ERC marker")
@@ -130,14 +152,19 @@ def sheets(mcu_map: dict) -> list:
         R(f"{U} divider bottom", "VBUS_DIV", "GND", status=U, rating="see top"),
         C("10nF", "VBUS_DIV", "GND", status="design value"),
         R("1k", "VBUS_DIV", "VBUS_SENSE", status="design value", rating="ADC input isolation"),
-        P("U", "Comparator", "TLV7041DBV", "TLV7041DBV", {"1": "BRK2_N", "2": "GND", "3": "OV_REF", "4": "VBUS_DIV",
+        P("U", "Comparator", "TLV7041DBV", "TLV7041DBV", {"1": "BRK2_N", "2": "GND", "3": "OV_REF_IN", "4": "VBUS_DIV",
                                                          "5": "+3V3"},
           status="CANDIDATE", mpn="TLV7041DBVR", rating="open-drain: wired-OR into TIM1_BKIN2"),
-        R(f"{U} hysteresis", "BRK2_N", "OV_REF", status=U),
+        R("10k", "OV_REF", "OV_REF_IN", status="design value",
+          rating="isolates the comparator's + input from the TL431 so the hysteresis resistor sets a defined offset"),
+        R("390k", "BRK2_N", "OV_REF_IN", status="design value",
+          rating="hysteresis: + input 2.5 % below the reference when tripped, 0.8 % above when released"),
         R("10k", "BRK2_N", "+3V3", status="design value"),
         P("U", "Reference_Voltage", "TL431DBZ", "TL431 (2.495 V)", {"1": "OV_REF", "2": "OV_REF", "3": "GND"},
           status="CANDIDATE", mpn="TL431BIDBZR"),
-        R("1k", "+3V3", "OV_REF", status="design value", rating="TL431 cathode current ~0.8 mA"),
+        R("470R", "+3V3", "OV_REF", status="design value",
+          rating="TL431 cathode current (3.3 - 2.495) / 470 = 1.7 mA; the minimum cathode current is to be read from the TI datasheet"),
+        TP("VBUS_SENSE"), TP("BRK2_N"), TP("OV_REF"),
     ], ["Over-voltage trip is independent of firmware: comparator -> BRK2_N -> TIM1_BKIN2 (outputs off in hardware)."]))
     # 3 -------------------------------------------------------------- bridge
     br = []
@@ -177,8 +204,12 @@ def sheets(mcu_map: dict) -> list:
         R("100k", "MCU_DRV_EN", "GND", status="design value", rating="driver disabled while MCU pins are high-Z"),
         R("100k", "DRV_EN_GATED", "GND", status="design value", rating="driver disabled if the AND gate is unpowered"),
         R("10k", "DRV_SPI_NSS", "+3V3", status="design value", rating="SPI deselected at boot"),
-        *[R("100k", f"PWM_{x}_{s}", "GND", status="DNP if internal pull-downs verified", dnp=True)
+        *[R("100k", f"PWM_{x}_{s}", "GND", status="design value",
+            rating="holds the gate-signal input low while the MCU pin is high-impedance; may become DNP once the "
+                   "DRV8353 input pull-downs are read from the datasheet")
           for x in "ABC" for s in ("HI", "LO")],
+        *[TP(f"PWM_{x}_{s}") for x in "ABC" for s in ("HI", "LO")],
+        TP("MCU_DRV_EN"), TP("DRV_EN_GATED"), TP("VCP"), TP("DVDD"),
     ], ["DRV8353S pin NAMES and NUMBERS are PLACEHOLDERS (primary datasheet not readable here): renumber from TI SLVSDY6x before any footprint/layout.",
         "Gate-driver ENABLE = MCU_DRV_EN AND HW_PERMIT (safety loop + watchdog): firmware alone cannot enable the driver."]))
     # 5 -------------------------------------------------------------- current sense
@@ -217,6 +248,7 @@ def sheets(mcu_map: dict) -> list:
         R("10k", "+3V3A", "TFET_N", status="design value"),
         R("1k", "TFET_N", "TEMP_FET", status="design value"),
         C("100nF", "TEMP_FET", "GND", status="design value"),
+        TP("TEMP_FET"),
         P("J", "Connector_Generic", "Conn_01x02", "MOTOR_TEMP", {"1": "TMOT_IN", "2": "GND"}, status=U,
           rating="sensor type unknown (NTC/PTC/KTY/PT1000)"),
         R(f"{U} bias", "+3V3A", "TMOT_IN", status=U, rating="depends on the motor's sensor"),
@@ -263,7 +295,7 @@ def sheets(mcu_map: dict) -> list:
         R("0R", "WDG_RST_N", "NRST", status="design option", rating="watchdog resets the MCU"),
         P("D", "Device", "D_Schottky", "BAT54", {"1": "WDG_RST_N", "2": "HW_PERMIT"}, status="CANDIDATE",
           rating="watchdog timeout pulls HW_PERMIT low (driver disabled in hardware)"),
-        TP("+3V3"), TP("NRST"), TP("DRV_NFAULT"),
+        TP("+3V3"), TP("NRST"), TP("DRV_NFAULT"), TP("WDG_WDI"), TP("WDG_RST_N"),
     ], ["Unused MCU pins are no-connect in this draft; pin functions come from hardware/interfaces/pin_allocation_STM32G474VBCETx.csv."]))
     # 9 -------------------------------------------------------------- hall inputs
     hl = [P("J", "Connector_Generic", "Conn_01x05", "HALL", {"1": "HALL_PWR", "2": "GND", "3": "HA_IN", "4": "HB_IN",
@@ -298,10 +330,11 @@ def sheets(mcu_map: dict) -> list:
                                                                      "4": "+3V3"}, status="CANDIDATE"),
            R(f"{U} LED series", "LOOP_P", "LOOP_A", status=U, rating="safety-loop voltage unknown (I_F ~ 5 mA)"),
            R("10k", "HW_PERMIT", "GND", status="design value", rating="HW_PERMIT low unless the loop is energised"),
-           C("1nF", "HW_PERMIT", "GND", status="design value")]
+           C("1nF", "HW_PERMIT", "GND", status="design value"),
+           TP("HW_PERMIT"), TP("THROTTLE_A"), TP("THROTTLE_B")]
     S.append(("driver_controls", "Wired driver controls and safety-loop sense", dc,
               ["HW_PERMIT is high only while the vehicle safety loop (e-stop + dead-man) is energised and the watchdog is not asserting.",
-               "Brake switch: normally closed preferred (fails safe); the firmware polarity is configurable."]))
+               "Brake switch: normally closed preferred (an open wire then reads as braking); the switch type is the calibration value controls.brake_switch."]))
     # 11 ------------------------------------------------------------- CAN
     S.append(("can_phy", "CAN physical layer", [
         P("U", "Interface_CAN_LIN", "TJA1051T-3", "TJA1051T/3", {"1": "CAN_TX", "2": "GND", "3": "+5V", "4": "CAN_RX",
@@ -319,7 +352,8 @@ def sheets(mcu_map: dict) -> list:
         P("J", "Connector_Generic", "Conn_01x04", "CAN", {"1": "CAN_H", "2": "CAN_L", "3": "GND", "4": "CAN_SHLD"},
           status=U, rating="vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)"),
         C("1nF", "CAN_SHLD", "GND", status=U, rating="shield termination per harness"),
-    ], ["500 kbit/s classic CAN, IDs 0x300-0x33F (docs/INTERFACE_CONTROL.md). Bit timing and termination must match the vehicle bus."]))
+        TP("CAN_TX"), TP("CAN_RX"),
+    ], ["Classic CAN at 500 kbit/s assumed; protocol block 0x300-0x33F, base set by calibration (docs/ICD.md section 2). Bit timing and termination must match the vehicle bus."]))
     # 12 ------------------------------------------------------------- aux rails
     S.append(("aux_rails", "Auxiliary rails and ground star point", [
         P("U", "Regulator_Switching", "LM5164DDA", "LM5164 (candidate)", {"1": "GND", "2": "VBAT_PROT", "3": "BUCK_EN",
@@ -411,10 +445,25 @@ def write_custom_lib(path: pathlib.Path):
 _LIBS: dict = {}
 
 
+def kicad8_to_kiutils(text: str) -> str:
+    """KiCad 8 writes boolean flags as (hide yes), (italic yes), (bold yes); kiutils 1.4.8 reads the KiCad 7
+    form (bare hide, italic, bold) and would silently drop the KiCad 8 one, making hidden fields visible.
+    Only the spelling changes; the symbols' content is KiCad 8.0.9's."""
+    for flag in ("hide", "italic", "bold"):
+        text = text.replace(f"({flag} yes)", flag).replace(f"({flag} no)", "")
+    return text
+
+
 def lib_symbol(lib: str, name: str):
     if lib not in _LIBS:
-        p = OUT / f"{PROJECT}.kicad_sym" if lib == PROJECT else LIBDIR / f"{lib}.kicad_sym"
-        _LIBS[lib] = {s.entryName: s for s in SymbolLib.from_file(str(p)).symbols}
+        if lib == PROJECT:
+            parsed = SymbolLib.from_file(str(OUT / f"{PROJECT}.kicad_sym"))
+        else:
+            p = LIBDIR / f"{lib}.kicad_sym"
+            if not p.exists():
+                sys.exit(f"{p} missing: run python3 tools/fetch_kicad_symbols.py (KiCad 8.0.9 symbol libraries)")
+            parsed = SymbolLib.from_sexpr(parse_sexp(kicad8_to_kiutils(p.read_text())))
+        _LIBS[lib] = {s.entryName: s for s in parsed.symbols}
     d = _LIBS[lib]
     s = copy.deepcopy(d[name])
     if s.extends:                                    # flatten derived symbols
@@ -487,7 +536,7 @@ def build(check: bool) -> int:
     write_custom_lib(OUT / f"{PROJECT}.kicad_sym")
     design = sheets(mcu_map_from_csv())
     root_uuid = uid("root")
-    date = datetime.date.today().isoformat()
+    date = REV_DATE
     # net -> sheets using it
     use = {}
     for sname, _t, parts, _n in design:
@@ -497,6 +546,7 @@ def build(check: bool) -> int:
                     use.setdefault(net, set()).add(sname)
     hier = {n for n, ss in use.items() if len(ss) > 1 and n not in POWER}
     counters = {}
+    fpmap = footprint_map()
     expected = {}       # net -> set((ref, pin))
     root = Schematic.create_new()
     root.version, root.generator = "20211014", "semmc_gen"
@@ -540,10 +590,11 @@ def build(check: bool) -> int:
             k = (si, prt.prefix)
             counters[k] = counters.get(k, 0) + 1
             prt.ref = f"{prt.prefix}{si * 100 + counters[k]}"     # sheet 3 -> R301, R302 ...
+            prt.footprint = fpmap.get(prt.ref, "")
             s_uuid = uid("sym", sname, prt.ref)
             props = [Property("Reference", prt.ref, 0, Position(X, Y - 5.08, 0), fx()),
                      Property("Value", prt.value, 1, Position(X, Y + 5.08, 0), fx()),
-                     Property("Footprint", "", 2, Position(X, Y, 0), fx(hide=True)),
+                     Property("Footprint", prt.footprint, 2, Position(X, Y, 0), fx(hide=True)),
                      Property("Datasheet", "", 3, Position(X, Y, 0), fx(hide=True))]
             for i, (k, v) in enumerate(prt.props.items()):
                 props.append(Property(k, v, 4 + i, Position(X, Y, 0), fx(hide=True)))
@@ -554,11 +605,15 @@ def build(check: bool) -> int:
                 ss.dnp = True
             sch.schematicSymbols.append(ss)
             root.symbolInstances.append(SymbolInstance(path=f"/{sh_uuid}/{s_uuid}", reference=prt.ref, unit=1,
-                                                       value=prt.value, footprint=""))
+                                                       value=prt.value, footprint=prt.footprint))
             for num, name, px, py, pa, et, net in pins:
                 ax, ay = round(X + px, 4), round(Y - py, 4)
                 if net is None:
-                    sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
+                    # A pin the library already types as no_connect needs no flag: KiCad 8 ERC reports
+                    # the extra flag as both "connected" and "dangling" (seen on J801 KEY, MAX6369 NC,
+                    # TLV755 NC).
+                    if et != "no_connect":
+                        sch.noConnects.append(NoConnect(Position(ax, ay), uid("nc", s_uuid, num)))
                     continue
                 if not prt.ref.startswith("#"):          # power flags are not netlist components
                     expected.setdefault(net, set()).add((prt.ref, num))
@@ -624,20 +679,23 @@ def write_bom(design):
             if prt.ref.startswith("#"):
                 continue
             key = (prt.lib, prt.name, prt.value, prt.props.get("MPN", ""), prt.dnp)
-            g = groups.setdefault(key, {"refs": [], "sheets": set(), "status": prt.props.get("Status", ""),
+            g = groups.setdefault(key, {"refs": [], "sheets": set(), "footprints": set(),
+                                        "status": prt.props.get("Status", ""),
                                         "rating": prt.props.get("Rating_basis", ""),
                                         "pin_check": prt.props.get("Pin_check", "")})
             g["refs"].append(prt.ref)
             g["sheets"].add(sname)
+            g["footprints"].add(prt.footprint)
     path = ROOT / "hardware" / "bom" / "BOM_draft.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["line", "refs", "qty", "symbol", "value", "mpn_candidate", "dnp", "selection_status",
-                    "rating_basis", "pin_check", "sheets"])
+                    "rating_basis", "pin_check", "sheets", "footprint"])
         for i, ((lib, name, value, mpn, dnp), g) in enumerate(sorted(groups.items(), key=lambda kv: kv[1]["refs"][0]), 1):
             w.writerow([i, " ".join(sorted(g["refs"])), len(g["refs"]), f"{lib}:{name}", value, mpn, "DNP" if dnp else "",
-                        g["status"], g["rating"], g["pin_check"], " ".join(sorted(g["sheets"]))])
+                        g["status"], g["rating"], g["pin_check"], " ".join(sorted(g["sheets"])),
+                        " ".join(sorted(g["footprints"]))])
 
 
 # ----------------------------------------------------------------------------- check
@@ -664,7 +722,12 @@ def check_netlist(expected: dict, design) -> int:
     if r.returncode != 0:
         print(r.stdout, r.stderr)
         return 2
-    tree = _sexp(net_path.read_text())
+    # kicad-cli records the absolute checkout path and the export time; make the
+    # committed netlist independent of both (repository-relative paths, revision date).
+    text = net_path.read_text().replace(str(OUT) + "/", "hardware/kicad/")
+    text = re.sub(r'^(    \(date ")[^"]*("\))$', lambda m: m.group(1) + REV_DATE + m.group(2), text, count=1, flags=re.M)
+    net_path.write_text(text)
+    tree = _sexp(text)
     nets_node = next(x for x in tree if isinstance(x, list) and x and x[0] == "nets")
     got = {}
     for n in nets_node[1:]:
@@ -695,8 +758,8 @@ def check_netlist(expected: dict, design) -> int:
              f"* intended nets: {len(expected)}", f"* KiCad nets: {len(got)} (of which no-connect singletons: {len(unc)})",
              f"* problems: {len(problems)}", ""]
     lines += [f"- {p}" for p in problems] or ["No mismatches: KiCad connectivity equals the intended connectivity."]
-    lines += ["", "This checks connectivity only. It is not an electrical rules check (KiCad 7 has no CLI ERC) and "
-              "not a design review."]
+    lines += ["", "This checks connectivity only. It is not an electrical rules check (the KiCad ERC runs separately: "
+              "`tools/run_kicad_erc.sh` with KiCad 8 or newer, in the CI `erc` job) and not a design review."]
     rep.write_text("\n".join(lines) + "\n")
     print("\n".join(lines[4:8]))
     for p in problems[:30]:

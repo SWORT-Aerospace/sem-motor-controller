@@ -1,0 +1,12 @@
+# Local pit broker in a container: docker compose -f tools/mqtt/compose.yaml up
+# Image tag pinned (eclipse-mosquitto 2.0.18, amd64 digest
+# sha256:f43889926d948c1146751bce701373b71c16a81e5de9b2986b7589221fa4d9e9, checked 2026-10-16).
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.18
+    network_mode: host          # the configuration listens on 127.0.0.1:1883 only
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+volumes:
+  mosquitto-data:

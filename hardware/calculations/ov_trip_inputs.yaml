@@ -1,0 +1,41 @@
+# Worst-case inputs for the over-voltage trip on sheet 02 (TLV7041 comparator, TL431 reference, divider on
+# VDC). Read by tools/ov_trip_worst_case.py, which writes ov_trip_worst_case.md.
+#
+# null = not known yet. Device values come only from the cited data sheet (docs/reference/datasheets/README.md);
+# none has been read, so every device bound is null and the worst case stays pending. Resistor tolerances
+# are design choices for the BOM, stated here so the calculation has them; they are not yet in the BOM.
+
+network:              # schematic references (hardware/kicad/02_dc_link.kicad_sch)
+  R_s: R205           # TL431 node OV_REF to the comparator + input OV_REF_IN
+  R_h: R206           # BRK2_N to OV_REF_IN: hysteresis
+  R_p: R207           # BRK2_N pull-up to +3V3
+  R_bias: R208        # +3V3 to the TL431 cathode
+  R_top: R202         # VDC to VBUS_DIV
+  R_bot: R203         # VBUS_DIV to GND
+
+resistors:
+  R205: {nominal_ohm: 10000, tolerance: 0.01}
+  R206: {nominal_ohm: 390000, tolerance: 0.01}
+  R207: {nominal_ohm: 10000, tolerance: 0.01}
+  R208: {nominal_ohm: 470, tolerance: 0.01}
+  R202: {nominal_ohm: null, tolerance: 0.001}   # set from V_OV,trip (B-BAT-V)
+  R203: {nominal_ohm: null, tolerance: 0.001}
+tolerance_basis: "design choice: 1 % for the comparator network, 0.1 % for the divider (ratio accuracy); temperature coefficient not yet included"
+
+devices:
+  V_ref_V:            {nominal: 2.495, min: null, max: null, source: "TL431BIDBZR data sheet: initial tolerance, drift over temperature, change with cathode current"}
+  I_k_min_A:          {max: null, source: "TL431BIDBZR data sheet: minimum cathode current for regulation"}
+  V_os_V:             {max: null, source: "TLV7041DBVR data sheet: input offset voltage over temperature"}
+  V_hys_internal_V:   {nominal: null, source: "TLV7041DBVR data sheet: internal hysteresis, if any"}
+  I_bias_A:           {max: null, source: "TLV7041DBVR data sheet: input bias current over temperature"}
+  V_OL_V:             {max: null, source: "TLV7041DBVR data sheet: output low voltage at the sink current below"}
+  I_leak_out_A:       {max: null, source: "TLV7041DBVR data sheet: output leakage, output high"}
+  I_leak_pin_A:       {max: null, source: "DS12288: PC3 input leakage"}
+  V_dd_min_V:         {nominal: null, source: "TLV7041DBVR data sheet: minimum supply for a defined output"}
+supply:
+  V_3V3_V:            {nominal: 3.3, min: null, max: null, source: "TLV75533PDBVR data sheet: output accuracy over load, line and temperature"}
+
+limits:               # acceptance criteria for the trip, all in volts at VDC
+  V_bat_max_V: null           # highest battery voltage in service, including charging (B-BAT-V)
+  V_regen_margin_V: null      # rise allowed during regeneration before a trip is wanted
+  V_stress_max_V: null        # lowest of the MOSFET V_DS, capacitor and DRV8353 VM ratings, minus switching overshoot

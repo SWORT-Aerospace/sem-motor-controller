@@ -1,101 +1,123 @@
-line,refs,qty,symbol,value,mpn_candidate,dnp,selection_status,rating_basis,pin_check,sheets
-1,C101,1,Device:C,UNRESOLVED 100V MLCC,,,UNRESOLVED,">= 1.25 x V_bat,max",,power_input
-2,C1103,1,Device:C,4.7nF,,,design value,split termination,,can_phy
-3,C1201 C1202,2,Device:C,UNRESOLVED 2.2uF 100V,,,UNRESOLVED,">= 1.25 x V_bat,max",,aux_rails
-4,C1203,1,Device:C,2.2nF (verify),,,TYPICAL - verify vs DS,,,aux_rails
-5,C1204 C1205,2,Device:C,22uF,,,design value,,,aux_rails
-6,C201 C202 C203,3,Device:C_Polarized,UNRESOLVED bulk,,,UNRESOLVED,"ripple current (Kolar-Round at I_ph,max), V_rated >= 1.25 x V_bat,max, ESR, temperature",,dc_link
-7,C204 C205 C206,3,Device:C,UNRESOLVED MLCC (per half-bridge),,,UNRESOLVED,">= 100 V X7R, DC-bias derated",,dc_link
-8,C1003 C1004 C1005 C1006 C1007 C1008 C207 C808,8,Device:C,10nF,,,design value,,,dc_link driver_controls mcu_debug
-9,C401,1,Device:C,47nF (verify),,,TYPICAL - verify vs DS,">= V_bat,max + 16 V",,gate_drive
-10,C402 C403 C404,3,Device:C,1uF (verify),,,TYPICAL - verify vs DS,,,gate_drive
-11,C405,1,Device:C,UNRESOLVED 100nF 100V,,,UNRESOLVED,VM decoupling at the driver,,gate_drive
-12,C501 C503 C505,3,Device:C,DNP (diff. filter option),,DNP,DNP option,,,current_sense
-13,C502 C504 C506,3,Device:C,470pF,,,design value,>> ADC S/H capacitance (charge kick-back),,current_sense
-14,C1001 C1002 C1101 C1102 C601 C602 C701 C702 C801 C802 C803 C804 C805 C810,14,Device:C,100nF,,,TYPICAL - verify,,,bus_measurement can_phy driver_controls mcu_debug temperature
-15,C806,1,Device:C,4.7uF,,,design value,,,mcu_debug
-16,C1206 C1207 C807 C809,4,Device:C,1uF,,,design value,,,aux_rails mcu_debug
-17,C811 C812,2,Device:C,UNRESOLVED load,,,UNRESOLVED,from the selected crystal's C_L and stray,,mcu_debug
-18,C1009 C1104 C901 C902 C903,5,Device:C,1nF,,,design value,tau = 1 us,,can_phy driver_controls hall_inputs
-19,D101,1,Device:D_TVS,UNRESOLVED TVS,,,UNRESOLVED,"V_standoff >= V_bat,max; V_clamp at surge current < V_DS(abs max) of the bridge MOSFETs",,power_input
-20,D102,1,Device:D_Zener,12V zener,,,design value,clamps V_GS of the bypass FET (check V_GS abs max of selected FET),,power_input
-21,D1101,1,Power_Protection:NUP2105L,NUP2105L,,,CANDIDATE,,,can_phy
-22,D701,1,Diode:ESD9B3.3ST5G,ESD9B3.3ST5G,,,CANDIDATE,,,temperature
-23,D801,1,Device:LED,green,,,design value,,,mcu_debug
-24,D802,1,Device:LED,red,,,design value,,,mcu_debug
-25,D803,1,Device:D_Schottky,BAT54,,,CANDIDATE,watchdog timeout pulls HW_PERMIT low (driver disabled in hardware),,mcu_debug
-26,D1001 D1002 D1003 D1004 D1005 D1006 D901 D902 D903,9,Diode:ESD9B5.0ST5G,ESD9B5.0ST5G,,,CANDIDATE,,,driver_controls hall_inputs
-27,F1001,1,Device:Polyfuse_Small,polyfuse (sensor supply),,,CANDIDATE,,,driver_controls
-28,F101,1,Device:Fuse,UNRESOLVED fuse,,,UNRESOLVED,"I_batt,max, V_bat,max, breaking capacity >= BMS short-circuit current",,power_input
-29,F901,1,Device:Polyfuse_Small,UNRESOLVED polyfuse,,,UNRESOLVED,hall supply current unknown,,hall_inputs
-30,FB801,1,Device:FerriteBead_Small,600R@100MHz,,,design value,,,mcu_debug
-31,J1001,1,Connector_Generic:Conn_01x12,DRIVER_CONTROLS,,,UNRESOLVED,vehicle harness connector unknown,,driver_controls
-32,J101,1,Connector_Generic:Conn_01x02,BATTERY_IN,,,UNRESOLVED,"connector/cable from I_batt,max and V_bat,max (battery/BMS unknown)",,power_input
-33,J1101,1,Connector_Generic:Conn_01x04,CAN,,,UNRESOLVED,"vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)",,can_phy
-34,J301,1,Connector_Generic:Conn_01x03,MOTOR_PHASES,,,UNRESOLVED,"I_ph,max; motor connector unknown",,bridge
-35,J701,1,Connector_Generic:Conn_01x02,MOTOR_TEMP,,,UNRESOLVED,sensor type unknown (NTC/PTC/KTY/PT1000),,temperature
-36,J801,1,Connector:Conn_ARM_JTAG_SWD_10,SWD,,,bench only,,,mcu_debug
-37,J802,1,Connector_Generic:Conn_01x03,UART (bench),,,bench only; not populated for competition,,,mcu_debug
-38,J901,1,Connector_Generic:Conn_01x05,HALL,,,UNRESOLVED,motor hall connector unknown,,hall_inputs
-39,JP1101 JP1102,2,Jumper:SolderJumper_2_Open,TERM,,,UNRESOLVED,close only if this node is a bus end (harness unknown),,can_phy
-40,JP901,1,Jumper:SolderJumper_3_Open,HALL SUPPLY 5V/3V3,,,UNRESOLVED,hall sensor supply voltage unknown,,hall_inputs
-41,L1201,1,Device:L,UNRESOLVED inductor,,,UNRESOLVED,per DS design procedure for the V_IN range and 5 V load,,aux_rails
-42,NT1201,1,Device:NetTie_2,PGND-GND star,,,layout: single point at the shunt ground,,,aux_rails
-43,Q101,1,Device:Q_PMOS_GSD,UNRESOLVED bypass P-FET,,,UNRESOLVED,"V_DS >= 1.25 x V_bat,max; continuous I_batt,max; SOA for closing after precharge",,power_input
-44,Q102,1,Device:Q_NMOS_GSD,UNRESOLVED small-signal N-FET,,,UNRESOLVED,"V_DS >= 1.25 x V_bat,max (drain sees the battery when off)",,power_input
-45,Q301,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET HS-A,,,UNRESOLVED,"V_DS >= 1.5 x V_bat,max; I_D, R_DS(on), Q_g, R_thJC from I_ph,max (motor unknown)",,bridge
-46,Q302,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET LS-A,,,UNRESOLVED,as HS,,bridge
-47,Q303,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET HS-B,,,UNRESOLVED,"V_DS >= 1.5 x V_bat,max; I_D, R_DS(on), Q_g, R_thJC from I_ph,max (motor unknown)",,bridge
-48,Q304,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET LS-B,,,UNRESOLVED,as HS,,bridge
-49,Q305,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET HS-C,,,UNRESOLVED,"V_DS >= 1.5 x V_bat,max; I_D, R_DS(on), Q_g, R_thJC from I_ph,max (motor unknown)",,bridge
-50,Q306,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET LS-C,,,UNRESOLVED,as HS,,bridge
-51,R1002 R1005,2,Device:R,18k,,,design value,5 V -> 3.21 V,,driver_controls
-52,R101,1,Device:R_Shunt,UNRESOLVED bus shunt,,,UNRESOLVED,"I_batt,max into INA228 full-scale range; Kelvin sense pads",,power_input
-53,R1019,1,Device:R,UNRESOLVED LED series,,,UNRESOLVED,safety-loop voltage unknown (I_F ~ 5 mA),,driver_controls
-54,R102,1,Device:R,UNRESOLVED precharge R,,,UNRESOLVED,"C_link, V_bat,max, precharge time; pulse energy 0.5*C*V^2 per attempt",,power_input
-55,R1003 R1006 R103 R105 R1206 R402 R403,7,Device:R,100k,,,design value,gate-source hold-off,,aux_rails driver_controls gate_drive power_input
-56,R104,1,Device:R,47k,,,design value - verify,"zener current (V_bat,max-12V)/R; power (V_bat,max-12V)^2/R",,power_input
-57,R1102 R1103,2,Device:R,60.4R,,,design value,,,can_phy
-58,R1201,1,Device:R,UNRESOLVED UVLO top,,,UNRESOLVED,"from V_bat,min",,aux_rails
-59,R1202,1,Device:R,UNRESOLVED UVLO bottom,,,UNRESOLVED,,,aux_rails
-60,R1203,1,Device:R,UNRESOLVED RON,,,UNRESOLVED,on-time vs V_IN range (battery unknown),,aux_rails
-61,R1204,1,Device:R,31.6k (verify VFB),,,TYPICAL - verify,,,aux_rails
-62,R201,1,Device:R,UNRESOLVED bleeder,,,UNRESOLVED,"discharge time vs power at V_bat,max",,dc_link
-63,R202,1,Device:R,UNRESOLVED divider top,,,UNRESOLVED,"ratio = 2.495 V / V_OV,trip (rule 37: FS >= 1.05 OV)",,dc_link
-64,R203,1,Device:R,UNRESOLVED divider bottom,,,UNRESOLVED,see top,,dc_link
-65,R1008 R1010 R1012 R1014 R1016 R1018 R204 R207 R702 R704 R802 R803 R902 R904 R906,15,Device:R,1k,,,design value,ADC input isolation,,dc_link driver_controls hall_inputs mcu_debug temperature
-66,R205,1,Device:R,UNRESOLVED hysteresis,,,UNRESOLVED,,,dc_link
-67,R1001 R1004 R1007 R1009 R1011 R1013 R1015 R1017 R1020 R1101 R1205 R206 R401 R404 R605 R701 R801 R804,18,Device:R,10k,,,design value,,,aux_rails bus_measurement can_phy dc_link driver_controls gate_drive mcu_debug temperature
-68,R301 R302 R304 R305 R307 R308 R805,7,Device:R,0R,,,design option,series gate R option; IDRIVE sets slew,,bridge mcu_debug
-69,R303,1,Device:R_Shunt,UNRESOLVED phase shunt A,,,UNRESOLVED,"I_ph,max into CSA linear range; P = I_rms^2 R; Kelvin pads",,bridge
-70,R306,1,Device:R_Shunt,UNRESOLVED phase shunt B,,,UNRESOLVED,"I_ph,max into CSA linear range; P = I_rms^2 R; Kelvin pads",,bridge
-71,R309,1,Device:R_Shunt,UNRESOLVED phase shunt C,,,UNRESOLVED,"I_ph,max into CSA linear range; P = I_rms^2 R; Kelvin pads",,bridge
-72,R405 R406 R407 R408 R409 R410,6,Device:R,100k,,DNP,DNP if internal pull-downs verified,,,gate_drive
-73,R501 R502 R503,3,Device:R,100R,,,design value - see timing budget,with 470 pF: tau = 47 ns (settling inside the PWM sampling window),,current_sense
-74,R601 R602,2,Device:R,10R (verify),,,TYPICAL - verify input-filter guidance,,,bus_measurement
-75,R603 R604 R901 R903 R905,5,Device:R,4.7k,,,design value,,,bus_measurement hall_inputs
-76,R703,1,Device:R,UNRESOLVED bias,,,UNRESOLVED,depends on the motor's sensor,,temperature
-77,SW801,1,Switch:SW_Push,RESET,,,bench,,,mcu_debug
-78,TH701,1,Device:Thermistor_NTC,10k NTC (B per selection),,,CANDIDATE,placed at the low-side MOSFETs,,temperature
-79,TP1201,1,Connector:TestPoint,+5V,,,bench test point,,,aux_rails
-80,TP1202,1,Connector:TestPoint,GND,,,bench test point,,,aux_rails
-81,TP1203,1,Connector:TestPoint,BUCK_PG,,,bench test point,,,aux_rails
-82,TP501,1,Connector:TestPoint,ISENSE_A,,,bench test point,,,current_sense
-83,TP502,1,Connector:TestPoint,ISENSE_B,,,bench test point,,,current_sense
-84,TP503,1,Connector:TestPoint,ISENSE_C,,,bench test point,,,current_sense
-85,TP801,1,Connector:TestPoint,+3V3,,,bench test point,,,mcu_debug
-86,TP802,1,Connector:TestPoint,NRST,,,bench test point,,,mcu_debug
-87,TP803,1,Connector:TestPoint,DRV_NFAULT,,,bench test point,,,mcu_debug
-88,U1001,1,Isolator:PC817,PC817 (safety-loop sense),,,CANDIDATE,,,driver_controls
-89,U101,1,semmc:RPP_BLOCK,UNRESOLVED reverse-polarity protection,,,UNRESOLVED,"ideal-diode controller + N-FETs, or keyed harness only: harness decision pending",,power_input
-90,U1101,1,Interface_CAN_LIN:TJA1051T-3,TJA1051T/3,TJA1051T/3/1J,,"CANDIDATE (alternate TCAN1042V, pin-compatible class - verify)",,,can_phy
-91,U1201,1,Regulator_Switching:LM5164DDA,LM5164 (candidate),LM5164DDAR,,CANDIDATE (100 V input class - verify),,,aux_rails
-92,U1202,1,Regulator_Linear:TLV75533PDBV,TLV75533,TLV75533PDBVR,,CANDIDATE,,,aux_rails
-93,U201,1,Comparator:TLV7041DBV,TLV7041DBV,TLV7041DBVR,,CANDIDATE,open-drain: wired-OR into TIM1_BKIN2,,dc_link
-94,U202,1,Reference_Voltage:TL431DBZ,TL431 (2.495 V),TL431BIDBZR,,CANDIDATE,,,dc_link
-95,U401,1,semmc:DRV8353S,DRV8353S (candidate),DRV8353SRTAR (verify),,"CANDIDATE (SPI, integrated CSAs, VDS monitors)",,UNVERIFIED (pinout not checked against a primary datasheet),gate_drive
-96,U402,1,74xGxx:74LVC1G08,74LVC1G08,SN74LVC1G08DBVR,,CANDIDATE,,,gate_drive
-97,U601,1,semmc:INA228,INA228 (candidate),INA228AIDGSR (verify),,"CANDIDATE (85 V common mode, 20-bit)",,SECONDARY: numbers match the KiCad official library (INA226-derived VSSOP-10) @cf07d539; primary TI datasheet NOT read,bus_measurement
-98,U801,1,MCU_ST_STM32G4:STM32G474VETx,STM32G474VET6,STM32G474VET6,,CANDIDATE (pin map generated),,KiCad library symbol (pin map from ST open pin data @7d1f151),mcu_debug
-99,U802,1,Power_Supervisor:MAX6369,MAX6369 (candidate),MAX6369KA+T,,CANDIDATE - SET0..2 strap per timeout table (verify),,,mcu_debug
-100,Y801,1,Device:Crystal_GND24,HSE UNSELECTED,,,UNRESOLVED,"frequency NOT selected: depends on the vehicle bus (classic or FD, bit rates) and the CPU frequency; candidates 8-40 MHz in hardware/timing/clock_tree_alternatives.md. The v0.2 '40 MHz required' claim is withdrawn.",,mcu_debug
+line,refs,qty,symbol,value,mpn_candidate,dnp,selection_status,rating_basis,pin_check,sheets,footprint
+1,C101,1,Device:C,UNRESOLVED 100V MLCC,,,UNRESOLVED,">= 1.25 x V_bat,max",,power_input,
+2,C1103,1,Device:C,4.7nF,,,design value,split termination,,can_phy,Capacitor_SMD:C_0603_1608Metric
+3,C1201 C1202,2,Device:C,UNRESOLVED 2.2uF 100V,,,UNRESOLVED,">= 1.25 x V_bat,max",,aux_rails,
+4,C1203,1,Device:C,2.2nF (verify),,,TYPICAL - verify vs DS,,,aux_rails,
+5,C1204 C1205,2,Device:C,22uF,,,design value,,,aux_rails,Capacitor_SMD:C_1206_3216Metric
+6,C201 C202 C203,3,Device:C_Polarized,UNRESOLVED bulk,,,UNRESOLVED,"ripple current (Kolar-Round at I_ph,max), V_rated >= 1.25 x V_bat,max, ESR, temperature",,dc_link,
+7,C204 C205 C206,3,Device:C,UNRESOLVED MLCC (per half-bridge),,,UNRESOLVED,">= 100 V X7R, DC-bias derated",,dc_link,
+8,C1003 C1004 C1005 C1006 C1007 C1008 C207 C808,8,Device:C,10nF,,,design value,,,dc_link driver_controls mcu_debug,Capacitor_SMD:C_0603_1608Metric
+9,C401,1,Device:C,47nF (verify),,,TYPICAL - verify vs DS,">= V_bat,max + 16 V",,gate_drive,
+10,C402 C403 C404,3,Device:C,1uF (verify),,,TYPICAL - verify vs DS,,,gate_drive,
+11,C405,1,Device:C,UNRESOLVED 100nF 100V,,,UNRESOLVED,VM decoupling at the driver,,gate_drive,
+12,C501 C503 C505,3,Device:C,DNP (diff. filter option),,DNP,DNP option,,,current_sense,Capacitor_SMD:C_0603_1608Metric
+13,C502 C504 C506,3,Device:C,470pF,,,design value,>> ADC S/H capacitance (charge kick-back),,current_sense,Capacitor_SMD:C_0603_1608Metric
+14,C1001 C1002 C1101 C1102 C601 C602 C701 C702 C801 C802 C803 C804 C805 C810,14,Device:C,100nF,,,TYPICAL - verify,,,bus_measurement can_phy driver_controls mcu_debug temperature,Capacitor_SMD:C_0603_1608Metric
+15,C806,1,Device:C,4.7uF,,,design value,,,mcu_debug,Capacitor_SMD:C_0805_2012Metric
+16,C1206 C1207 C807 C809,4,Device:C,1uF,,,design value,,,aux_rails mcu_debug,Capacitor_SMD:C_0603_1608Metric
+17,C811 C812,2,Device:C,UNRESOLVED load,,,UNRESOLVED,from the selected crystal's C_L and stray,,mcu_debug,Capacitor_SMD:C_0603_1608Metric
+18,C1009 C1104 C901 C902 C903,5,Device:C,1nF,,,design value,tau = 1 us,,can_phy driver_controls hall_inputs,Capacitor_SMD:C_0603_1608Metric
+19,D101,1,Device:D_TVS,UNRESOLVED TVS,,,UNRESOLVED,"V_standoff >= V_bat,max; V_clamp at surge current < V_DS(abs max) of the bridge MOSFETs",,power_input,
+20,D102,1,Device:D_Zener,12V zener,,,design value,clamps V_GS of the bypass FET (check V_GS abs max of selected FET),,power_input,Diode_SMD:D_SOD-123
+21,D1101,1,Power_Protection:NUP2105L,NUP2105L,,,CANDIDATE,,,can_phy,Package_TO_SOT_SMD:SOT-23
+22,D701,1,Diode:ESD9B3.3ST5G,ESD9B3.3ST5G,,,CANDIDATE,,,temperature,Diode_SMD:D_SOD-923
+23,D801,1,Device:LED,green,,,design value,,,mcu_debug,LED_SMD:LED_0603_1608Metric
+24,D802,1,Device:LED,red,,,design value,,,mcu_debug,LED_SMD:LED_0603_1608Metric
+25,D803,1,Device:D_Schottky,BAT54,,,CANDIDATE,watchdog timeout pulls HW_PERMIT low (driver disabled in hardware),,mcu_debug,Diode_SMD:D_SOD-323
+26,D1001 D1002 D1003 D1004 D1005 D1006 D901 D902 D903,9,Diode:ESD9B5.0ST5G,ESD9B5.0ST5G,,,CANDIDATE,,,driver_controls hall_inputs,Diode_SMD:D_SOD-923
+27,F1001,1,Device:Polyfuse_Small,polyfuse (sensor supply),,,CANDIDATE,,,driver_controls,
+28,F101,1,Device:Fuse,UNRESOLVED fuse,,,UNRESOLVED,"I_batt,max, V_bat,max, breaking capacity >= BMS short-circuit current",,power_input,
+29,F901,1,Device:Polyfuse_Small,UNRESOLVED polyfuse,,,UNRESOLVED,hall supply current unknown,,hall_inputs,
+30,FB801,1,Device:FerriteBead_Small,600R@100MHz,,,design value,,,mcu_debug,Inductor_SMD:L_0603_1608Metric
+31,J1001,1,Connector_Generic:Conn_01x12,DRIVER_CONTROLS,,,UNRESOLVED,vehicle harness connector unknown,,driver_controls,
+32,J101,1,Connector_Generic:Conn_01x02,BATTERY_IN,,,UNRESOLVED,"connector/cable from I_batt,max and V_bat,max (battery/BMS unknown)",,power_input,
+33,J1101,1,Connector_Generic:Conn_01x04,CAN,,,UNRESOLVED,"vehicle CAN harness connector, pinout and termination UNKNOWN (telematics proposal: CANH, CANL, GND)",,can_phy,
+34,J301,1,Connector_Generic:Conn_01x03,MOTOR_PHASES,,,UNRESOLVED,"I_ph,max; motor connector unknown",,bridge,
+35,J701,1,Connector_Generic:Conn_01x02,MOTOR_TEMP,,,UNRESOLVED,sensor type unknown (NTC/PTC/KTY/PT1000),,temperature,
+36,J801,1,Connector:Conn_ARM_JTAG_SWD_10,SWD,,,bench only,,,mcu_debug,Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD
+37,J802,1,Connector_Generic:Conn_01x03,UART (bench),,,bench only; not populated for competition,,,mcu_debug,Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical
+38,J901,1,Connector_Generic:Conn_01x05,HALL,,,UNRESOLVED,motor hall connector unknown,,hall_inputs,
+39,JP1101 JP1102,2,Jumper:SolderJumper_2_Open,TERM,,,UNRESOLVED,close only if this node is a bus end (harness unknown),,can_phy,Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm
+40,JP901,1,Jumper:SolderJumper_3_Open,HALL SUPPLY 5V/3V3,,,UNRESOLVED,hall sensor supply voltage unknown,,hall_inputs,Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm_NumberLabels
+41,L1201,1,Device:L,UNRESOLVED inductor,,,UNRESOLVED,per DS design procedure for the V_IN range and 5 V load,,aux_rails,
+42,NT1201,1,Device:NetTie_2,PGND-GND star,,,layout: single point at the shunt ground,,,aux_rails,NetTie:NetTie-2_SMD_Pad0.5mm
+43,Q101,1,Device:Q_PMOS_GSD,UNRESOLVED bypass P-FET,,,UNRESOLVED,"V_DS >= 1.25 x V_bat,max; continuous I_batt,max; SOA for closing after precharge",,power_input,
+44,Q102,1,Device:Q_NMOS_GSD,UNRESOLVED small-signal N-FET,,,UNRESOLVED,"V_DS >= 1.25 x V_bat,max (drain sees the battery when off)",,power_input,
+45,Q301,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET HS-A,,,UNRESOLVED,"V_DS >= 1.5 x V_bat,max; I_D, R_DS(on), Q_g, R_thJC from I_ph,max (motor unknown)",,bridge,
+46,Q302,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET LS-A,,,UNRESOLVED,as HS,,bridge,
+47,Q303,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET HS-B,,,UNRESOLVED,"V_DS >= 1.5 x V_bat,max; I_D, R_DS(on), Q_g, R_thJC from I_ph,max (motor unknown)",,bridge,
+48,Q304,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET LS-B,,,UNRESOLVED,as HS,,bridge,
+49,Q305,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET HS-C,,,UNRESOLVED,"V_DS >= 1.5 x V_bat,max; I_D, R_DS(on), Q_g, R_thJC from I_ph,max (motor unknown)",,bridge,
+50,Q306,1,Device:Q_NMOS_GDS,UNRESOLVED N-MOSFET LS-C,,,UNRESOLVED,as HS,,bridge,
+51,R1002 R1005,2,Device:R,18k,,,design value,5 V -> 3.21 V,,driver_controls,Resistor_SMD:R_0603_1608Metric
+52,R101,1,Device:R_Shunt,UNRESOLVED bus shunt,,,UNRESOLVED,"I_batt,max into INA228 full-scale range; Kelvin sense pads",,power_input,
+53,R1019,1,Device:R,UNRESOLVED LED series,,,UNRESOLVED,safety-loop voltage unknown (I_F ~ 5 mA),,driver_controls,
+54,R102,1,Device:R,UNRESOLVED precharge R,,,UNRESOLVED,"C_link, V_bat,max, precharge time; pulse energy 0.5*C*V^2 per attempt",,power_input,
+55,R1003 R1006 R103 R105 R1206 R402 R403 R405 R406 R407 R408 R409 R410,13,Device:R,100k,,,design value,gate-source hold-off,,aux_rails driver_controls gate_drive power_input,Resistor_SMD:R_0603_1608Metric
+56,R104,1,Device:R,47k,,,design value - verify,"zener current (V_bat,max-12V)/R; power (V_bat,max-12V)^2/R",,power_input,
+57,R1102 R1103,2,Device:R,60.4R,,,design value,,,can_phy,Resistor_SMD:R_0603_1608Metric
+58,R1201,1,Device:R,UNRESOLVED UVLO top,,,UNRESOLVED,"from V_bat,min",,aux_rails,
+59,R1202,1,Device:R,UNRESOLVED UVLO bottom,,,UNRESOLVED,,,aux_rails,Resistor_SMD:R_0603_1608Metric
+60,R1203,1,Device:R,UNRESOLVED RON,,,UNRESOLVED,on-time vs V_IN range (battery unknown),,aux_rails,
+61,R1204,1,Device:R,31.6k (verify VFB),,,TYPICAL - verify,,,aux_rails,Resistor_SMD:R_0603_1608Metric
+62,R201,1,Device:R,UNRESOLVED bleeder,,,UNRESOLVED,"discharge time vs power at V_bat,max",,dc_link,
+63,R202,1,Device:R,UNRESOLVED divider top,,,UNRESOLVED,"ratio = 2.495 V / V_OV,trip (rule 37: FS >= 1.05 OV)",,dc_link,
+64,R203,1,Device:R,UNRESOLVED divider bottom,,,UNRESOLVED,see top,,dc_link,Resistor_SMD:R_0603_1608Metric
+65,R1008 R1010 R1012 R1014 R1016 R1018 R204 R702 R704 R802 R803 R902 R904 R906,14,Device:R,1k,,,design value,ADC input isolation,,dc_link driver_controls hall_inputs mcu_debug temperature,Resistor_SMD:R_0603_1608Metric
+66,R1001 R1004 R1007 R1009 R1011 R1013 R1015 R1017 R1020 R1101 R1205 R205 R207 R401 R404 R605 R701 R801 R804,19,Device:R,10k,,,design value,isolates the comparator's + input from the TL431 so the hysteresis resistor sets a defined offset,,aux_rails bus_measurement can_phy dc_link driver_controls gate_drive mcu_debug temperature,Resistor_SMD:R_0603_1608Metric
+67,R206,1,Device:R,390k,,,design value,"hysteresis: + input 2.5 % below the reference when tripped, 0.8 % above when released",,dc_link,Resistor_SMD:R_0603_1608Metric
+68,R208,1,Device:R,470R,,,design value,TL431 cathode current (3.3 - 2.495) / 470 = 1.7 mA; the minimum cathode current is to be read from the TI datasheet,,dc_link,Resistor_SMD:R_0603_1608Metric
+69,R301 R302 R304 R305 R307 R308 R805,7,Device:R,0R,,,design option,series gate R option; IDRIVE sets slew,,bridge mcu_debug,Resistor_SMD:R_0603_1608Metric
+70,R303,1,Device:R_Shunt,UNRESOLVED phase shunt A,,,UNRESOLVED,"I_ph,max into CSA linear range; P = I_rms^2 R; Kelvin pads",,bridge,
+71,R306,1,Device:R_Shunt,UNRESOLVED phase shunt B,,,UNRESOLVED,"I_ph,max into CSA linear range; P = I_rms^2 R; Kelvin pads",,bridge,
+72,R309,1,Device:R_Shunt,UNRESOLVED phase shunt C,,,UNRESOLVED,"I_ph,max into CSA linear range; P = I_rms^2 R; Kelvin pads",,bridge,
+73,R501 R502 R503,3,Device:R,100R,,,design value - see timing budget,with 470 pF: tau = 47 ns (settling inside the PWM sampling window),,current_sense,Resistor_SMD:R_0603_1608Metric
+74,R601 R602,2,Device:R,10R (verify),,,TYPICAL - verify input-filter guidance,,,bus_measurement,Resistor_SMD:R_0603_1608Metric
+75,R603 R604 R901 R903 R905,5,Device:R,4.7k,,,design value,,,bus_measurement hall_inputs,Resistor_SMD:R_0603_1608Metric
+76,R703,1,Device:R,UNRESOLVED bias,,,UNRESOLVED,depends on the motor's sensor,,temperature,Resistor_SMD:R_0603_1608Metric
+77,SW801,1,Switch:SW_Push,RESET,,,bench,,,mcu_debug,Button_Switch_SMD:SW_SPST_PTS645
+78,TH701,1,Device:Thermistor_NTC,10k NTC (B per selection),,,CANDIDATE,placed at the low-side MOSFETs,,temperature,Resistor_SMD:R_0603_1608Metric
+79,TP1001,1,Connector:TestPoint,HW_PERMIT,,,bench test point,,,driver_controls,TestPoint:TestPoint_Pad_D1.5mm
+80,TP1002,1,Connector:TestPoint,THROTTLE_A,,,bench test point,,,driver_controls,TestPoint:TestPoint_Pad_D1.5mm
+81,TP1003,1,Connector:TestPoint,THROTTLE_B,,,bench test point,,,driver_controls,TestPoint:TestPoint_Pad_D1.5mm
+82,TP101,1,Connector:TestPoint,PRECHG_EN,,,bench test point,,,power_input,TestPoint:TestPoint_Pad_D1.5mm
+83,TP1101,1,Connector:TestPoint,CAN_TX,,,bench test point,,,can_phy,TestPoint:TestPoint_Pad_D1.5mm
+84,TP1102,1,Connector:TestPoint,CAN_RX,,,bench test point,,,can_phy,TestPoint:TestPoint_Pad_D1.5mm
+85,TP1201,1,Connector:TestPoint,+5V,,,bench test point,,,aux_rails,TestPoint:TestPoint_Pad_D1.5mm
+86,TP1202,1,Connector:TestPoint,GND,,,bench test point,,,aux_rails,TestPoint:TestPoint_Pad_D1.5mm
+87,TP1203,1,Connector:TestPoint,BUCK_PG,,,bench test point,,,aux_rails,TestPoint:TestPoint_Pad_D1.5mm
+88,TP201,1,Connector:TestPoint,VBUS_SENSE,,,bench test point,,,dc_link,TestPoint:TestPoint_Pad_D1.5mm
+89,TP202,1,Connector:TestPoint,BRK2_N,,,bench test point,,,dc_link,TestPoint:TestPoint_Pad_D1.5mm
+90,TP203,1,Connector:TestPoint,OV_REF,,,bench test point,,,dc_link,TestPoint:TestPoint_Pad_D1.5mm
+91,TP401,1,Connector:TestPoint,PWM_A_HI,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+92,TP402,1,Connector:TestPoint,PWM_A_LO,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+93,TP403,1,Connector:TestPoint,PWM_B_HI,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+94,TP404,1,Connector:TestPoint,PWM_B_LO,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+95,TP405,1,Connector:TestPoint,PWM_C_HI,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+96,TP406,1,Connector:TestPoint,PWM_C_LO,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+97,TP407,1,Connector:TestPoint,MCU_DRV_EN,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+98,TP408,1,Connector:TestPoint,DRV_EN_GATED,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+99,TP409,1,Connector:TestPoint,VCP,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+100,TP410,1,Connector:TestPoint,DVDD,,,bench test point,,,gate_drive,TestPoint:TestPoint_Pad_D1.5mm
+101,TP501,1,Connector:TestPoint,ISENSE_A,,,bench test point,,,current_sense,TestPoint:TestPoint_Pad_D1.5mm
+102,TP502,1,Connector:TestPoint,ISENSE_B,,,bench test point,,,current_sense,TestPoint:TestPoint_Pad_D1.5mm
+103,TP503,1,Connector:TestPoint,ISENSE_C,,,bench test point,,,current_sense,TestPoint:TestPoint_Pad_D1.5mm
+104,TP701,1,Connector:TestPoint,TEMP_FET,,,bench test point,,,temperature,TestPoint:TestPoint_Pad_D1.5mm
+105,TP801,1,Connector:TestPoint,+3V3,,,bench test point,,,mcu_debug,TestPoint:TestPoint_Pad_D1.5mm
+106,TP802,1,Connector:TestPoint,NRST,,,bench test point,,,mcu_debug,TestPoint:TestPoint_Pad_D1.5mm
+107,TP803,1,Connector:TestPoint,DRV_NFAULT,,,bench test point,,,mcu_debug,TestPoint:TestPoint_Pad_D1.5mm
+108,TP804,1,Connector:TestPoint,WDG_WDI,,,bench test point,,,mcu_debug,TestPoint:TestPoint_Pad_D1.5mm
+109,TP805,1,Connector:TestPoint,WDG_RST_N,,,bench test point,,,mcu_debug,TestPoint:TestPoint_Pad_D1.5mm
+110,U1001,1,Isolator:PC817,PC817 (safety-loop sense),,,CANDIDATE,,,driver_controls,Package_DIP:DIP-4_W7.62mm
+111,U101,1,semmc:RPP_BLOCK,UNRESOLVED reverse-polarity protection,,,UNRESOLVED,"ideal-diode controller + N-FETs, or keyed harness only: harness decision pending",,power_input,
+112,U1101,1,Interface_CAN_LIN:TJA1051T-3,TJA1051T/3,TJA1051T/3/1J,,"CANDIDATE (alternate TCAN1042V, pin-compatible class - verify)",,,can_phy,Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
+113,U1201,1,Regulator_Switching:LM5164DDA,LM5164 (candidate),LM5164DDAR,,CANDIDATE (100 V input class - verify),,,aux_rails,Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm_ThermalVias
+114,U1202,1,Regulator_Linear:TLV75533PDBV,TLV75533,TLV75533PDBVR,,CANDIDATE,,,aux_rails,Package_TO_SOT_SMD:SOT-23-5
+115,U201,1,Comparator:TLV7041DBV,TLV7041DBV,TLV7041DBVR,,CANDIDATE,open-drain: wired-OR into TIM1_BKIN2,,dc_link,Package_TO_SOT_SMD:SOT-23-5
+116,U202,1,Reference_Voltage:TL431DBZ,TL431 (2.495 V),TL431BIDBZR,,CANDIDATE,,,dc_link,Package_TO_SOT_SMD:SOT-23
+117,U401,1,semmc:DRV8353S,DRV8353S (candidate),DRV8353SRTAR (verify),,"CANDIDATE (SPI, integrated CSAs, VDS monitors)",,UNVERIFIED (pinout not checked against a primary datasheet),gate_drive,
+118,U402,1,74xGxx:74LVC1G08,74LVC1G08,SN74LVC1G08DBVR,,CANDIDATE,,,gate_drive,Package_TO_SOT_SMD:SOT-23-5
+119,U601,1,semmc:INA228,INA228 (candidate),INA228AIDGSR (verify),,"CANDIDATE (85 V common mode, 20-bit)",,SECONDARY: numbers match the KiCad official library (INA226-derived VSSOP-10) @cf07d539; primary TI datasheet NOT read,bus_measurement,Package_SO:VSSOP-10_3x3mm_P0.5mm
+120,U801,1,MCU_ST_STM32G4:STM32G474VETx,STM32G474VET6,STM32G474VET6,,CANDIDATE (pin map generated),,KiCad library symbol (pin map from ST open pin data @7d1f151),mcu_debug,Package_QFP:LQFP-100_14x14mm_P0.5mm
+121,U802,1,Power_Supervisor:MAX6369,MAX6369 (candidate),MAX6369KA+T,,CANDIDATE - SET0..2 strap per timeout table (verify),,,mcu_debug,Package_TO_SOT_SMD:SOT-23-8
+122,Y801,1,Device:Crystal_GND24,HSE UNSELECTED,,,UNRESOLVED,"frequency NOT selected: depends on the vehicle bus (classic or FD, bit rates) and the CPU frequency; candidates 8-40 MHz in hardware/timing/clock_tree_alternatives.md. The v0.2 '40 MHz required' claim is withdrawn.",,mcu_debug,Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm

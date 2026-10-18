@@ -7,6 +7,7 @@
 #include "semmc/mc_core.h"
 
 #include <math.h>
+#include <stdatomic.h>
 #include <string.h>
 
 #include "semmc_protocol.h"
@@ -20,25 +21,24 @@
 
 /* ---------------------------------------------------------------- helpers */
 
-static uint8_t make_tag(uint16_t boot_id, uint32_t companion_session, uint8_t prev)
+static uint8_t make_tag(uint16_t boot_id, uint32_t issued)
 {
-    /* Deterministic, non-zero, different from the previous tag. Not secret. */
-    uint32_t x = ((uint32_t)boot_id << 16) ^ companion_session ^ 0x9E3779B9u;
+    /* Non-zero, and distinct for any 255 consecutive sessions of one boot: a
+     * per-boot offset plus the count of tags issued so far, which a session
+     * reset (bus-off, companion restart, hello timeout) does not clear. A
+     * frame carrying the tag of an earlier session therefore cannot match the
+     * current one. Not secret; a controller reboot starts a new offset. */
+    uint32_t x = (uint32_t)boot_id ^ 0x9E3779B9u;
     x ^= x >> 15;
     x *= 0x2C1B3C6Du;
     x ^= x >> 12;
-    uint8_t t = (uint8_t)(x ^ (x >> 8) ^ (x >> 16) ^ (x >> 24));
-    if (t == 0u) t = 1u;
-    if (t == prev) t = (uint8_t)(t == 255u ? 1u : t + 1u);
-    return t;
+    const uint8_t base = (uint8_t)(x ^ (x >> 8) ^ (x >> 16) ^ (x >> 24));
+    return (uint8_t)(1u + ((uint32_t)base + issued) % 255u);
 }
 
 static void sup_session_reset(mc_core_t *c)
 {
-    const uint8_t prev = c->sess.tag;
-    memset(&c->sess, 0, sizeof c->sess);
-    c->sess.tag = 0u;
-    (void)prev;
+    memset(&c->sess, 0, sizeof c->sess); /* tag 0 = none; tags_issued is kept */
     mc_fresh_reset(&c->fr_req);
     mc_fresh_reset(&c->fr_limits);
     memset(c->lim, 0, sizeof c->lim);
@@ -62,6 +62,12 @@ static void force_tx(mc_core_t *c, uint32_t id)
 bool mc_core_init(mc_core_t *c, const uint8_t *cal_blob, size_t cal_len, mc_build_kind_t build, uint16_t boot_id)
 {
     memset(c, 0, sizeof(*c));
+    atomic_init(&c->fast_pub_idx, 0u);
+    atomic_init(&c->fast_oc_events, 0u);
+    atomic_init(&c->fast_dt_events, 0u);
+    atomic_init(&c->fast_oc_ack, 0u);
+    atomic_init(&c->fast_dt_ack, 0u);
+    atomic_init(&c->current_invalid_run, 0u);
     c->build = build;
     c->boot_id = boot_id;
     mc_cfg_report_t rep;
@@ -96,6 +102,16 @@ bool mc_core_init(mc_core_t *c, const uint8_t *cal_blob, size_t cal_len, mc_buil
     mc_fresh_init_seq_only(&c->fr_hello, MC_HELLO_MAX_AGE_US, MC_CLOCK_DOMAIN_COMPANION);
     sup_session_reset(c);
     c->speed_val = MC_VAL_MISSING;
+    /* No measurement exists before the first slow step: report MISSING, never a zero. */
+    c->slow_vbus_V = NAN;
+    c->slow_vbus_val = MC_VAL_MISSING;
+    c->slow_ibatt_A = NAN;
+    c->slow_ibatt_val = MC_VAL_MISSING;
+    c->t_fet_degC = NAN;
+    c->t_fet_val = MC_VAL_MISSING;
+    c->t_motor_degC = NAN;
+    c->t_motor_val = MC_VAL_MISSING;
+    c->p_batt_W = NAN;
     c->energy_J = 0.0;
     c->tx_force_mask = 0xFFFFu;
     return ok;
@@ -127,11 +143,10 @@ void mc_core_on_msg_rx(mc_core_t *c, mc_time_us_t now_us, uint32_t msg_id, const
         if (!c->sess.hello_seen || c->sess.companion_session != m.companion_session || c->sess.tag == 0u) {
             /* New companion session (first, rebooted, or after bus-off): assign
              * a fresh tag; nothing from an earlier session is honoured. */
-            const uint8_t prev = c->sess.tag;
             sup_session_reset(c);
             c->sess.hello_seen = true;
             c->sess.companion_session = m.companion_session;
-            c->sess.tag = make_tag(c->boot_id, m.companion_session, prev);
+            c->sess.tag = make_tag(c->boot_id, ++c->tags_issued);
             force_tx(c, SEMMC_ID_CTRL_SESSION);
         }
         c->sess.last_hello_us = now_us;
@@ -218,6 +233,7 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     /* ---- measurements ---- */
     c->slow_vbus_V = in->vbus_V;
     const mc_validity_t vbus_val = vcheck(in->vbus_V, in->vbus_val);
+    c->slow_vbus_val = vbus_val;
     c->slow_ibatt_A = in->ibatt_A;
     c->slow_ibatt_val = vcheck(in->ibatt_A, in->ibatt_val);
     c->t_fet_degC = in->t_fet_degC;
@@ -228,11 +244,19 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
         c->speed_mech_rad_s = c->hall.omega_e / (float)c->p.pole_pairs;
         c->speed_val = c->hall.invalid ? MC_VAL_INVALID : (c->hall.have_sector ? MC_VAL_OK : MC_VAL_MISSING);
     }
-    if (mc_usable(c->slow_ibatt_val) && mc_usable(vbus_val)) {
-        c->p_batt_W = in->vbus_V * in->ibatt_A;
-        c->energy_J += (double)c->p_batt_W * (double)dt;
-    } else {
-        c->p_batt_W = NAN; /* energy is NOT integrated from guesses */
+    /* Energy at the controller's bus shunt: E = sum(V * I * dt) over slow steps
+     * whose voltage and current are both usable and whose interval does not
+     * exceed MC_ENERGY_MAX_DT_S. Every other interval is counted as a gap and
+     * reported (ctrl_energy_quality), never integrated from a guess. */
+    const bool power_ok = mc_usable(c->slow_ibatt_val) && mc_usable(vbus_val);
+    c->p_batt_W = power_ok ? in->vbus_V * in->ibatt_A : NAN;
+    if (dt > 0.0f) {
+        if (power_ok && dt <= MC_ENERGY_MAX_DT_S) {
+            c->energy_J += (double)c->p_batt_W * (double)dt;
+            c->energy_integrated_s += (double)dt;
+        } else {
+            c->energy_gap_s += (double)dt;
+        }
     }
 
     /* ---- protection ---- */
@@ -242,8 +266,12 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     pi.hw_overvoltage = in->hw_overvoltage;
     pi.gate_driver_fault = in->gate_driver_fault;
     pi.watchdog_fault = in->watchdog_fault;
-    pi.fast_overcurrent = c->fast_overcurrent;
-    pi.fast_dt_invalid = c->fast_dt_invalid;
+    /* Fast-step events not yet reacted to. Read once here; the ack stored after the publish below is this
+     * value, so an event the fast step adds after this read stays pending for the next slow step. */
+    const unsigned oc_events = atomic_load_explicit(&c->fast_oc_events, memory_order_acquire);
+    const unsigned dt_events = atomic_load_explicit(&c->fast_dt_events, memory_order_acquire);
+    pi.fast_overcurrent = oc_events != atomic_load_explicit(&c->fast_oc_ack, memory_order_relaxed);
+    pi.fast_dt_invalid = dt_events != atomic_load_explicit(&c->fast_dt_ack, memory_order_relaxed);
     pi.vbus_V = in->vbus_V;
     pi.vbus_val = vbus_val;
     pi.t_fet_degC = in->t_fet_degC;
@@ -252,7 +280,8 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     pi.t_motor_val = c->t_motor_val;
     pi.speed_mech_rad_s = c->speed_mech_rad_s;
     pi.hall_invalid = c->hall.invalid;
-    pi.current_sense_invalid = c->current_invalid_run >= MC_CURRENT_INVALID_LIMIT;
+    pi.current_sense_invalid =
+        atomic_load_explicit(&c->current_invalid_run, memory_order_relaxed) >= MC_CURRENT_INVALID_LIMIT;
     pi.throttle_valid = in->driver.throttle_valid;
     /* Stall / stuck-hall plausibility: a large q current with no hall edge
      * for MC_STALL_TIME_S means either a blocked rotor or a hall sensor stuck
@@ -270,8 +299,6 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
     }
     pi.rotor_stall = c->stall_timer_s >= MC_STALL_TIME_S;
     if (c->config_ok) mc_prot_evaluate(&c->prot, &pi, dt);
-    c->fast_overcurrent = false; /* consumed (latched in prot if it was set) */
-    c->fast_dt_invalid = false;
 
     /* ---- supervisor input ---- */
     c->sup.session_established = c->sess.established && !c->link_down;
@@ -343,6 +370,27 @@ void mc_core_slow_step(mc_core_t *c, mc_time_us_t now_us, const mc_slow_inputs_t
                               c->sm.state == MC_ST_DERATED);
     c->fast_cmd.iq_ref_A = c->fast_cmd.pwm_enable ? c->arb.iq_ref_A : 0.0f;
     c->fast_cmd.id_ref_A = c->fast_cmd.pwm_enable ? c->arb.id_ref_A : 0.0f;
+    /* Publish to the fast step: fill the buffer the index does not select, then store the index (release).
+     * Only then acknowledge the events read above (a latched fault has already withdrawn pwm_enable). */
+    {
+        const unsigned next = 1u - atomic_load_explicit(&c->fast_pub_idx, memory_order_relaxed);
+        c->fast_pub[next] = c->fast_cmd;
+        atomic_store_explicit(&c->fast_pub_idx, next, memory_order_release);
+    }
+    atomic_store_explicit(&c->fast_oc_ack, oc_events, memory_order_release);
+    atomic_store_explicit(&c->fast_dt_ack, dt_events, memory_order_release);
+}
+
+/* Fast step only: count one event (single writer, so load + store is enough; release orders it after the
+ * data the fast step wrote before it). */
+static void fast_event(atomic_uint *ev)
+{
+    atomic_store_explicit(ev, atomic_load_explicit(ev, memory_order_relaxed) + 1u, memory_order_release);
+}
+
+static bool fast_pending(const atomic_uint *ev, const atomic_uint *ack)
+{
+    return atomic_load_explicit(ev, memory_order_relaxed) != atomic_load_explicit(ack, memory_order_acquire);
 }
 
 /* ---------------------------------------------------------------- fast step */
@@ -354,7 +402,7 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
 
     const float dt = in->dt;
     const bool dt_ok = mc_isfinite(dt) && dt > 0.0f && dt <= c->foc.dt_max_s;
-    if (!dt_ok) c->fast_dt_invalid = true;
+    if (!dt_ok) fast_event(&c->fast_dt_events);
 
     c->theta_e = mc_hall_update(&c->hall, in->hall_code, dt_ok ? dt : 0.0f);
     mc_currents_resolve(&in->phase, &c->pc);
@@ -362,15 +410,20 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
     /* Software overcurrent: any phase, measured or reconstructed. Acts in this
      * interrupt (outputs off now) and latches in the next slow step. */
     if (c->pc.valid) {
+        bool oc = false;
         for (int k = 0; k < 3; k++) {
-            if (mc_absf(c->pc.i[k]) > c->p.sw_overcurrent_A) c->fast_overcurrent = true;
+            if (mc_absf(c->pc.i[k]) > c->p.sw_overcurrent_A) oc = true;
         }
+        if (oc) fast_event(&c->fast_oc_events);
     }
-    const bool enable = c->fast_cmd.pwm_enable && dt_ok && !in->hw_trip && !c->fast_overcurrent && !c->fast_dt_invalid;
+    const mc_fast_cmd_t cmd = c->fast_pub[atomic_load_explicit(&c->fast_pub_idx, memory_order_acquire)];
+    const bool enable = cmd.pwm_enable && dt_ok && !in->hw_trip && !fast_pending(&c->fast_oc_events, &c->fast_oc_ack) &&
+                        !fast_pending(&c->fast_dt_events, &c->fast_dt_ack);
+    const unsigned run = atomic_load_explicit(&c->current_invalid_run, memory_order_relaxed);
     if (enable && !c->pc.valid) {
-        if (c->current_invalid_run < UINT32_MAX) c->current_invalid_run++;
+        if (run < UINT32_MAX) atomic_store_explicit(&c->current_invalid_run, run + 1u, memory_order_relaxed);
     } else if (c->pc.valid) {
-        c->current_invalid_run = 0u;
+        atomic_store_explicit(&c->current_invalid_run, 0u, memory_order_relaxed);
     }
     if (!enable || !c->pc.valid) {
         mc_foc_reset(&c->foc);
@@ -387,8 +440,8 @@ void mc_core_fast_step(mc_core_t *c, const mc_fast_inputs_t *in, mc_fast_outputs
     c->fast_pwm_was_enabled = true;
 
     mc_foc_in_t fi;
-    fi.i_ref.d = c->fast_cmd.id_ref_A;
-    fi.i_ref.q = c->fast_cmd.iq_ref_A;
+    fi.i_ref.d = cmd.id_ref_A;
+    fi.i_ref.q = cmd.iq_ref_A;
     fi.sin_th = sinf(c->theta_e);
     fi.cos_th = cosf(c->theta_e);
     fi.omega_e = c->hall.omega_e;
@@ -472,7 +525,7 @@ static bool build_frame(mc_core_t *c, uint32_t id, uint8_t seq, uint8_t out[8])
     }
     case SEMMC_ID_CTRL_MOTION: {
         semmc_ctrl_motion_t m = {seq, mc_usable(c->speed_val) ? c->speed_mech_rad_s : NAN,
-                                 c->pc.valid ? c->iq_meas_A : NAN, mc_isfinite(c->slow_vbus_V) ? c->slow_vbus_V : NAN};
+                                 c->pc.valid ? c->iq_meas_A : NAN, mc_usable(c->slow_vbus_val) ? c->slow_vbus_V : NAN};
         r = semmc_encode_ctrl_motion(&m, out);
         break;
     }
@@ -487,6 +540,11 @@ static bool build_frame(mc_core_t *c, uint32_t id, uint8_t seq, uint8_t out[8])
     case SEMMC_ID_CTRL_ENERGY: {
         semmc_ctrl_energy_t m = {seq, (float)c->energy_J, c->p_batt_W};
         r = semmc_encode_ctrl_energy(&m, out);
+        break;
+    }
+    case SEMMC_ID_CTRL_ENERGY_QUALITY: {
+        semmc_ctrl_energy_quality_t m = {seq, (float)c->energy_integrated_s, (float)c->energy_gap_s};
+        r = semmc_encode_ctrl_energy_quality(&m, out);
         break;
     }
     case SEMMC_ID_CTRL_THERMAL: {
@@ -504,7 +562,7 @@ static bool build_frame(mc_core_t *c, uint32_t id, uint8_t seq, uint8_t out[8])
         m.v_ia = (c->pc.measured_mask & MC_PH_A) ? 0u : vi | ((c->pc.reconstructed_mask & MC_PH_A) ? 0u : 1u);
         m.v_ib = (c->pc.measured_mask & MC_PH_B) ? 0u : vi | ((c->pc.reconstructed_mask & MC_PH_B) ? 0u : 1u);
         m.v_ic = (c->pc.measured_mask & MC_PH_C) ? 0u : vi | ((c->pc.reconstructed_mask & MC_PH_C) ? 0u : 1u);
-        m.v_vbus = mc_isfinite(c->slow_vbus_V) ? 0u : 4u;
+        m.v_vbus = validity_nibble(c->slow_vbus_val);
         m.v_ibatt = validity_nibble(c->slow_ibatt_val);
         m.v_t_fet = validity_nibble(c->t_fet_val);
         m.v_t_motor = validity_nibble(c->t_motor_val);
@@ -531,12 +589,12 @@ static bool build_frame(mc_core_t *c, uint32_t id, uint8_t seq, uint8_t out[8])
 static const uint32_t k_tx_ids[] = {
     SEMMC_ID_CTRL_FAULT,   SEMMC_ID_CTRL_STATUS,  SEMMC_ID_CTRL_CMD_TRACE, SEMMC_ID_DRIVER_CONTROLS,
     SEMMC_ID_CTRL_SESSION, SEMMC_ID_CTRL_MOTION,  SEMMC_ID_CTRL_CURRENTS,  SEMMC_ID_CTRL_ENERGY,
-    SEMMC_ID_CTRL_THERMAL, SEMMC_ID_CTRL_VALIDITY, SEMMC_ID_CTRL_IDENTITY};
+    SEMMC_ID_CTRL_THERMAL, SEMMC_ID_CTRL_VALIDITY, SEMMC_ID_CTRL_ENERGY_QUALITY, SEMMC_ID_CTRL_IDENTITY};
 static const uint32_t k_tx_period_us[] = {
     SEMMC_PERIOD_US_CTRL_FAULT,   SEMMC_PERIOD_US_CTRL_STATUS,  SEMMC_PERIOD_US_CTRL_CMD_TRACE,
     SEMMC_PERIOD_US_DRIVER_CONTROLS, SEMMC_PERIOD_US_CTRL_SESSION, SEMMC_PERIOD_US_CTRL_MOTION,
     SEMMC_PERIOD_US_CTRL_CURRENTS, SEMMC_PERIOD_US_CTRL_ENERGY,  SEMMC_PERIOD_US_CTRL_THERMAL,
-    SEMMC_PERIOD_US_CTRL_VALIDITY, SEMMC_PERIOD_US_CTRL_IDENTITY};
+    SEMMC_PERIOD_US_CTRL_VALIDITY, SEMMC_PERIOD_US_CTRL_ENERGY_QUALITY, SEMMC_PERIOD_US_CTRL_IDENTITY};
 
 bool mc_core_msg_tx_poll(mc_core_t *c, mc_time_us_t now_us, uint32_t *msg_id, uint8_t data[8])
 {
