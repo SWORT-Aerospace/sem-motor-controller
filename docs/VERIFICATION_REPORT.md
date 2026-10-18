@@ -229,3 +229,23 @@ Nothing was flashed, energised or measured.
 | Ancestry | `main` (`3a80039`, including the team's questionnaire edit), v0.4 (`0b7255e`) and v0.5 (`76f4cfc`) are ancestors of the head |
 | Manufacturer documents | none in the repository; the manufacturers' sites are refused by the build environment's network policy (CONNECT 403, checked once). The download list: [`reference/datasheets/README.md`](reference/datasheets/README.md) |
 
+
+### 8.6 Continued v0.6 work: what changed and how it was checked (2026-10-18)
+
+| Area | Result | Evidence |
+|---|---|---|
+| Concurrency | fast-loop events counted with single-writer atomics; an overcurrent during the slow step's acknowledgment is kept | `firmware/tests/test_core_preemption.c` (fails on the old code); DMB in both handlers (`test_fast_slow_handoff_compiles_to_ordered_atomics`) |
+| Start-up sequence | `mc_startup`: bypass closes only on fresh samples that agree with the resistor current; driver woken after the bypass (VM is the link); offsets with the driver awake; attempts limited, then LOCKOUT | `firmware/tests/test_drivers.c`, 139 checks; ten safety properties each removed once and caught by them |
+| Gate driver and battery meter | driver logic written against verified descriptions; the image passes none, so both stay UNVERIFIED and DRV_ENABLE low | `test_target_image_keeps_the_gate_driver_and_meter_inhibited` |
+| Over-voltage trip | worst-case tool; resistor-only spread trip +0.57 % to +1.00 %, release -2.74 % to -2.26 % of the set point; device terms pending (B-OVTRIP) | `hardware/calculations/ov_trip_worst_case.md` |
+| Footprints | 82 of 122 BOM lines assigned (68 verified, 14 waiting for the manufacturer's drawing), 40 with a stated reason; before: 0 | `hardware/footprints/FOOTPRINT_CHECK.md`, 0 failed checks |
+| ERC | KiCad 8.0.9, 0 errors, 0 warnings with the footprints assigned, recorded against the SHA-256 of the schematic inputs | run 39085951988 (`8e230d8`), `hardware/kicad/ERC_RECORD.yaml` |
+| Bench gate-disable path | BP1 to BP4 PASS on the netlist, with mutation tests; BP5 (driver behaviour disabled or unpowered) OPEN | `hardware/review/CONSISTENCY_CHECK.md` |
+| Budget | minimum build (protection and local recording) fully priced: $385 to $1,018 with equipment owned, $489 to $1,382 if bought; full scope not established (2 lines unpriced) | `docs/PROCUREMENT.md` |
+| Release gate | G5 PASS; G1 to G4, G6, G7 FAIL; no fabrication outputs | `docs/generated/release_gate.md` |
+
+Local verification of `e0d7593` (this environment, not a fresh clone): ctest 11/11; pytest 312 passed, 0 skipped, with the
+broker and the ARM toolchain required; target images linked: `semmc_stm32g474.elf` 54 624 + 96 bytes flash, 8 120
+bytes RAM, SHA-256 `99f41e9b...77bdd`; `semmc_stm32g474_pwmtest.elf` `4672013d...0aeebba`;
+`semmc_stm32g474_timing.elf` `610ff5da...1b7758`. The MQTT latency maxima and deadline-miss counts of the committed
+demonstration samples were not regenerated. Nothing was flashed, energised or measured.

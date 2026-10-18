@@ -18,7 +18,7 @@ The README keeps a short status; this page holds the detail. "Works" always name
 | Checked without hardware | vector table against ST's interrupt list; memory map; no double precision on the current-interrupt path; fault handlers reach the safe state; pin and alternate-function map against ST's database (45 functions, 0 errors); timer, dead-time and CAN bit-timing encodings; the core's fast step in an instruction-level emulator (instruction counts, not timing on silicon) |
 | Simulated (host) | the controller core, protection and state machine against the synthetic plant; the telemetry chain through a real MQTT broker |
 | Bench-tested | nothing |
-| Not implemented | the DRV8353 configuration and the INA228 battery meter (datasheets not read): the power stage stays inhibited, precharge never closes, and no synthetic configuration can enable it on hardware |
+| Written, inhibited | the start-up sequence and the DRV8353 and INA228 driver logic, host-tested against invented register maps; no verified device description is passed (datasheets not read) and the bus transports are not written, so the power stage stays inhibited, precharge never closes, and no synthetic configuration can enable it on hardware |
 
 Item by item: [`../firmware/platform/stm32g4/README.md`](../firmware/platform/stm32g4/README.md) "Status".
 

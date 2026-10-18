@@ -148,8 +148,8 @@ CMSIS sources are used for register encodings only.
 * SRAM 96 KB from 0x20000000 (SRAM1 80 KB, SRAM2 16 KB); the 32 KB CCM SRAM is unused. Stack at the top
   (0x20018000), at least 4 KB reserved at link time, painted at start-up and measured in the main loop
   (`g_bench.stack_unused_min_bytes`); no static stack-depth analysis has been done.
-* This revision uses 54 728 bytes of flash (text and initialised data) and 8 120 bytes of RAM (data and
-  bss), from `arm-none-eabi-size` on `semmc_stm32g474.elf`.
+* This revision uses 54 720 bytes of flash (text and initialised data, built at `e0d7593`) and 8 120 bytes
+  of RAM (data and bss), from `arm-none-eabi-size` on `semmc_stm32g474.elf`.
 * **STM32G474VCT6 (256 KB flash).** The image itself would fit. The current linker layout places the
   calibration page at 0x0807F000, which a 256 KB part does not have, so that variant needs its own layout with
   the calibration at the end of its flash, and matching programming instructions. Its other differences from the

@@ -81,7 +81,7 @@ driver: mode switch OFF -> ON (wired)          --->   ECO_ASSIST only if the sup
 | Gate-driver fault | nFAULT (VDS over-current, UVLO) → TIM1_BKIN | PWM outputs off in the timer hardware | yes |
 | Bus over-voltage | comparator → TIM1_BKIN2 | PWM outputs off in the timer hardware | yes |
 | Watchdog | MAX6369 WDO → HW_PERMIT (diode) and NRST | driver disabled and MCU reset | yes |
-| Precharge bypass | FET gate pulled down (bypass open at power-up and in reset); rule for closing it: V_DC ≥ `power.precharge_complete_fraction` x V_BAT (VBUS_SENSE vs INA228) within `power.precharge_timeout_s`, else a fault; a link that falls back after closing is a fault | no inrush at power-up | the pull-down yes; the sequencing is implemented (`firmware/src/io/mc_precharge.c`, host tests) and linked into the target image, but never closes there until the INA228 driver exists |
+| Precharge bypass | FET gate pulled down (bypass open at power-up and in reset); rule for closing it: V_DC ≥ `power.precharge_complete_fraction` x V_BAT (VBUS_SENSE vs INA228) within `power.precharge_timeout_s`, else a fault; a link that falls back after closing is a fault | no inrush at power-up | the pull-down yes; the sequencing is implemented (`firmware/src/io/mc_precharge.c`, `mc_startup.c` with the battery-current cross-check, host tests) and linked into the target image, but never closes there until a verified INA228 description and its I2C transport exist |
 
 Every row of this table is checked on the exported netlist by `tools/hw_consistency.py` (PR1–PR7). Electrical levels of the driver inputs, contact types and the safety-loop voltage are UNKNOWN (input sheet).
 
