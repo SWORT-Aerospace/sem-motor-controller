@@ -6,7 +6,7 @@ import math
 import pytest
 
 from host.pit import energy, ingest
-from host.telematics import stlg
+from host.telematics import signals, stlg
 from host.telematics.clocks import LocalClock
 from host.telematics.controller_adapter import SimFixtureAdapter
 from host.telematics.node import NodeConfig, SimLink, TelematicsNode, meta_fields
@@ -95,8 +95,9 @@ def test_node_logs_raw_frames_and_reports_missing_as_null(tmp_path):
     msg = node.message(0.5)
     m, why = ingest.validate_live(json.dumps(msg).encode())
     assert why is None, why
-    assert msg["m"]["ctrl.dc_current"]["q"] == "missing" and msg["m"]["ctrl.dc_current"]["v"] is None
-    assert msg["m"]["ctrl.dc_voltage"]["q"] == "stale"   # last frame 0.44 s ago
+    assert msg["m"]["ctrl.dc_current"] == [None, "missing", None, None, None]
+    assert msg["m"]["ctrl.dc_voltage"][:2] == [None, "stale"]   # last frame 0.44 s ago
+    assert len(json.dumps(msg)) < 2000                          # compact entries
     node.close(1.0)
     _meta, recs, rep = stlg.read(w.path)
     kinds = [r[3] for r in recs]
@@ -109,7 +110,7 @@ def test_node_logs_raw_frames_and_reports_missing_as_null(tmp_path):
 def _v4(**kw):
     m = {"schema": "sem.telemetry.v4", "run_id": "R", "boot": 1, "seq": 0, "t_local_ms": 10, "utc": None,
          "utc_q": "none", "utc_err_s": None, "replayed": False, "adapter": {"id": "x", "fixture": True, "silent_ms": None},
-         "m": {"ctrl.dc_voltage": {"v": 48.0, "u": "V", "q": "valid", "age_ms": 12, "seq": 4, "ts": "rx"}},
+         "registry": signals.REGISTRY_ID, "m": {"ctrl.dc_voltage": [48.0, "valid", 12, 4, "r"]},
          "counters": {"rx_frames": 3}}
     m.update(kw)
     return json.dumps(m).encode()
@@ -118,15 +119,16 @@ def _v4(**kw):
 def test_v4_validation():
     assert ingest.validate_live(_v4())[1] is None
     bad = {
-        "unit": {"ctrl.dc_voltage": {"v": 48.0, "u": "mV", "q": "valid", "age_ms": 1, "seq": None, "ts": "rx"}},
-        "value with q stale": {"ctrl.dc_voltage": {"v": 0.0, "u": "V", "q": "stale", "age_ms": 900, "seq": None,
-                                                   "ts": "rx"}},
-        "outside": {"ctrl.dc_voltage": {"v": 480.0, "u": "V", "q": "valid", "age_ms": 1, "seq": None, "ts": "rx"}},
-        "age_ms": {"ctrl.dc_voltage": {"v": 48.0, "u": "V", "q": "valid", "age_ms": 5000, "seq": None, "ts": "rx"}},
-        "registry": {"ctrl.torque_request": {"v": 1.0, "u": "N*m", "q": "valid", "age_ms": 1, "seq": None, "ts": "rx"}},
+        "not an entry": {"ctrl.dc_voltage": {"v": 48.0, "q": "valid"}},
+        "value with q stale": {"ctrl.dc_voltage": [0.0, "stale", 900, None, "r"]},
+        "outside": {"ctrl.dc_voltage": [480.0, "valid", 1, None, "r"]},
+        "age_ms": {"ctrl.dc_voltage": [48.0, "valid", 5000, None, "r"]},
+        "registry": {"ctrl.torque_request": [1.0, "valid", 1, None, "r"]},
+        "time reference": {"ctrl.dc_voltage": [48.0, "valid", 1, None, "x"]},
     }
     for what, mm in bad.items():
         assert ingest.validate_live(_v4(m=mm))[1] is not None, what
+    assert "registry" in ingest.validate_live(_v4(registry="reg-000000000000"))[1]   # units unknown to this pit
     assert "'sup' block" in ingest.validate_live(_v4(sup={"torque_Nm": 1.0}))[1]
     assert "boot" in ingest.validate_live(_v4(boot=-1))[1]
 

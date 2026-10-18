@@ -1,0 +1,39 @@
+{
+ "A": {
+  "high": 608.94,
+  "low": 392.28,
+  "parts_high": 520.85,
+  "parts_low": 377.31
+ },
+ "B": {
+  "high": 812.6,
+  "low": 435.27,
+  "parts_high": 706.0,
+  "parts_low": 420.3
+ },
+ "B_with_display": {
+  "high": 862.05,
+  "low": 480.22,
+  "parts_high": 750.95,
+  "parts_low": 465.25
+ },
+ "equipment_if_not_owned": {
+  "high": 180.0,
+  "low": 85.0
+ },
+ "recurring": {
+  "mb_per_running_hour": 15.06,
+  "message_bytes": 2052,
+  "message_size_measured": true,
+  "one_time": 3.0,
+  "per_month_high": 64.51,
+  "per_month_low": 1.9,
+  "running_hours_per_month": {
+   "high": 20,
+   "low": 2
+  }
+ },
+ "unpriced_lines": [
+  "wedge_s"
+ ]
+}

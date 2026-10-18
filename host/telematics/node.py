@@ -16,7 +16,8 @@ Tasks, in priority order, as the firmware (telematics/firmware) has them:
   3. Log writer: moves queued records into STLG blocks at a bounded rate; a storage stall (injected)
      stops it, the queue fills, drops are counted.
   4. Uplink, 2 Hz: a `sem.telemetry.v4` summary of the latest measurement per signal, each with its
-     validity and age; a missing or stale value is null with q "missing" or "stale", never 0. While the
+     validity and age (compact entries, units from the named signal registry); a missing or stale value is
+     null with q "missing" or "stale", never 0. While the
      link is down messages wait in a bounded queue (the oldest is dropped and counted); later they are sent
      oldest first with replayed = true. The log does not depend on the uplink.
 
@@ -252,7 +253,8 @@ class TelematicsNode:
             "t_local_ms": int(round(t_local * 1000)), "utc": _num(u), "utc_q": q, "utc_err_s": _num(err),
             "adapter": {"id": a.id, "fixture": a.id.endswith("fixture"),
                         "silent_ms": None if self.last_decoded_us is None else (now - self.last_decoded_us) // 1000},
-            "m": self.latest.summary(now, self.live_signals()),
+            "registry": signals.REGISTRY_ID,
+            "m": {k: compact(e) for k, e in self.latest.summary(now, self.live_signals()).items()},
             "counters": dict(self.c),
             "replayed": False,
         }
@@ -311,6 +313,21 @@ class TelematicsNode:
         self.w.n_in_buf = 0
         self.w.f.close()
         return lost
+
+
+TS_CODE = {"sample": "s", "rx": "r", None: None}
+
+
+def compact(e: dict) -> list:
+    """A live entry as [value, q, age_ms, source seq, time reference ("s" sample, "r" receive)] plus the upper
+    bound when there is one. The unit is the registry's (the message names the registry). Values are rounded
+    to 6 significant digits on the uplink only (the log keeps every received byte); the compact form roughly
+    halves the message (3.3 KB with named fields and full floats in the demonstration)."""
+    v = e["v"] if e["v"] is None else float(f"{e['v']:.6g}")       # 6 significant digits on the uplink
+    out = [v, e["q"], e["age_ms"], e["seq"], TS_CODE[e["ts"]]]
+    if "upper" in e:
+        out.append(float(f"{e['upper']:.4g}"))
+    return out
 
 
 def meta_fields(cfg: NodeConfig, adapter, run_id: str, unit_id: str, boot: int) -> dict:

@@ -129,6 +129,17 @@ def _validate_common(m: dict) -> str | None:
     return None
 
 
+TS_NAMES = {"s": "sample", "r": "rx", None: None}
+
+
+def live_entry(raw) -> dict | None:
+    """A v4 live entry [value, q, age_ms, seq, ts(, upper)] as a dict; None if it is not one."""
+    if not isinstance(raw, list) or len(raw) not in (5, 6) or raw[4] not in TS_NAMES:
+        return None
+    return {"v": raw[0], "q": raw[1], "age_ms": raw[2], "seq": raw[3], "ts": TS_NAMES[raw[4]],
+            "upper": raw[5] if len(raw) == 6 else None}
+
+
 def _validate_v4(m: dict) -> str | None:
     """sem.telemetry.v4 (host/telematics/node.py): the latest measurement per registry signal."""
     for k, ok, what in (("run_id", lambda v: isinstance(v, str) and v != "", "a non-empty string"),
@@ -149,15 +160,16 @@ def _validate_v4(m: dict) -> str | None:
         return "adapter.id or adapter.fixture missing"
     if a.get("silent_ms") is not None and not (_is_int(a["silent_ms"]) and a["silent_ms"] >= 0):
         return "adapter.silent_ms not a non-negative integer or null"
-    for sid, e in m["m"].items():
+    if m.get("registry") != signals.REGISTRY_ID:
+        return f"signal registry {m.get('registry')!r} is not this pit's {signals.REGISTRY_ID}: units unknown"
+    for sid, raw in m["m"].items():
         reg = signals.lookup(sid)
         if reg is None:
             return f"m.{sid}: not a registry signal"
-        if not isinstance(e, dict):
-            return f"m.{sid} not an object"
-        if e.get("u") != reg.unit:
-            return f"m.{sid}: unit {e.get('u')!r}, the registry says {reg.unit!r}"
-        q, v, age = e.get("q"), e.get("v"), e.get("age_ms")
+        e = live_entry(raw)
+        if e is None:
+            return f"m.{sid}: not a [value, q, age_ms, seq, ts(, upper)] entry"
+        q, v, age = e["q"], e["v"], e["age_ms"]
         if q not in LIVE_Q:
             return f"m.{sid}: unknown q {q!r}"
         if q in ("valid", "unverified"):
@@ -171,11 +183,11 @@ def _validate_v4(m: dict) -> str | None:
             return f"m.{sid}: missing with an age"
         if q != "missing" and not (_is_int(age) and age >= 0):
             return f"m.{sid}: age_ms not a non-negative integer"
-        if e.get("seq") is not None and not (_is_int(e["seq"]) and 0 <= e["seq"] < 2**32):
+        if e["seq"] is not None and not (_is_int(e["seq"]) and 0 <= e["seq"] < 2**32):
             return f"m.{sid}: seq not an unsigned integer or null"
-        if e.get("ts") not in ("sample", "rx", None):
-            return f"m.{sid}: ts {e.get('ts')!r}"
-        if "upper" in e and not (_is_num(e["upper"]) and e["upper"] >= 0):
+        if e["ts"] not in ("sample", "rx", None):
+            return f"m.{sid}: time reference {e['ts']!r}"
+        if e["upper"] is not None and not (_is_num(e["upper"]) and e["upper"] >= 0):
             return f"m.{sid}: upper not a non-negative number"
     return _validate_common(m)
 

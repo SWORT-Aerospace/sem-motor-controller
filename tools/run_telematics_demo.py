@@ -227,13 +227,15 @@ def analyse(ev: dict, db: sqlite3.Connection, live_rep: dict) -> tuple[list[dict
         "SELECT t_local_ms, payload FROM live WHERE schema='sem.telemetry.v4' ORDER BY run_id, seq")]
 
     def qs(sig, a, b):
-        return collections.Counter((m["m"][sig]["q"], m["m"][sig]["v"] is None) for t, m in lm if a <= t < b)
+        return collections.Counter((ingest.live_entry(m["m"][sig])["q"], ingest.live_entry(m["m"][sig])["v"] is None)
+                                   for t, m in lm if a <= t < b)
     sil = qs("ctrl.dc_voltage", SILENCE[0] + 0.5, SILENCE[1])
     cur = qs("ctrl.dc_current", DROP_CURRENTS[1] + 0.5, DROP_CURRENTS[2])
     vin = qs("ctrl.dc_voltage", VBUS_INVALID[0] + 0.2, VBUS_INVALID[1])
     whl = qs("wheel.wheel_drive.speed", WHEEL_DISCONNECT[1] + 1.0, WHEEL_DISCONNECT[2])
     gns = qs("gnss.speed", GNSS_OUT[0] + 0.5, GNSS_OUT[1])
-    bad_value = sum(1 for _t, m in lm for e in m["m"].values() if e["q"] not in ("valid", "unverified") and e["v"] is not None)
+    bad_value = sum(1 for _t, m in lm for e in map(ingest.live_entry, m["m"].values())
+                    if e["q"] not in ("valid", "unverified") and e["v"] is not None)
     bad_db = db.execute("SELECT COUNT(*) FROM measurements WHERE validity NOT IN ('valid','unverified') AND value IS "
                         "NOT NULL").fetchone()[0]
     silent = [m["adapter"]["silent_ms"] for t, m in lm if SILENCE[0] + 0.5 <= t < SILENCE[1]]
@@ -490,7 +492,9 @@ def run(out: pathlib.Path, in_process: bool = False, pace: float = 4.0, duration
         for r in db.execute("SELECT run_id, record_id, source, signal, value, unit, t_rx_us, t_sample_us, t_unc_us, "
                             "source_seq, validity, provenance FROM measurements ORDER BY run_id, t_rx_us, record_id"):
             f.write(",".join("" if x is None else str(x) for x in r) + "\n")
+    sizes = [len(r[0]) for r in db.execute("SELECT payload FROM live WHERE schema='sem.telemetry.v4'")]
     res = {"kind": "HOST SIMULATION (receive-only telematics node; simulated external controller)", "mode": mode,
+           "live_message_bytes_mean": round(sum(sizes) / len(sizes)) if sizes else None,
            "unit": UNIT, "duration_s": duration, "repo_commit": ev["git"], "working_tree_dirty": ev["dirty"],
            "checks": checks, "counters": {b: ev["boots"][b]["node"].c for b in ev["boots"]},
            "energy": {k: {kk: vv for kk, vv in v.items() if kk != "notes"} for k, v in summ["energy"].items()},
@@ -552,9 +556,8 @@ def _run_broker(out, dbp, live_rep, pace, duration):
     def inject(t):
         rid = run_id(1)
         good = json.loads(next(iter(links[rid].payloads.values())))
-        bad = [json.dumps(dict(good, seq=10**6, m=dict(good["m"], **{"ctrl.dc_voltage": {"v": 0.0, "u": "V",
-                                                                     "q": "stale", "age_ms": 900, "seq": None,
-                                                                     "ts": "rx"}}))).encode(),
+        bad = [json.dumps(dict(good, seq=10**6, m=dict(good["m"], **{"ctrl.dc_voltage": [0.0, "stale", 900, None, "r"]}))
+                          ).encode(),
                json.dumps(dict(good, seq=10**6 + 1, sup={"torque_Nm": 2.0})).encode(),
                b"{not json"]
         invalid["n"] = len(bad)

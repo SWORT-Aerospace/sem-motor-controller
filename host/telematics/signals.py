@@ -90,6 +90,17 @@ REGISTRY: tuple[Signal, ...] = (
 )
 
 
+def _registry_id() -> str:
+    import hashlib
+    h = hashlib.sha256("|".join(f"{s.id}:{s.unit}:{s.lo!r}:{s.hi!r}" for s in REGISTRY).encode()).hexdigest()
+    return "reg-" + h[:12]
+
+
+# Named in every live message: the units and ranges a live value refers to. The pit refuses a message whose
+# registry differs from its own (it would not know the units).
+REGISTRY_ID = _registry_id()
+
+
 def lookup(signal_id: str) -> Signal | None:
     for s in REGISTRY:
         if s.id == signal_id or ("*" in s.id and fnmatch.fnmatchcase(signal_id, s.id) and "." in signal_id):

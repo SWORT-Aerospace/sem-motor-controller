@@ -10,6 +10,7 @@ import sqlite3
 
 import pytest
 
+from host.pit import ingest
 from tools import mqtt_broker, run_telematics_demo as demo
 
 
@@ -46,7 +47,8 @@ def test_outputs_and_energy_boundaries(in_process):
     for (p,) in db.execute("SELECT payload FROM live"):
         m = json.loads(p)
         assert "sup" not in m and "ctrl" not in m
-        assert all(x["v"] is None for x in m["m"].values() if x["q"] not in ("valid", "unverified"))
+        entries = [ingest.live_entry(x) for x in m["m"].values()]
+        assert all(x["v"] is None for x in entries if x["q"] not in ("valid", "unverified"))
 
 
 @pytest.fixture(scope="module")
