@@ -338,6 +338,11 @@ flashed, connected, energised, measured on a vehicle or ordered.** Every result 
 ([`CLAIMS.md`](CLAIMS.md)); the audit made before any edit and what changed with this work are in
 [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
+Section 12 corrects four statements of this section: localization needs witnesses that share no error with each
+other, not only distinct sensors, and is now conditional; a source that kept working excludes only a complete loss of
+the paths it shares; the constant-latency remark (11.3, corrected in place); and the CSIA clean-run disagreement,
+whose cause is now found (12.3).
+
 ### 11.1 What changed, and the test behind each change
 
 | Area | Change | Shown by |
@@ -373,7 +378,7 @@ flashed, connected, energised, measured on a vehicle or ordered.** Every result 
 
 * **A constant CAN latency is not observable from the receive side** (EXP-04): with values 0.3 s old and regular arrivals, B2 is evaluated as CONSISTENT. A producer timestamp from the controller would not bound it by itself: it also needs a stated relation between the controller's clock and the unit's (offset and drift) with an uncertainty bound, or the controller team's documented bound on the delay. Without that the sample age is unknown, and section 12 shows the pit reporting it so. It is a request to the controller team, not something this unit can add by transmitting.
 * **A1 is blind below its 50 W effort floor** (EXP-02): the simulated cruise needs about 33 W, so an IMU offset at cruise is seen by B4 only.
-* **The frozen CSIA adapter disagrees with itself on nominal data**: on the simulated slowdown run (all sensors correct) it reports an unattributed disagreement in 328 of 550 ticks, while the witness relations report none; on the corrupted-wheel run it attributes the disagreement to the wheel_l path. Its output stays research-only, consistent with the documented evaluation that favours R3v; the frozen files are unchanged.
+* **The frozen CSIA adapter reports a disagreement on nominal data**: on the simulated slowdown run (all sensors correct) an unattributed disagreement in 328 of 550 ticks, while the witness relations report none; on the corrupted-wheel run it attributes the disagreement to the wheel_l path. Section 12.3 traces the 328 ticks to its E6 power balance fed a defaulted torque constant and the fixture's iq. Its output stays research-only, consistent with the documented evaluation that favours R3v; the frozen files are unchanged.
 * Corrected before the record: the pre-check first compared its windows in simulation time against results in the unit's clock (offset 1.732 s); its first A1 expectation for the IMU offset ignored the effort floor (now recorded as the limitation above); its first slowdown only coasted from 6.5 to 5.8 m/s (now a braking slowdown to about 4 m/s); B4 first compared an instantaneous IMU value with a 1 s wheel derivative and was always timing-uncertain (now both over the same window); the context first took acceleration from the IMU, so an IMU offset switched off every CRUISE relation (now the speed derivative first); the host model's reserve could exceed a small queue (now at most 1/8, as in the firmware).
 
 ### 11.4 Still depending on the physical world
@@ -382,3 +387,69 @@ Every bench step B0 to B12 and check E1 to E6; every protocol EXP-01 to EXP-04 (
 behaviour that only RM0456, DS13737 and ES0499 settle (www.st.com was refused by this environment's network policy
 again, T-U5-DOCS); the battery's maximum voltage (T-VEH-PWR); the controller's bus and frames (T-CTRL-IF); the items of
 [`HARDWARE_OPEN_ITEMS.md`](HARDWARE_OPEN_ITEMS.md).
+
+## 12. v0.7: correctness pass and physical handoff (2026-10-19)
+
+Work on `eng/v0.7-telematics` after `9dcaad5`, recorded at `bfb940b`. The repository implements vehicle telemetry and
+evidence analysis; it has no propulsion authority, and CSIA integration is shadow and advisory only. **Nothing was
+flashed, connected, energised, measured on a vehicle or ordered.** Every result below is HOST-TESTED or SIMULATED.
+The research architecture was not extended: no new relation, monitor or model.
+
+### 12.1 What changed, and the test behind each change
+
+| Area | Change | Shown by |
+|---|---|---|
+| Independence of witnesses | `lineage.independence()` returns what two values share: raw sensors, shared paths with the kinds of error each can put on every value through it (loss, timing, value; `telemetry_schema.yaml` `shared_paths.errors`), parameters (counted as value). The verdicts used to keep only a yes or no and dropped the shared paths | `test_evidence_model.py::test_lineage_separates_same_source_from_shared_path`; the schema check refuses a path without its error kinds |
+| Localization | three levels: a disagreement observed; a localization conditional on stated assumptions (each pair of witnesses shares no timing or value error through each path it shares), with the shared dependencies in the conclusion and the receipt; a cause established, which software never produces. Witnesses that share a parameter put that parameter's error first among the candidates | `test_witnesses_and_verdicts.py`: `test_localization_is_conditional_and_keeps_shared_dependencies`; `test_two_witnesses_with_a_shared_scaling_error_do_not_localize_to_the_correct_measurement` (both wheels through one wrong circumference agree, GNSS is right: the conclusion says the evidence does not separate the shared circumference from a GNSS error and lists the circumference first); `test_two_witnesses_with_a_shared_timing_or_acquisition_error_keep_that_alternative`; `test_no_conclusion_is_established_by_software`; EXP-01 `shared_scaling_error` in the pre-check |
+| Common cause | per shared path, two fault models (`verdicts.FAULT_MODELS`): a complete loss, excluded only by a source outside the event that delivered evidence continuously from one window before to one window after it; a partial or brief disturbance, never excluded by the loss pattern. A source that broke off or recovered excludes nothing. Onsets are grouped within one window of the first onset | `test_an_unaffected_source_excludes_only_the_complete_loss_model`, `test_a_source_with_a_break_or_that_recovered_does_not_exclude_anything` (a partial disturbance; a recovered source), `test_a_chain_of_onsets_is_not_merged_into_one_long_event` (five onsets 0.6 s apart over 2.4 s: two events of two sources and one onset alone, never one 2.4 s event), `test_no_shared_path_left_is_still_ambiguous` |
+| Timing assumptions | each timestamp bound has a basis, `measured`, `documented` or `assumed` (`Measurement.t_unc_basis`, a column of `measurements`, the `evidence_records` view, query rows and receipts). Wheel edges: measured; a DBC with a stated latency: documented; the simulation fixture, GNSS, IMU and temperature: assumed. On a run not labelled SIMULATED an assumed bound does not make a value admissible: TIMING_UNCERTAIN, "sample age unknown"; `receipt_problems` flags a receipt that admits one. An older database gains the column; a bound stored without a basis reads as assumed | `test_an_assumed_timestamp_bound_is_not_a_bound_for_measured_data`, `test_producers_state_the_basis_of_their_bounds`, `test_assumed_timestamp_bounds_are_admitted_for_simulated_data_only`, `test_timing_basis_survives_import_and_assumed_bounds_count_only_for_simulated_data` (the same database relabelled BENCH: B1 and B3 become INSUFFICIENT_EVIDENCE, since GNSS and IMU bounds are assumed), `test_an_older_database_gains_the_basis_column_and_reads_unrecorded_bounds_as_assumed`; the CSIA boundary does the same (`TIMING_UNCERTAIN` in its gate) |
+| Constant latency | the statement that a producer timestamp would resolve a constant delay was wrong: it also needs a stated relation between the producer's clock and the unit's and an uncertainty bound on it (or a documented delay bound); without that the sample age is unknown. Corrected in `claims.yaml` (C-TIMING), `HARDWARE_OPEN_ITEMS.md` H5, 11.3 above, EXP-04, the protocols' README, `timing.py` and the pre-check's limitation text | text |
+| CSIA clean-run case | `tools/csia_disagreement_case.py` and [`generated/csia_clean_run_case.md`](generated/csia_clean_run_case.md) (12.3); the boundary withholds `ctrl.phase_current_q` and `ctrl.dc_current` from the adapter unless a torque constant is stated, and lists the adapter parameters left at their frozen defaults | `test_csia_clean_run_case_reproduces_and_isolates_the_power_balance`, `test_csia_boundary_withholds_power_inputs_without_a_torque_constant`; `csia_disagreement_case.py --check` in CI |
+| Bench chain | continues past the query: C8 runs the shadow review on the stored run and checks every receipt (complete, advisory, nothing established, the data class's timing policy); C9 writes the speed and distance plot from the database. On a bench log, C3 checks every sample without edges (unbounded before the first edge, bounded after it, never 0) and C4 the distance against the log's own edge total. `--boot N`; `--rehearse-minimal` | `test_bench_chain_host_mode_passes` (C1 to C9), `test_minimal_rehearsal_runs_the_bench_command_and_the_wrong_boot_fails`, `test_bench_stop_check_needs_a_stop_and_rejects_a_zero_speed` |
+| Minimal bench package | `bench.yaml` section `minimal`, `documents` and `document_checks` (DC01 to DC17, each tied to a firmware line and to the step it precedes); `telematics_bench.py render` writes [`../telematics/firmware/BENCH_MINIMAL.md`](../telematics/firmware/BENCH_MINIMAL.md); `package --minimal` builds the package; CI job firmware-build builds it (artifact `telematics-bench-minimal`) | `test_minimal_section_validation_catches_drift`, `test_minimal_page_names_the_chain_the_document_checks_and_what_needs_a_board`, `test_minimal_package_has_one_image_its_rows_the_documents_and_a_simulated_rehearsal` |
+| Found on the way | at `9dcaad5` the demonstration summary had been refreshed without regenerating `TELEMATICS_BOM.md`, whose recurring cost uses the measured live message size: `telematics_bom.py --check` would fail; regenerated. The receipt check first flagged INAPPLICABLE observations that listed assumed inputs; the timing filter now runs before the context check. The CSIA case first said no single torque constant balances both steady points; within E6's tolerance one does (lambda 1.22), so the text now says fitting it would hide the mismatch | |
+
+### 12.2 Results at `bfb940b`
+
+| Check | Result |
+|---|---|
+| Fresh clone: firmware unit tests (ASan, UBSan) | 473 checks and 35 driver checks, 0 failed |
+| Fresh clone: target images | `tm_u575.elf` 20,464 B flash, 65,552 B RAM; SHA-256 `tm_u575.bin` `4f4650b07a8a9024f1baf054467519fdbff1af35bfc31d3d17726fe3f51a4c3a`, `tm_u575_can.bin` `1609575a87a8dc5d1382ef15a244cd06538da2675024136367829bce1ea46e1b` (revision `bfb940bad094`; every commit changes the revision string inside the image and so its hash) |
+| Fresh clone: bench packages | full: 14 files; minimal: 17 files; both valid for a recorded run, images rebuilt in a new build directory with identical SHA-256 (`.elf`, `.bin`, `.hex`); minimal rehearsal (SIMULATED) PASS: C2 to C9, 6,000 pulses, 600.0 m, 9 receipts with no problem |
+| Generated files and static checks | `scope.py`, `telematics_schema.py`, `claims.py` (26 claims), `gen_protocol.py`, `gen_dbc.py`, `telematics_bom.py`, `telematics_bench.py render` (both pages), `wheel_sensor_check.py`, `blockers.py`, `telematics_storage.py`, `csia_disagreement_case.py` (`--check`): current; `check_links.py`: 151 files, 0 broken |
+| Telematics and reference suites (`SEMMC_REQUIRE_MQTT=1 SEMMC_REQUIRE_ARM=1`, controller build directory pointed at a path that does not exist) | 240 collected (129 unit, 111 integration): 239 passed, 1 skipped (`hardware_required`, needs the board); the controller build directory was not created |
+| Controller suite (`pytest -m controller`) | 216 passed |
+| Demonstration through Mosquitto | 9/9 checks; samples refreshed in `generated/telematics_demo/` |
+| Evidence review of the demonstration, boot 1 | 1,228 ticks, 0 INCONSISTENT, 0 ambiguous; two SUPPORTED shared-path events on `unit:recorder`: 67.66 s (the storage stall's counted drops) and 121.59 s (no final counters record, a brown-out reset cause in the next session); timing policy "assumed timestamp bounds accepted: simulated data" |
+| Simulated pre-check of the protocols | 9 variants, 40 checks, all pass, two of them limitations (A1's effort floor; the constant latency). EXP-01: a corrupted wheel is localized conditionally to its own path; a 15 % scaling error shared by both wheels gives B1 inconsistent for both, B3 consistent, and the conclusion about GNSS names the shared circumference first; a real slowdown gives no inconsistency. EXP-03: independent losses stay AMBIGUOUS with the complete loss of the shared paths excluded and their partial disturbance kept |
+
+### 12.3 The CSIA clean-run disagreement
+
+Reproduced from the EXP-01 slowdown run (every sensor correct): 550 ticks, 328 DISAGREE_AMBIGUOUS, all of them the E6
+power balance above its failure threshold; failing while accelerating (154), at steady speeds near 6.5 m/s (166) and
+near 4 m/s (2), and stopped (6). The minimal case feeds the frozen adapter three constant, simultaneous inputs (rotor speed, iq, p_dc) at
+two steady points: E6 lambda 15.98 at 6.5 m/s (DISAGREE_AMBIGUOUS) and 7.93 at 4.0 m/s, so timing cannot be the
+cause. The relationship expects p_dc = (1 + 0.08) x kt x iq x rotor + 3 W with iq a q-axis current and kt the motor's
+torque constant; the boundary gave no kt (the motor data are open, B-MOTOR), so the adapter used its default 0.06
+N m/A, and the fixture's `iq_A` is 0.9 x the DC current, which is not a current consistent with any torque.
+Classification: **an adapter input mismatch in an unsupported configuration**, not a timing defect, and not shown to
+be a limitation of the algorithm. No kt was fitted (fitting would hide the mismatch and would be tuning); the frozen
+evaluation files are unchanged, and nothing here is offered as evidence that the witness relations are better than
+CSIA. Full case: [`generated/csia_clean_run_case.md`](generated/csia_clean_run_case.md).
+
+### 12.4 Documents
+
+www.st.com and www.winbond.com were refused by this environment's network policy on 2026-10-18 and again on
+2026-10-19 (the proxy answers 403 to the connection). The five PDFs that answer the document checks are requested,
+with the exact file names, in [`../telematics/firmware/BENCH_MINIMAL.md`](../telematics/firmware/BENCH_MINIMAL.md)
+section 5.1 (T-U5-DOCS).
+
+### 12.5 Still requires a real board
+
+Everything on the minimal bench, M0 to M4: every connection row; that the image starts (clock tree, vector table,
+watchdog, USART1 through the ST-LINK virtual COM port); TIM2 input capture on PA3 (AF1, the 2 us filter, falling
+edges, flag clearing, the timebase rate); internal flash bank 2 erase and programming and the log surviving a power
+cycle; the DUMP export; the speed against the generator. Then the full bench B0 to B12 and E1 to E6, and the bench
+stage of EXP-01 (two generator channels at a known ratio), the first physical protocol. The vehicle stages of
+EXP-01 to EXP-04 also need T-VEH-PWR, T-GNSS and T-CTRL-IF.
+
