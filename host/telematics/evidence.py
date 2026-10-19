@@ -15,6 +15,12 @@ value may be used for at a given time, by a given consumer. Every assessment has
 
 Only VALID is admissible as evidence for a cross-domain witness. Nothing here turns a non-admissible value into
 0, False or a bare NaN: the value is None and the reason says why.
+
+Timing evidence keeps its basis (measurement.py `t_unc_basis`: measured, documented or assumed). An assumed bound is
+accepted only when the consumer says the data are simulated (`accept_assumed_timing`); for any other run it counts as
+no bound, so an assumption never makes a value admissible. When no measured or documented bound ties the value to its
+sample time, the sample's age is unknown: `age_us` is then only the time since reception (a lower bound), and
+`sample_age_known` is False.
 """
 from __future__ import annotations
 
@@ -88,25 +94,33 @@ class Evidence:
     lineage: tuple[str, ...]
     upper: Optional[float] = None
     record_id: Optional[int] = None
+    t_unc_basis: Optional[str] = None
 
     @property
     def admissible(self) -> bool:
         return self.state == ADMISSIBLE
 
+    @property
+    def sample_age_known(self) -> bool:
+        """The sample time is bounded by a measured or documented bound; otherwise only the age since reception is."""
+        return self.t_unc_basis in ("measured", "documented")
+
     def as_dict(self) -> dict:
         d = dataclasses.asdict(self)
         d["lineage"] = list(self.lineage)
+        d["sample_age_known"] = self.sample_age_known
         return d
 
 
 def assess(signal: str, meas: Optional[Measurement], now_us: int, *, supported: bool = True,
-           timing_tol_us: Optional[int] = None, unsupported_reason: str = "not provided by this configuration") \
-        -> Evidence:
+           timing_tol_us: Optional[int] = None, unsupported_reason: str = "not provided by this configuration",
+           accept_assumed_timing: bool = False) -> Evidence:
     """The evidence state of `signal` at `now_us` from its latest measurement (None: none received).
 
     `supported` False gives UNSUPPORTED whatever was received (a value for an unsupported signal would be a
     configuration error, not evidence). `timing_tol_us` is the consumer's tolerance on the timestamp: a VALID value
-    whose uncertainty is unknown or larger becomes TIMING_UNCERTAIN."""
+    whose uncertainty is unknown or larger becomes TIMING_UNCERTAIN; an assumed bound counts as unknown unless
+    `accept_assumed_timing` (simulated data)."""
     reg = signals.lookup(signal)
     if reg is None:
         raise ValueError(f"unknown signal {signal!r}")
@@ -125,13 +139,23 @@ def assess(signal: str, meas: Optional[Measurement], now_us: int, *, supported: 
     if st in ("VALID", "SOURCE_UNVERIFIED") and age > reg.stale_s * 1e6:
         st, value, reason = "STALE", None, f"age {age} us > {int(reg.stale_s * 1e6)} us"
     if st == "VALID" and timing_tol_us is not None:
-        if meas.t_unc_us is None:
-            st, value, reason = "TIMING_UNCERTAIN", None, "no bound on the timestamp error"
-        elif meas.t_unc_us > timing_tol_us:
-            st, value, reason = "TIMING_UNCERTAIN", None, \
-                f"timestamp uncertainty {meas.t_unc_us} us > tolerance {timing_tol_us} us"
+        why = timing_problem(meas.t_unc_us, meas.t_unc_basis, timing_tol_us, accept_assumed_timing)
+        if why:
+            st, value, reason = "TIMING_UNCERTAIN", None, why
     return Evidence(signal, st, value, reg.unit, reason, meas.t_ref_us, meas.t_unc_us, age, meas.source,
-                    meas.provenance, meas.source_seq, lin, meas.upper, meas.record_id)
+                    meas.provenance, meas.source_seq, lin, meas.upper, meas.record_id, meas.t_unc_basis)
+
+
+def timing_problem(t_unc_us: Optional[int], basis: Optional[str], tol_us: int, accept_assumed: bool) -> Optional[str]:
+    """Why a timestamp bound does not meet a tolerance, or None when it does."""
+    if t_unc_us is None or basis is None:
+        return "no bound on the timestamp error: sample age unknown"
+    if basis == "assumed" and not accept_assumed:
+        return (f"timestamp bound {t_unc_us} us only assumed, not measured or documented: not admissible for "
+                "measured data (sample age unknown)")
+    if t_unc_us > tol_us:
+        return f"timestamp uncertainty {t_unc_us} us ({basis}) > tolerance {tol_us} us"
+    return None
 
 
 def supported_signals(adapter_map: Iterable[str], wheel_configured: bool, wheel_channels: Iterable[str] = (),

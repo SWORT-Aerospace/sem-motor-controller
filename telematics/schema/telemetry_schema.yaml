@@ -103,16 +103,28 @@ sources:
     depends_on: [power:unit_supply, ground:unit_ground, unit:recorder]
     status: HOST-TESTED
 
-# the unit's own power tree, for common-cause reasoning (bench: USB; vehicle supply blocked, T-VEH-PWR)
+# The unit's own power tree and its other shared paths, for common-cause reasoning (bench: USB; vehicle supply
+# blocked, T-VEH-PWR). `errors` are the kinds of COMMON error a disturbance of the path can give every source on it:
+#   loss    evidence stops or is dropped (the sources go stale or missing)
+#   timing  times shift together (buffering, a delayed acquisition, a clock error): values keep agreeing with each
+#           other but are compared at the wrong time
+#   value   values shift together (missed edges on every Hall channel from a supply sag, a ground offset, a shared
+#           scaling): two sources on the path can agree with each other and both be wrong
+# Kinds are per path and conservative: a kind listed is not excluded by the schema, it is a hypothesis the evidence has
+# to rule out. Shared parameters (`parameters` below) can always give a common value error.
 shared_paths:
-  unit:recorder: {feeds: [], evidence_of_disturbance: ["the session ends without a final counters record", "the next session's reset cause is a brown-out or power-on reset", "the counters show records or frames the unit could not log (log_dropped_queue, log_dropped_storage, can_not_logged)"]}
-  power:unit_supply: {feeds: [power:unit_5v, power:unit_3v3, unit:recorder], evidence_of_disturbance: ["BOOT reset cause BOR or POR", "a gap in the unit's records"]}
-  power:unit_5v: {feeds: [], evidence_of_disturbance: ["GNSS records stop together with other 5 V loads"]}
-  power:unit_3v3: {feeds: [power:sensor_supply], evidence_of_disturbance: ["IMU and TMP117 reads fail together", "BOOT reset cause BOR"]}
-  power:sensor_supply: {feeds: [], evidence_of_disturbance: ["every wheel channel silent or stuck together"]}
-  bus:i2c1: {feeds: [], evidence_of_disturbance: ["IMU and TEMP reads fail together while wheel capture continues"]}
-  bus:vehicle_can: {feeds: [], evidence_of_disturbance: ["every controller message stops together", "FDCAN error counters rise"]}
-  clock:tim2: {feeds: [], evidence_of_disturbance: ["record time not monotonic", "status-line time jumps"]}
+  unit:recorder: {feeds: [], errors: [loss, timing], evidence_of_disturbance: ["the session ends without a final counters record", "the next session's reset cause is a brown-out or power-on reset", "the counters show records or frames the unit could not log (log_dropped_queue, log_dropped_storage, can_not_logged)"]}
+  power:unit_supply: {feeds: [power:unit_5v, power:unit_3v3, unit:recorder], errors: [loss, value], evidence_of_disturbance: ["BOOT reset cause BOR or POR", "a gap in the unit's records"]}
+  power:unit_5v: {feeds: [], errors: [loss, value], evidence_of_disturbance: ["GNSS records stop together with other 5 V loads"]}
+  power:unit_3v3: {feeds: [power:sensor_supply], errors: [loss, value], evidence_of_disturbance: ["IMU and TMP117 reads fail together", "BOOT reset cause BOR"]}
+  power:sensor_supply: {feeds: [], errors: [loss, value], evidence_of_disturbance: ["every wheel channel silent or stuck together"]}
+  bus:i2c1: {feeds: [], errors: [loss, timing], evidence_of_disturbance: ["IMU and TEMP reads fail together while wheel capture continues"]}
+  bus:vehicle_can: {feeds: [], errors: [loss, timing], evidence_of_disturbance: ["every controller message stops together", "FDCAN error counters rise"]}
+  clock:tim2: {feeds: [], errors: [timing, value], evidence_of_disturbance: ["record time not monotonic", "status-line time jumps"]}
+  ground:unit_ground: {feeds: [], errors: [loss, value], evidence_of_disturbance: ["edges or reads fail on several inputs at once while the supply holds"]}
+  antenna:gnss: {feeds: [], errors: [loss, value], evidence_of_disturbance: ["fix lost or speed accuracy degraded (gnss.speed_acc)"]}
+  power:controller_supply: {feeds: [], errors: [loss], evidence_of_disturbance: ["every controller message stops"]}
+  ground:vehicle_can_ground: {feeds: [], errors: [loss, value], evidence_of_disturbance: ["CAN error counters rise"]}
 
 # ------------------------------------------------------------------------------------------------ signals
 # For each signal: physical source, transport and encoding, scaling, expected rate, timestamp source, freshness

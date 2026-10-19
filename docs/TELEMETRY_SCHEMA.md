@@ -103,16 +103,22 @@ Measurement validity to state: `valid` -> `VALID`, `unverified` -> `SOURCE_UNVER
 
 ## Shared paths (common-cause candidates)
 
-| Path | Feeds | Evidence of a disturbance |
-|---|---|---|
-| `unit:recorder` | - | the session ends without a final counters record; the next session's reset cause is a brown-out or power-on reset; the counters show records or frames the unit could not log (log_dropped_queue, log_dropped_storage, can_not_logged) |
-| `power:unit_supply` | `power:unit_5v`, `power:unit_3v3`, `unit:recorder` | BOOT reset cause BOR or POR; a gap in the unit's records |
-| `power:unit_5v` | - | GNSS records stop together with other 5 V loads |
-| `power:unit_3v3` | `power:sensor_supply` | IMU and TMP117 reads fail together; BOOT reset cause BOR |
-| `power:sensor_supply` | - | every wheel channel silent or stuck together |
-| `bus:i2c1` | - | IMU and TEMP reads fail together while wheel capture continues |
-| `bus:vehicle_can` | - | every controller message stops together; FDCAN error counters rise |
-| `clock:tim2` | - | record time not monotonic; status-line time jumps |
+Common errors a disturbance of the path can give every source on it: loss (evidence stops), timing (times shift together), value (values shift together, so two sources can agree and both be wrong). A listed kind is a hypothesis the evidence has to rule out.
+
+| Path | Feeds | Common errors | Evidence of a disturbance |
+|---|---|---|---|
+| `unit:recorder` | - | loss, timing | the session ends without a final counters record; the next session's reset cause is a brown-out or power-on reset; the counters show records or frames the unit could not log (log_dropped_queue, log_dropped_storage, can_not_logged) |
+| `power:unit_supply` | `power:unit_5v`, `power:unit_3v3`, `unit:recorder` | loss, value | BOOT reset cause BOR or POR; a gap in the unit's records |
+| `power:unit_5v` | - | loss, value | GNSS records stop together with other 5 V loads |
+| `power:unit_3v3` | `power:sensor_supply` | loss, value | IMU and TMP117 reads fail together; BOOT reset cause BOR |
+| `power:sensor_supply` | - | loss, value | every wheel channel silent or stuck together |
+| `bus:i2c1` | - | loss, timing | IMU and TEMP reads fail together while wheel capture continues |
+| `bus:vehicle_can` | - | loss, timing | every controller message stops together; FDCAN error counters rise |
+| `clock:tim2` | - | timing, value | record time not monotonic; status-line time jumps |
+| `ground:unit_ground` | - | loss, value | edges or reads fail on several inputs at once while the supply holds |
+| `antenna:gnss` | - | loss, value | fix lost or speed accuracy degraded (gnss.speed_acc) |
+| `power:controller_supply` | - | loss | every controller message stops |
+| `ground:vehicle_can_ground` | - | loss, value | CAN error counters rise |
 
 ## Vehicle contexts
 

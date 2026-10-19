@@ -5,6 +5,7 @@ vehicle result.
 """
 import contextlib
 import io
+import json
 import subprocess
 import sys
 
@@ -66,7 +67,7 @@ def test_query_cli_prints_states_not_numbers_for_missing_values(run):
     with contextlib.redirect_stdout(buf):
         pit_query.main(["--db", str(path), "aligned", "--run", rid, "--signal", "gnss.speed", "--from",
                         f"{clock.local(21.0):.3f}", "--to", f"{clock.local(22.0):.3f}", "--step", "0.5"])
-    lines = buf.getvalue().splitlines()
+    lines = [ln for ln in buf.getvalue().splitlines() if not ln.startswith("#")]
     assert lines[0] == "t_s\tgnss.speed" and all(ln.endswith("INVALID") for ln in lines[1:])
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -105,9 +106,42 @@ def test_bench_chain_host_mode_passes(tmp_path, telematics_build):
                         str(telematics_build)], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "BENCH CHAIN" in r.stdout and "(SIMULATED): PASS" in r.stdout
-    for c in ("C1", "C2", "C3", "C4", "C5", "C6", "C7"):
+    for c in ("C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"):
         assert f"PASS {c}" in r.stdout
     assert run_bench_chain.SEGMENTS[1][2] == 0.0                                     # a stop is part of the train
+    assert (tmp_path / "chain" / "import").glob("*_speed_distance.png")
+
+
+def test_minimal_rehearsal_runs_the_bench_command_and_the_wrong_boot_fails(tmp_path, telematics_build):
+    """The rehearsal reads the simulated DUMP text back with the bench's own arguments (no pulse count): the data class
+    stays SIMULATED, the review stores complete receipts, and the session after the power cycle (no pulses) fails."""
+    out = tmp_path / "m"
+    assert run_bench_chain.main(["--rehearse-minimal", "--out", str(out), "--build", str(telematics_build)]) == 0
+    res = json.loads((out / "chain.json").read_text())
+    ids = [c["id"] for c in res["checks"]]
+    assert res["data_class"] == "SIMULATED" and res["boot"] == 1 and len(res["sessions"]) == 2
+    assert not any(i.startswith("C1 ") for i in ids)                  # the bench cannot count its pulses
+    assert "C4 distance = the log's edge total x pitch" in ids and res["pass"]
+    assert res["review"]["receipts"] > 0 and res["review"]["problems"] == []
+    assert res["review"]["timing_policy"].startswith("assumed timestamp bounds accepted: simulated")
+    assert (out / res["plot"]).exists()
+    cap = out / "capture_M3_SIMULATED.txt"
+    text = cap.read_text()
+    assert text.startswith("DUMP BEGIN 256") and text.rstrip().endswith("DUMP END")
+    again = ["--uart-capture", str(cap), "--pulse-hz", "100", "--circumference", "0.1", "--ppr", "1"]
+    assert run_bench_chain.main(again + ["--boot", "2", "--out", str(tmp_path / "b2")]) == 1
+    b2 = json.loads((tmp_path / "b2" / "chain.json").read_text())
+    assert not next(c for c in b2["checks"] if c["id"].startswith("C2 median"))["pass"]
+    assert run_bench_chain.main(again + ["--boot", "7", "--out", str(tmp_path / "b7")]) == 1
+
+
+def test_bench_stop_check_needs_a_stop_and_rejects_a_zero_speed():
+    """C3 on a bench log: every sample without edges must be UNKNOWN (bounded after the first edge), never 0."""
+    ok = [(1, None, "no_evidence", None), (2, 10.0, "valid", None), (3, None, "no_evidence", 1.0)]
+    assert run_bench_chain.stop_check(ok)["pass"]
+    assert not run_bench_chain.stop_check(ok + [(4, 0.0, "valid", None)])["pass"]              # a speed of 0
+    assert not run_bench_chain.stop_check(ok + [(4, None, "no_evidence", None)])["pass"]      # unbounded after edges
+    assert not run_bench_chain.stop_check(ok[:2])["pass"]                                      # no stop in the log
 
 
 def test_csia_boundary_passes_only_valid_evidence_and_withholds_trust(run):
@@ -123,5 +157,47 @@ def test_csia_boundary_passes_only_valid_evidence_and_withholds_trust(run):
     assert r["gate"]["withheld"].get("gnss.speed", {}).get("INVALID", 0) >= 25      # the outage did not cross
     assert "iq_ref" in r["gate"]["not_passed"] and "iq_ref" not in r["gate"]["passed"]
     assert set(r["withheld_numbers"]) == {"trust", "aggregate_trust", "lambdas"}
+    assert r["data_class"] == "SIMULATED" and r["gate"]["passed"].get("rotor", 0) > 0
+    # stated as a bench run, the controller, GNSS and IMU samples have only assumed bounds and do not cross
+    import json
+    meta = json.loads(db.execute("SELECT meta_json FROM runs WHERE run_id=?", (rid,)).fetchone()[0])
+    db.execute("UPDATE runs SET meta_json=? WHERE run_id=?", (json.dumps({**meta, "kind": "BENCH - relabel"}), rid))
+    try:
+        b = csia_boundary.run(db, rid, 1.5 / 6.283185307, 10.0, False)
+    finally:
+        db.execute("UPDATE runs SET meta_json=? WHERE run_id=?", (json.dumps(meta), rid))
+    assert b["data_class"] == "BENCH" and "rotor" not in b["gate"]["passed"]
+    assert b["gate"]["withheld"]["ctrl.motor_speed"].get("TIMING_UNCERTAIN", 0) > 0
+    assert b["gate"]["passed"].get("wheel_l", 0) > 0                     # measured bounds still cross
     for x in r["transitions"]:
         assert "trust" not in x and not any(w in x["statement"].lower() for w in ("fault", "failed"))
+
+
+def test_csia_boundary_withholds_power_inputs_without_a_torque_constant(run):
+    db, rid, _clock, _p = run
+    pytest.importorskip("numpy")
+    try:
+        r = csia_boundary.run(db, rid, 1.5 / 6.283185307, 10.0, False)
+    except ImportError as e:
+        pytest.skip(str(e))
+    assert "p_dc" not in r["gate"]["passed"] and "iq" not in r["gate"]["passed"]
+    assert r["gate"]["withheld"]["ctrl.phase_current_q"]["no torque constant"] > 0
+    assert r["adapter_defaults"]["kt_Nm_per_A"] == 0.06                  # listed as a default, not used for E6
+    k = csia_boundary.run(db, rid, 1.5 / 6.283185307, 10.0, False, kt_Nm_per_A=0.2)
+    assert k["gate"]["passed"].get("p_dc", 0) > 0 and "kt_Nm_per_A" not in k["adapter_defaults"]
+
+
+def test_csia_clean_run_case_reproduces_and_isolates_the_power_balance(tmp_path):
+    pytest.importorskip("numpy")
+    from tools import csia_disagreement_case as K
+    try:
+        a = K.clean_run(tmp_path / "case")
+    except ImportError as e:
+        pytest.skip(str(e))
+    assert a["ticks"] == 550 and a["explanations"]["DISAGREE_AMBIGUOUS"] == 328
+    assert a["failing"] == {"E6_power_balance": 328}
+    pt = K.steady_point(6.5)
+    e, lam = K.minimal(pt)                                  # constant, simultaneous inputs: no timing effect
+    assert e == "DISAGREE_AMBIGUOUS" and lam > 9.0
+    now = K.boundary_now(tmp_path / "case")
+    assert "AMBIGUOUS" not in now["verdicts"]

@@ -15,7 +15,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 def _m(**kw):
     base = dict(record_id=1, source="controller", signal="ctrl.dc_voltage", value=48.0, unit="V", t_rx_us=1000,
-                t_sample_us=None, t_unc_us=10_000, source_seq=3, validity="valid", provenance="test")
+                t_sample_us=None, t_unc_us=10_000, source_seq=3, validity="valid", provenance="test",
+                t_unc_basis="assumed")
     base.update(kw)
     return Measurement(**base)
 

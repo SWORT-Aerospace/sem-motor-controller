@@ -63,6 +63,7 @@ modules:
   tools/run_evidence_review.py: telematics
   tools/run_vehicle_experiment.py: telematics
   tools/run_bench_chain.py: telematics
+  tools/csia_disagreement_case.py: telematics
   tools/pit_query.py: telematics
   tools/claims.py: telematics
   docs/README.md: telematics
@@ -102,6 +103,7 @@ modules:
   docs/generated/: reference
   docs/generated/telematics_demo/: telematics
   docs/generated/scope.md: telematics
+  docs/generated/csia_clean_run_case.md: telematics
   docs/generated/wheel_sensor_check.md: telematics
   docs/generated/telematics_budget.md: telematics
   docs/generated/telematics_budget.json: telematics

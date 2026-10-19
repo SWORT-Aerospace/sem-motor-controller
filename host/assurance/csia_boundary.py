@@ -6,8 +6,9 @@ The CSIA vehicle adapter (host/csia_adapter, frozen with its evaluation; the doc
 docs/csia/) is research code that keeps Beta-belief "trust" values per node. This boundary decides what may cross in
 each direction:
 
-  in   a sample crosses only if its measurement is VALID (host/telematics/evidence.py); every other sample is
-       withheld and counted by state. Nothing is invented for an input the unit does not have: no torque request
+  in   a sample crosses only if its measurement is VALID (host/telematics/evidence.py) and, for any run that is
+       not simulated, its timestamp bound is measured or documented (an assumed bound is no bound there); every
+       other sample is withheld and counted by state. Nothing is invented for an input the unit does not have: no torque request
        (`iq_ref`: a request is propulsion authority, which this system does not hold), no road grade without a route
        map, no KCL residual from a reconstructed phase current. A relation that needs one gets no evidence and the
        core says so.
@@ -21,6 +22,7 @@ the whole run, with that reason. Shadow mode: the output is a record for people;
 from __future__ import annotations
 
 import bisect
+import dataclasses
 import math
 import sqlite3
 from typing import Optional
@@ -39,6 +41,10 @@ INPUTS = {
 }
 NOT_PASSED = {
     "iq_ref": "a torque request is propulsion authority: the receive-only unit has none and passes none",
+    "iq, p_dc (without a torque constant)": "the power-balance relation E6 expects p_dc = (1 + loss) x kt x iq x rotor "
+                                           "speed + aux, with iq the motor's q-axis current; without the motor's torque "
+                                           "constant (B-MOTOR) the adapter would use its default 0.06 N m/A, so iq and "
+                                           "p_dc are withheld and E6 is gated (tools/csia_disagreement_case.py)",
     "kcl": "the KCL residual is only evidence with three measured phase currents; not claimed from the broadcast",
     "grade": "no route map: road grade is unknown, so relations that need it get no evidence",
 }
@@ -65,10 +71,13 @@ def _seq_unwrap():
     return f
 
 
-def qualified_samples(db: sqlite3.Connection, run_id: str) -> tuple[list, dict]:
-    """(time-ordered [(t_s, csia_input, Sample)], {"passed": {...}, "withheld": {signal: {state: n}}})."""
+def qualified_samples(db: sqlite3.Connection, run_id: str, accept_assumed_timing: bool = False,
+                      power_inputs: bool = False) -> tuple[list, dict]:
+    """(time-ordered [(t_s, csia_input, Sample)], {"passed": {...}, "withheld": {signal: {state: n}}}).
+    `power_inputs`: pass iq and p_dc (only when the caller states the motor's torque constant)."""
     from host.csia_adapter.adapter import Sample
-    rows = db.execute("SELECT signal, value, t_rx_us, t_sample_us, source_seq, validity FROM measurements WHERE "
+    rows = db.execute("SELECT signal, value, t_rx_us, t_sample_us, source_seq, validity, t_unc_basis FROM measurements "
+                      "WHERE "
                       "run_id=? AND (signal IN (%s) OR signal IN ('gnss.speed','gnss.speed_acc','gnss.num_sv',"
                       "'ctrl.dc_voltage','ctrl.dc_current')) ORDER BY COALESCE(t_sample_us, t_rx_us), record_id"
                       % ",".join("?" * len(INPUTS)), (run_id, *INPUTS)).fetchall()
@@ -76,8 +85,10 @@ def qualified_samples(db: sqlite3.Connection, run_id: str) -> tuple[list, dict]:
     out, passed, withheld = [], {}, {}
     latest: dict[str, float] = {}
     volt: list[tuple[int, float]] = []
-    for sig, v, t_rx, t_s, seq, val in rows:
+    for sig, v, t_rx, t_s, seq, val, basis in rows:
         st = evidence.state_of(val)
+        if st == "VALID" and basis not in ("measured", "documented") and not accept_assumed_timing:
+            st = "TIMING_UNCERTAIN"                  # no measured or documented bound: the sample age is unknown
         if st != "VALID":
             withheld.setdefault(sig, {}).setdefault(st, 0)
             withheld[sig][st] += 1
@@ -85,6 +96,10 @@ def qualified_samples(db: sqlite3.Connection, run_id: str) -> tuple[list, dict]:
         t_ref = t_s if t_s is not None else t_rx
         t = t_ref / 1e6
         latest[sig] = v
+        if not power_inputs and sig in ("ctrl.phase_current_q", "ctrl.dc_current"):
+            withheld.setdefault(sig, {}).setdefault("no torque constant", 0)
+            withheld[sig]["no torque constant"] += 1
+            continue
         if sig in INPUTS:
             name, sigma, clock = INPUTS[sig]
             out.append((t, name, Sample(v, sigma(v), t, clock, t_rx / 1e6, useq(name, seq), 1, {})))
@@ -132,7 +147,7 @@ def _verdict(st, p) -> tuple[str, str]:
 
 
 def run(db: sqlite3.Connection, run_id: str, wheel_radius_m: Optional[float], gear_ratio: Optional[float],
-        freewheel: Optional[bool] = None, tick_s: float = 0.1) -> dict:
+        freewheel: Optional[bool] = None, tick_s: float = 0.1, kt_Nm_per_A: Optional[float] = None) -> dict:
     res = {"run_id": run_id, "advisory_only": True, "verdicts": {}, "transitions": [],
            "withheld_numbers": {k: "not reported: not a calibrated probability" for k in WITHHELD_NUMBERS}}
     missing = [n for n, v in (("wheel radius", wheel_radius_m), ("gear ratio", gear_ratio),
@@ -141,13 +156,25 @@ def run(db: sqlite3.Connection, run_id: str, wheel_radius_m: Optional[float], ge
         res.update(verdict="UNSUPPORTED", reason="the CSIA vehicle adapter needs " + ", ".join(missing) +
                    ", which this configuration does not state")
         return res
+    from host.assurance.review import data_class
     from host.csia_adapter.adapter import AdapterParams, VehicleCsiaAdapter
-    data, gate = qualified_samples(db, run_id)
+    import json
+    meta = json.loads(db.execute("SELECT meta_json FROM runs WHERE run_id=?", (run_id,)).fetchone()[0])
+    res["data_class"] = data_class(meta)
+    data, gate = qualified_samples(db, run_id, accept_assumed_timing=res["data_class"] == "SIMULATED",
+                                   power_inputs=kt_Nm_per_A is not None)
     res["gate"] = gate
     if not data:
         res.update(verdict="UNSUPPORTED", reason="no admissible evidence crossed the boundary")
         return res
-    ad = VehicleCsiaAdapter(AdapterParams(wheel_radius_m=wheel_radius_m, gear_ratio=gear_ratio, freewheel=freewheel))
+    given = {"wheel_radius_m": wheel_radius_m, "gear_ratio": gear_ratio, "freewheel": freewheel}
+    if kt_Nm_per_A is not None:
+        given["kt_Nm_per_A"] = kt_Nm_per_A
+    params = AdapterParams(**given)
+    # the frozen adapter's other parameters keep its defaults: listed, so nobody reads them as vehicle data
+    res["adapter_defaults"] = {f.name: getattr(params, f.name) for f in dataclasses.fields(params)
+                               if f.name not in given and f.name != "windows"}
+    ad = VehicleCsiaAdapter(params)
     res["csia_version"] = ad.csia_version
     k, last = 0, None
     t, t1 = data[0][0] + tick_s, data[-1][0]

@@ -28,7 +28,7 @@ import json
 import pathlib
 import shutil
 import sys
-from typing import Callable
+from typing import Callable, Optional
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -36,7 +36,9 @@ sys.path.insert(0, str(ROOT))
 from host.assurance import review, verdicts  # noqa: E402
 from host.pit import ingest  # noqa: E402
 from host.telematics import sim_session  # noqa: E402
-from host.telematics.sim_vehicle import Faults, default_profile  # noqa: E402
+from host.telematics.node import NodeConfig  # noqa: E402
+from host.telematics.sim_vehicle import Faults, VehicleSimConfig, default_profile  # noqa: E402
+from host.telematics.wheel import WheelConfig  # noqa: E402
 from models.vehicle.longitudinal import SYNTHETIC_VEHICLE, resistive_force  # noqa: E402
 
 DATA_CLASS = "SIMULATED"
@@ -66,12 +68,16 @@ class Variant:
     power_cuts: tuple = ()
     can_delay: tuple = ()
     can_stall: tuple = ()
+    configured_circumference_m: Optional[float] = None   # the unit's setting when it differs from the true 1.50 m
 
 
 VARIANTS = (
     Variant("EXP-01", "wheel_corruption", "wheel_l edges at 0.85 x the true rate from 25 s to 45 s (a wrong "
             "circumference or lost edges): plausible but wrong speed on one path",
             faults=Faults(wheel_scale=((0, 25.0, 45.0, 0.85),))),
+    Variant("EXP-01", "shared_scaling_error", "the unit is configured with a circumference 15 % short (1.275 m for "
+            "1.50 m): every wheel speed and the motor speed through the drivetrain read 15 % low together; GNSS is "
+            "right", configured_circumference_m=1.275),
     Variant("EXP-01", "real_slowdown", "the driver brakes from 6.5 to about 4 m/s from 25 s to 29 s and holds 4.0 m/s "
             "to 45 s; every sensor is correct", profile=slowdown),
     Variant("EXP-02", "real_drag", "a 150 N drag the driver model does not know of (a dragging brake) from 25 s to "
@@ -144,12 +150,29 @@ def check(v: Variant, res: list[dict], reps: list[dict], local: Callable[[float]
         s = share(tl.get("B1:wheel_r"), a, b, "CONSISTENT")
         out.append(_c("B1:wheel_r consistent (witness path clean)", s >= 0.5, f"CONSISTENT for {s:.0%}"))
         loc = sorted(k.split(":", 1)[1] for k in r["ambiguous"] if k.startswith("localization:"))
-        out.append(_c("localized to the wheel_l evidence path only", loc == ["wheel.wheel_l.speed"],
-                      f"localizations: {loc or 'none'}"))
+        st = r["ambiguous"].get("localization:wheel.wheel_l.speed", {}).get("statement", "")
+        out.append(_c("conditional localization to the wheel_l evidence path only", loc == ["wheel.wheel_l.speed"]
+                      and st.startswith("conditional localization"), f"localizations: {loc or 'none'}"))
         out.append(_c("no localization to a correct path", not set(loc) - {"wheel.wheel_l.speed"},
                       f"localizations: {loc or 'none'}", "falsifier"))
         bad = inconsistent_outside(r, 24.0, 47.0)
         out.append(_c("no inconsistency outside the disturbance", not bad, f"outside 24-47 s: {bad or 'none'}"))
+    elif v.name == "shared_scaling_error":
+        a, b = 20.0, 50.0
+        for rel in ("B1:wheel_l", "B1:wheel_r"):
+            s_ = share(tl.get(rel), a, b, "INCONSISTENT")
+            out.append(_c(f"{rel} inconsistent", s_ >= 0.5, f"INCONSISTENT for {s_:.0%} of {a:.0f}-{b:.0f} s"))
+        s_ = share(tl.get("B3:wheel_l-wheel_r"), a, b, "CONSISTENT")
+        out.append(_c("the wheels agree with each other", s_ >= 0.5, f"B3 CONSISTENT for {s_:.0%}"))
+        amb = {k.split(":", 1)[1]: x for k, x in r["ambiguous"].items() if k.startswith("localization:")}
+        g = amb.get("gnss.speed")
+        out.append(_c("no confident localization to the correct GNSS path", g is not None and "does not separate" in
+                      g["statement"] and g["candidates"][0].startswith("a common value error") and
+                      "wheel.circumference_m" in g["candidates"][0],
+                      (g["statement"][:160] + " / first candidate: " + g["candidates"][0][:110]) if g else
+                      "no conclusion on gnss.speed", "falsifier"))
+        out.append(_c("no localization to a wheel path", not [k for k in amb if k.startswith("wheel.")],
+                      f"localizations: {sorted(amb) or 'none'}", "falsifier"))
     elif v.name == "real_slowdown":
         bad = sorted(k for k, t in tl.items() if not k.startswith("localization:") and
                      ever(t, 6.0, r["t_last_s"], "INCONSISTENT"))
@@ -211,9 +234,11 @@ def check(v: Variant, res: list[dict], reps: list[dict], local: Callable[[float]
         out.append(_c("onset and end of the delay are visible", t.get("late", 0) >= 1 and t.get("bursts", 0) >= 1,
                       f"late {t.get('late')}, bursts {t.get('bursts')}"))
         s = share(tl.get("B2:wheel_l"), 31.0, 39.0, "CONSISTENT")
-        out.append(_c("LIMITATION: a constant latency is not observable without a producer timestamp", s >= 0.5,
-                      f"B2:wheel_l evaluated as CONSISTENT for {s:.0%} of 31-39 s with values 0.3 s old; the "
-                      "receive side cannot tell (the controller would need to send a timestamp)", "limitation"))
+        out.append(_c("LIMITATION: a constant latency is not observable from the receive side", s >= 0.5,
+                      f"B2:wheel_l evaluated as CONSISTENT for {s:.0%} of 31-39 s with values 0.3 s old (simulated "
+                      "data, assumed bounds accepted). A producer timestamp alone would not settle it: it also needs a "
+                      "known relation between the controller's clock and the unit's, with an uncertainty bound; "
+                      "without that the sample age is unknown", "limitation"))
         bad = [k for k, x in tl.items() if not k.startswith("localization:") and ever(x, 29.0, 41.0, "INCONSISTENT")]
         out.append(_c("a delay at steady speed produces no inconsistency", not bad, f"{bad or 'none'}", "falsifier"))
     words = [w for s in statements(r) for w in verdicts.FORBIDDEN_LABELS if w in s.lower()]
@@ -225,9 +250,14 @@ def run_variant(v: Variant, out: pathlib.Path) -> dict:
     d = out / f"{v.exp}_{v.name}"
     if d.exists():
         shutil.rmtree(d)
+    ncfg = None
+    if v.configured_circumference_m is not None:
+        vc = VehicleSimConfig()
+        ncfg = NodeConfig(wheel=WheelConfig(v.configured_circumference_m, vc.wheel_ppr),
+                          wheel_channels=sim_session.CHANNELS, battery_monitor=True)
     sim = sim_session.simulate(d, v.faults, v.duration, profile=v.profile, power_cuts=v.power_cuts,
                                can_delay=v.can_delay, can_stall=v.can_stall, unit=f"TLMSIM-{v.exp}",
-                               note=f"{v.exp} {v.name}: {v.what}")
+                               ncfg=ncfg, note=f"{v.exp} {v.name}: {v.what}")
     db = ingest.connect(d / "pit.sqlite")
     reps = [ingest.import_log(db, p) for _rid, p in sim["runs"]]
     res = [review.run(db, rid, dict(SIM_PARAMS), wheel_pairs=PAIRS) for rid, _p in sim["runs"]]
@@ -252,7 +282,8 @@ def render(results: list[dict]) -> str:
             L.append(f"| {r['experiment']} | {r['variant']} | {c['id']} | {c['role']} | "
                      f"{'PASS' if c['pass'] else 'FAIL'} | {c['detail'].replace('|', '/')} |")
     L += ["", "A `limitation` row passes when the known limitation is reproduced: it is a property of the receive "
-          "side to be fixed by the interface (a producer timestamp), not a success.", ""]
+          "side to be fixed by the interface (a producer timestamp with a stated clock relation and uncertainty "
+          "bound, or a documented delay bound), not a success.", ""]
     return "\n".join(L)
 
 

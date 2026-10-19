@@ -84,11 +84,13 @@ cmake -S telematics/firmware -B build-u575 -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRe
       -DCMAKE_TOOLCHAIN_FILE=$PWD/telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake -DTM_TARGET_U575=ON
 cmake --build build-u575                                      # tm_u575.elf/.bin/.hex and tm_u575_can.*
 python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild   # bench package
+python3 tools/telematics_bench.py package --minimal --images build-u575 --host-build build-telematics \
+        --out build/telematics_bench_minimal --rebuild                                 # minimal bench package
 python3 tools/telematics_import.py dump.bin --db pit.sqlite --out build/bench_import   # a log read from the board
 python3 tools/telematics_schema.py --check                    # the signal contract against the code
 python3 tools/run_evidence_review.py --db pit.sqlite --run <run_id> --out build/evidence_review   # shadow review
 python3 tools/pit_query.py --db pit.sqlite gaps --run <run_id> --signal ctrl.dc_voltage           # evidence queries
-python3 tools/run_bench_chain.py --out build/bench_chain       # pulse -> capture -> log -> decoder -> DB -> query
+python3 tools/run_bench_chain.py --out build/bench_chain       # pulse -> log -> decoder -> DB -> review -> receipt -> plot
 python3 tools/run_vehicle_experiment.py --out build/vehicle_experiments   # protocols' simulated pre-check
 python3 tools/claims.py --check                                # every claim's label against its evidence
 ```
@@ -123,7 +125,7 @@ Every row is taken from ST's board files and is **not verified on a board**; lev
 ## 6. Next steps (critical path)
 
 1. **Interface agreement and telemetry hardware selection.** Send [`docs/CONTROLLER_INTERFACE_REQUEST.md`](docs/CONTROLLER_INTERFACE_REQUEST.md) to the controller team; quote the bench parts; the vehicle supply waits for the battery's maximum voltage.
-2. **Embedded acquisition and local log.** The next physical test is the bench package (`python3 tools/telematics_bench.py package`, also a CI artifact): steps B0 to B12 of [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md), from flashing `tm_u575.bin` and a 100 Hz square wave on PA3 to the stuck-sensor checks (B6), 75 min across the timer overflow on the NOR (B7) and CAN receive (B11), each written on the package's blank results form. The log read back after B3 goes through the whole pulse-to-database chain with the generator's rate as ground truth: `python3 tools/run_bench_chain.py --dump dump.bin --pulse-hz 100`.
+2. **Embedded acquisition and local log.** The next physical test is the minimal bench ([`telematics/firmware/BENCH_MINIMAL.md`](telematics/firmware/BENCH_MINIMAL.md), package `python3 tools/telematics_bench.py package --minimal`, also a CI artifact): a USB-powered NUCLEO, a generator on PA3, the log through a power cycle, DUMP, decoder, database, review, receipt and plot, after ten document checks. Then the full bench, steps B0 to B12 of [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md), from flashing `tm_u575.bin` and a 100 Hz square wave on PA3 to the stuck-sensor checks (B6), 75 min across the timer overflow on the NOR (B7) and CAN receive (B11), each written on the package's blank results form. The log read back after B3 goes through the whole pulse-to-database chain with the generator's rate as ground truth: `python3 tools/run_bench_chain.py --dump dump.bin --pulse-hz 100`.
 3. **Bench integration.** The CAN receive image against a USB-CAN adapter, then the controller team's recording through the DBC adapter, then the electrical checks E1 to E6.
 4. **Remote uplink.** The modem on the target (configuration B).
 5. **Vehicle data and analysis.** Energy at both boundaries, coast-down, the shadow monitors on measured data.

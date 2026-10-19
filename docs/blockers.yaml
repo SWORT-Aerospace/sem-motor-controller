@@ -393,9 +393,9 @@ blockers:
     missing: "RM0456 (reference manual), DS13737 (data sheet), ES0499 (errata) and UM2861 (Nucleo user manual): per-pin 5 V tolerance, LSE fitting, solder-bridge defaults, PLL limits per voltage range, flash timings, TIMINGR formula, the register behaviour the drivers rely on (docs/U575_REGISTER_CHECK.md lists each item); and the W25Q128JV data sheet (command set, pinout, erase and program times)."
     affects: "the connection table's levels; the CAN image's PLL1 setting; the I2C timing; the flash write rate"
     why: "The firmware follows ST's HAL and board files, which agree with each other, but these facts are only in the manuals."
-    done_now: "Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md); every dependent item listed in BENCH.md."
-    input: "The three PDFs committed to docs/reference/datasheets/ or st.com reachable from this environment."
-    closure: "Each item checked against the manual with page references; BENCH.md updated."
+    done_now: "Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md). Each open question is a document check (DC01 to DC17 in telematics/bench/bench.yaml) tied to the firmware line it affects and to the bench step it must precede: 10 before the minimal bench (telematics/firmware/BENCH_MINIMAL.md section 5), the W25Q128JV ones before the NOR is fitted."
+    input: "The five PDFs named in telematics/firmware/BENCH_MINIMAL.md section 5.1 (RM0456, DS13737, ES0499, UM2861, W25Q128JV) committed to docs/reference/datasheets/ under the file names given there; www.st.com and www.winbond.com are refused by this environment's network policy."
+    closure: "Each document check answered from its document with revision and page; BENCH.md and BENCH_MINIMAL.md updated where an answer differs."
     unlocks: 4
 
   - id: C-ERC

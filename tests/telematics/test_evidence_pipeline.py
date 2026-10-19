@@ -66,6 +66,54 @@ def test_review_receipts_are_complete_and_the_data_class_is_never_vehicle_by_def
     assert review.data_class({"kind": "a drive on the vehicle"}) == "UNKNOWN"     # VEHICLE only when stated first
 
 
+def test_timing_basis_survives_import_and_assumed_bounds_count_only_for_simulated_data(tmp_path):
+    _sim, db, reps = _session(tmp_path, Faults(wheel_scale=((0, 10.0, 18.0, 0.85),)))
+    rid = reps[0]["run_id"]
+    basis = dict(db.execute("SELECT source, GROUP_CONCAT(DISTINCT t_unc_basis) FROM measurements WHERE run_id=? AND "
+                            "t_unc_us IS NOT NULL GROUP BY source", (rid,)).fetchall())
+    assert basis["wheel"] == "measured" and basis["controller"] == "assumed" and basis["gnss"] == "assumed"
+    assert db.execute("SELECT COUNT(*) FROM evidence_records WHERE run_id=? AND t_unc_basis='assumed'",
+                      (rid,)).fetchone()[0] > 0
+    sim = review.run(db, rid, dict(PARAMS), wheel_pairs=X.PAIRS, write=False)
+    assert sim["data_class"] == "SIMULATED" and "accepted" in sim["timing_policy"]
+    assert sim["counts"]["results"].get("CONSISTENT", 0) > 0
+    # the same log stated as a bench run: GNSS, IMU and controller bounds are only assumed, so the relations that
+    # need them get no admissible input. The wheel bounds are measured and the wheel speeds are admitted, but the
+    # wheel pair needs the IMU yaw rate to rule out cornering, so it is not compared either
+    meta = json.loads(db.execute("SELECT meta_json FROM runs WHERE run_id=?", (rid,)).fetchone()[0])
+    meta["kind"] = "BENCH - test relabel"
+    db.execute("UPDATE runs SET meta_json=? WHERE run_id=?", (json.dumps(meta), rid))
+    db.execute("DELETE FROM receipt_snapshots WHERE run_id=?", (rid,))
+    bench = review.run(db, rid, dict(PARAMS), wheel_pairs=X.PAIRS)
+    assert bench["data_class"] == "BENCH" and "not accepted" in bench["timing_policy"]
+    tl = bench["timeline"]
+    assert not any(r == "CONSISTENT" or r == "INCONSISTENT" for _t, r in tl["B1:wheel_l"])
+    assert not any(r in ("CONSISTENT", "INCONSISTENT") for _t, r in tl.get("B3:wheel_l-wheel_r", []))
+    assert "INSUFFICIENT_EVIDENCE" in {r for _t, r in tl["B3:wheel_l-wheel_r"]}
+    for (js,) in db.execute("SELECT snapshot_json FROM receipt_snapshots WHERE run_id=?", (rid,)):
+        r = json.loads(js)
+        assert verdicts.receipt_problems(r) == [], verdicts.receipt_problems(r)
+        assert "not accepted" in r["timing_policy"]
+
+
+def test_an_older_database_gains_the_basis_column_and_reads_unrecorded_bounds_as_assumed(tmp_path):
+    import sqlite3
+    from host.pit import queries
+    p = tmp_path / "old.sqlite"
+    old = sqlite3.connect(p)
+    old.executescript("""CREATE TABLE measurements (run_id TEXT NOT NULL, record_id INTEGER NOT NULL, block INTEGER NOT
+      NULL, idx INTEGER NOT NULL, source TEXT NOT NULL, signal TEXT NOT NULL, value REAL, unit TEXT NOT NULL, t_rx_us
+      INTEGER NOT NULL, t_sample_us INTEGER, t_unc_us INTEGER, source_seq INTEGER, validity TEXT NOT NULL, provenance
+      TEXT NOT NULL, upper REAL, utc REAL, utc_q TEXT NOT NULL, PRIMARY KEY (run_id, record_id));
+      INSERT INTO measurements VALUES ('R', 1, 0, 0, 'wheel', 'wheel.wheel_l.speed', 5.0, 'm/s', 100, 90, 10, NULL,
+      'valid', 'old import', NULL, NULL, 'none');""")
+    old.commit()
+    old.close()
+    db = ingest.connect(p)
+    ts, ms = queries._series(db, "R", "wheel.wheel_l.speed")
+    assert ms[0].t_unc_basis == "assumed"
+
+
 def test_unsupported_parameters_make_relations_insufficient_not_guessed(tmp_path):
     _sim, db, reps = _session(tmp_path)
     res = review.run(db, reps[0]["run_id"], {}, write=False)

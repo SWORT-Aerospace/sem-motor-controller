@@ -45,7 +45,7 @@ alignment.
 |---|---|
 | stall 0.6 s | `can:ctrl_motion`: 1 late arrival, about 60 burst frames, all wait-bounded; A1 and B2 INSUFFICIENT_EVIDENCE around the release; no INCONSISTENT |
 | constant 0.3 s delay | 1 late arrival and a burst at the end; no INCONSISTENT at steady speed |
-| limitation | during the plateau B2 is evaluated as CONSISTENT with values 0.3 s old: a constant latency is not observable without a producer timestamp |
+| limitation | during the plateau B2 is evaluated as CONSISTENT with values 0.3 s old (simulated data, whose assumed timestamp bounds are accepted): a constant latency is not observable from the receive side |
 
 ## Supports, falsifies, inapplicable
 
@@ -59,8 +59,11 @@ alignment.
 ## The limitation, and what would remove it
 
 A constant added latency cannot be seen from the receive side: every frame arrives on time relative to the previous
-one. Only a producer timestamp (the controller's own time in its frames, with a known relation to the unit's clock) or
-a loopback measurement can bound it. This is a request to the controller team
+one. A producer timestamp (the controller's own time in its frames) does not bound it by itself: it also needs a
+stated relation between the controller's clock and the unit's (offset and drift, for example from a shared time
+reference) with an uncertainty bound. A documented bound on the controller's sample-to-transmit delay would also do.
+Without either, the sample age is unknown: on measured data the pit then marks the value TIMING_UNCERTAIN ("sample age
+unknown") instead of using it, and only simulated data may carry an assumed bound. This is a request to the controller team
 ([`docs/CONTROLLER_INTERFACE_REQUEST.md`](../../docs/CONTROLLER_INTERFACE_REQUEST.md)), not something this unit can
 add by transmitting.
 

@@ -20,6 +20,10 @@ carries its evidence with it:
   provenance     adapter or driver identity, message and field, so the value can be traced to the bytes
   upper          an upper bound when `value` is None but the evidence bounds it (wheel speed with no recent
                  edge: the wheel turned less than one pulse pitch since the last edge)
+  t_unc_basis    where `t_unc_us` comes from: "measured" (computed from the logged times themselves, such as an
+                 edge interval), "documented" (stated by the source's own documentation, such as a latency bound in
+                 the controller team's mapping file) or "assumed" (a stated assumption of this project); None when
+                 there is no bound. An assumed bound is never evidence about a real run's timing.
 
 `age_us(now)` is computed when the value is used, from the reference time. Nothing here runs on hardware.
 """
@@ -41,6 +45,7 @@ VALIDITY = (
     "no_evidence",    # nothing observed in the interval (wheel without edges, not shown to be standstill)
 )
 USABLE = ("valid",)   # what energy and speed computations accept
+TIMING_BASES = ("measured", "documented", "assumed")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -57,10 +62,14 @@ class Measurement:
     validity: str
     provenance: str
     upper: Optional[float] = None
+    t_unc_basis: Optional[str] = None
 
     def __post_init__(self):
         if self.validity not in VALIDITY:
             raise ValueError(f"unknown validity {self.validity!r}")
+        if self.t_unc_basis not in TIMING_BASES + (None,) or (self.t_unc_basis is None) != (self.t_unc_us is None):
+            raise ValueError(f"{self.signal}: timestamp bound {self.t_unc_us} with basis {self.t_unc_basis!r}: a bound "
+                             f"needs one of {TIMING_BASES}, no bound has none")
         if self.value is not None and (not isinstance(self.value, (int, float)) or not math.isfinite(self.value)):
             raise ValueError(f"{self.signal}: value must be a finite number or None")
         if self.validity in ("invalid", "out_of_range", "decode_error", "no_evidence") and self.value is not None:
@@ -88,21 +97,35 @@ class Measurement:
         return dataclasses.asdict(self)
 
 
+ROW_COLUMNS = ("record_id, source, signal, value, unit, t_rx_us, t_sample_us, t_unc_us, source_seq, validity, "
+               "provenance, upper, t_unc_basis")
+
+
+def from_row(row) -> Measurement:
+    """A measurement from a pit `measurements` row selected with ROW_COLUMNS. A row imported before the timing basis
+    was recorded has a bound with no basis: it is read as "assumed", the reading that never makes it admissible for
+    measured data."""
+    row = tuple(row)
+    if row[7] is not None and row[12] is None:
+        row = row[:12] + ("assumed",)
+    return Measurement(*row)
+
+
 def checked(record_id: int, source: str, signal: str, value, unit: str, t_rx_us: int, *, t_sample_us=None,
             t_unc_us=None, source_seq=None, provenance: str, invalid: bool = False,
-            confirmed: Optional[bool] = True) -> Measurement:
+            confirmed: Optional[bool] = True, t_unc_basis: Optional[str] = None) -> Measurement:
     """Build a measurement and classify it: a NaN or sentinel (`invalid`) gives "invalid", a value outside
     the registry range "out_of_range", an unconfirmed one (`confirmed` None: no fresh validity flag)
     "unverified", a flag that says invalid (`confirmed` False) "invalid"."""
     v = None if value is None else float(value)
     if invalid or v is None or not math.isfinite(v) or confirmed is False:
         return Measurement(record_id, source, signal, None, unit, t_rx_us, t_sample_us, t_unc_us, source_seq,
-                           "invalid", provenance)
+                           "invalid", provenance, t_unc_basis=t_unc_basis)
     if not signals.in_range(signal, v):
         return Measurement(record_id, source, signal, None, unit, t_rx_us, t_sample_us, t_unc_us, source_seq,
-                           "out_of_range", provenance)
+                           "out_of_range", provenance, t_unc_basis=t_unc_basis)
     return Measurement(record_id, source, signal, v, unit, t_rx_us, t_sample_us, t_unc_us, source_seq,
-                       "valid" if confirmed else "unverified", provenance)
+                       "valid" if confirmed else "unverified", provenance, t_unc_basis=t_unc_basis)
 
 
 class LatestTable:

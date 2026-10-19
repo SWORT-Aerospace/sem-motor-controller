@@ -15,7 +15,7 @@ Scope: the telematics unit only. The motor controller is another team's; none of
 
 Each configuration includes the one before it. A and B include spares, shipping and the vehicle-supply placeholders (`dcdc`, `fuse`, `fuse_holder`, `rev_diode`, `spare_tvs_diode`, `supply_passives`, `tvs`: priced from candidates, none selected); every total includes 0 to 10 % sales tax on its parts. Options, in no total: `storage_card`, `storage_socket`, `temp_probes`. Equipment, only if not owned and never in A or B: $85.00 to $180.00 (two USB-CAN adapters and a generic crimp tool; the genuine Deutsch HDT-48-00 is $427.05, so borrow one). An oscilloscope, a multimeter and a function generator are assumed borrowed.
 
-Recurring (B): SIM $3.00 once, then $1.93 to $66.21 per month for 2 to 20 running hours a month at 15.5 MB per running hour (live message of 2108 bytes measured from the telematics demonstration at 2 Hz plus MQTT overhead). The running hours are an assumption to replace with the team's test plan.
+Recurring (B): SIM $3.00 once, then $1.94 to $66.84 per month for 2 to 20 running hours a month at 15.6 MB per running hour (live message of 2129 bytes measured from the telematics demonstration at 2 Hz plus MQTT overhead). The running hours are an assumption to replace with the team's test plan.
 
 Lines without a price, excluded from the totals: `wedge_s`.
 

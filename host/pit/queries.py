@@ -2,7 +2,8 @@
 
     aligned(db, run, signals, t0, t1, step_s)   one row per step: each signal's value and evidence state at that
                                                 time, from its latest measurement (a stale or missing value is
-                                                null with its state, never 0 or the last good value)
+                                                null with its state, never 0 or the last good value), with the
+                                                basis of its timestamp bound and whether its sample age is known
     intervals(db, run, signal)                  the intervals in which a signal was not admissible (MISSING before
                                                 its first sample, STALE in a silence longer than its freshness
                                                 threshold, and the import state of any non-VALID sample)
@@ -23,15 +24,14 @@ import sqlite3
 from typing import Iterable, Optional
 
 from host.telematics import evidence, signals
-from host.telematics.measurement import Measurement
+from host.telematics.measurement import ROW_COLUMNS, Measurement, from_row
 
-_Q = ("SELECT record_id, source, signal, value, unit, t_rx_us, t_sample_us, t_unc_us, source_seq, validity, "
-      "provenance, upper FROM measurements WHERE run_id=? AND signal=? ORDER BY COALESCE(t_sample_us, t_rx_us), "
+_Q = (f"SELECT {ROW_COLUMNS} FROM measurements WHERE run_id=? AND signal=? ORDER BY COALESCE(t_sample_us, t_rx_us), "
       "record_id")
 
 
 def _series(db: sqlite3.Connection, run_id: str, signal: str) -> tuple[list[int], list[Measurement]]:
-    ms = [Measurement(*r) for r in db.execute(_Q, (run_id, signal))]
+    ms = [from_row(r) for r in db.execute(_Q, (run_id, signal))]
     return [m.t_ref_us for m in ms], ms
 
 
@@ -54,7 +54,8 @@ def aligned(db: sqlite3.Connection, run_id: str, sigs: Iterable[str], t0_us: Opt
             ts, ms = ser[s]
             i = bisect.bisect_right(ts, t) - 1
             e = evidence.assess(s, ms[i] if i >= 0 else None, t)
-            row[s] = {"value": e.value, "state": e.state, "age_ms": None if e.age_us is None else e.age_us // 1000}
+            row[s] = {"value": e.value, "state": e.state, "age_ms": None if e.age_us is None else e.age_us // 1000,
+                      "t_unc_basis": e.t_unc_basis, "sample_age_known": e.sample_age_known}
         out.append(row)
         t += step
     return out
@@ -96,15 +97,16 @@ def intervals(db: sqlite3.Connection, run_id: str, signal: str) -> list[dict]:
 def window(db: sqlite3.Connection, run_id: str, t_us: int, before_s: float = 2.0, after_s: float = 2.0,
            sigs: Optional[Iterable[str]] = None) -> dict:
     a, b = t_us - int(before_s * 1e6), t_us + int(after_s * 1e6)
-    q = ("SELECT t_rx_us, t_sample_us, signal, value, unit, state, reason, source, seq, raw FROM evidence_records "
-         "WHERE run_id=? AND COALESCE(t_sample_us, t_rx_us) BETWEEN ? AND ?")
+    q = ("SELECT t_rx_us, t_sample_us, signal, value, unit, state, reason, source, seq, raw, t_unc_us, t_unc_basis "
+         "FROM evidence_records WHERE run_id=? AND COALESCE(t_sample_us, t_rx_us) BETWEEN ? AND ?")
     args: list = [run_id, a, b]
     if sigs:
         sigs = list(sigs)
         q += " AND signal IN (%s)" % ",".join("?" * len(sigs))
         args += sigs
-    rows = [dict(zip(("t_rx_us", "t_sample_us", "signal", "value", "unit", "state", "reason", "source", "seq", "raw"),
-                     r)) for r in db.execute(q + " ORDER BY COALESCE(t_sample_us, t_rx_us), record_id", args)]
+    rows = [dict(zip(("t_rx_us", "t_sample_us", "signal", "value", "unit", "state", "reason", "source", "seq", "raw",
+                      "t_unc_us", "t_unc_basis"), r))
+            for r in db.execute(q + " ORDER BY COALESCE(t_sample_us, t_rx_us), record_id", args)]
     rec = [{"t_us": t, "kind": k, "subject": s, "verdict": v, "context": c}
            for t, k, s, v, c in db.execute("SELECT t_us, kind, subject, verdict, context FROM receipts WHERE run_id=? "
                                            "AND t_us BETWEEN ? AND ? ORDER BY t_us", (run_id, a, b))]

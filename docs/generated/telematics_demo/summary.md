@@ -1,6 +1,6 @@
 # Telematics end-to-end demonstration (HOST SIMULATION)
 
-Unit `TLMSIM-0001`, 165 s of simulated driving, real Mosquitto broker on loopback, pit ingestion service as its own process, pace 4x, commit `27d513e54b54`. Command: `python3 tools/run_telematics_demo.py --out build/telematics_demo`. The external controller is a Python stand-in broadcasting the semmc simulation fixture; the node is the host model of the receive-only telematics unit, not its firmware; no supervisor takes part. Nothing here was measured on hardware.
+Unit `TLMSIM-0001`, 165 s of simulated driving, real Mosquitto broker on loopback, pit ingestion service as its own process, pace 4x, commit `9dcaad5eaa77` plus uncommitted changes. Command: `python3 tools/run_telematics_demo.py --out build/telematics_demo`. The external controller is a Python stand-in broadcasting the semmc simulation fixture; the node is the host model of the receive-only telematics unit, not its firmware; no supervisor takes part. Nothing here was measured on hardware.
 
 | Check | Result | Evidence |
 |---|---|---|

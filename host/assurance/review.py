@@ -26,7 +26,7 @@ from host.assurance import verdicts, witnesses
 from host.telematics import context as C
 from host.telematics import evidence, lineage, signals
 from host.telematics.evidence import Evidence
-from host.telematics.measurement import Measurement
+from host.telematics.measurement import ROW_COLUMNS, Measurement, from_row
 
 
 def data_class(meta: dict) -> str:
@@ -61,10 +61,15 @@ class _Series:
         self.m: list[Measurement] = []
         self.t_valid: list[int] = []
 
-    def fresh_valid(self, a_us: int, b_us: int) -> bool:
-        """An admissible sample was received in (a, b]."""
-        i = bisect.bisect_right(self.t_valid, a_us)
-        return i < len(self.t_valid) and self.t_valid[i] <= b_us
+    def continuous(self, a_us: int, b_us: int, max_gap_us: int) -> bool:
+        """Admissible evidence throughout [a, b]: a sample within `max_gap_us` before a, none of the gaps up to b
+        longer than `max_gap_us`, and a sample within `max_gap_us` of b. One sample after an event is not enough."""
+        i = bisect.bisect_left(self.t_valid, a_us - max_gap_us)
+        j = bisect.bisect_right(self.t_valid, b_us)
+        pts = self.t_valid[i:j]
+        if not pts or pts[0] > a_us or b_us - pts[-1] > max_gap_us:
+            return False
+        return all(q - p <= max_gap_us for p, q in zip(pts, pts[1:]))
 
     def at(self, t_us: int) -> Optional[Measurement]:
         i = bisect.bisect_right(self.t, t_us) - 1
@@ -73,10 +78,10 @@ class _Series:
 
 def _load(db, run_id) -> dict[str, _Series]:
     out: dict[str, _Series] = {}
-    q = ("SELECT record_id, source, signal, value, unit, t_rx_us, t_sample_us, t_unc_us, source_seq, validity, "
-         "provenance, upper FROM measurements WHERE run_id=? ORDER BY COALESCE(t_sample_us, t_rx_us), record_id")
+    q = (f"SELECT {ROW_COLUMNS} FROM measurements WHERE run_id=? ORDER BY COALESCE(t_sample_us, t_rx_us), "
+         "record_id")
     for row in db.execute(q, (run_id,)):
-        m = Measurement(*row)
+        m = from_row(row)
         s = out.setdefault(m.signal, _Series())
         s.t.append(m.t_ref_us)
         s.m.append(m)
@@ -145,6 +150,10 @@ def run(db: sqlite3.Connection, run_id: str, params: Optional[dict] = None, tick
     t0, t1, tick = min(times), max(times), int(tick_s * 1e6)
     meta_r = {"schema_version": evidence.schema()["schema_version"], "relation_set": rel_hash,
               "data_class": data_class(meta), "run_id": run_id}
+    # an assumed timestamp bound is evidence about a simulation's timing only; on any other run it is no bound
+    accept_assumed = meta_r["data_class"] == "SIMULATED"
+    meta_r["timing_policy"] = ("assumed timestamp bounds accepted: simulated data" if accept_assumed else
+                               "assumed timestamp bounds not accepted: only measured or documented bounds count")
     # direct evidence of a disturbance on a shared path
     disturb = []
     for t, status in db.execute("SELECT t_local_us, status FROM records WHERE run_id=? AND rtype=8", (run_id,)):
@@ -220,17 +229,21 @@ def run(db: sqlite3.Connection, run_id: str, params: Optional[dict] = None, tick
                     mv = _mean_valid(series.get("imu.ax"), dw[1], t)
                     val, why = (mv[0], None) if mv else (None, "no admissible imu.ax sample in the window")
             mid, half = ((t + dw[1]) // 2, (t - dw[1]) // 2) if ok else (None, None)
+            # the window is measured from the wheel samples' times; the IMU mean also rests on the IMU samples' bound
+            imu_b = series["imu.ax"].m[-1].t_unc_basis if series.get("imu.ax") and series["imu.ax"].m else None
+            basis = ("measured" if src == "wheel" else imu_b) if val is not None else None
             ev[sig] = Evidence(sig, "VALID" if val is not None else "UNKNOWN", val, "m/s^2", why, t_ref_us=mid,
-                               t_unc_us=half if val is not None else None, age_us=0 if val is not None else None,
+                               t_unc_us=half if basis is not None else None, age_us=0 if val is not None else None,
                                source=src, provenance=("speed derivative" if src == "wheel" else "mean of imu.ax") +
-                               " over the window" if val is not None else None, seq=None, lineage=lin)
+                               " over the window" if val is not None else None, seq=None, lineage=lin,
+                               t_unc_basis=basis)
         since_boot = (t - (boot if boot is not None else t0)) / 1e6
         ctx = C.classify({s: e for s, e in ev.items() if not s.startswith("accel.")}, since_boot, accel,
                          ctx_cfg if params.get("drivetrain.freewheel") is None else
                          C.ContextConfig(**{**ctx_cfg.__dict__, "freewheel": params["drivetrain.freewheel"]}))
         counts["context"][ctx.mode] = counts["context"].get(ctx.mode, 0) + 1
         ctx_rows.append((ctx.mode, run_id, t - tick, t))
-        p = {**params, "_now_s": t / 1e6, "_prev": prev_temp}
+        p = {**params, "_now_s": t / 1e6, "_prev": prev_temp, "_accept_assumed_timing": accept_assumed}
         obs = [witnesses.evaluate(r, ev, ctx, p) for r in rels]
         for s in temps:
             if ev[s].admissible:
@@ -280,15 +293,22 @@ def run(db: sqlite3.Connection, run_id: str, params: Optional[dict] = None, tick
                                  json.dumps({"changed": c.as_dict(), "observations": basis, "snapshot_t_us": t},
                                             sort_keys=True, default=str)))
         t += tick
-    def still_admissible(a_us: int, b_us: int) -> set[str]:
-        """Signals with fresh admissible evidence received in (a, b]: positive evidence that their paths worked."""
-        return {s for s, ser in series.items() if ser.fresh_valid(a_us, b_us)}
+    def continuity(sig: str, a_us: int, b_us: int) -> bool:
+        """The signal delivered admissible evidence throughout [a, b], with no break longer than twice its expected
+        period (its freshness threshold when the schema gives no rate)."""
+        ser = series.get(sig)
+        if ser is None:
+            return False
+        per = evidence.expected_period_us(sig)
+        reg = signals.lookup(sig)
+        gap = 2 * per if per else int(reg.stale_s * 1e6) if reg else 0
+        return gap > 0 and ser.continuous(a_us, b_us, gap)
 
     # an orderly end of the log (a final counters record) is the end of the recording, not a loss of evidence
     orderly = bool(rep and json.loads(rep[0]).get("final_counters"))
     if orderly:
         onsets = [o for o in onsets if o[0] < t_last - int(onset_window_s * 1e6)]
-    cc = verdicts.common_cause(onsets, int(onset_window_s * 1e6), disturb, still_admissible)
+    cc = verdicts.common_cause(onsets, int(onset_window_s * 1e6), disturb, continuity, others=list(series))
     for c in cc:
         t_c = c.t_us
         receipts.append((run_id, t_c, c.kind, c.subject, c.verdict, None,
@@ -299,7 +319,8 @@ def run(db: sqlite3.Connection, run_id: str, params: Optional[dict] = None, tick
         db.executemany("INSERT OR REPLACE INTO receipts VALUES (?,?,?,?,?,?,?)", receipts)
         db.executemany("INSERT OR REPLACE INTO receipt_snapshots VALUES (?,?,?)", snapshots)
         db.commit()
-    return {"run_id": run_id, "data_class": meta_r["data_class"], "relation_set": rel_hash,
+    return {"run_id": run_id, "data_class": meta_r["data_class"], "timing_policy": meta_r["timing_policy"],
+            "relation_set": rel_hash,
             "schema_version": meta_r["schema_version"], "ticks": len(ctx_rows), "tick_s": tick_s,
             "supported": sorted(sup), "unsupported_wanted": sorted(set(wanted) - sup),
             "relations": [r.definition() for r in rels], "parameters": {k: v for k, v in params.items()},

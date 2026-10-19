@@ -61,12 +61,14 @@ def check(d: dict) -> list[str]:
     sources, paths, params = d["sources"], d["shared_paths"], d["parameters"]
     for name, s in sources.items():
         for p in s["depends_on"]:
-            if p not in paths and not p.startswith(("bus:vehicle_can", "power:controller", "ground:", "antenna:")):
+            if p not in paths:
                 err.append(f"source {name}: shared path {p} not in shared_paths")
     for p, e in paths.items():
         for q in e.get("feeds", ()):
             if q not in paths:
                 err.append(f"shared path {p} feeds unknown {q}")
+        if not e.get("errors") or not set(e["errors"]) <= {"loss", "timing", "value"}:
+            err.append(f"shared path {p}: errors must be a non-empty subset of loss, timing, value")
     ids = [s["id"] for s in d["signals"]]
     if len(ids) != len(set(ids)):
         err.append("signal ids repeat")
@@ -162,9 +164,13 @@ def render(d: dict) -> str:
                  f"{', '.join(f'`{p}`' for p in x['lineage'].get('parameters', ())) or '-'} |")
     L += ["", "## Vehicle parameters", "", "| Parameter | Source | Status |", "|---|---|---|"]
     L += [f"| `{k}` | {_c(v['source'])} | {v['status']} |" for k, v in d["parameters"].items()]
-    L += ["", "## Shared paths (common-cause candidates)", "", "| Path | Feeds | Evidence of a disturbance |", "|---|---|---|"]
-    L += [f"| `{k}` | {', '.join(f'`{q}`' for q in v['feeds']) or '-'} | {_c('; '.join(v['evidence_of_disturbance']))} |"
-          for k, v in d["shared_paths"].items()]
+    L += ["", "## Shared paths (common-cause candidates)", "",
+          "Common errors a disturbance of the path can give every source on it: loss (evidence stops), timing (times "
+          "shift together), value (values shift together, so two sources can agree and both be wrong). A listed kind is a "
+          "hypothesis the evidence has to rule out.", "",
+          "| Path | Feeds | Common errors | Evidence of a disturbance |", "|---|---|---|---|"]
+    L += [f"| `{k}` | {', '.join(f'`{q}`' for q in v['feeds']) or '-'} | {', '.join(v['errors'])} | "
+          f"{_c('; '.join(v['evidence_of_disturbance']))} |" for k, v in d["shared_paths"].items()]
     L += ["", "## Vehicle contexts", "", "| Context | Needs | Rule |", "|---|---|---|"]
     for k, v in d["contexts"].items():
         needs = ", ".join(f"`{n}`" for n in v["needs"]) or "-"

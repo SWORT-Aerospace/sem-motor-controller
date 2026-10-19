@@ -15,6 +15,7 @@ Nothing here depends on the controller firmware in `../../firmware/` (deferred c
 | `platform/host/` | RAM flash model, the W25Q bus model `tm_fakew25q` and the host simulator `tm_hostsim` (the portable application driven by a script, on internal flash or the NOR model; writes a storage image) |
 | `platform/u575/` | Startup and vector table, linker script, clocks and LSE/MSI PLL mode, TIM2 capture, watchdog, USART1, internal flash bank 2, FDCAN1 bus monitoring, SPI1 (the NOR), I2C1, `main_u575.c` (storage selection, console, sensor polling); vendored CMSIS headers with their provenance |
 | `tests/` | C unit tests (`tm_tests`, under ASan and UBSan): CRC, timer extension, accumulator, queue, blocks, flash log on the RAM model (erase before write, power loss mid-slot, write errors, full storage), drivers on simulated devices |
+| `BENCH_MINIMAL.md` | Generated from `../bench/bench.yaml` (section `minimal`): the first bench, one wheel input through the whole chain to a plot, with the document checks due before flashing |
 | `BENCH.md` | Generated from `../bench/bench.yaml` by `tools/telematics_bench.py`: build and package commands, parts, the connection table, the bench procedure B0 to B12 and the electrical checks before any vehicle bus |
 
 ## Commands

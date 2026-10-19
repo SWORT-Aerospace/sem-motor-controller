@@ -5,7 +5,7 @@
 #   static-checks       generated files current, links, claims register (no toolchain)
 #   schema-validation   the canonical telemetry schema against the code
 #   firmware-build      telematics firmware: host build and unit tests (ASan/UBSan), NUCLEO-U575ZI-Q images,
-#                       recording durations, bench package
+#                       recording durations, bench packages (full and minimal, with a SIMULATED rehearsal)
 #   host-tools          the pit and bench tools end to end: pulse-to-database chain, demonstration through a real
 #                       broker, shadow evidence review, evidence queries, the protocols' simulated pre-check
 #   unit-tests          pytest, telematics and reference suites, without the integration tests
@@ -97,6 +97,13 @@ jobs:
         with:
           name: telematics-bench-package
           path: build/telematics_bench
+      - name: Telematics minimal bench package (one image, its connections, document checks, blank form, SIMULATED rehearsal)
+        run: python tools/telematics_bench.py package --minimal --images build-u575 --host-build build-telematics --out build/telematics_bench_minimal --rebuild
+      - name: Upload telematics minimal bench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: telematics-bench-minimal
+          path: build/telematics_bench_minimal
   host-tools:
     runs-on: ubuntu-24.04
     steps:
@@ -125,6 +132,8 @@ jobs:
           python tools/pit_query.py --db build/telematics_demo/pit.sqlite gaps --run TLMSIM-0001-B0001 --signal ctrl.dc_voltage
       - name: Vehicle-validation protocols, simulated pre-check (SIMULATED; no physical result)
         run: python tools/run_vehicle_experiment.py --out build/vehicle_experiments
+      - name: CSIA clean-run case is current (frozen adapter, SIMULATED)
+        run: python tools/csia_disagreement_case.py --check
       - name: Upload host tool outputs
         uses: actions/upload-artifact@v4
         with:
@@ -132,6 +141,7 @@ jobs:
           path: |
             build/bench_chain/chain.md
             build/bench_chain/chain.json
+            build/bench_chain/import/*.png
             build/telematics_demo
             build/vehicle_experiments/results.md
             build/vehicle_experiments/results.json

@@ -15,10 +15,10 @@ from host.telematics.wheel import EdgeRecord, WheelConfig, WheelGroup
 from tools import telematics_schema as TS
 
 
-def m(signal, value, t, validity="valid", unc=1_000, source=None, seq=None, upper=None):
+def m(signal, value, t, validity="valid", unc=1_000, source=None, seq=None, upper=None, basis="measured"):
     unit = signals.lookup(signal).unit
     return Measurement(1, source or signal.split(".")[0], signal, value, unit, t, None, unc, seq, validity, "test",
-                       upper)
+                       upper, None if unc is None else basis)
 
 
 # ---------------------------------------------------------------- schema and versioning
@@ -229,3 +229,33 @@ def test_motor_speed_shows_stopped_only_without_a_freewheel():
     ev = _ev(ctrl__motor_speed=0.0)
     assert C.classify(ev, 30.0).mode == "UNKNOWN"
     assert C.classify(ev, 30.0, cfg=C.ContextConfig(freewheel=False)).mode == "STOPPED"
+
+
+# ---------------------------------------------------------------- timing basis
+def test_an_assumed_timestamp_bound_is_not_a_bound_for_measured_data():
+    t = 1_000_000
+    meas = m("ctrl.dc_voltage", 48.0, t, unc=10_000, basis="assumed")
+    e = evidence.assess("ctrl.dc_voltage", meas, t, timing_tol_us=250_000)
+    assert e.state == "TIMING_UNCERTAIN" and "only assumed" in e.reason and not e.sample_age_known
+    e = evidence.assess("ctrl.dc_voltage", meas, t, timing_tol_us=250_000, accept_assumed_timing=True)
+    assert e.state == "VALID" and e.t_unc_basis == "assumed" and not e.sample_age_known
+    for basis in ("measured", "documented"):
+        e = evidence.assess("ctrl.dc_voltage", m("ctrl.dc_voltage", 48.0, t, basis=basis), t, timing_tol_us=250_000)
+        assert e.state == "VALID" and e.sample_age_known
+    e = evidence.assess("ctrl.dc_voltage", m("ctrl.dc_voltage", 48.0, t, unc=None), t, timing_tol_us=250_000)
+    assert e.state == "TIMING_UNCERTAIN" and "sample age unknown" in e.reason
+    with pytest.raises(ValueError):                     # a bound must say where it comes from
+        Measurement(1, "ctrl", "ctrl.dc_voltage", 48.0, "V", t, None, 10_000, None, "valid", "test")
+
+
+def test_producers_state_the_basis_of_their_bounds():
+    from host.telematics.controller_adapter import Frame, SimFixtureAdapter
+    from protocol.generated import semmc_protocol as proto
+    data, _s, _i = proto.encode("ctrl_motion", {"speed_mech_rad_s": 10.0, "iq_A": 1.0, "vbus_V": 48.0}, 0)
+    res = SimFixtureAdapter().decode(1000, Frame(proto.MESSAGES["ctrl_motion"]["id"], data))
+    assert res.measurements and all(x.t_unc_basis == "assumed" for x in res.measurements)
+    g = _group()
+    out = []
+    for k in range(1, 4):
+        out += g.feed(EdgeRecord(k * 50_000, 0, 2, 25_000, 2 * k, 0, k - 1, 0))
+    assert out and all(x.t_unc_basis == "measured" for x in out if x.t_unc_us is not None)

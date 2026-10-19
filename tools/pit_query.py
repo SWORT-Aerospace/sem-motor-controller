@@ -27,7 +27,8 @@ from host.pit import ingest, queries  # noqa: E402
 
 def _fmt(cell: dict) -> str:
     if cell["state"] in ("VALID", "SOURCE_UNVERIFIED") and cell["value"] is not None:
-        return f"{cell['value']:.4g}" + ("" if cell["state"] == "VALID" else " (unverified)")
+        return f"{cell['value']:.4g}" + ("" if cell["sample_age_known"] else "?") + \
+            ("" if cell["state"] == "VALID" else " (unverified)")
     return cell["state"]
 
 
@@ -68,6 +69,7 @@ def main(argv=None) -> int:
         print("t_s\t" + "\t".join(a.signal))
         for r in rows:
             print(f"{r['t_us'] / 1e6:.3f}\t" + "\t".join(_fmt(r[s]) for s in a.signal))
+        print("# ? after a value: its sample age is unknown (receive time only, or an assumed timestamp bound)")
     elif a.cmd == "gaps":
         iv = queries.intervals(db, a.run, a.signal)
         print("from_s\tto_s\tstate\tsamples\treason")
@@ -82,7 +84,8 @@ def main(argv=None) -> int:
         for r in w["evidence"]:
             t = r["t_sample_us"] if r["t_sample_us"] is not None else r["t_rx_us"]
             v = f"{r['value']:.4g}" if r["value"] is not None else "-"
-            print(f"{t / 1e6:.6f}\t{r['signal']}\t{v}\t{r['state']}\t{r['reason'] or ''}")
+            unc = "-" if r["t_unc_us"] is None else f"+-{r['t_unc_us']} us {r['t_unc_basis'] or 'basis not recorded'}"
+            print(f"{t / 1e6:.6f}\t{r['signal']}\t{v}\t{r['state']}\t{unc}\t{r['reason'] or ''}")
         for e in w["receipts"]:
             print(f"# receipt {e['t_us'] / 1e6:.3f} {e['kind']} {e['subject']}: {e['verdict']}")
     elif a.cmd == "prepost":

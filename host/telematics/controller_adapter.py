@@ -8,12 +8,14 @@ into measurements (measurement.py) and never produces a frame. Two adapters:
                      CRC-8 of every frame, takes `source_seq` from the protocol's per-message counter
                      (byte 1) and validity from `ctrl_validity`. The protocol gives no sample time for any
                      controller broadcast, so `t_sample_us` stays None and `t_unc_us` is one broadcast
-                     period: an ASSUMED bound on sample-to-transmit latency until the controller team states it.
+                     period with basis "assumed": a stated assumption on sample-to-transmit latency, accepted
+                     for simulated runs only, until the controller team states it.
   DbcAdapter         a DBC file (the usual CAN database format) plus a mapping file from DBC signals to
                      registry signals, units checked. This is the path for the controller team's real
                      message definitions. Without a counter or time signal named in the mapping it gives
-                     no sequence and no sample time; a DBC carries no checksum algorithm, so frames are not
-                     checked beyond length.
+                     no sequence and no sample time; a `latency_bound_ms` in the mapping gives the timestamp
+                     bound with basis "documented" (the mapping is the controller team's statement); a DBC
+                     carries no checksum algorithm, so frames are not checked beyond length.
 
 Both report, per frame, one of: decoded, ignored (a known message we do not map), unknown_id, invalid.
 """
@@ -132,11 +134,12 @@ class SimFixtureAdapter:
             prov = f"{self.id}:{name}.{fld}"
             if cond is not None and not values.get(cond):
                 out.append(checked(self.rid(), "controller", sig, None, unit, t_rx_us, t_unc_us=unc,
+                                   t_unc_basis="assumed",
                                    source_seq=seq, provenance=prov + f" ({cond}=0)", invalid=True))
                 continue
             sentinel = isinstance(v, float) and math.isnan(v)
             out.append(checked(self.rid(), "controller", sig, None if sentinel else v, unit, t_rx_us,
-                               t_unc_us=unc, source_seq=seq, provenance=prov, invalid=sentinel,
+                               t_unc_us=unc, t_unc_basis="assumed", source_seq=seq, provenance=prov, invalid=sentinel,
                                confirmed=self._confirmed(t_rx_us, flag)))
         return AdapterResult("decoded", out, name)
 
@@ -213,6 +216,7 @@ class DbcAdapter:
             lat = s.get("latency_bound_ms")
             out.append(checked(self.rid(), "controller", s["to"], None if sentinel else v, reg.unit, t_rx_us,
                                t_unc_us=None if lat is None else int(lat * 1000), source_seq=seq,
+                               t_unc_basis=None if lat is None else "documented",
                                provenance=f"{self.id}:{msg.name}.{s['signal']}", invalid=sentinel,
                                confirmed=confirmed))
         return AdapterResult("decoded", out, msg.name)

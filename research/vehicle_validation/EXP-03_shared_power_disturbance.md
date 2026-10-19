@@ -10,15 +10,28 @@ power reset cause, a bus error status, a session that ended without its final re
 evidence it stays AMBIGUOUS between a common cause and independent causes. Simultaneity alone is never a common cause.
 
 *Hypothesis.* A dip on the unit's supply produces a reset cause and an incomplete session, which the analysis finds;
-two unrelated losses at the same time produce neither, and a source that kept working exonerates the paths it shares.
+two unrelated losses at the same time produce neither. A source that kept working excludes only a *complete* loss of
+the paths it shares: a partial fault, differing reset thresholds, buffering or a disturbance briefer than a sample
+period can affect sources on one path differently, so a partial or brief disturbance stays a candidate unless direct
+evidence decides.
 
 ## What is compared
 
-Family C (`host/assurance/verdicts.common_cause`): onsets of lost admissible evidence within 1 s of each other from two
-or more sources; their shared paths from the schema (`telematics/schema/telemetry_schema.yaml`, `sources.depends_on`
-and `shared_paths`); exoneration by any source on the same path that delivered fresh admissible evidence in the second
-after the event; direct disturbance evidence from the log (BOOT reset cause, TEMP status, COUNTERS2 drop counters, a
-missing final counters record).
+Family C (`host/assurance/verdicts.common_cause`): onsets of lost admissible evidence from two or more sources,
+grouped within 1 s of the first onset of an event (a chain of onsets each close to the last does not merge widely
+separated losses into one "simultaneous" event); their shared paths from the schema
+(`telematics/schema/telemetry_schema.yaml`, `sources.depends_on` and `shared_paths`, each path with the errors it can
+carry in common); direct disturbance evidence from the log (BOOT reset cause, TEMP status, COUNTERS2 drop counters, a
+missing final counters record). Each shared path is judged under two fault models
+(`verdicts.FAULT_MODELS`):
+
+* *complete loss:* every source through the path loses its evidence for the event. A source outside the event that
+  delivered admissible evidence continuously from one window before the event to one window after it (no break
+  longer than twice its expected period) contradicts this model for its paths, and the receipt names that source.
+* *partial or brief disturbance:* some sources on the path affected and not others. Nothing in the loss pattern
+  excludes it; it stays a candidate.
+
+A source that broke off or recovered within that span excludes nothing.
 
 ## Independent ground truth
 
@@ -44,15 +57,17 @@ missing final counters record).
 | Case | Signature |
 |---|---|
 | unit power cut (0.5 s, brown-out reset) | one SUPPORTED shared-path event on `unit:recorder` at the cut: the session ended without a final counters record and the next session's reset cause is a power reset |
-| GNSS outage and wheel disconnect together | one AMBIGUOUS event: no shared path remains a candidate (the paths are exonerated by sources that kept working, for example the battery monitor and the IMU) |
+| GNSS outage and wheel disconnect together | one AMBIGUOUS event: complete loss of the shared paths (`ground:unit_ground`, `power:unit_supply`, `unit:recorder`) excluded by sources that kept delivering throughout (the battery monitor, the IMU, the temperatures); a partial or brief disturbance of those paths and independent causes kept as candidates |
 
 ## Supports, falsifies, inapplicable
 
 * **Supports:** every reset dip gives a SUPPORTED event on the unit's supply or recorder path with the reset cause in
-  its basis; every dip without a reset that still drops evidence gives an event with the drop counters or an AMBIGUOUS
-  verdict; every independent-loss run gives AMBIGUOUS, never SUPPORTED.
+  its basis; every dip without a reset that still drops evidence gives an event with the drop counters, or an
+  AMBIGUOUS verdict that keeps the partial disturbance of the supply path among its candidates; every independent-loss
+  run gives AMBIGUOUS, never SUPPORTED.
 * **Falsifies:** a SUPPORTED common cause in an independent-loss run; a reset dip with no reported event; an event whose
-  basis cites a disturbance on a path the affected sources do not share.
+  basis cites a disturbance on a path the affected sources do not share; a partial disturbance excluded because one
+  source kept working; a loss excluded on the evidence of a source that itself broke off or recovered.
 * **Inapplicable:** a dip so short that no source lost evidence (nothing to explain); a run in which the scope did not
   trigger (no ground truth).
 

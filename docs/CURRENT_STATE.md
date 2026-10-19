@@ -118,3 +118,22 @@ The sections above are the audit made before any edit. What the change added, an
 
 Still open and unchanged by this work: every item under UNVERIFIED and BLOCKED above. The register-level check against
 ST's manuals (T-U5-DOCS) could not be done: www.st.com was refused by this environment's network policy.
+
+## After the correctness pass and the physical handoff (2026-10-19)
+
+A bounded correctness pass on the evidence platform, then the package for the first physical chain
+([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) section 12). Nothing below is above HOST-TESTED or SIMULATED;
+nothing was flashed, connected or measured.
+
+| Area | Now | Where | Label |
+|---|---|---|---|
+| Independence of witnesses | depends on the fault considered: each shared path carries the kinds of error it can put on every value through it (loss, timing, value); parameters count as value; distinct sensors are not independent of an error they share | `host/telematics/lineage.py` (`Independence`), `telematics/schema/telemetry_schema.yaml` | HOST-TESTED |
+| Localization | three levels kept apart: a disagreement observed; a localization conditional on stated assumptions, with the shared dependencies in the decision and the receipt; a cause established (never by software). Two witnesses sharing a parameter put the shared error first, so a shared scaling error does not localize to the correct measurement | `host/assurance/verdicts.py` | HOST-TESTED |
+| Common cause | two fault models per shared path: a complete loss, excluded only by a source that delivered evidence throughout the event; a partial or brief disturbance, never excluded by the loss pattern; a recovered source excludes nothing; onsets grouped within one window of the first | `host/assurance/verdicts.py`, `review.py` | HOST-TESTED |
+| Timing assumptions | each timestamp bound has a basis (measured, documented, assumed) from producer to receipt; an assumed bound counts only on SIMULATED runs, otherwise the value is TIMING_UNCERTAIN with its sample age unknown; the query tool marks such values | `host/telematics/measurement.py`, `evidence.py`, `host/pit/`, `tools/pit_query.py` | HOST-TESTED |
+| CSIA clean-run disagreement | reproduced (328 of 550 ticks, E6 power balance only) and reduced to constant inputs; an adapter input mismatch in an unsupported configuration, not a timing defect; the boundary withholds the power inputs without a stated torque constant; frozen files untouched | `tools/csia_disagreement_case.py`, [`generated/csia_clean_run_case.md`](generated/csia_clean_run_case.md) | SIMULATED |
+| Bench chain | continues to the shadow review, its receipts and the speed and distance plot (C8, C9); bench checks that need no operator timing; `--boot`; a rehearsal of the minimal procedure | `tools/run_bench_chain.py` | HOST-TESTED; bench: not run |
+| Minimal bench package | one image with SHA-256, six connection rows, three parts and three pieces of equipment, the document checks due before flashing with the PDFs to provide, a blank form for M0 to M4, a SIMULATED rehearsal | [`../telematics/firmware/BENCH_MINIMAL.md`](../telematics/firmware/BENCH_MINIMAL.md), `tools/telematics_bench.py package --minimal` | procedure written; not run |
+
+Still open: every item under UNVERIFIED and BLOCKED above. www.st.com and www.winbond.com were refused again by this
+environment's network policy, so the document checks are unanswered (T-U5-DOCS).

@@ -157,3 +157,80 @@ def test_real_images_carry_the_tree_revision_and_rebuild_identically(tmp_path):
     m = B.package(B.load(), tb.load(), build, tmp_path / "pkg", allow_dirty=True, do_rebuild=True)
     assert m["reproduced_in_a_new_build_directory"] and all(m["reproduced_in_a_new_build_directory"].values())
     assert "arm-none-eabi-gcc" in m["compiler"] and m["build_type"] == "MinSizeRel"
+
+
+def test_minimal_section_validation_catches_drift():
+    d, bom = B.load(), tb.load()
+    assert B.validate_minimal(d, bom) == []
+    d2 = copy.deepcopy(d)
+    m = d2["minimal"]
+    m["open"].append("nor_cs")
+    m["connections"].append("i2c_scl")                                 # needs the IMU, not a minimal part
+    del m["equipment_use"]["scope"]
+    m["steps"] = [s for s in m["steps"] if s["id"] != "M3"]
+    next(s for s in m["steps"] if s["id"] == "M1")["firmware_text"][0]["contains"] = "log: SD card"
+    next(s for s in m["steps"] if s["id"] == "M4")["do"] += " minimal.nope"
+    d2["document_checks"][5]["code"]["contains"] = "#define KEY1 0x12345678u"
+    d2["document_checks"].append({"id": "DC99", "doc": "AN0000", "before": "M9", "question": "x",
+                                  "code": {"file": "telematics/firmware/src/tm_w25q.c", "contains": "0x9F"}})
+    d2["documents"].append({"id": "ORPHAN", "file": "x.pdf", "title": "x", "part": "x", "maker": "x", "page": "x"})
+    err = "\n".join(B.validate_minimal(d2, bom))
+    for frag in ("open row nor_cs", "connection i2c_scl needs part imu", "equipment scope without its use",
+                 "steps must be M0 to M4", "minimal M1: telematics/firmware/platform/u575/main_u575.c",
+                 "minimal.nope", "DC06: telematics/firmware/platform/u575/flash_u575.c", "document AN0000",
+                 "before M9", "document ORPHAN is asked for but no check needs it"):
+        assert frag in err, frag
+
+
+def test_minimal_page_names_the_chain_the_document_checks_and_what_needs_a_board():
+    text = B.DOC_MIN.read_text()
+    d = B.load()
+    for x in d["documents"]:
+        assert f"docs/reference/datasheets/{x['file']}" in text
+    before = [c for c in d["document_checks"] if c["before"] in ("M0", "M1")]
+    assert {c["doc"] for c in before} == {"UM2861", "DS13737", "RM0456", "ES0499"}       # the NOR comes later
+    assert all(c["before"] in ("B0", "B7") for c in d["document_checks"] if c["doc"] == "W25Q128JV")
+    for s in ("0x45670123", "BKER", "quad-word", "EF 40 18", "WEL", "BUSY", "tSE, tPP, tCE"):
+        assert s in text, s
+    assert "never run on a board" in text and "SIMULATED" in text and "## 1. Still needs a real board" in text
+    assert "refused by its network policy" in text
+    m = text[text.index("### M4."):text.index("## 8.")]
+    assert "--boot 1" in text and "data class BENCH" in m and "nothing established" in m
+    assert "propulsion" not in text.lower() or "no propulsion" in text.lower()
+
+
+def test_minimal_package_has_one_image_its_rows_the_documents_and_a_simulated_rehearsal(tmp_path, telematics_build):
+    rev = B._git("describe", "--always", "--dirty", "--abbrev=12")
+    img = _fake_images(tmp_path / "img", rev)
+    out = tmp_path / "pkg"
+    d, bom = B.load(), tb.load()
+    m = B.package(d, bom, img, out, allow_dirty=True, do_rebuild=False, minimal=True, host_build=telematics_build)
+    on_disk = {str(p.relative_to(out)) for p in out.rglob("*") if p.is_file()} - {"MANIFEST.json"}
+    assert set(m["files"]) == on_disk
+    for f, v in m["files"].items():
+        assert hashlib.sha256((out / f).read_bytes()).hexdigest() == v["sha256"], f
+    assert m["profile"] == "minimal" and [i["name"] for i in m["images"]] == ["tm_u575"]
+    assert not list((out / "images").glob("tm_u575_can*"))
+    assert (out / "BENCH_MINIMAL.md").read_text() == B.DOC_MIN.read_text() and not (out / "BENCH.md").exists()
+    assert "The PDFs to provide" in (out / "DOCUMENT_CHECKS.md").read_text()
+    assert m["verified_on_board"] == "nothing" and m["needs_a_board"] == d["minimal"]["needs_a_board"]
+    assert m["build_commands"] == [d["commands"]["build_host"], d["commands"]["build_target"]]
+    assert m["document_checks_before_flashing"] == [c["id"] for c in d["document_checks"] if c["before"] in ("M0", "M1")]
+    rows = list(csv.DictReader(open(out / "CONNECTIONS.csv")))
+    assert [r["id"] for r in rows] == d["minimal"]["connections"]
+    assert {r["id"]: r["connect_to"] for r in rows}["wheel_1"] == "nothing (open)"
+    parts = list(csv.DictReader(open(out / "PARTS.csv")))
+    assert [p["id"] for p in parts if p["kind"] == "part"] == d["minimal"]["parts"]
+    assert [p["id"] for p in parts if p["kind"] == "equipment"] == d["minimal"]["equipment"]
+    # the rehearsal: the bench's chain command on host-simulated data, labelled as such, every check passing
+    r = m["rehearsal"]
+    assert r["pass"] and r["data_class"] == "SIMULATED" and all(c["pass"] for c in r["checks"])
+    assert {"C8 shadow review: receipts stored, complete, advisory, nothing established",
+            "C9 speed and distance plot written from the database"} <= {c["id"] for c in r["checks"]}
+    assert (out / "rehearsal" / "chain.md").read_text().startswith("# Pulse-to-database chain (SIMULATED)")
+    assert list((out / "rehearsal" / "import").glob("*_speed_distance.png"))
+    assert not (out / "rehearsal" / "pit.sqlite").exists()
+    res = yaml.safe_load((out / "results.yaml").read_text())
+    assert set(res["steps"]) == set(B.MIN_STEP_IDS) and set(res["document_checks"]) == set(m["document_checks_before_flashing"])
+    form = (out / "RESULTS_FORM.md").read_text()
+    assert form.count("| Result (pass, fail, not run) | |") == len(B.MIN_STEP_IDS)

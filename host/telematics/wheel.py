@@ -186,7 +186,8 @@ class WheelEstimator:
 
     def _m(self, signal: str, value, t_rx: int, t_sample, t_unc, validity: str, prov: str, upper=None):
         return Measurement(self.rid(), "wheel", f"wheel.{self.name}.{signal}", value,
-                           "m/s" if signal == "speed" else "m", t_rx, t_sample, t_unc, None, validity, prov, upper)
+                           "m/s" if signal == "speed" else "m", t_rx, t_sample, t_unc, None, validity, prov, upper,
+                           None if t_unc is None else "measured")     # bound computed from the record's edge times
 
     def feed(self, r: EdgeRecord, state: str = "", ref: Optional[str] = None) -> list[Measurement]:
         """One record of this channel. `state` and `ref` come from classify() (WheelGroup passes them); a

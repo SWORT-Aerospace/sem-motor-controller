@@ -42,7 +42,7 @@ separates the cases the protocol needs; it does not show that the vehicle, its s
 way. `tests/telematics/test_evidence_pipeline.py` runs it in CI.
 
 Two rows are marked `limitation`: they pass when a known blind spot is reproduced (A1 cannot see an IMU offset at
-cruise power; a constant CAN latency is not observable without a producer timestamp). They are properties to fix, by
+cruise power; a constant CAN latency is not observable from the receive side, and a producer timestamp bounds it only with a stated clock relation and uncertainty bound). They are properties to fix, by
 the interface or by another relation, not successes.
 
 ## Negative results

@@ -25,7 +25,7 @@ from typing import Callable, Optional
 
 from host.telematics import lineage
 from host.telematics.context import Context
-from host.telematics.evidence import Evidence
+from host.telematics.evidence import Evidence, timing_problem
 
 RESULTS = ("CONSISTENT", "INCONSISTENT", "INAPPLICABLE", "INSUFFICIENT_EVIDENCE")
 # physics that holds whenever the vehicle moves (not only at steady speed); the relation checks that an admissible
@@ -56,7 +56,10 @@ class Observation:
     rejected: dict                  # signal -> [state, reason]
     context: str
     causes_if_inconsistent: tuple[str, ...]
-    independence: dict              # witness -> {"independent": bool, "caveats": [...]}
+    independence: dict              # witness -> lineage.Independence.as_dict(): distinct sensors, shared paths and
+                                    # parameters (a shared dependency is a caveat, not an exclusion)
+    compared: str = ""              # the quantity actually compared for the subject (lineage item), when it differs
+    timing_basis: dict = dataclasses.field(default_factory=dict)   # input -> basis of its timestamp bound
 
     def as_dict(self) -> dict:
         d = dataclasses.asdict(self)
@@ -77,6 +80,7 @@ class Relation:
     causes: tuple[str, ...]
     fn: Callable[[dict, dict], tuple[str, str, Optional[float], Optional[float]]]
     timing_tol_us: int = 250_000     # each input's timestamp bound, and their mutual alignment (PROVISIONAL)
+    compared: str = ""               # lineage item of the subject's compared quantity (B2: speed.from_motor)
 
     def definition(self) -> dict:
         return {k: (list(v) if isinstance(v, tuple) else v) for k, v in dataclasses.asdict(self).items()
@@ -91,25 +95,28 @@ def evaluate(rel: Relation, ev: dict[str, Evidence], ctx: Context, params: dict)
     indep = {}
     for w in rel.witnesses:
         try:
-            ok, cav = lineage.independent_witnesses(rel.subject, w)
+            indep[w] = lineage.independence(rel.compared or rel.subject, w).as_dict()
         except KeyError:
-            ok, cav = True, ["no lineage entry"]
-        indep[w] = {"independent": ok, "caveats": cav}
+            indep[w] = {"distinct_sensors": None, "caveats": ["no lineage entry: what the two share is unknown"]}
 
     def obs(result, detail, residual=None, tol=None):
+        timing = {s: ev[s].t_unc_basis for s in inputs if s in ev}
         return Observation(rel.id, rel.family, rel.claim, rel.subject, rel.witnesses, result, detail, residual, tol,
-                           admitted, rejected, ctx.mode, rel.causes, indep)
+                           admitted, rejected, ctx.mode, rel.causes, indep, rel.compared or rel.subject, timing)
 
-    if ctx.mode not in rel.valid_contexts:
-        return obs("INAPPLICABLE", f"context {ctx.mode} not in {list(rel.valid_contexts)} ({ctx.reason})")
     # timing: a value whose time is not bounded within the relation's tolerance is not admissible for it, and
-    # values are compared only if their times are that close (not because the same loop handled them)
+    # values are compared only if their times are that close (not because the same loop handled them). A bound that
+    # is only assumed counts for simulated data alone (`_accept_assumed_timing`, set by the review from the run's
+    # data class); for a bench or vehicle run it is no bound at all.
+    accept = bool(params.get("_accept_assumed_timing", False))
     for s in list(admitted):
         e = ev[s]
-        if e.t_unc_us is None or e.t_unc_us > rel.timing_tol_us:
+        why = timing_problem(e.t_unc_us, e.t_unc_basis, rel.timing_tol_us, accept)
+        if why:
             del admitted[s]
-            rejected[s] = ["TIMING_UNCERTAIN", "no bound on the timestamp error" if e.t_unc_us is None else
-                           f"timestamp uncertainty {e.t_unc_us} us > {rel.timing_tol_us} us"]
+            rejected[s] = ["TIMING_UNCERTAIN", why]
+    if ctx.mode not in rel.valid_contexts:
+        return obs("INAPPLICABLE", f"context {ctx.mode} not in {list(rel.valid_contexts)} ({ctx.reason})")
     if rejected:
         return obs("INSUFFICIENT_EVIDENCE", "inputs not admissible: " +
                    ", ".join(f"{s} {st}" for s, (st, _r) in sorted(rejected.items())))
@@ -120,7 +127,7 @@ def evaluate(rel: Relation, ev: dict[str, Evidence], ctx: Context, params: dict)
     unknown = [p for p in rel.parameters if params.get(p) is None]
     if unknown:
         return obs("INSUFFICIENT_EVIDENCE", "parameters unknown: " + ", ".join(unknown))
-    not_indep = [w for w, i in indep.items() if not i["independent"]]
+    not_indep = [w for w, i in indep.items() if i["distinct_sensors"] is False]
     if not_indep:
         return obs("INSUFFICIENT_EVIDENCE", "witness shares a raw source with the subject: " + ", ".join(not_indep))
     result, detail, residual, tol = rel.fn(admitted, {**params, "_ctx": ctx})
@@ -180,7 +187,7 @@ def motor_vs_wheel(channel: str) -> Relation:
                     ("drivetrain.gear_ratio", "wheel.circumference_m", "drivetrain.freewheel"),
                     "max(5 %, 0.3 m/s) (PROVISIONAL)",
                     ("gear ratio or circumference parameter", "the controller's speed estimate", "wheel slip",
-                     "freewheel overrunning", "Hall edges lost or extra"), fn)
+                     "freewheel overrunning", "Hall edges lost or extra"), fn, compared="speed.from_motor")
 
 
 def imu_vs_wheel_accel() -> Relation:

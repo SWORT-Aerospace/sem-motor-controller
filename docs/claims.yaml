@@ -53,12 +53,22 @@ claims:
       tests: [tests/telematics/test_evidence_model.py::test_timing_in_order_gap_duplicate_reorder_and_wrap,
               tests/telematics/test_evidence_model.py::test_timing_late_burst_and_wait_bound,
               tests/telematics/test_evidence_model.py::test_timing_long_silence_is_ambiguous_not_a_small_gap]
-    not_shown: "a constant added latency (observable only with a producer timestamp: EXP-04 limitation)"
+    not_shown: "a constant added latency (EXP-04 limitation): bounding it needs a producer timestamp together with a stated relation between the producer's clock and the unit's and an uncertainty bound on it, or a documented delay bound; without that the sample age is unknown"
   - id: C-LINEAGE
-    statement: "Every value and derived quantity names its raw sources, parameters and shared paths; two values from one raw source are never counted as two witnesses; shared paths are reported as caveats"
+    statement: "Every value and derived quantity names its raw sources, parameters and shared paths, each shared path with the kinds of error it can put on every value through it (loss, timing, value); two values from one raw source are never counted as two witnesses; distinct sensors are not taken as independent of a fault they share"
     label: HOST-TESTED
     evidence:
       tests: [tests/telematics/test_evidence_model.py::test_lineage_separates_same_source_from_shared_path]
+  - id: C-TIMING-BASIS
+    statement: "Every timestamp bound carries its basis (measured, documented or assumed) through import, admissibility decisions, queries and receipts; on a run not labelled SIMULATED an assumed bound does not make a value admissible (TIMING_UNCERTAIN, sample age unknown); a bound stored without a basis reads as assumed"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_evidence_model.py::test_an_assumed_timestamp_bound_is_not_a_bound_for_measured_data,
+              tests/telematics/test_evidence_model.py::test_producers_state_the_basis_of_their_bounds,
+              tests/telematics/test_witnesses_and_verdicts.py::test_assumed_timestamp_bounds_are_admitted_for_simulated_data_only,
+              tests/telematics/test_evidence_pipeline.py::test_timing_basis_survives_import_and_assumed_bounds_count_only_for_simulated_data,
+              tests/telematics/test_evidence_pipeline.py::test_an_older_database_gains_the_basis_column_and_reads_unrecorded_bounds_as_assumed]
+    not_shown: "a measured or documented bound for the controller, GNSS and IMU streams: they carry assumed bounds until a document or a bench measurement gives one"
   - id: C-CONTEXT
     statement: "The vehicle context (STARTUP, STOPPED, LAUNCH, CRUISE, COAST, UNKNOWN) comes from admissible evidence only; STOPPED needs a source that can measure zero; BRAKE and READY are reported as not determinable"
     label: HOST-TESTED
@@ -73,17 +83,24 @@ claims:
               tests/telematics/test_witnesses_and_verdicts.py::test_unknown_parameters_and_unsimultaneous_inputs_are_not_compared,
               tests/telematics/test_witnesses_and_verdicts.py::test_mode_dependent_validity_of_the_drivetrain_relation]
   - id: C-NO-FAULT-LABEL
-    statement: "No conclusion names a fault; an inconsistency is AMBIGUOUS with its candidate causes; localization needs two witnesses independent of the subject and of each other that agree"
+    statement: "No conclusion names a fault or establishes a cause; an inconsistency is reported as a disagreement observed, AMBIGUOUS with its candidate causes; a localization is conditional: it needs two agreeing witnesses from sensors distinct from the subject's, states the assumption that they share no timing or value error, keeps each dependency they do share, and puts a shared parameter's error first among the candidates"
     label: HOST-TESTED
     evidence:
       tests: [tests/telematics/test_witnesses_and_verdicts.py::test_an_inconsistency_is_ambiguous_with_its_candidates_and_never_a_fault,
-              tests/telematics/test_witnesses_and_verdicts.py::test_localization_needs_two_independent_witnesses_that_agree]
+              tests/telematics/test_witnesses_and_verdicts.py::test_localization_is_conditional_and_keeps_shared_dependencies,
+              tests/telematics/test_witnesses_and_verdicts.py::test_two_witnesses_with_a_shared_scaling_error_do_not_localize_to_the_correct_measurement,
+              tests/telematics/test_witnesses_and_verdicts.py::test_two_witnesses_with_a_shared_timing_or_acquisition_error_keep_that_alternative,
+              tests/telematics/test_witnesses_and_verdicts.py::test_no_conclusion_is_established_by_software]
+    not_shown: "that the stated assumptions hold on the vehicle: a common error outside the schema's shared paths is not excluded"
   - id: C-COMMON-CAUSE
-    statement: "A simultaneous loss of evidence is a SUPPORTED common cause only with direct disturbance evidence on a shared path; a source that kept working exonerates the paths it shares"
+    statement: "A simultaneous loss of evidence is a SUPPORTED common cause only with direct disturbance evidence on a shared path; a source that delivered evidence throughout the event excludes only a complete loss of the paths it shares, never a partial or brief disturbance; a source that broke off or recovered excludes nothing; onsets are grouped within one window of the first, so a chain of onsets does not become one event"
     label: HOST-TESTED
     evidence:
       tests: [tests/telematics/test_witnesses_and_verdicts.py::test_simultaneous_loss_is_supported_only_with_direct_disturbance_evidence,
-              tests/telematics/test_witnesses_and_verdicts.py::test_a_source_that_kept_working_exonerates_the_paths_it_shares]
+              tests/telematics/test_witnesses_and_verdicts.py::test_an_unaffected_source_excludes_only_the_complete_loss_model,
+              tests/telematics/test_witnesses_and_verdicts.py::test_a_source_with_a_break_or_that_recovered_does_not_exclude_anything,
+              tests/telematics/test_witnesses_and_verdicts.py::test_a_chain_of_onsets_is_not_merged_into_one_long_event,
+              tests/telematics/test_witnesses_and_verdicts.py::test_no_shared_path_left_is_still_ambiguous]
   - id: C-RECEIPTS
     statement: "Every stored conclusion has a receipt with the values, times, states, context, relation results and rejections it rests on, marked advisory and with its data class; a receipt that lacks any of these is detected"
     label: HOST-TESTED
@@ -91,7 +108,7 @@ claims:
       tests: [tests/telematics/test_witnesses_and_verdicts.py::test_a_receipt_answers_why_and_is_complete,
               tests/telematics/test_evidence_pipeline.py::test_review_receipts_are_complete_and_the_data_class_is_never_vehicle_by_default]
   - id: C-EXP01-SIM
-    statement: "On simulated drives the analysis localizes a corrupted wheel-speed path and reports no inconsistency for a real slowdown"
+    statement: "On simulated drives a corrupted wheel-speed path is localized to that path conditionally, with its assumptions listed; a real slowdown gives no inconsistency; a scaling error shared by both wheels is not localized to the correct GNSS path"
     label: SIMULATED
     evidence:
       tests: [tests/telematics/test_evidence_pipeline.py::test_exp01_separates_a_corrupted_wheel_from_a_real_slowdown]
@@ -103,7 +120,7 @@ claims:
       tests: [tests/telematics/test_evidence_pipeline.py::test_simulated_protocol_prechecks_pass_and_say_so]
       files: [research/vehicle_validation/EXP-02_motor_effort_response.md]
   - id: C-EXP03-SIM
-    statement: "On simulated drives a unit power cut is a supported shared-path event and two independent simultaneous losses stay ambiguous"
+    statement: "On simulated drives a unit power cut is a supported shared-path event; two independent simultaneous losses stay ambiguous, with a partial disturbance of the shared paths kept as an alternative"
     label: SIMULATED
     evidence:
       tests: [tests/telematics/test_evidence_pipeline.py::test_simulated_protocol_prechecks_pass_and_say_so]
@@ -137,12 +154,23 @@ claims:
       files: [telematics/firmware/tests/test_tm.c]
     not_shown: "interrupt latency and FDCAN behaviour on the board under a real flood"
   - id: C-BENCH-CHAIN
-    statement: "The pulse-to-database chain (pulse, capture time, record, log, decoder, evidence row, query) reproduces a known pulse train exactly in the firmware's host build"
+    statement: "The pulse-to-database chain (pulse, capture time, record, log, decoder, evidence row, query, shadow review, receipt, plot) reproduces a known pulse train exactly in the firmware's host build, and the minimal bench procedure, power cycle included, passes on host-simulated data through the bench's own chain command"
     label: HOST-TESTED
     evidence:
-      tests: [tests/telematics/test_pit_queries_advisory.py::test_bench_chain_host_mode_passes]
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_bench_chain_host_mode_passes,
+              tests/telematics/test_pit_queries_advisory.py::test_minimal_rehearsal_runs_the_bench_command_and_the_wrong_boot_fails,
+              tests/telematics/test_pit_queries_advisory.py::test_bench_stop_check_needs_a_stop_and_rejects_a_zero_speed]
       files: [tools/run_bench_chain.py]
-    not_shown: "the same chain on the NUCLEO-U575ZI-Q (run tools/run_bench_chain.py --dump after BENCH.md B1 to B3)"
+    not_shown: "the same chain on the NUCLEO-U575ZI-Q (telematics/firmware/BENCH_MINIMAL.md, steps M0 to M4)"
+  - id: C-MINIMAL-PACKAGE
+    statement: "The minimal bench package holds one image with its SHA-256, the connection rows, parts and equipment it uses, the document checks due before flashing with the PDFs to provide, a blank results form and a SIMULATED rehearsal; every console text and firmware line it quotes is checked against the code"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_telematics_bench.py::test_minimal_package_has_one_image_its_rows_the_documents_and_a_simulated_rehearsal,
+              tests/telematics/test_telematics_bench.py::test_minimal_section_validation_catches_drift,
+              tests/telematics/test_telematics_bench.py::test_minimal_page_names_the_chain_the_document_checks_and_what_needs_a_board]
+      files: [telematics/firmware/BENCH_MINIMAL.md]
+    not_shown: "any step on a board: none has been run, and the document checks are unanswered (the PDFs are not in the repository)"
   - id: C-PIT-QUERIES
     statement: "The pit answers time-aligned signals, intervals of missing or stale evidence, event windows and pre/post windows with each value's evidence state"
     label: HOST-TESTED
@@ -160,8 +188,16 @@ claims:
     statement: "Only VALID evidence reaches the CSIA shadow adapter; no torque request, grade or KCL input is invented; its trust numbers are withheld; its output is SUPPORTED, AMBIGUOUS or UNSUPPORTED"
     label: HOST-TESTED
     evidence:
-      tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_boundary_passes_only_valid_evidence_and_withholds_trust]
-    not_shown: "that the frozen CSIA adapter is accurate: on simulated nominal drives it reports unattributed disagreements our relations do not (the documented evaluation favours R3v)"
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_boundary_passes_only_valid_evidence_and_withholds_trust,
+              tests/telematics/test_pit_queries_advisory.py::test_csia_boundary_withholds_power_inputs_without_a_torque_constant]
+    not_shown: "that the frozen CSIA adapter is accurate (the documented evaluation favours R3v)"
+  - id: C-CSIA-CLEAN-RUN
+    statement: "The frozen CSIA adapter's disagreement on a clean simulated run (328 of 550 ticks) is its E6 power balance alone and reproduces with constant, simultaneous inputs: an input mismatch in an unsupported configuration (torque constant defaulted, the fixture's iq not a torque current), not a timing defect; the boundary now withholds the power inputs unless a torque constant is stated"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_clean_run_case_reproduces_and_isolates_the_power_balance]
+      files: [docs/generated/csia_clean_run_case.md, tools/csia_disagreement_case.py]
+    not_shown: "anything about E6 with a real motor's torque constant and q-axis current; frozen evaluation files unchanged and no comparison drawn from this development example"
   - id: C-FIRMWARE-TARGET
     statement: "The telematics firmware builds and links for the NUCLEO-U575ZI-Q"
     label: HOST-TESTED

@@ -22,8 +22,10 @@ this tracks what the unit can observe:
   ambiguous         a silence longer than half the counter range: a counter cannot tell how many frames were lost,
                     so the loss is estimated from the elapsed time and the expected period, and marked as such
   non-monotonic rx  the receive time went backwards: the local clock, not the source, is in doubt
-  latency           absolute latency needs a producer timestamp on the same clock; with a producer timestamp on
-                    another clock only its variation is observable (receive minus producer time, minus its minimum)
+  latency           absolute latency needs a producer timestamp and a stated relation between the producer's clock
+                    and the unit's, with an uncertainty bound; with a producer timestamp on an unrelated clock only
+                    its variation is observable (receive minus producer time, minus its minimum). Without either the
+                    sample age is unknown
 
 Nothing here runs on hardware. The firmware logs every frame with its receive time, so the pit applies this to
 the log (host/pit/ingest.py: source_timing).
