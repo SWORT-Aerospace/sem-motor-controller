@@ -473,8 +473,11 @@ flashed or measured.** Record: [`../telematics/bench/DOCUMENT_CHECKS_RECORD.md`]
 Checked and unchanged: ES0499 2.2.25 (flash), 2.18.2 (IWDG), 2.20.1 (I2C timing), 2.21.x (USART), 2.23.1 and
 2.23.7 (SPI). Results on this machine before the commit: telematics and reference suites 240 passed, 1 skipped
 (`hardware_required`), no controller build directory created; every generated-file check current; 153 Markdown files,
-0 broken links. `tm_u575.elf` 20,496 B text and 84 B data. The new bench candidate, its CI artifact and its hashes are
-named in [`../telematics/bench/HANDOFF_MINIMAL.md`](../telematics/bench/HANDOFF_MINIMAL.md).
+0 broken links. `tm_u575.elf` 20,496 B text and 84 B data. New bench candidate `ca74302`: the CI push run 39191847887
+built `tm_u575.bin` with SHA-256 `1a758fbea520b05ff68b2cba50a0d9502d492f5f25dfb815cd769cc932f48e12`, the same as a
+fresh-clone build here (artifact `telematics-bench-minimal`, ID 12160820013). The pull-request run's artifact is a
+merge-commit build and is not the candidate. Details: [`../telematics/bench/HANDOFF_MINIMAL.md`](../telematics/bench/HANDOFF_MINIMAL.md)
+section 1.
 
 **The minimal bench still cannot proceed under its own gate:** DC02 to DC09 need DS13737 or RM0456.
 
