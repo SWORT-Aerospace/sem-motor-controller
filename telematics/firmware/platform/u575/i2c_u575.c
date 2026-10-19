@@ -38,8 +38,11 @@ static int wait_flag(uint32_t mask)
             recover();
             return TM_BUS_NACK;
         }
-        if (isr & (I2C_ISR_BERR | I2C_ISR_ARLO)) {
-            I2C1->ICR = I2C_ICR_BERRCF | I2C_ICR_ARLOCF;
+        /* ES0499 Rev 12 2.20.2: in controller mode a bus error can be flagged spuriously and has no effect on the
+         * transfer; the flag is cleared and the transfer goes on (a real fault still ends in NACK or timeout) */
+        if (isr & I2C_ISR_BERR) I2C1->ICR = I2C_ICR_BERRCF;
+        if (isr & I2C_ISR_ARLO) {
+            I2C1->ICR = I2C_ICR_ARLOCF;
             recover();
             return TM_BUS_ERROR;
         }

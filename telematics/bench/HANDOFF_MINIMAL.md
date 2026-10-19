@@ -5,6 +5,8 @@ power cycle, the console DUMP, the decoder, the database, the review, a receipt 
 detailed procedure is `BENCH_MINIMAL.md` inside the package below, and
 [`../firmware/BENCH_MINIMAL.md`](../firmware/BENCH_MINIMAL.md) in the repository.
 
+**Superseded (2026-10-19): do not flash `b734667`.** Reading UM2861 Rev 10 and ES0499 Rev 12 led to two firmware fixes ([`DOCUMENT_CHECKS_RECORD.md`](DOCUMENT_CHECKS_RECORD.md)); the new bench candidate's artifact and hashes replace section 1 once its CI run has built them.
+
 **Bench only, on USB power.** Nothing connects to the vehicle, its battery or the controller's bus. The unit has no
 propulsion authority. **Nothing here has been run on a board yet.**
 

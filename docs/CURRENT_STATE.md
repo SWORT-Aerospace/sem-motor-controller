@@ -137,3 +137,14 @@ nothing was flashed, connected or measured.
 
 Still open: every item under UNVERIFIED and BLOCKED above. www.st.com and www.winbond.com were refused again by this
 environment's network policy, so the document checks are unanswered (T-U5-DOCS).
+
+## After UM2861 Rev 10 and ES0499 Rev 12 (2026-10-19)
+
+The board manual and the errata sheet were read from copies the team provided
+([`../telematics/bench/DOCUMENT_CHECKS_RECORD.md`](../telematics/bench/DOCUMENT_CHECKS_RECORD.md)). DC01 (board) and
+DC10 (errata) are complete as documentary checks; the eight checks that need RM0456 or DS13737 stay open. Two firmware
+discrepancies were fixed, which makes a new bench candidate: the LSE drive is set to medium-high before the LSE starts
+(ES0499 2.2.3 and 2.2.16, revision X) with LSCO cleared (2.2.9), and an I2C bus error no longer aborts a transfer
+(2.20.2). The bench documents now use the Micro-B ST-LINK cable, SWD at 8 MHz, the UM2861 connector positions, a
+sticker and jumper check in M0, no press of the user button, and a 10 s power-off in M3. Nothing was run on a board.
+

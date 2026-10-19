@@ -1,6 +1,6 @@
 # STM32U575 register-level code: what was checked, what was corrected, what stays open
 
-**Status (2026-10-18).** The register-level code of the telematics firmware (`telematics/firmware/platform/u575/`) has been compared line by line with ST's own drivers, `STMicroelectronics/stm32u5xx-hal-driver` v1.6.3 (commit `2552682ee5a0d6f826a6435750fc9267be65868b`: HAL, LL and release notes), and with the vendored CMSIS device header (`vendor/PROVENANCE.md`). It has **not** been checked against the reference manual RM0456, the data sheet DS13737 or the errata sheet ES0499: st.com is refused by this environment's network policy and the PDFs are not in the repository (T-U5-DOCS in [`BLOCKERS.md`](BLOCKERS.md)). Register names that compile and sequences that match ST's HAL are not proof that the peripherals behave as intended on the part; the bench is the check ([`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md)). Full comparison, with every HAL file and line cited: [`reference/u575_hal_audit.md`](reference/u575_hal_audit.md).
+**Status (2026-10-18).** The register-level code of the telematics firmware (`telematics/firmware/platform/u575/`) has been compared line by line with ST's own drivers, `STMicroelectronics/stm32u5xx-hal-driver` v1.6.3 (commit `2552682ee5a0d6f826a6435750fc9267be65868b`: HAL, LL and release notes), and with the vendored CMSIS device header (`vendor/PROVENANCE.md`). On 2026-10-19 the errata sheet ES0499 Rev 12 and the board manual UM2861 Rev 10 were read from copies the team provided (section 5; answers in [`../telematics/bench/DOCUMENT_CHECKS_RECORD.md`](../telematics/bench/DOCUMENT_CHECKS_RECORD.md)). It has **not** been checked against the reference manual RM0456 or the data sheet DS13737: st.com is refused by this environment's network policy and those PDFs are not in the repository (T-U5-DOCS in [`BLOCKERS.md`](BLOCKERS.md)). Register names that compile and sequences that match ST's HAL are not proof that the peripherals behave as intended on the part; the bench is the check ([`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md)). Full comparison, with every HAL file and line cited: [`reference/u575_hal_audit.md`](reference/u575_hal_audit.md).
 
 ## 1. Corrected
 
@@ -25,7 +25,7 @@ Each difference from ST's sequence was changed to ST's sequence. `tests/telemati
 
 Clock enables with read-back; reset flags and their clearing; IWDG start (key sequence, prescaler /64, reload 1000, about 2 s on a 32 kHz LSI); MSIPLLSEL before MSIPLLEN, after LSERDY; PLL1 from MSIS 4 MHz, M 1, N 40, Q 8 (160 MHz VCO, 20 MHz PLL1Q), PLL1QEN, FDCANSEL = PLL1Q; TIM2 as a 32-bit counter, PSC 3, input capture on CH1/CH3/CH4 with an 8-sample filter (2 us) on falling edges, flags cleared with rc_w0 writes; flash keys, page erase in bank 2 (8 KiB pages, 128 per bank on the 2 MB part, BKER, PNB, PER, STRT), quad-word programming with interrupts off, error flags cleared, ECC flag cleared; USART1 BRR 35 from 4 MHz (114,286 baud, 0.8 % low); FDCAN1 message RAM layout (RX FIFO 0 at 0xB0, 72-byte elements), init and configuration-change sequence, bus monitoring (MON), DAR, bit timing 40 tq at 87.5 %, RX FIFO 0 get index and acknowledge; SPI1 TSIZE, SPE, CSTART, TXP/RXP, EOT and close; I2C1 TIMINGR written with PE = 0, transfer configuration in CR2, NACK checked before RXNE; unique id; non-secure register aliases (no `-mcmse`; the disassembly shows the non-secure addresses). Details and HAL lines: [`reference/u575_hal_audit.md`](reference/u575_hal_audit.md) section 2.
 
-## 3. Open until RM0456, DS13737 and ES0499 are read
+## 3. Open until RM0456 and DS13737 are read (the ES0499 items: section 5)
 
 Each is a question about the silicon that ST's drivers do not answer. The bench step named checks the consequence, not the cause. The same questions, with the W25Q128JV's, are the document checks DC01 to DC17 (`telematics/bench/bench.yaml`, rendered in [`../telematics/firmware/BENCH_MINIMAL.md`](../telematics/firmware/BENCH_MINIMAL.md) section 5): each names the firmware line that depends on its answer and the bench step it must be answered before, ten of them before the minimal bench is flashed.
 
@@ -50,3 +50,22 @@ Each is a question about the silicon that ST's drivers do not answer. The bench 
 * The IWDG is not frozen when a debugger halts the core: with a debugger attached, a halt resets the board after about 2 s.
 * A second capture between the TIM2 status read and the capture-register reads is reported as an overrun only on the next edge (diagnostic counters only).
 * The flash is not locked again after an operation (ST's HAL also leaves it to the caller).
+
+## 5. After ES0499 Rev 12 and UM2861 Rev 10 (2026-10-19)
+
+A NUCLEO-U575ZI-Q carries silicon revision X, W or U depending on its product identification (UM2861 Table 21); the
+banner's `chip: rev` (REV_ID 0x2001, 0x3001, 0x3007; ES0499 Table 2) tells which. Every limitation for the functions
+the images use is reviewed in the record, section 4.
+
+| ID | Where | Was | Document | Now | Bench step that shows it |
+|---|---|---|---|---|---|
+| E1 | `board_u575.c` `board_init` | LSE drive never set: whatever the backup domain held | ES0499 2.2.3 and 2.2.16: low and medium-low drive forbidden on revision X | medium-high set before LSEON; an LSE left on at a lower drive or in bypass is switched off first (the drive cannot be raised while LSEON = 1, HAL rcc.h) | M1 (clock line: PLL mode on the LSE) |
+| E2 | `board_u575.c` `board_init` | LSCOEN left as found | ES0499 2.2.9 (revision X, VBAT and VDD from one source; SB50, UM2861 Table 9): a missed backup domain reset can leave LSCO driving PA2 | LSCOEN cleared at every start; M3 keeps the board unpowered at least 10 s | M3, B6 |
+| E3 | `i2c_u575.c` `wait_flag` | a bus error aborted the transfer | ES0499 2.20.2: spurious in controller mode, no effect on the transfer | flag cleared, the transfer goes on; arbitration loss still ends it | B12 |
+
+Checked and unchanged: 2.2.25 (the flash driver never sets STRT while WDW is set), 2.23.1 (CRCSIZE kept at its
+reset value), 2.23.7 (SCK = PCLK/2), 2.20.1 (standard mode at a 4 MHz kernel clock), 2.18.2 (BDRST never set).
+Procedure rule: the blue user button B1 is not pressed (2.2.1: PC13 transitions disturb the LSE on LQFP144). Open:
+2.2.27, a spurious MSI PLL unlock, whose workaround needs the unlock interrupt; the vendored device header has no
+flag for it and RM0456 is not available. `tests/telematics/test_firmware_target.py::test_es0499_workarounds_in_the_source`
+keeps E1 to E3 from regressing (a source check).

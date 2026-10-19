@@ -204,5 +204,6 @@ claims:
     evidence:
       tests: [tests/telematics/test_firmware_target.py::test_vector_table_matches_st_interrupt_list,
               tests/telematics/test_firmware_target.py::test_layout_leaves_the_log_bank_free_and_has_no_controller_code,
-              tests/telematics/test_firmware_target.py::test_register_sequences_follow_st_hal]
-    not_shown: "that it runs on the board: it has never been flashed (T-BENCH1)"
+              tests/telematics/test_firmware_target.py::test_register_sequences_follow_st_hal,
+              tests/telematics/test_firmware_target.py::test_es0499_workarounds_in_the_source]
+    not_shown: "that it runs on the board: it has never been flashed (T-BENCH1); RM0456 and DS13737 not read"

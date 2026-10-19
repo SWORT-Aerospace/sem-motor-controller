@@ -34,9 +34,9 @@ lines:
      qty: 1, low: 24.15, high: 26.11, evidence: snippet,
      source: "Future Electronics US $24.15/$25.36 (pricing.yaml snapshots); ST eStore $26.11 at 1-2 pcs, in stock; Digi-Key $26.11, about 1,012 in stock",
      driver: telematics/firmware/platform/u575/main_u575.c, checks: "TIM2_IRQHandler"}
-  - {id: usb_cable, config: bench, item: "USB data cable from the PC to the board's ST-LINK USB port", part: "USB-C to USB-A or USB-C, data capable",
+  - {id: usb_cable, config: bench, item: "USB data cable from the PC to the board's ST-LINK USB port (CN1, USB Micro-B)", part: "USB Type-A or USB Type-C to Micro-B, data capable",
      qty: 1, low: 3.00, high: 8.00, evidence: allowance,
-     source: "not quoted; search snippets of UM2861 give a USB Type-C connector on this board (the manual itself was not readable here): check the port before buying",
+     source: "not quoted; UM2861 Rev 10 section 3.1 and Table 6: the ST-LINK connector CN1 is USB Micro-B (the board's USB Type-C connector CN15 is the MCU's own USB, not used here)",
      notes: "Power and console come through it: the bench needs no other supply."}
   - {id: nor_chip, config: bench, item: "SPI NOR flash 128 Mbit, SOIC-8 (log storage)", part: "Winbond W25Q128JVSIQ", qty: 1, low: 1.88, high: 1.88,
      evidence: snippet, source: "Digi-Key US $1.88 at 1 (tube), 27,875 in stock, 20-week standard lead time",
@@ -72,7 +72,7 @@ lines:
      evidence: snippet, source: "Adafruit $3.95 at 1-9", notes: "Into the NUCLEO's female Arduino/Zio headers; also the B6 jumper to GND."}
   - {id: jumpers_fm, config: bench, item: "Female/male jumper wires, 40 x 150 mm", part: "Adafruit 826", qty: 1, low: 3.95, high: 3.95,
      evidence: snippet, source: "Adafruit $3.95 at 1-9 (search snippet 2026-10-18)",
-     notes: "For the male ST morpho pins: PD0/PD1 (FDCAN1) may be on the morpho or the board's CAN FD header only (UM2861 not read)."}
+     notes: "Spare: PD0/PD1 (FDCAN1) are on the Zio connector CN9 pins 25 and 27 (UM2861 Rev 10 Table 17), female like the Arduino headers."}
   # ------------------------------------------------------------------ A: vehicle bus
   - {id: can_cable, config: A, item: "CAN twisted pair, 120 ohm, shielded (tap from the controller's bus), per foot", part: "Belden 9841",
      qty: 10, low: 5.49, high: 5.49, evidence: snippet, source: "ShowMeCables $5.49/ft at 1-99 ft; 0 in stock in the snapshot",

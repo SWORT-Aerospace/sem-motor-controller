@@ -116,14 +116,15 @@ def _body(src: str, signature: str) -> str:
 def test_register_sequences_follow_st_hal():
     """The orderings that the audit against ST's HAL v1.6.3 corrected (docs/U575_REGISTER_CHECK.md): what ST's own
     driver does, kept from regressing. Text checks of the source; they do not show the registers behave so on the
-    part (RM0456, the data sheet and the errata remain unread: T-U5-DOCS)."""
+    part (RM0456 and the data sheet remain unread: T-U5-DOCS; ES0499 is covered by the test below)."""
     u5 = FW / "platform" / "u575"
     board = (u5 / "board_u575.c").read_text()
     gpio = _body(board, "static void gpio_mode(")
     assert gpio.index("AFR[") < gpio.index("g->MODER =")                # alternate function before mode
     init = _body(board, "void board_init(void)")
-    order = [init.index(k) for k in ("PWR_DBPR_DBP, 10000u", "RCC_BDCR_LSEON", "RCC_BDCR_LSESYSEN",
-                                     "RCC_BDCR_LSESYSRDY", "RCC_CR_MSIPLLSEL", "RCC_CR_MSIPLLEN")]
+    order = [init.index(k) for k in ("PWR_DBPR_DBP, 10000u", "RCC->BDCR |= RCC_BDCR_LSEON;",
+                                     "RCC->BDCR |= RCC_BDCR_LSESYSEN;", "RCC_BDCR_LSESYSRDY", "RCC_CR_MSIPLLSEL",
+                                     "RCC_CR_MSIPLLEN")]
     assert order == sorted(order)                                       # LSE for RCC, then MSI PLL mode
     cap = _body(board, "void board_capture_start(void)")
     assert cap.index("TIM2->CR1 = TIM_CR1_URS;") < cap.index("TIM_EGR_UG") < cap.index("__DSB()") < cap.index(
@@ -139,3 +140,23 @@ def test_register_sequences_follow_st_hal():
     assert "SPI1->CFG1 & SPI_CFG1_CRCSIZE" in (u5 / "spi_u575.c").read_text()
     can = _body((u5 / "can_u575.c").read_text(), "const char *can_monitor_init(")
     assert can.index("bitrate == 0u") < can.index("KERNEL_HZ / bitrate")
+
+
+def test_es0499_workarounds_in_the_source():
+    """The workarounds that ES0499 Rev 12 (read with UM2861 Rev 10, docs/U575_REGISTER_CHECK.md section 5) calls
+    for, kept from regressing. Text checks of the source; the bench shows whether the LSE starts and locks."""
+    u5 = FW / "platform" / "u575"
+    init = _body((u5 / "board_u575.c").read_text(), "void board_init(void)")
+    # 2.2.3, 2.2.16: never the low or medium-low LSE drive; the drive is raised only with the LSE off (HAL rcc.h)
+    off, byp, rdy, drv, lsco, on = (init.index(k) for k in (
+        "RCC->BDCR &= ~(RCC_BDCR_LSEON | RCC_BDCR_LSESYSEN);", "RCC->BDCR &= ~RCC_BDCR_LSEBYP;",
+        "wait_clear_kick(&RCC->BDCR, RCC_BDCR_LSERDY", "(RCC->BDCR & ~RCC_BDCR_LSEDRV) | RCC_BDCR_LSEDRV_1",
+        "RCC->BDCR &= ~RCC_BDCR_LSCOEN;", "RCC->BDCR |= RCC_BDCR_LSEON;"))
+    assert off < byp < rdy < drv < on and lsco < on                     # 2.2.9: LSCO off before the LSE starts
+    assert "(RCC->BDCR & RCC_BDCR_LSEDRV) < RCC_BDCR_LSEDRV_1" in init and "LSEDRV_0" not in init
+    # 2.20.2: a bus error in controller mode is cleared and the transfer goes on; arbitration loss still ends it
+    wait = _body((u5 / "i2c_u575.c").read_text(), "static int wait_flag(uint32_t mask)")
+    assert "if (isr & I2C_ISR_BERR) I2C1->ICR = I2C_ICR_BERRCF;" in wait
+    arlo = wait[wait.index("if (isr & I2C_ISR_ARLO)"):]
+    assert arlo.index("return TM_BUS_ERROR") < arlo.index("if (isr & mask)")
+    assert "I2C_ISR_BERR | I2C_ISR_ARLO" not in wait

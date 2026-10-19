@@ -68,6 +68,15 @@ static bool wait_set_kick(volatile uint32_t *reg, uint32_t mask, uint32_t loops)
     return false;
 }
 
+static bool wait_clear_kick(volatile uint32_t *reg, uint32_t mask, uint32_t loops)
+{
+    while (loops--) {
+        if (!(*reg & mask)) return true;
+        IWDG->KR = 0xAAAAu;
+    }
+    return false;
+}
+
 static void watchdog_start(void)
 {
     /* IWDG on the LSI (32 kHz nominal): prescaler /64, reload 1000: about 2 s */
@@ -98,10 +107,24 @@ void board_init(void)
     (void)RCC->AHB3ENR;
     board_gpio_out(GPIOC, 7u, false);   /* LD1 green */
     board_gpio_out(GPIOB, 7u, false);   /* LD2 blue */
-    /* LSE (32.768 kHz crystal of the Nucleo; its fitting is to be confirmed in UM2861) and MSIS locked to it.
+    /* LSE (the X2 32.768 kHz crystal, fitted by default: UM2861 Rev 10 7.7.1) and MSIS locked to it.
      * The LSE can take seconds to start: wait a bounded time, then run untrimmed. */
     PWR->DBPR |= PWR_DBPR_DBP;
     (void)wait_set(&PWR->DBPR, PWR_DBPR_DBP, 10000u);   /* backup domain writable before LSEON (HAL rcc.c) */
+    /* LSE drive: ES0499 Rev 12 2.2.3 and 2.2.16 forbid the low (00) and medium-low (01) drives on silicon
+     * revision X, which NUCLEO-U575ZI-Q $AT1 and $AT2 carry (UM2861 Rev 10 Table 21). Medium-high is the lowest
+     * drive left on every revision. The drive cannot be raised while LSEON = 1 (HAL rcc.h,
+     * __HAL_RCC_LSEDRIVE_CONFIG) and the backup domain survives a reset, so an LSE left on at a lower drive or in
+     * bypass (the board has the X2 crystal, UM2861 7.7.1) is switched off first, as HAL_RCC_OscConfig does. */
+    if ((RCC->BDCR & RCC_BDCR_LSEDRV) < RCC_BDCR_LSEDRV_1 || (RCC->BDCR & RCC_BDCR_LSEBYP)) {
+        RCC->BDCR &= ~(RCC_BDCR_LSEON | RCC_BDCR_LSESYSEN);
+        RCC->BDCR &= ~RCC_BDCR_LSEBYP;
+        (void)wait_clear_kick(&RCC->BDCR, RCC_BDCR_LSERDY, 3000000u);
+        RCC->BDCR = (RCC->BDCR & ~RCC_BDCR_LSEDRV) | RCC_BDCR_LSEDRV_1;
+    }
+    /* LSCO is never used; a missed backup domain reset on revision X with VBAT and VDD from one source (ES0499
+     * 2.2.9; SB50, UM2861 Table 9) can leave it driving PA2, wheel_1's input */
+    RCC->BDCR &= ~RCC_BDCR_LSCOEN;
     RCC->BDCR |= RCC_BDCR_LSEON;
     g_board.lse_ok = wait_set_kick(&RCC->BDCR, RCC_BDCR_LSERDY, 3000000u);
     /* LSEON alone is ST's "LSE for RTC only"; LSESYSEN makes the LSE available to RCC and peripherals

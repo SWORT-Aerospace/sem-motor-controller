@@ -346,17 +346,21 @@ def document_checks_md(d: dict, heading: str = "#", number: str = "") -> list[st
     L += ["", f"{n_min} checks come before the minimal bench (M0, M1); the other "
           f"{len(d['document_checks']) - n_min} only before the full bench steps named (the NOR in B0 and B7, CAN in "
           "B11, I2C in B12).", "",
-          f"{heading}# {number.rstrip('. ') + '.1 ' if number else ''}The PDFs to provide", "",
-          "None of these documents is in the repository, and this environment cannot fetch them: www.st.com and "
-          "www.winbond.com are refused by its network policy (the proxy answers 403 to the connection). Please download "
-          "each from the manufacturer and commit it under the exact file name to `docs/reference/datasheets/`; the "
-          "checks above are then answered from them with page references.", "",
-          "| # | Document | Part (exact) | Manufacturer | Commit as | Official page | Needed by |",
+          f"{heading}# {number.rstrip('. ') + '.1 ' if number else ''}The documents", "",
+          "Read so far, from copies the team provided (not committed to the repository): " + "; ".join(
+              f"{x['id']} {x['received']}" for x in d["documents"] if x.get("received")) + ". "
+          "The others are not in the repository, and this environment cannot fetch them: www.st.com and "
+          "www.winbond.com are refused by its network policy (the proxy answers 403 to the connection). Please "
+          "download each from the manufacturer and commit it under the exact file name to "
+          "`docs/reference/datasheets/`; the checks are then answered from them with page references.", "",
+          "| # | Document | Part (exact) | Manufacturer | Status | Official page | Needed by |",
           "|---|---|---|---|---|---|---|"]
     for i, x in enumerate(d["documents"], 1):
         need = ", ".join(c["id"] for c in d["document_checks"] if c["doc"] == x["id"])
-        L.append(f"| {i} | {_md_cell(x['title'])} | {_md_cell(x['part'])} | {x['maker']} | "
-                 f"`docs/reference/datasheets/{x['file']}` | {_md_cell(x['page'])} | {need} |")
+        status = (f"read: {x['received']}" if x.get("received") else
+                  f"needed: commit as `docs/reference/datasheets/{x['file']}`")
+        L.append(f"| {i} | {_md_cell(x['title'])} | {_md_cell(x['part'])} | {x['maker']} | {_md_cell(status)} | "
+                 f"{_md_cell(x['page'])} | {need} |")
     return L
 
 
@@ -661,8 +665,9 @@ def package(d: dict, bom: dict, images: pathlib.Path, out: pathlib.Path, allow_d
         manifest["parts_total_usd"] = {k: round(sum(lines[p][k] * lines[p]["qty"] for p in m["parts"]), 2)
                                        for k in ("low", "high")}
         manifest["document_checks_before_flashing"] = [c["id"] for c in d["document_checks"] if _before_minimal(c)]
-        manifest["documents_missing"] = [x["file"] for x in d["documents"]
-                                         if not (ROOT / "docs" / "reference" / "datasheets" / x["file"]).exists()]
+        manifest["documents_read"] = {x["id"]: x["received"] for x in d["documents"] if x.get("received")}
+        manifest["documents_missing"] = [x["file"] for x in d["documents"] if not x.get("received") and
+                                         not (ROOT / "docs" / "reference" / "datasheets" / x["file"]).exists()]
         manifest["rehearsal"] = rehearsal
         manifest["needs_a_board"] = m["needs_a_board"]
     else:

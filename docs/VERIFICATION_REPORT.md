@@ -453,3 +453,28 @@ cycle; the DUMP export; the speed against the generator. Then the full bench B0 
 stage of EXP-01 (two generator channels at a known ratio), the first physical protocol. The vehicle stages of
 EXP-01 to EXP-04 also need T-VEH-PWR, T-GNSS and T-CTRL-IF.
 
+## 13. v0.7: UM2861 Rev 10 and ES0499 Rev 12 read (2026-10-19)
+
+The team provided UM2861 Rev 10 (March 2025, SHA-256 `2ad8e323...`) and ES0499 Rev 12 (June 2026, SHA-256
+`52dac38c...`); they were read locally and are not committed. RM0456 and DS13737 were not provided. **Nothing was
+flashed or measured.** Record: [`../telematics/bench/DOCUMENT_CHECKS_RECORD.md`](../telematics/bench/DOCUMENT_CHECKS_RECORD.md).
+
+| Finding | Document | Change | Shown by |
+|---|---|---|---|
+| LSE drive never set; low and medium-low forbidden on revision X | ES0499 2.2.3, 2.2.16 (pp. 8, 13); UM2861 Table 21 (p. 42) | firmware: medium-high before LSEON, the LSE switched off first if left on lower or in bypass | `test_firmware_target.py::test_es0499_workarounds_in_the_source` (source order) |
+| missed backup domain reset (revision X, VBAT and VDD from one source) can leave LSCO driving PA2 | ES0499 2.2.9 (p. 9); UM2861 Table 9 (p. 24) | firmware: LSCOEN cleared; procedure: 10 s power-off in M3 | same test; `BENCH_MINIMAL.md` M3 |
+| a spurious I2C bus error aborted the transfer | ES0499 2.20.2 (p. 32) | firmware: flag cleared, transfer continues | same test |
+| the ST-LINK connector is USB Micro-B, not Type-C | UM2861 section 3.1 (p. 4), Table 6 (p. 14) | BOM `usb_cable` | `telematics_bom.py --check` |
+| SWD at 8 MHz recommended on every MB1549 revision | UM2861 Table 22 (p. 43) | flash and read commands `freq=8000` | `telematics_bench.py render --check` |
+| connector positions A0, A1, GND, PA0, PD0, PD1, D10 to D15 | UM2861 Tables 15, 17, 18 (pp. 34, 35) | connection table; "locate" removed | same |
+| PC13 transitions disturb the LSE (LQFP144) | ES0499 2.2.1 (p. 7) | procedure: do not press B1 | `BENCH_MINIMAL.md` M1 |
+| spurious MSI PLL unlock | ES0499 2.2.27 (p. 16) | none: the workaround needs the unlock interrupt, absent from the vendored header; RM0456 needed | open; M4's speed check detects a timebase error |
+
+Checked and unchanged: ES0499 2.2.25 (flash), 2.18.2 (IWDG), 2.20.1 (I2C timing), 2.21.x (USART), 2.23.1 and
+2.23.7 (SPI). Results on this machine before the commit: telematics and reference suites 240 passed, 1 skipped
+(`hardware_required`), no controller build directory created; every generated-file check current; 153 Markdown files,
+0 broken links. `tm_u575.elf` 20,496 B text and 84 B data. The new bench candidate, its CI artifact and its hashes are
+named in [`../telematics/bench/HANDOFF_MINIMAL.md`](../telematics/bench/HANDOFF_MINIMAL.md).
+
+**The minimal bench still cannot proceed under its own gate:** DC02 to DC09 need DS13737 or RM0456.
+

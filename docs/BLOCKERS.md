@@ -16,7 +16,7 @@ Battery: Team-reported: 48 V nominal, 10 Ah. Not datasheet-verified. The maximum
 | [B-DRIVETRAIN](#b-drivetrain) Drivetrain and vehicle mass | both | The four values, with a photo of the tyre sidewall or the wheel and of the sprockets or gearbox plate. | 6 |
 | [T-PARTS](#t-parts) Configuration A parts not chosen and quoted | telematics | Live distributor quotes; the team lead's decision on the alternatives. | 6 |
 | [T-VEH-PWR](#t-veh-pwr) Vehicle supply of the unit blocked | telematics | V_bat,max from the battery and BMS datasheets (B-BAT-V); then a TVS and an isolated DC-DC whose absolute-maximum input is above that TVS's clamp at the surge current. | 6 |
-| [T-U5-DOCS](#t-u5-docs) STM32U575 and W25Q128JV reference documents not read | telematics | The five PDFs named in telematics/firmware/BENCH_MINIMAL.md section 5.1 (RM0456, DS13737, ES0499, UM2861, W25Q128JV) committed to docs/reference/datasheets/ under the file names given there; www.st.com and www.winbond.com are refused by this environment's network policy. | 4 |
+| [T-U5-DOCS](#t-u5-docs) STM32U575 reference manual and data sheet, and the W25Q128JV data sheet, not read | telematics | RM0456 and DS13737 (before the minimal bench) and the W25Q128JV data sheet (before the NOR is fitted), committed to docs/reference/datasheets/ under the file names in telematics/firmware/BENCH_MINIMAL.md section 5.1; www.st.com and www.winbond.com are refused by this environment's network policy. | 4 |
 | [B-RULES](#b-rules) Event and rule edition | both | Event name and the official rule PDF of the applicable edition. | 3 |
 | [T-STORAGE](#t-storage) Vehicle log storage not decided | telematics | The attempt length (event rules), the controller's frame rate (T-CTRL-IF) and the team's choice: log fewer controller frames, a larger part (4-byte addressing to be written; the driver refuses parts above 16 MiB), or microSD (driver not written). | 3 |
 | [T-GNSS](#t-gnss) GNSS and PPS on the target | telematics | none (team work) once T-BENCH1 has run | 2 |
@@ -120,13 +120,13 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 ### T-U5-DOCS
 
-**STM32U575 and W25Q128JV reference documents not read** (track: telematics)
+**STM32U575 reference manual and data sheet, and the W25Q128JV data sheet, not read** (track: telematics)
 
-- **Missing:** RM0456 (reference manual), DS13737 (data sheet), ES0499 (errata) and UM2861 (Nucleo user manual): per-pin 5 V tolerance, LSE fitting, solder-bridge defaults, PLL limits per voltage range, flash timings, TIMINGR formula, the register behaviour the drivers rely on (docs/U575_REGISTER_CHECK.md lists each item); and the W25Q128JV data sheet (command set, pinout, erase and program times).
+- **Missing:** RM0456 (reference manual) and DS13737 (data sheet): per-pin input limits, alternate-function numbers, RCC reset values and MSI PLL mode, TIM2 capture behaviour, flash programming, ECC and option bytes, flash and LSI timings, PLL limits per voltage range, the TIMINGR formula (document checks DC02 to DC09, DC16, DC17); and the W25Q128JV data sheet (DC11 to DC15). UM2861 Rev 10 and ES0499 Rev 12 were read on 2026-10-19 (DC01 and DC10 complete, telematics/bench/DOCUMENT_CHECKS_RECORD.md).
 - **Affects:** the connection table's levels; the CAN image's PLL1 setting; the I2C timing; the flash write rate
 - **Why it matters:** The firmware follows ST's HAL and board files, which agree with each other, but these facts are only in the manuals.
-- **Done now:** Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md). Each open question is a document check (DC01 to DC17 in telematics/bench/bench.yaml) tied to the firmware line it affects and to the bench step it must precede: 10 before the minimal bench (telematics/firmware/BENCH_MINIMAL.md section 5), the W25Q128JV ones before the NOR is fitted.
-- **Input required:** The five PDFs named in telematics/firmware/BENCH_MINIMAL.md section 5.1 (RM0456, DS13737, ES0499, UM2861, W25Q128JV) committed to docs/reference/datasheets/ under the file names given there; www.st.com and www.winbond.com are refused by this environment's network policy.
+- **Done now:** Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md). Each question is a document check (DC01 to DC17 in telematics/bench/bench.yaml) tied to the firmware line it affects and to the bench step it must precede. UM2861 Rev 10 and ES0499 Rev 12 answered DC01 and DC10; reading them fixed the LSE drive and the I2C bus-error handling in the firmware and the USB cable, SWD speed and connector positions in the bench documents (docs/U575_REGISTER_CHECK.md section 5).
+- **Input required:** RM0456 and DS13737 (before the minimal bench) and the W25Q128JV data sheet (before the NOR is fitted), committed to docs/reference/datasheets/ under the file names in telematics/firmware/BENCH_MINIMAL.md section 5.1; www.st.com and www.winbond.com are refused by this environment's network policy.
 - **Closure criterion:** Each document check answered from its document with revision and page; BENCH.md and BENCH_MINIMAL.md updated where an answer differs.
 
 ### B-RULES

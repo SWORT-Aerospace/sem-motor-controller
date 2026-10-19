@@ -186,7 +186,10 @@ def test_minimal_page_names_the_chain_the_document_checks_and_what_needs_a_board
     text = B.DOC_MIN.read_text()
     d = B.load()
     for x in d["documents"]:
-        assert f"docs/reference/datasheets/{x['file']}" in text
+        if x.get("received"):
+            assert f"read: {x['received']}" in text                    # a revision and hash, not a request
+        else:
+            assert f"docs/reference/datasheets/{x['file']}" in text
     before = [c for c in d["document_checks"] if c["before"] in ("M0", "M1")]
     assert {c["doc"] for c in before} == {"UM2861", "DS13737", "RM0456", "ES0499"}       # the NOR comes later
     assert all(c["before"] in ("B0", "B7") for c in d["document_checks"] if c["doc"] == "W25Q128JV")
@@ -212,7 +215,7 @@ def test_minimal_package_has_one_image_its_rows_the_documents_and_a_simulated_re
     assert m["profile"] == "minimal" and [i["name"] for i in m["images"]] == ["tm_u575"]
     assert not list((out / "images").glob("tm_u575_can*"))
     assert (out / "BENCH_MINIMAL.md").read_text() == B.DOC_MIN.read_text() and not (out / "BENCH.md").exists()
-    assert "The PDFs to provide" in (out / "DOCUMENT_CHECKS.md").read_text()
+    assert "The documents" in (out / "DOCUMENT_CHECKS.md").read_text()
     assert m["verified_on_board"] == "nothing" and m["needs_a_board"] == d["minimal"]["needs_a_board"]
     assert m["build_commands"] == [d["commands"]["build_host"], d["commands"]["build_target"]]
     assert m["document_checks_before_flashing"] == [c["id"] for c in d["document_checks"] if c["before"] in ("M0", "M1")]

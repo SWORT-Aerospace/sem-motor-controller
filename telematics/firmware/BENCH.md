@@ -40,7 +40,7 @@ Exactly the `bench` lines of `hardware/telematics/bom.yaml` (docs/TELEMATICS_BOM
 | Line | Qty | Item | Part | Used for | Driver |
 |---|---|---|---|---|---|
 | `mcu` | 1 | Development board NUCLEO-U575ZI-Q (STM32U575, on-board ST-LINK) | NUCLEO-U575ZI-Q | the NUCLEO-U575ZI-Q itself | `telematics/firmware/platform/u575/main_u575.c` |
-| `usb_cable` | 1 | USB data cable from the PC to the board's ST-LINK USB port | USB-C to USB-A or USB-C, data capable | rows usb |  |
+| `usb_cable` | 1 | USB data cable from the PC to the board's ST-LINK USB port (CN1, USB Micro-B) | USB Type-A or USB Type-C to Micro-B, data capable | rows usb |  |
 | `nor_chip` | 1 | SPI NOR flash 128 Mbit, SOIC-8 (log storage) | Winbond W25Q128JVSIQ | rows nor_vcc, nor_gnd, nor_cs, nor_miso, nor_mosi, nor_sck, nor_wp_hold | `telematics/firmware/src/tm_w25q.c` |
 | `nor_adapter` | 1 | SOIC-8 to 0.1 in breakout PCB (6 pack) | Adafruit 1212 | the W25Q128JV soldered onto it (rows nor_*), on the breadboard |  |
 | `nor_passives` | 1 | 100 nF ceramic capacitor (NOR decoupling), 10 kOhm resistor (/CS pull-up), 120 Ohm resistor (bench CAN bus end) | any through-hole | 100 nF across NOR pins 8 and 4; 10 kOhm from /CS to 3V3; 120 Ohm at the adapter end of the B11 bench bus |  |
@@ -58,16 +58,16 @@ Equipment (not bought for the unit): 2 x USB-CAN adapter (bench: acknowledging n
 
 ## 4. Connections
 
-MCU pins: ST's open pin data and the firmware (each row names the line that sets the pin up). Arduino positions: Zephyr v4.4.2 boards/st/nucleo_u575zi_q/arduino_r3_connector.dtsi (A0 = PA3, A1 = PA2, D10 = PD14, D11 = PA7, D12 = PA6, D13 = PA5, D14 = PB9, D15 = PB8) and nucleo_u575zi_q.dts (console USART1 PA9/PA10, 115200 8N1; LD1 PC7, LD2 PB7; LSE fitted, MSI PLL mode). The user manual UM2861, which gives the morpho and Zio positions, and the data sheet DS13737 were not readable from this environment: positions marked "locate" are found on the board and written on the results form before wiring.
+MCU pins: ST's open pin data and the firmware (each row names the line that sets the pin up). Positions: UM2861 Rev 10 (March 2025), Tables 15, 17 and 18 (Zio CN7, CN9, CN10, printed pages 34 and 35): A0 = PA3 at CN9 pin 1, A1 = PA2 at CN9 pin 3, GND at CN9 pins 12 and 23, PD0 and PD1 at CN9 pins 25 and 27, PA0 at CN10 pin 29, D15 = PB8, D14 = PB9, D13 = PA5, D12 = PA6, D11 = PA7 and D10 = PD14 at CN7 pins 2, 4, 10, 12, 14 and 16; console USART1 PA9/PA10 to the ST-LINK virtual COM port by default (Table 10, page 29); LD1 PC7, LD2 PB7 (section 7.5); LSE crystal X2 fitted by default (section 7.7.1). These are documents: whether the board on the bench matches is checked on the results form. The data sheet DS13737 was not available.
 
 | Row | Signal | MCU pin | NUCLEO position | Connect to | Part | Firmware line | Notes |
 |---|---|---|---|---|---|---|---|
-| `usb` | Power, programming, console | - | ST-LINK USB port | PC | usb_cable | `uart_u575.c`: `board_gpio_af(GPIOA, 9u, 7u` | USART1 PA9/PA10 reaches the PC as the ST-LINK virtual COM port, 115200 8N1 |
+| `usb` | Power, programming, console | - | ST-LINK USB Micro-B port CN1 | PC | usb_cable | `uart_u575.c`: `board_gpio_af(GPIOA, 9u, 7u` | USART1 PA9/PA10 reaches the PC as the ST-LINK virtual COM port, 115200 8N1 |
 | `leds` | LD1 green, LD2 blue | PC7, PB7 | on board | - |  | `board_u575.c`: `GPIOC->BSRR = on ? (1uL << 7)` | LD1 toggles with each status line; LD2 is on while a block waits to be written or is being written |
-| `wheel_0` | wheel_0 (TIM2_CH4, AF1) | PA3 | Arduino A0 | generator output (0 to 3.3 V square) |  | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Internal pull-up on; falling edges counted. Never above 3.3 V: 5 V tolerance per pin is not in the sources read |
-| `wheel_1` | wheel_1 (TIM2_CH3, AF1) | PA2 | Arduino A1 | B6: the same generator output as wheel_0 |  | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Open (unconnected) in the other steps: it then reads as suspect inactive (I) while wheel_0 turns, which is right |
-| `wheel_2` | wheel_2 (TIM2_CH1, AF1) | PA0 | not needed (morpho or Zio) | nothing (open) |  | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Open in every step: its position is not needed |
-| `gen_gnd` | Generator ground | - | GND (any) | generator ground |  |  | One ground |
+| `wheel_0` | wheel_0 (TIM2_CH4, AF1) | PA3 | Arduino A0 (CN9 pin 1) | generator output (0 to 3.3 V square) |  | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Internal pull-up on; falling edges counted. Never above 3.3 V: 5 V tolerance per pin is not in the sources read |
+| `wheel_1` | wheel_1 (TIM2_CH3, AF1) | PA2 | Arduino A1 (CN9 pin 3; also on CN10 pin 13 by default, SB56) | B6: the same generator output as wheel_0 |  | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Open (unconnected) in the other steps: it then reads as suspect inactive (I) while wheel_0 turns, which is right |
+| `wheel_2` | wheel_2 (TIM2_CH1, AF1) | PA0 | CN10 pin 29 (D32); not needed | nothing (open) |  | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Open in every step: its position is not needed |
+| `gen_gnd` | Generator ground | - | GND (CN9 pin 12 or 23) | generator ground |  |  | One ground |
 | `nor_vcc` | NOR VCC (pin 8) | - | 3V3 | W25Q128JV pin 8, 100 nF to pin 4 | nor_chip |  | SOIC-8 pins as the standard SPI NOR pinout (W25Q128JV data sheet, not read here: check pin 1 before soldering) |
 | `nor_gnd` | NOR GND (pin 4) | - | GND | W25Q128JV pin 4 | nor_chip |  |  |
 | `nor_cs` | NOR /CS (pin 1) | PD14 | Arduino D10 | W25Q128JV pin 1, 10 kOhm to 3V3 | nor_chip | `spi_u575.c`: `(14u + 16u)` | The 10 kOhm keeps the NOR deselected while the MCU resets |
@@ -79,8 +79,8 @@ MCU pins: ST's open pin data and the firmware (each row names the line that sets
 | `i2c_sda` | I2C1 SDA | PB9 | Arduino D14 | Qwiic blue (SDA) | imu | `i2c_u575.c`: `board_gpio_af(GPIOB, 9u, 4u, false, true)` |  |
 | `i2c_power` | Qwiic 3.3 V and GND | - | 3V3, GND | Qwiic red (3.3 V), black (GND) | imu |  | 3.3 V only; the breakouts carry the I2C pull-ups |
 | `tmp117` | TMP117 on I2C1 | - | - | the IMU breakout's second Qwiic connector (qwiic_cable) | tmp117 | `main_u575.c`: `0x48u; a <= 0x4Bu` | Any address 0x48 to 0x4B is probed; the banner names the one found |
-| `can_rx` | CAN RX (FDCAN1_RX, AF9) | PD0 | locate (Zio, morpho or the CAN FD header; UM2861) | CAN Pal RX | can_xcvr | `can_u575.c`: `board_gpio_af(GPIOD, 0u, 9u` | B11 and E1 only (tm_u575_can) |
-| `can_tx` | CAN TX (FDCAN1_TX, AF9) | PD1 | locate (Zio, morpho or the CAN FD header; UM2861) | CAN Pal TX | can_xcvr | `can_u575.c`: `board_gpio_af(GPIOD, 1u, 9u` | Bus-monitoring mode keeps it recessive; the silent pin below disables the transmitter in hardware |
+| `can_rx` | CAN RX (FDCAN1_RX, AF9) | PD0 | CN9 pin 25 (D67, CAN_RX) | CAN Pal RX | can_xcvr | `can_u575.c`: `board_gpio_af(GPIOD, 0u, 9u` | B11 and E1 only (tm_u575_can) |
+| `can_tx` | CAN TX (FDCAN1_TX, AF9) | PD1 | CN9 pin 27 (D66, CAN_TX) | CAN Pal TX | can_xcvr | `can_u575.c`: `board_gpio_af(GPIOD, 1u, 9u` | Bus-monitoring mode keeps it recessive; the silent pin below disables the transmitter in hardware |
 | `can_slnt` | CAN Pal SLNT | - | 3V3 | CAN Pal SLNT | can_xcvr |  | High = TJA1051 silent mode: transmitter off whatever TX does (Adafruit CAN Pal pinout guide) |
 | `can_power` | CAN Pal supply and logic level | - | 3V3, GND | CAN Pal supply, VIO and GND pins | can_xcvr |  | 3.3 V only: the CAN Pal's charge pump makes the transceiver's 5 V, VIO at 3.3 V sets the logic level (Adafruit product page). No 5 V wire. Read the pin labels off the CAN Pal's silkscreen and write them on the form |
 
@@ -93,11 +93,11 @@ MCU pins: ST's open pin data and the firmware (each row names the line that sets
 | Use | Command |
 |---|---|
 | verify | `sha256sum tm_u575.bin tm_u575_can.bin     # must equal MANIFEST.json` |
-| flash cubeprogrammer | `STM32_Programmer_CLI -c port=SWD -w tm_u575.bin 0x08000000 -v -rst` |
+| flash cubeprogrammer | `STM32_Programmer_CLI -c port=SWD freq=8000 -w tm_u575.bin 0x08000000 -v -rst     # SWD at 8 MHz or less: UM2861 Table 22` |
 | flash openocd | `openocd -f interface/stlink.cfg -f target/stm32u5x.cfg -c "program tm_u575.elf verify reset exit"` |
 | console | `python3 tools/uart_capture.py /dev/ttyACM0 capture_B<n>.txt     # or: picocom -b 115200 --logfile capture_B<n>.txt /dev/ttyACM0` |
 | export uart | `in the terminal: DUMP (every used slot) or DUMP <first> <last> (those slots and their session header)` |
-| export programmer | `STM32_Programmer_CLI -c port=SWD -r 0x08100000 0x100000 dump.bin     # internal flash only (the NOR is not memory-mapped)` |
+| export programmer | `STM32_Programmer_CLI -c port=SWD freq=8000 -r 0x08100000 0x100000 dump.bin     # internal flash only (the NOR is not memory-mapped)` |
 | import | `python3 tools/telematics_import.py --uart-capture capture_B<n>.txt --db bench.sqlite --out bench/B<n> --wheel-circumference <m> --wheel-ppr 1 --source "bench B<n>: generator"` |
 | status | `python3 tools/telematics_import.py --status-capture capture_B<n>.txt --out bench/B<n>` |
 

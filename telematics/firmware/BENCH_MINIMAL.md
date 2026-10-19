@@ -50,7 +50,7 @@ Image: `tm_u575` (`tm_u575.elf`, `tm_u575.bin`, `tm_u575.hex`, `tm_u575.map`). I
 | Line | Qty | Item | Part |
 |---|---|---|---|
 | `mcu` | 1 | Development board NUCLEO-U575ZI-Q (STM32U575, on-board ST-LINK) | NUCLEO-U575ZI-Q |
-| `usb_cable` | 1 | USB data cable from the PC to the board's ST-LINK USB port | USB-C to USB-A or USB-C, data capable |
+| `usb_cable` | 1 | USB data cable from the PC to the board's ST-LINK USB port (CN1, USB Micro-B) | USB Type-A or USB Type-C to Micro-B, data capable |
 | `jumpers` | 1 | Male/male jumper wires, 40 x 150 mm | Adafruit 758 |
 
 | Equipment | Qty | Item | Used for here |
@@ -65,12 +65,12 @@ The generator's own output lead (BNC to clips or to a 0.1 in pin) connects it to
 
 | Row | Signal | MCU pin | NUCLEO position | Connect to | Firmware line | Notes |
 |---|---|---|---|---|---|---|
-| `usb` | Power, programming, console | - | ST-LINK USB port | PC | `uart_u575.c`: `board_gpio_af(GPIOA, 9u, 7u` | USART1 PA9/PA10 reaches the PC as the ST-LINK virtual COM port, 115200 8N1 |
+| `usb` | Power, programming, console | - | ST-LINK USB Micro-B port CN1 | PC | `uart_u575.c`: `board_gpio_af(GPIOA, 9u, 7u` | USART1 PA9/PA10 reaches the PC as the ST-LINK virtual COM port, 115200 8N1 |
 | `leds` | LD1 green, LD2 blue | PC7, PB7 | on board | - | `board_u575.c`: `GPIOC->BSRR = on ? (1uL << 7)` | LD1 toggles with each status line; LD2 is on while a block waits to be written or is being written |
-| `wheel_0` | wheel_0 (TIM2_CH4, AF1) | PA3 | Arduino A0 | generator output (0 to 3.3 V square) | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Internal pull-up on; falling edges counted. Never above 3.3 V: 5 V tolerance per pin is not in the sources read |
-| `wheel_1` | wheel_1 (TIM2_CH3, AF1) | PA2 | Arduino A1 | nothing (open) | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Unconnected on this bench: reads as suspect inactive (I) while wheel_0 turns, as a disconnected sensor must |
-| `wheel_2` | wheel_2 (TIM2_CH1, AF1) | PA0 | not needed (morpho or Zio) | nothing (open) | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Unconnected on this bench: reads as suspect inactive (I) while wheel_0 turns, as a disconnected sensor must |
-| `gen_gnd` | Generator ground | - | GND (any) | generator ground |  | One ground |
+| `wheel_0` | wheel_0 (TIM2_CH4, AF1) | PA3 | Arduino A0 (CN9 pin 1) | generator output (0 to 3.3 V square) | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Internal pull-up on; falling edges counted. Never above 3.3 V: 5 V tolerance per pin is not in the sources read |
+| `wheel_1` | wheel_1 (TIM2_CH3, AF1) | PA2 | Arduino A1 (CN9 pin 3; also on CN10 pin 13 by default, SB56) | nothing (open) | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Unconnected on this bench: reads as suspect inactive (I) while wheel_0 turns, as a disconnected sensor must |
+| `wheel_2` | wheel_2 (TIM2_CH1, AF1) | PA0 | CN10 pin 29 (D32); not needed | nothing (open) | `board_u575.c`: `WHEEL_PIN[3] = {3u, 2u, 0u}` | Unconnected on this bench: reads as suspect inactive (I) while wheel_0 turns, as a disconnected sensor must |
+| `gen_gnd` | Generator ground | - | GND (CN9 pin 12 or 23) | generator ground |  | One ground |
 
 Every row is unverified: positions come from ST's board files (Zephyr's NUCLEO-U575ZI-Q description), not from UM2861, which could not be read here (DC01).
 
@@ -100,23 +100,23 @@ Each question is about the silicon or the board and is answered only by the docu
 
 10 checks come before the minimal bench (M0, M1); the other 7 only before the full bench steps named (the NOR in B0 and B7, CAN in B11, I2C in B12).
 
-### 5.1 The PDFs to provide
+### 5.1 The documents
 
-None of these documents is in the repository, and this environment cannot fetch them: www.st.com and www.winbond.com are refused by its network policy (the proxy answers 403 to the connection). Please download each from the manufacturer and commit it under the exact file name to `docs/reference/datasheets/`; the checks above are then answered from them with page references.
+Read so far, from copies the team provided (not committed to the repository): ES0499 Rev 12, June 2026, SHA-256 52dac38c801ae72c42ebffd39296ddf7c80ae378cd555f1a1d1baf49daf86a56 (read 2026-10-19); UM2861 Rev 10, March 2025 (ST file DM00789949), SHA-256 2ad8e32398e92f2a2d803c7c436bbe85bd15d4c187df5d3fc57840159da977e2 (read 2026-10-19). The others are not in the repository, and this environment cannot fetch them: www.st.com and www.winbond.com are refused by its network policy (the proxy answers 403 to the connection). Please download each from the manufacturer and commit it under the exact file name to `docs/reference/datasheets/`; the checks are then answered from them with page references.
 
-| # | Document | Part (exact) | Manufacturer | Commit as | Official page | Needed by |
+| # | Document | Part (exact) | Manufacturer | Status | Official page | Needed by |
 |---|---|---|---|---|---|---|
-| 1 | RM0456, STM32U5 series reference manual (latest revision) | STM32U575ZIT6Q (on the NUCLEO-U575ZI-Q) | STMicroelectronics | `docs/reference/datasheets/st-rm0456-stm32u5.pdf` | https://www.st.com/en/microcontrollers-microprocessors/stm32u575zi.html (documentation tab; unverified) | DC04, DC05, DC06, DC07, DC08, DC16, DC17 |
-| 2 | DS13737, STM32U575xx data sheet (latest revision) | STM32U575ZIT6Q | STMicroelectronics | `docs/reference/datasheets/st-ds13737-stm32u575.pdf` | https://www.st.com/en/microcontrollers-microprocessors/stm32u575zi.html (unverified) | DC02, DC03, DC09 |
-| 3 | ES0499, STM32U575xx and STM32U585xx device errata (latest revision) | STM32U575xx and STM32U585xx, every silicon revision | STMicroelectronics | `docs/reference/datasheets/st-es0499-stm32u575-errata.pdf` | https://www.st.com/en/microcontrollers-microprocessors/stm32u575zi.html (unverified) | DC10 |
-| 4 | UM2861, STM32U5 Nucleo-144 board (MB1549) user manual (latest revision) | NUCLEO-U575ZI-Q (MB1549) | STMicroelectronics | `docs/reference/datasheets/st-um2861-nucleo-u575zi-q.pdf` | https://www.st.com/en/evaluation-tools/nucleo-u575zi-q.html (unverified) | DC01 |
-| 5 | W25Q128JV 3V 128M-bit serial flash memory data sheet (latest revision) | W25Q128JVSIQ (SOIC-8 208 mil) | Winbond | `docs/reference/datasheets/winbond-w25q128jv.pdf` | https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/ (unverified) | DC11, DC12, DC13, DC14, DC15 |
+| 1 | RM0456, STM32U5 series reference manual (latest revision) | STM32U575ZIT6Q (on the NUCLEO-U575ZI-Q) | STMicroelectronics | needed: commit as `docs/reference/datasheets/st-rm0456-stm32u5.pdf` | https://www.st.com/en/microcontrollers-microprocessors/stm32u575zi.html (documentation tab; unverified) | DC04, DC05, DC06, DC07, DC08, DC16, DC17 |
+| 2 | DS13737, STM32U575xx data sheet (latest revision) | STM32U575ZIT6Q | STMicroelectronics | needed: commit as `docs/reference/datasheets/st-ds13737-stm32u575.pdf` | https://www.st.com/en/microcontrollers-microprocessors/stm32u575zi.html (unverified) | DC02, DC03, DC09 |
+| 3 | ES0499, STM32U575xx and STM32U585xx device errata (latest revision) | STM32U575xx and STM32U585xx, every silicon revision | STMicroelectronics | read: Rev 12, June 2026, SHA-256 52dac38c801ae72c42ebffd39296ddf7c80ae378cd555f1a1d1baf49daf86a56 (read 2026-10-19) | https://www.st.com/en/microcontrollers-microprocessors/stm32u575zi.html (unverified) | DC10 |
+| 4 | UM2861, STM32U5 Nucleo-144 board (MB1549) user manual (latest revision) | NUCLEO-U575ZI-Q (MB1549) | STMicroelectronics | read: Rev 10, March 2025 (ST file DM00789949), SHA-256 2ad8e32398e92f2a2d803c7c436bbe85bd15d4c187df5d3fc57840159da977e2 (read 2026-10-19) | https://www.st.com/en/evaluation-tools/nucleo-u575zi-q.html (unverified) | DC01 |
+| 5 | W25Q128JV 3V 128M-bit serial flash memory data sheet (latest revision) | W25Q128JVSIQ (SOIC-8 208 mil) | Winbond | needed: commit as `docs/reference/datasheets/winbond-w25q128jv.pdf` | https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/ (unverified) | DC11, DC12, DC13, DC14, DC15 |
 
 ## 6. Commands
 
 | Use | Command |
 |---|---|
-| flash cubeprogrammer | `STM32_Programmer_CLI -c port=SWD -w tm_u575.bin 0x08000000 -v -rst` |
+| flash cubeprogrammer | `STM32_Programmer_CLI -c port=SWD freq=8000 -w tm_u575.bin 0x08000000 -v -rst     # SWD at 8 MHz or less: UM2861 Table 22` |
 | flash openocd | `openocd -f interface/stlink.cfg -f target/stm32u5x.cfg -c "program tm_u575.elf verify reset exit"` |
 | verify | `sha256sum tm_u575.bin     # must equal MANIFEST.json` |
 | console first | `python3 tools/uart_capture.py /dev/ttyACM0 capture_M1.txt` |
@@ -134,15 +134,15 @@ Steps in order. Write every value on the results form, including the ones that p
 
 ### M0. Document checks and preflight, unpowered
 
-- **Do.** Answer every document check due before M0 or M1 (DOCUMENT_CHECKS.md, last column), each with the document's revision and page; if an answer contradicts the firmware line the check names, stop and do not flash. Check the image hash (minimal.verify). Board unplugged. Generator output off; set a 100.000 Hz square wave, low level 0 V, high level 3.3 V (high-impedance load setting; many generators start at a symmetric amplitude around 0 V, which would drive the pin below ground); enable the output into nothing, check low, high and frequency on the scope, then turn the output off again. Wire the generator's signal to Arduino A0 (PA3) and its ground to a NUCLEO GND pin; nothing on A1 or PA0. Check both wires for continuity.
-- **Expect.** every check before M0 and M1 answered, none contradicting the firmware; hash equal; low between -0.1 and 0.1 V, high between 3.0 and 3.3 V, 100.0 Hz; continuity on both wires
-- **Record.** document revision and page per check; SHA-256 of tm_u575.bin; generator model and frequency accuracy; scope low and high levels and frequency; continuity of A0 and GND wires.
+- **Do.** Answer every document check due before M0 or M1 (DOCUMENT_CHECKS.md, last column), each with the document's revision and page; if an answer contradicts the firmware line the check names, stop and do not flash. Check the image hash (minimal.verify). Board unplugged. Read the board sticker: the product identification (NUU575ZIQ$AT1 to $AT4) and the main board revision (MB1549-U575ZIQ-C0x) name the silicon revision (X, W or U; UM2861 Table 21). Check the default jumpers: JP1 OFF, JP2 ON, JP4 [1-2] (VDD 3.3 V), JP5 ON, JP6 [1-2] (5 V from the ST-LINK) (UM2861 Table 4). Generator output off; set a 100.000 Hz square wave, low level 0 V, high level 3.3 V (high-impedance load setting; many generators start at a symmetric amplitude around 0 V, which would drive the pin below ground); enable the output into nothing, check low, high and frequency on the scope, then turn the output off again. Wire the generator's signal to Arduino A0 (PA3) and its ground to a NUCLEO GND pin; nothing on A1 or PA0. Check both wires for continuity.
+- **Expect.** every check before M0 and M1 answered, none contradicting the firmware; hash equal; jumpers as listed; low between -0.1 and 0.1 V, high between 3.0 and 3.3 V, 100.0 Hz; continuity on both wires
+- **Record.** document revision and page per check; SHA-256 of tm_u575.bin; product identification and main board revision from the sticker; jumper positions; generator model and frequency accuracy; scope low and high levels and frequency; continuity of A0 and GND wires.
 
 ### M1. Flash and start without input
 
-- **Do.** Generator output still off. USB cable from the PC to the ST-LINK port. Flash tm_u575.bin (commands.flash_cubeprogrammer or commands.flash_openocd), then open the console with capture (minimal.console_first). Do not halt the core with a debugger: the watchdog resets the board after about 2 s. If the log line does not say slot 0 on this first start (bank 2 held something else) or says PAUSED, type ERASE YES, let it restart, and record that.
-- **Expect.** Banner: "telematics tm_u575 <revision>" with the MANIFEST revision (not ending in -dirty), "boot=1", a clock line ("PLL mode on the LSE (LSE accuracy)" if the LSE starts), "log: internal flash bank 2 (0x08100000, 1 MiB, 256 slots): no W25Q NOR of 1 to 16 MiB answered, slot 0 of 256", "CAN: off (not in this image)", "IMU: none, TMP117: none", "chip: rev 0x...., fault record ..."; then one status line per second with "wheel=NNN" and "edges=0/0/0"; LD1 toggling.
-- **Record.** banner text; LSE started yes or no; the reset cause; silicon revision and fault-record line; ERASE YES needed yes or no.
+- **Do.** Generator output still off. USB cable from the PC to the ST-LINK port. Flash tm_u575.bin (commands.flash_cubeprogrammer or commands.flash_openocd), then open the console with capture (minimal.console_first). Do not halt the core with a debugger: the watchdog resets the board after about 2 s. Do not press the blue user button B1 at any point: it toggles PC13, which disturbs the LSE on this package (ES0499 2.2.1). If the log line does not say slot 0 on this first start (bank 2 held something else) or says PAUSED, type ERASE YES, let it restart, and record that.
+- **Expect.** Banner: "telematics tm_u575 <revision>" with the MANIFEST revision (not ending in -dirty), "boot=1", a clock line ("PLL mode on the LSE (LSE accuracy)" if the LSE starts), "log: internal flash bank 2 (0x08100000, 1 MiB, 256 slots): no W25Q NOR of 1 to 16 MiB answered, slot 0 of 256", "CAN: off (not in this image)", "IMU: none, TMP117: none", "chip: rev 0x2001" (X), "0x3001" (W) or "0x3007" (U) matching the sticker (ES0499 Table 2); then one status line per second with "wheel=NNN" and "edges=0/0/0"; LD5 (5V_PWR) on, LD1 toggling.
+- **Record.** banner text; LSE started yes or no; the reset cause; silicon revision and fault-record line; revision agrees with the sticker yes or no; ERASE YES needed yes or no.
 - **Text checked against the code.** `main_u575.c`: "internal flash bank 2 (0x08100000, 1 MiB, 256 slots): no W25Q NOR of 1 to 16 MiB answered"; `main_u575.c`: "IMU: %s, TMP117: %s"; `main_u575.c`: "chip: rev 0x%04x, fault record %s"; `main_u575.c`: "off (not in this image)"; `tm_app.c`: "edges=%lu/%lu/%lu wheel=%c%c%c"
 
 ### M2. Pulses into the log
@@ -154,7 +154,7 @@ Steps in order. Write every value on the results form, including the ones that p
 
 ### M3. Power cycle, then export
 
-- **Do.** Generator output stays off. Unplug the USB cable for 10 s and plug it back in: the board restarts on USB power. Open the console again with capture (minimal.console_after_cycle) and type DUMP; wait for "DUMP END". Keep capture_M1.txt and capture_M3.txt unchanged.
+- **Do.** Generator output stays off. Unplug the USB cable for at least 10 s and plug it back in: the board restarts on USB power. (On revision X a shorter power-off can leave the backup domain without its reset, ES0499 2.2.9; ST's workaround is below 100 mV for more than 200 ms.) Open the console again with capture (minimal.console_after_cycle) and type DUMP; wait for "DUMP END". Keep capture_M1.txt and capture_M3.txt unchanged.
 - **Expect.** Banner "boot=2" with a power-on or brown-out reset cause and "slot n of 256" with n above 0: the M2 session survived the power cycle in internal flash. "DUMP BEGIN 256", one "S <slot> <hex>" line per used slot, "DUMP END".
 - **Record.** the reset cause after the power cycle; slot n in the banner; number of S lines; time the DUMP took.
 - **Text checked against the code.** `main_u575.c`: "DUMP BEGIN %lu"; `main_u575.c`: "DUMP END"
