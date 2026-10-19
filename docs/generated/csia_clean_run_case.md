@@ -44,7 +44,7 @@ The torque constants that balance the two points exactly differ (0.173 and 0.260
 * **Timing:** not the cause: the minimal case uses constant, simultaneous inputs and fails the same way.
 * **Operating context:** the failures are at the higher steady speed and in transients with power; at 4.0 m/s steady the residual stays under the threshold.
 * **Model assumptions:** E6 expects p_dc = (1 + 0.08) x kt x iq x rotor + 3 W, with iq the motor's q-axis current and kt the motor's torque constant. The boundary gave no kt (the motor data are open, B-MOTOR), so the adapter used its default 0.06 N m/A; and the simulation fixture's `ctrl_motion.iq_A` is 0.9 x the DC current, an illustrative field, not a current consistent with any torque.
-* **Classification:** an adapter input mismatch in an unsupported configuration: a required parameter defaulted and an input whose meaning differs from the relationship's model. Not a timing defect. Not shown to be a limitation of the CSIA algorithm: the case says nothing about E6 with a real motor's kt and a real q-axis current.
+* **Classification:** an unsupported adapter-input configuration: a required parameter defaulted and an input whose meaning differs from the relationship's model. Not a timing defect, and not evidence that the CSIA algorithm is inferior: the case says nothing about E6 with a real motor's kt and a real q-axis current.
 
 ## D. The boundary now
 

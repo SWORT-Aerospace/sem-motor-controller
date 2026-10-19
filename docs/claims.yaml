@@ -192,7 +192,7 @@ claims:
               tests/telematics/test_pit_queries_advisory.py::test_csia_boundary_withholds_power_inputs_without_a_torque_constant]
     not_shown: "that the frozen CSIA adapter is accurate (the documented evaluation favours R3v)"
   - id: C-CSIA-CLEAN-RUN
-    statement: "The frozen CSIA adapter's disagreement on a clean simulated run (328 of 550 ticks) is its E6 power balance alone and reproduces with constant, simultaneous inputs: an input mismatch in an unsupported configuration (torque constant defaulted, the fixture's iq not a torque current), not a timing defect; the boundary now withholds the power inputs unless a torque constant is stated"
+    statement: "The frozen CSIA adapter's disagreement on a clean simulated run (328 of 550 ticks) is its E6 power balance alone and reproduces with constant, simultaneous inputs: an unsupported adapter-input configuration (torque constant defaulted, the fixture's iq not a torque current), not a timing defect and not evidence that the algorithm is inferior; the boundary now withholds the power inputs unless a torque constant is stated"
     label: SIMULATED
     evidence:
       tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_clean_run_case_reproduces_and_isolates_the_power_balance]

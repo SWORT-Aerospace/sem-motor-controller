@@ -170,10 +170,10 @@ def render(a: dict, pts: dict, mins: dict, kts: dict, cross: dict, now: dict) ->
           "current and kt the motor's torque constant. The boundary gave no kt (the motor data are open, B-MOTOR), so "
           "the adapter used its default 0.06 N m/A; and the simulation fixture's `ctrl_motion.iq_A` is 0.9 x the DC "
           "current, an illustrative field, not a current consistent with any torque.",
-          "* **Classification:** an adapter input mismatch in an unsupported configuration: a required parameter "
-          "defaulted and an input whose meaning differs from the relationship's model. Not a timing defect. Not shown "
-          "to be a limitation of the CSIA algorithm: the case says nothing about E6 with a real motor's kt and a real "
-          "q-axis current.", "",
+          "* **Classification:** an unsupported adapter-input configuration: a required parameter defaulted and an "
+          "input whose meaning differs from the relationship's model. Not a timing defect, and not evidence that the "
+          "CSIA algorithm is inferior: the case says nothing about E6 with a real motor's kt and a real q-axis "
+          "current.", "",
           "## D. The boundary now", "",
           "The shadow boundary now withholds iq and p_dc unless the caller states the motor's torque constant, so E6 "
           "is gated instead of evaluated with a default, and it lists the adapter parameters left at their frozen "

@@ -378,7 +378,7 @@ whose cause is now found (12.3).
 
 * **A constant CAN latency is not observable from the receive side** (EXP-04): with values 0.3 s old and regular arrivals, B2 is evaluated as CONSISTENT. A producer timestamp from the controller would not bound it by itself: it also needs a stated relation between the controller's clock and the unit's (offset and drift) with an uncertainty bound, or the controller team's documented bound on the delay. Without that the sample age is unknown, and section 12 shows the pit reporting it so. It is a request to the controller team, not something this unit can add by transmitting.
 * **A1 is blind below its 50 W effort floor** (EXP-02): the simulated cruise needs about 33 W, so an IMU offset at cruise is seen by B4 only.
-* **The frozen CSIA adapter reports a disagreement on nominal data**: on the simulated slowdown run (all sensors correct) an unattributed disagreement in 328 of 550 ticks, while the witness relations report none; on the corrupted-wheel run it attributes the disagreement to the wheel_l path. Section 12.3 traces the 328 ticks to its E6 power balance fed a defaulted torque constant and the fixture's iq. Its output stays research-only, consistent with the documented evaluation that favours R3v; the frozen files are unchanged.
+* **The frozen CSIA adapter reports a disagreement on nominal data**: on the simulated slowdown run (all sensors correct) an unattributed disagreement in 328 of 550 ticks; on the corrupted-wheel run it attributes the disagreement to the wheel_l path. Section 12.3 traces the 328 ticks to an unsupported adapter-input configuration (its E6 power balance fed a defaulted torque constant and the fixture's iq). The witness relations have no power-balance relation on these inputs, so their silence on the same run is not a comparison and not evidence that the algorithm is inferior. Its output stays research-only, consistent with the documented evaluation that favours R3v; the frozen files are unchanged.
 * Corrected before the record: the pre-check first compared its windows in simulation time against results in the unit's clock (offset 1.732 s); its first A1 expectation for the IMU offset ignored the effort floor (now recorded as the limitation above); its first slowdown only coasted from 6.5 to 5.8 m/s (now a braking slowdown to about 4 m/s); B4 first compared an instantaneous IMU value with a 1 s wheel derivative and was always timing-uncertain (now both over the same window); the context first took acceleration from the IMU, so an IMU offset switched off every CRUISE relation (now the speed derivative first); the host model's reserve could exceed a small queue (now at most 1/8, as in the firmware).
 
 ### 11.4 Still depending on the physical world
@@ -432,8 +432,8 @@ two steady points: E6 lambda 15.98 at 6.5 m/s (DISAGREE_AMBIGUOUS) and 7.93 at 4
 cause. The relationship expects p_dc = (1 + 0.08) x kt x iq x rotor + 3 W with iq a q-axis current and kt the motor's
 torque constant; the boundary gave no kt (the motor data are open, B-MOTOR), so the adapter used its default 0.06
 N m/A, and the fixture's `iq_A` is 0.9 x the DC current, which is not a current consistent with any torque.
-Classification: **an adapter input mismatch in an unsupported configuration**, not a timing defect, and not shown to
-be a limitation of the algorithm. No kt was fitted (fitting would hide the mismatch and would be tuning); the frozen
+Classification: **an unsupported adapter-input configuration**, not a timing defect, and not evidence that the
+algorithm is inferior. No kt was fitted (fitting would hide the mismatch and would be tuning); the frozen
 evaluation files are unchanged, and nothing here is offered as evidence that the witness relations are better than
 CSIA. Full case: [`generated/csia_clean_run_case.md`](generated/csia_clean_run_case.md).
 
