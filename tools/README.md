@@ -178,7 +178,7 @@ The `CHECKS` list in `verify_all.py`, in order. Commands run from the repository
 | `contract_report` | host simulation | `python3 tools/control_contract_report.py --build build` | both |
 | `telematics_scope`, `telematics_bom`, `telematics_bench_doc` | generation | `python3 tools/scope.py --check`, `python3 tools/telematics_bom.py --check`, `python3 tools/telematics_bench.py render --check` | both |
 | `tm_configure`, `tm_build`, `tm_ctest` | telematics firmware | `cmake -S telematics/firmware -B build-telematics -G Ninja`, `cmake --build build-telematics`, `ctest --test-dir build-telematics --output-on-failure -V` | both |
-| `tm_u575_configure`, `tm_u575_build` | telematics firmware | configure and build the NUCLEO-U575ZI-Q images into `build-u575` (README section 3) | both |
+| `tm_u575_configure`, `tm_u575_build` | telematics firmware | configure and build the NUCLEO-U575ZI-Q images into `build-u575` (README section 2) | both |
 | `tm_storage` | telematics firmware | `python3 tools/telematics_storage.py --check --build build-telematics` | both |
 | `tm_bench_package` | telematics firmware | `python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild --allow-dirty` (a working tree with changes is marked not valid for a recorded run) | both |
 | `telematics_demo` | telematics | `python3 tools/run_telematics_demo.py --out build/telematics_demo` | both |
