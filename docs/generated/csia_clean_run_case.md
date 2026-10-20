@@ -58,3 +58,40 @@ The shadow boundary now withholds iq and p_dc unless the caller states the motor
 Withheld for want of a torque constant: `ctrl.dc_current` 5498, `ctrl.phase_current_q` 5501.
 
 Adapter parameters left at the frozen defaults: `accel_window_s` = 1.0, `corroboration_s` = 3.0, `engage_settle_s` = 0.5, `gnss_min_sv` = 6, `gnss_sacc_max` = 0.5, `gz_max` = 0.8, `gz_phys_max` = 1.0, `i_engaged_A` = 1.0, `i_slip_A` = 12.0, `kt_Nm_per_A` = 0.06, `lam_fail` = 9.0, `lam_ok` = 4.0, `loss_abs_W` = 4.0, `loss_rel` = 0.08, `p_aux_W` = 3.0, `rotor_phys_max` = 600.0, `tick_s` = 0.1, `track_width_m` = 0.5, `trust_hold_s` = 2.0, `v_min_gnss` = 1.5, `v_min_wheels` = 0.8.
+
+## E. Supported configuration
+
+The same run with both causes of section C removed: the torque constant stated (0.06 N m/A for the simulated motor) and iq the q-axis current that produces the simulated motor torque (torque / kt), in place of the fixture's illustrative field. The frozen adapter and its parameters are unchanged and nothing is fitted. E6 uses kt x iq only, so the result does not depend on the value stated as long as iq is derived with the same one.
+
+Clean run, 550 ticks (section A: 328 DISAGREE_AMBIGUOUS with the unsupported configuration):
+
+| Explanation | Ticks |
+|---|---|
+| DISAGREE_AMBIGUOUS | 2 |
+| OK_CONSISTENT | 514 |
+| REGIME_GATED | 34 |
+
+E6 is evaluated on 550 ticks: median lambda 0.53, 99th percentile 2.39 (failure threshold 9). Attributions on the clean run: none.
+
+Ticks with E6 above its threshold, with the simulated motor torque 0.1 s before and at the tick:
+
+| Tick [s] | E6 lambda | Torque before [N m] | Torque at the tick [N m] |
+|---|---|---|---|
+| 26.7 | 16.8 | 0.087 | 0.000 |
+| 46.7 | 3483.0 | 0.074 | 1.506 |
+
+Each is an instantaneous torque step of the simulated driver model. iq and the DC current come in different frames a few milliseconds apart, so at a step one tick holds the old iq with the new DC power; a real current loop does not step in zero time.
+
+The same inputs with the DC power reading 1.4 x high from 10 s to 22 s (the gain of the CSIA study's `dc_gain` fault):
+
+| Measure | Value |
+|---|---|
+| First attribution to `dc_meter` | not attributed |
+| Ticks attributing `dc_meter` in the window | 0 of 120 |
+| Explanations in the window | DISAGREE_AMBIGUOUS 105, OK_CONSISTENT 15 |
+| Attributions to any other path, whole run | none |
+| Explanations from 5 s after the window | DISAGREE_AMBIGUOUS 1, OK_CONSISTENT 297 |
+
+The gain error is seen as a disagreement but not attributed. E6 is the only relationship that uses both p_dc and iq, and the phase-current cross-check (P_phase_current) is disabled because the boundary passes no torque reference, so the DC meter and the phase-current measurement cannot be told apart. In the CSIA study's development set, where that cross-check is available, the same fault is attributed to the DC meter. A second, independent DC power measurement (the battery-side monitor of the energy accounting) would add the missing path; it is not an input of the frozen adapter and is not simulated here.
+
+**What this shows:** on simulated data, the clean-run disagreement of section A comes from the unsupported configuration. **What it does not show:** anything about the real motor's torque constant, the real controller's q-axis current or the real drive losses (the simulated drive efficiency 0.82 against E6's 8 % loss model); those need the controller interface (T-CTRL-IF) and the motor data (B-MOTOR).

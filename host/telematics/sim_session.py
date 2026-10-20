@@ -39,8 +39,8 @@ def simulate(out: pathlib.Path, faults: Faults = Faults(), duration: float = 60.
              power_cuts: tuple = (), can_delay: tuple = (), can_stall: tuple = (), storage_stalls: tuple = (), link_outages: tuple = (),
              vcfg: Optional[VehicleSimConfig] = None, ncfg: Optional[NodeConfig] = None, dt: float = 0.01,
              note: str = "") -> dict:
-    """Run one simulated drive; returns {"runs": [(run_id, log path)], "truth": [(t, v, distance)], "sim",
-    "links", "clock"}; times in `truth` and in the arguments are simulation (controller) time, times in the logs are the
+    """Run one simulated drive; returns {"runs": [(run_id, log path)], "truth": [(t, v, distance)], "torque": [(t, motor
+    shaft torque N m)], "sim", "links", "clock"}; times in `truth` and in the arguments are simulation (controller) time, times in the logs are the
     unit's clock (`clock.local`). Every log's metadata says it is a host simulation."""
     out.mkdir(parents=True, exist_ok=True)
     vcfg = vcfg or VehicleSimConfig()
@@ -50,7 +50,7 @@ def simulate(out: pathlib.Path, faults: Faults = Faults(), duration: float = 60.
     pps_rng = np.random.default_rng(5)
     ncfg = ncfg or NodeConfig(wheel=WheelConfig(vcfg.wheel_circumference_m, vcfg.wheel_ppr), wheel_channels=CHANNELS,
                               battery_monitor=True)
-    runs, links, truth = [], {}, []
+    runs, links, truth, torque = [], {}, [], []
     state = {"boot": 0, "node": None}
 
     def start(t: float, cause: str) -> TelematicsNode:
@@ -81,6 +81,7 @@ def simulate(out: pathlib.Path, faults: Faults = Faults(), duration: float = 60.
         res = sim.step(t, dt)
         frames = sim.frames(t)
         truth.append((t, sim.v, sim.dist))
+        torque.append((t, sim.torque_Nm))
         cut = next(((a, b) for a, b in power_cuts if a <= t < b), None)
         if cut and node is not None:
             node.crash()
@@ -110,4 +111,4 @@ def simulate(out: pathlib.Path, faults: Faults = Faults(), duration: float = 60.
         t_prev = t
     if node is not None:
         node.close(duration)
-    return {"runs": runs, "truth": truth, "sim": sim, "links": links, "clock": clock}
+    return {"runs": runs, "truth": truth, "torque": torque, "sim": sim, "links": links, "clock": clock}

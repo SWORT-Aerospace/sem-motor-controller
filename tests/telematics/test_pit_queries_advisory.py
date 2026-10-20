@@ -201,3 +201,21 @@ def test_csia_clean_run_case_reproduces_and_isolates_the_power_balance(tmp_path)
     assert e == "DISAGREE_AMBIGUOUS" and lam > 9.0
     now = K.boundary_now(tmp_path / "case")
     assert "AMBIGUOUS" not in now["verdicts"]
+
+
+def test_csia_clean_run_with_a_supported_configuration(tmp_path):
+    """Section E: torque constant stated and a torque-consistent iq; then a 1.4 x DC power gain error (SIMULATED)."""
+    pytest.importorskip("numpy")
+    from tools import csia_disagreement_case as K
+    try:
+        s = K.supported_run(tmp_path / "supported")
+    except ImportError as e:
+        pytest.skip(str(e))
+    assert s["ticks"] == 550 and s["explanations"].get("DISAGREE_AMBIGUOUS", 0) <= 2      # 328 when unsupported
+    assert s["suspects_clean"] == {} and s["e6_p99"] < 9.0
+    for _t, _lam, before, after in s["e6_above"]:                    # only at an instantaneous torque step
+        assert abs(after - before) > 0.5 * max(abs(after), abs(before))
+    f = s["fault"]
+    assert f["explanations"].get("DISAGREE_AMBIGUOUS", 0) > 0.8 * f["ticks"]                # the gain error is seen
+    assert f["other_suspects"] == {}                                   # and never attributed to the wrong path
+    assert f["first_dc_meter_s"] is None                               # no phase-current cross-check without iq_ref

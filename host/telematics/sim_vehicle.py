@@ -106,6 +106,7 @@ class VehicleSim:
         self.t_fet = 25.0
         self.t_motor = 25.0
         self.ax = 0.0
+        self.torque_Nm = 0.0           # motor shaft torque (drivetrain losses are lumped into drive_efficiency)
         self.next_gnss, self.next_imu, self.next_temp, self.next_batt = 0.05, 0.0, 1.0, 0.0
 
     # ---- plant --------------------------------------------------------------------------
@@ -116,6 +117,7 @@ class VehicleSim:
         f_res = resistive_force(self.p, self.v) if self.v > 0 else 0.0
         a_cmd = max(-0.4, min(0.6, 0.8 * (target - self.v)))
         f_trac = max(0.0, self.p.mass_kg * a_cmd + f_res) if target > 0 else 0.0   # no regeneration
+        self.torque_Nm = f_trac * self.p.wheel_radius_m / self.p.gear_ratio
         f_extra = sum(w[2] for w in self.f.extra_drag if w[0] <= t < w[1]) if self.v > 0 else 0.0
         a = (f_trac - f_res - f_extra) / self.p.mass_kg if self.v > 0 or f_trac > f_res + f_extra else 0.0
         if target == 0.0 and self.v > 0:
