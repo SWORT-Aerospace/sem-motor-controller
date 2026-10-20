@@ -99,7 +99,7 @@ Flashing and reading the log back: [`telematics/firmware/BENCH.md`](telematics/f
 
 ## 4. Bill of materials
 
-Telematics only, summed from its own lines, every price a dated search snapshot or a stated allowance; nothing ordered ([`docs/TELEMATICS_BOM.md`](docs/TELEMATICS_BOM.md)):
+Telematics only, summed from its own lines, every price a dated search snapshot or a stated allowance; nothing ordered ([`docs/TELEMATICS_BOM.md`](docs/TELEMATICS_BOM.md); the BOM by stage with the build plan: [`docs/TELEMETRY_BOM_PLAN.md`](docs/TELEMETRY_BOM_PLAN.md)):
 
 | Configuration | Contents | Range |
 |---|---|---|
@@ -114,13 +114,13 @@ Battery: 48 V nominal, 10 Ah, as the vehicle team reports it. Its maximum voltag
 
 | Signal | Pin | Nucleo position |
 |---|---|---|
-| wheel 0 / 1 / 2 (Hall switch outputs, 3.3 V) | PA3 / PA2 / PA0 (TIM2) | Arduino A0 / A1 / not needed on the bench |
-| CAN RX / TX to the CAN Pal, its silent pin at 3.3 V | PD0 / PD1 (FDCAN1) | to locate: Zio, morpho or the CAN FD header |
-| IMU and temperature sensors (I2C) | PB8 SCL / PB9 SDA | Arduino D15 / D14 |
-| NOR flash (SPI) | PA5 / PA6 / PA7, CS PD14 | Arduino D13 / D12 / D11 / D10 |
+| wheel 0 / 1 / 2 (Hall switch outputs, 3.3 V) | PA3 / PA2 / PA0 (TIM2) | Arduino A0 (CN9 pin 1) / A1 (CN9 pin 3) / not needed on the bench |
+| CAN RX / TX to the CAN Pal, its silent pin at 3.3 V | PD0 / PD1 (FDCAN1) | Zio CN9 pin 25 / pin 27 |
+| IMU and temperature sensors (I2C) | PB8 SCL / PB9 SDA | Arduino D15 / D14 (CN7 pin 2 / pin 4) |
+| NOR flash (SPI) | PA5 / PA6 / PA7, CS PD14 | Arduino D13 / D12 / D11 / D10 (CN7 pins 10 / 12 / 14 / 16) |
 | Console | USART1 PA9 / PA10 | ST-LINK USB |
 
-Every row is taken from ST's board files and is **not verified on a board**; levels, solder bridges and the electrical checks before any vehicle bus are in [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) sections 4 and 7.
+Every row is taken from ST's board files and UM2861 Rev 10 (Tables 15 and 17) and is **not verified on a board**; levels, solder bridges and the electrical checks before any vehicle bus are in [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) sections 4 and 7.
 
 ## 6. Next steps (critical path)
 

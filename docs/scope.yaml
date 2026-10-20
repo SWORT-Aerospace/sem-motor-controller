@@ -71,6 +71,7 @@ modules:
   docs/scope.yaml: telematics
   docs/CONTROLLER_INTERFACE_REQUEST.md: telematics
   docs/TELEMATICS_BOM.md: telematics
+  docs/TELEMETRY_BOM_PLAN.md: telematics
   docs/TELEMETRY_INTEGRATION.md: telematics
   docs/TELEMETRY_EMBEDDED_PORT.md: telematics
   docs/U575_REGISTER_CHECK.md: telematics

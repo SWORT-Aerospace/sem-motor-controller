@@ -1,6 +1,6 @@
 # Implementation plan (v0.7, telematics)
 
-The single plan for this repository. The deliverable is the telematics unit and the pit software; the motor controller is built by another team ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)). Open items with their owners are in [`BLOCKERS.md`](BLOCKERS.md); this page orders them.
+The single plan for this repository. The deliverable is the telematics unit and the pit software; the motor controller is built by another team ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)). Open items with their owners are in [`BLOCKERS.md`](BLOCKERS.md); this page orders them. What to buy and build at each stage, with the full BOM and the evidence each stage returns: [`TELEMETRY_BOM_PLAN.md`](TELEMETRY_BOM_PLAN.md).
 
 **Critical path.** Interface agreement and telemetry hardware selection, then embedded acquisition and the local log, then bench integration, then the remote uplink, then vehicle data and analysis. T1 and T2 can run at the same time: T2 needs only a development board and a signal generator. Controller items (power-stage parts, precharge, footprints, the current loop) block none of these stages; they are listed at the end as deferred controller development.
 

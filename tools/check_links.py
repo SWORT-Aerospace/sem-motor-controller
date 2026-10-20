@@ -29,7 +29,8 @@ CURRENT = {"README.md", "CONTRIBUTING.md", "docs/STATUS.md", "docs/ICD.md", "doc
            "docs/DESIGN_DECISIONS.md", "docs/DEVELOPMENT.md", "docs/MATH_SPEC.md",
            "config/README.md", "firmware/README.md", "protocol/README.md", "host/README.md", "models/README.md",
            "hardware/README.md", "tools/README.md", "tests/README.md",
-           "docs/CONTROLLER_INTERFACE_REQUEST.md", "docs/TELEMATICS_BOM.md", "docs/generated/scope.md",
+           "docs/CONTROLLER_INTERFACE_REQUEST.md", "docs/TELEMATICS_BOM.md", "docs/TELEMETRY_BOM_PLAN.md",
+           "docs/generated/scope.md",
            "docs/generated/telematics_demo/summary.md", "telematics/firmware/README.md", "telematics/firmware/BENCH.md",
            "docs/decisions/ADR-0013-telematics-scope.md"}
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)")

@@ -103,3 +103,81 @@ def test_page_is_current_and_keeps_the_battery_as_reported():
     assert "48 V nominal, 10 Ah, as the vehicle team reports it" in text
     assert "Nothing has been ordered and no price is a quote" in text
     assert "**the vehicle power connection is blocked**" in text and "13S" not in text
+
+
+PLAN = tb.ROOT / "docs" / "TELEMETRY_BOM_PLAN.md"
+
+
+def _money(lo, hi):
+    f = lambda x: f"{x:,.2f}"                                   # noqa: E731
+    return f(lo) if math.isclose(lo, hi) else f"{f(lo)} to {f(hi)}"
+
+
+def _tables(text):
+    """Every pipe table of a page as (header cells, body rows)."""
+    out, cur = [], None
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            cur = None
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if cur is None:
+            cur = (cells, [])
+            out.append(cur)
+        elif not set("".join(cells)) <= set("-: "):
+            cur[1].append(cells)
+    return out
+
+
+def test_bom_plan_lists_every_line_once_with_the_bom_s_quantity_and_prices():
+    d = tb.load()
+    lines = {l["id"]: l for l in d["lines"]}
+    seen = []
+    for head, rows in _tables(PLAN.read_text()):
+        if head[0] != "ID":
+            continue
+        q, u, ext = head.index("Qty"), head.index("Unit (USD)"), head.index("Line (USD)")
+        lo = hi = 0.0
+        for row in rows:
+            m = re.fullmatch(r"`(\w+)`", row[0])
+            if not m:                                               # the table's total: the sum of its rows
+                assert row[0] == "**Total**" and row[ext] == f"**{_money(lo, hi)}**", row
+                continue
+            l = lines[m.group(1)]
+            seen.append(l["id"])
+            assert row[q] == str(l["qty"]), l["id"]
+            if l["low"] is None:
+                assert row[u] == row[ext] == "unknown", l["id"]
+                continue
+            assert row[u] == _money(l["low"], l["high"]), l["id"]
+            assert row[ext] == _money(l["qty"] * l["low"], l["qty"] * l["high"]), l["id"]
+            lo, hi = lo + l["qty"] * l["low"], hi + l["qty"] * l["high"]
+    listed = [l["id"] for l in d["lines"] if l["config"] in ("bench", "A", "B", "B_display", "option", "equipment")]
+    assert sorted(seen) == sorted(listed)                            # the whole BOM, each line once
+
+
+def test_bom_plan_stage_totals_recurring_cost_and_battery_are_the_bom_s():
+    import yaml
+    d = tb.load()
+    t = tb.totals(d)
+    lines = {l["id"]: l for l in d["lines"]}
+    text = PLAN.read_text()
+    minimal = [lines[i] for i in yaml.safe_load((tb.ROOT / "telematics/bench/bench.yaml").read_text())["minimal"]["parts"]]
+    stages = {r[0]: r[2] for head, rows in _tables(text) if head[0] == "Stage" and "Within $500?" in head for r in rows}
+    assert stages["Minimal bench"] == _money(round(sum(l["qty"] * l["low"] for l in minimal), 2),
+                                             round(1.10 * sum(l["qty"] * l["high"] for l in minimal), 2))
+    for stage, key in (("Full bench", "bench"), ("Configuration A", "A"), ("Configuration B", "B"),
+                       ("B with display", "B_with_display")):
+        assert stages[stage] == _money(t[key]["low"], t[key]["high"]), stage
+        if key != "B_with_display":
+            assert f"**${t[key]['low']:,.2f} to ${t[key]['high']:,.2f}**" in text      # the lead's figures
+    for config, words in (("bench", "before tax; the minimal bench"), ("A", "to the bench kit before tax"),
+                          ("B", "LTE uplink, $")):
+        part = [l for l in d["lines"] if l["config"] == config and l["low"] is not None]
+        lo, hi = sum(l["qty"] * l["low"] for l in part), sum(l["qty"] * l["high"] for l in part)
+        assert f"${lo:,.2f} to ${hi:,.2f}" in text and words in text, config
+    r = t["recurring"]
+    assert f"${r['per_month_low']:.2f} to ${r['per_month_high']:.2f} a month" in text
+    assert f"{r['mb_per_running_hour']:.1f} MB per running hour" in text
+    assert "**48 V nominal, 10 Ah, as the vehicle team reports it**" in text
+    assert "Nothing has been ordered and no price is a quote" in text
