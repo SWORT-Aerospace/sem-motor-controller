@@ -43,7 +43,7 @@ flowchart LR
 ```
 
 1. **On the vehicle**, the NUCLEO timestamps every wheel edge, polls the IMU and the temperature sensors, and receives the controller's CAN frames with its transmitter disabled. Every record goes through a bounded queue into the on-board log.
-2. **After a run**, the log is read out over USB and imported into the pit database. With configuration B, the unit also sends a 2 Hz summary over LTE to an MQTT broker in the pit during the run (so far in the host model only).
+2. **After a run**, the log is read out over USB and imported into the pit database. With configuration B, the unit also sends a 2 Hz summary over LTE to an MQTT broker in the pit during the run. The summary, its backlog and its accounting are in the firmware and checked in the host simulator; the modem's transport is not written yet.
 3. **At the pit**, every value is checked before it is used. A missing or stale value is reported as missing or stale, never as zero, and every conclusion links back to the logged data it rests on.
 
 The arrow from the controller is the only connection to it, and it points one way. What crosses it is whatever the controller already broadcasts. What we need from the controller team is listed in [`docs/CONTROLLER_INTERFACE_REQUEST.md`](docs/CONTROLLER_INTERFACE_REQUEST.md). Until they answer, our own CAN message set (`semmc`, [`protocol/`](protocol/README.md)) is a simulation fixture for tests, not an agreed interface.
@@ -58,9 +58,11 @@ The firmware runs on the NUCLEO-U575ZI-Q and lives in [`telematics/firmware/`](t
 | On-board log | STLG records on a W25Q128JV NOR flash (16 MiB), or internal flash bank 2 when no NOR answers; sparse logging once only a reserve is left |
 | Controller data | FDCAN1 in bus-monitoring mode: receive only, no acknowledgement, no transmission |
 | Sensors | ISM330DHCX IMU and up to four TMP117 temperature sensors on I2C1 |
+| GNSS and time | NEO-M9N on USART2 at 10 Hz; its PPS on PA1 is timestamped and labelled with the UTC second it marks, so the pit puts the whole log on UTC (vehicle image only) |
+| Live summary | the 2 Hz message the pit validates, with a 30-message backlog while the link is down; drops counted, replays flagged (no transport yet) |
 | Diagnostics | Restart cause, boot count and a counter for every drop; a USB console whose `DUMP` command reads the log out |
 
-Two images are built: `tm_u575` (wheels, log, sensors, console) and `tm_u575_can`, which adds CAN reception.
+Three images are built: `tm_u575` (wheels, log, sensors, console) for the bench, `tm_u575_can`, which adds CAN reception, and `tm_u575_vehicle`, which adds GNSS and PPS. The bench image contains no CAN or GNSS code.
 
 **Status: never flashed; no connection bench-verified.** The portable code passes its unit tests under sanitizers and matches the Python reference byte for byte. The register-level code follows ST's HAL and has been checked against the board manual UM2861 Rev 10 and the errata ES0499 Rev 12. The checks that need the STM32U575 data sheet and reference manual are still open ([`telematics/bench/DOCUMENT_CHECKS_RECORD.md`](telematics/bench/DOCUMENT_CHECKS_RECORD.md)).
 
@@ -73,7 +75,7 @@ cmake -S telematics/firmware -B build-telematics -G Ninja && cmake --build build
 ctest --test-dir build-telematics --output-on-failure            # unit tests under ASan and UBSan
 cmake -S telematics/firmware -B build-u575 -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel \
       -DCMAKE_TOOLCHAIN_FILE=$PWD/telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake -DTM_TARGET_U575=ON
-cmake --build build-u575                                         # tm_u575.elf/.bin/.hex and tm_u575_can.*
+cmake --build build-u575                                         # tm_u575.*, tm_u575_can.*, tm_u575_vehicle.*
 ```
 
 Bench connections:
@@ -85,8 +87,10 @@ Bench connections:
 | IMU and temperature sensors (I2C) | PB8 SCL / PB9 SDA | Arduino D15 / D14 (CN7 pin 2 / pin 4) |
 | NOR flash (SPI) | PA5 / PA6 / PA7, CS PD14 | Arduino D13 / D12 / D11 / D10 (CN7 pins 10 / 12 / 14 / 16) |
 | Console | USART1 PA9 / PA10 | ST-LINK USB (CN1, Micro-B) |
+| GNSS TX / RX, vehicle image (3.3 V) | PD6 / PD5 (USART2) | Zio CN9 pin 4 / pin 6 |
+| GNSS PPS, vehicle image | PA1 (TIM2_CH2) | Zio CN10 pin 11 |
 
-Positions come from ST's board files and UM2861 Rev 10 (Tables 15 and 17) and are **not verified on a board**. Levels, solder bridges and the electrical checks before any vehicle bus: [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) sections 4 and 7. Status by function: [`docs/TELEMETRY_EMBEDDED_PORT.md`](docs/TELEMETRY_EMBEDDED_PORT.md).
+Positions come from ST's board files and UM2861 Rev 10 (Tables 15, 17 and 18) and are **not verified on a board**. Levels, solder bridges and the electrical checks before any vehicle bus: [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md) sections 4 and 7. Status by function: [`docs/TELEMETRY_EMBEDDED_PORT.md`](docs/TELEMETRY_EMBEDDED_PORT.md).
 
 ## 3. Bill of materials
 
@@ -124,7 +128,9 @@ Battery: 48 V nominal, 10 Ah, as the vehicle team reports it. Its maximum charge
 | Log import, pit database, speed, energy and data-quality reports | yes | no vehicle data yet |
 | End-to-end demonstration: controller silence, invalid frames, a storage stall, a broker outage, a restart | 9 of 9 checks through a real Mosquitto broker, all inputs simulated | no |
 | Evidence model and advisory review | yes; the four validation protocols pass their simulated pre-check | no |
-| GNSS with PPS, LTE modem on the board | host model only | no |
+| GNSS with PPS (vehicle image) | unit tests; the firmware's own code on a simulated drive gives exact UTC from its PPS records | no |
+| Live summary (uplink message) | unit tests; on a simulated drive every message passes the pit's validation and every value equals the pit's import of the log | no; the modem's transport is not written |
+| CSIA in shadow mode | simulated: with supported inputs the clean run disagrees on 2 of 550 ticks instead of 328 | no |
 
 **Bench-tested:** nothing yet. The first physical test is the minimal bench (section 6).
 
@@ -132,7 +138,7 @@ Battery: 48 V nominal, 10 Ah, as the vehicle team reports it. Its maximum charge
 
 0. **Pre-flash documents.** Commit the STM32U575 data sheet DS13737 and reference manual RM0456 to `docs/reference/datasheets/`; the open firmware checks DC02 to DC09 are then answered from them.
 1. **Minimal bench, USB power only.** One wheel input through the whole chain to a plot: [`telematics/bench/HANDOFF_MINIMAL.md`](telematics/bench/HANDOFF_MINIMAL.md).
-2. **Full bench.** Steps B0 to B12 and the electrical checks E1 to E5: [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md).
+2. **Full bench.** Steps B0 to B12 and the electrical checks E1 to E5, then B13 (GNSS and PPS) once configuration A's GNSS board is at hand: [`telematics/firmware/BENCH.md`](telematics/firmware/BENCH.md).
 3. **Controller interface, in parallel from now.** Send [`docs/CONTROLLER_INTERFACE_REQUEST.md`](docs/CONTROLLER_INTERFACE_REQUEST.md) to the controller team and decode their recording.
 4. **Vehicle unit, configuration A.** Needs the pack's maximum voltage and the wheel geometry from the vehicle team.
 5. **First vehicle run, receive-only.** After E1 to E6 and with the controller team's agreement.

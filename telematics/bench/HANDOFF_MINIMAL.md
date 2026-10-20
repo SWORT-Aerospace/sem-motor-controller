@@ -22,6 +22,7 @@ prepared meanwhile.
 | Also in the package | `tm_u575.elf` `e06f38d0a4639a1814660e4ae1cd9d270d8a95c82bbfaef01cfea9fe1dc1ad00`, `tm_u575.hex` `77d24508ed102cee629462d5212fbfdc1259c14c698062132843a84433bd3583`, `MANIFEST.json`, the blank `RESULTS_FORM.md` and `results.yaml`, `tools/uart_capture.py` |
 | Revision in the banner | `ca7430256449` |
 | Superseded | `b734667` (artifact 12156850299): do not flash. It leaves the LSE drive unset, which ES0499 forbids on revision X, and aborts I2C transfers on a spurious bus error |
+| Later commits | add the vehicle image (`tm_u575_vehicle`: GNSS and PPS) and the live summary. They change the bytes of `tm_u575` (an unused record hook in the application, the metadata's UTC field formatted from a parameter) but not what it does or prints, so a build of a later commit has a different hash. The minimal bench flashes `ca74302`'s artifact above; a new candidate, with new hashes here, is made only when the bench needs a firmware change |
 
 ## 2. Gate before flashing
 

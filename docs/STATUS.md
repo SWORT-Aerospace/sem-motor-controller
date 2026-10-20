@@ -13,8 +13,9 @@ The README keeps a short status; this page holds the detail. "Works" always name
 | Console: status line, `DUMP` of the log, `ERASE YES` | yes (`uart_u575.c`, `main_u575.c`) | | no |
 | CAN receive: FDCAN1 in bus-monitoring mode (sends nothing, not even the acknowledge bit), frames to the log with receive time | yes, in the `tm_u575_can` image (`can_u575.c`) | decoding: semmc fixture and DBC adapters (`host/telematics/controller_adapter.py`) | no |
 | IMU (LSM6DSOX or ISM330DHCX) and TMP117 temperature on I2C1 | yes (`i2c_u575.c`, `tm_imu.c`), polled at 100 Hz and 1 Hz | | no |
-| GNSS with PPS capture | no | `host/telematics/node.py`, `host/telematics/clocks.py` | no |
-| LTE modem and the live uplink `sem.telemetry.v4` | no | `host/telematics/node.py`, `host/telematics/mqtt_link.py`; real Mosquitto broker | no |
+| GNSS with PPS capture: UBX-NAV-PVT on USART2 to `GNSS` records, the PPS on PA1 labelled with its UTC second (`PPS` records), unlabelled edges counted | yes, in the `tm_u575_vehicle` image (`tm_gnss.c`, `gnss_u575.c`) | UTC at the pit (`host/telematics/clocks.py`, `host/pit/ingest.py`); NAV-PVT encoder for simulations (`host/telematics/ubx.py`) | no |
+| Live uplink message `sem.telemetry.v4`: the unit's own signals, UTC, counters; 30-message backlog, drops counted, replays flagged | the message and backlog (`tm_live.c`), compiled into `tm_u575_vehicle`, not called: no transport | `host/telematics/node.py`, `host/telematics/mqtt_link.py`; real Mosquitto broker | no |
+| LTE modem transport | no (T-MODEM) | `host/telematics/mqtt_link.py` | no |
 | Battery-side monitor (total battery energy) | no | `host/telematics/sim_vehicle.py`, STLG `BATT` | no |
 | Pit: validation, SQLite with idempotent re-import, speed and distance, energy at two boundaries, data quality, shadow monitors | runs on the pit computer | yes (`host/pit/`, `tools/telematics_import.py`, `tools/run_pit_replay.py`) | no vehicle data |
 | CAN flood: the log queue keeps a 32-record reserve for the unit's own records; frames beyond it counted (`can_not_logged`, COUNTERS2 id 27) | yes (`tm_app.c`; C test `test_can_flood`) | the same rule in the node model | no |

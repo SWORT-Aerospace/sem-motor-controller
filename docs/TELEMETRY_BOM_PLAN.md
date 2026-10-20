@@ -8,12 +8,12 @@ This page is the build and purchasing view: what to buy at each stage, what open
 
 ## 1. Where the project stands
 
-Thirteen capabilities are shown in software or in documents; none has run on a board. HOST-TESTED means code run in CI on a PC, including the firmware's own C code built for the PC; SIMULATED means results on simulated drives; DOCUMENTS means checked against an ST document, not against the physical board. Labels and evidence: [`CLAIMS.md`](CLAIMS.md).
+Fifteen capabilities are shown in software or in documents; none has run on a board. HOST-TESTED means code run in CI on a PC, including the firmware's own C code built for the PC; SIMULATED means results on simulated drives; DOCUMENTS means checked against an ST document, not against the physical board. Labels and evidence: [`CLAIMS.md`](CLAIMS.md).
 
 | Capability | How it is shown | Evidence | Still needs |
 |---|---|---|---|
 | Receive-only: the unit cannot transmit on the controller's bus or command propulsion | No transmit path in any production code (import-graph and code scan); CAN in bus-monitoring mode (C-RX-ONLY) | HOST-TESTED | E1 to E5 on the bench: transmitter off in hardware, no termination, one ground |
-| Firmware builds for the NUCLEO-U575ZI-Q with the same hash every time | CI build of `ca74302` equals a local fresh-clone build byte for byte (C-FIRMWARE-TARGET) | HOST-TESTED | Flash and start on a real board (M1) |
+| Firmware builds for the NUCLEO-U575ZI-Q with the same hash every time | CI build of `ca74302` equals a local fresh-clone build byte for byte; three images: bench, CAN, vehicle (C-FIRMWARE-TARGET) | HOST-TESTED | Flash and start on a real board (M1) |
 | Board pins, console routing, power and crystal | UM2861 Rev 10, check DC01 | DOCUMENTS | M0: sticker, jumpers and pin positions on the actual board |
 | Silicon errata handled for every board revision | ES0499 Rev 12, check DC10; three firmware fixes | DOCUMENTS | Checks DC02 to DC09 from DS13737 and RM0456 |
 | Wheel speed: no false 0 m/s; stuck or disconnected sensor flagged | C firmware and Python reference tested on a PC (C-HALL) | HOST-TESTED | M2, B3 and B6 with a signal generator |
@@ -21,9 +21,11 @@ Thirteen capabilities are shown in software or in documents; none has run on a b
 | Local log: drops counted, restarts detected, logging continues with no network | Fault-injection tests (C-STORAGE, C-LOG-OUTAGE) | HOST-TESTED | B8 and B9: power cut during a write, flash full |
 | Log length: the 16 MiB NOR holds 138 min at bench rates, 26.7 min at full rate | Computed with the firmware's own code ([`generated/telematics_storage.md`](generated/telematics_storage.md)) | HOST-TESTED | The real controller's frame rate and the attempt length |
 | Evidence platform: schema, evidence states, timing, lineage, cross-checks, receipts, pit queries | Unit and integration tests (C-SCHEMA to C-PIT-QUERIES) | HOST-TESTED | Real recordings |
-| Live uplink over MQTT with outage and reconnect | Demonstration through a real Mosquitto broker, 9 of 9 checks | HOST-TESTED | An MQTT client on the board's modem |
+| Live uplink over MQTT with outage and reconnect | Demonstration through a real Mosquitto broker, 9 of 9 checks; the message, its 30-message backlog and its accounting are firmware now, and every value the firmware sends equals the pit's import of its log (C-LIVE-FIRMWARE) | HOST-TESTED | The modem's transport on the board (T-MODEM) |
+| GNSS and PPS: the whole log on UTC | The firmware's GNSS code in the vehicle image, unit-tested; on a simulated drive through the firmware the UTC error is 0 and no PPS edge is left unlabelled (C-GNSS-FIRMWARE, C-FIRMWARE-LOOP) | HOST-TESTED | DC19 to DC21 from the u-blox and SparkFun documents; bench step B13 |
+| Firmware in the loop: the simulated vehicle drives the firmware's own code into the pit | Every record and live sequence number accounted for, a GNSS outage attributed to GNSS, a 5 % wheel-sensor error localized to that wheel (C-FIRMWARE-LOOP) | SIMULATED | Bench and vehicle data |
 | Fault localization protocols EXP-01 to EXP-04 | Simulated drives (C-EXP01-SIM to C-EXP04-SIM) | SIMULATED | EXP-01 bench stage, then vehicle data |
-| CSIA in shadow mode: only valid evidence in, advisory output only | Boundary tests (C-CSIA-BOUNDARY); the 328 of 550 clean-run case is an unsupported adapter-input configuration, not evidence that the algorithm is inferior (C-CSIA-CLEAN-RUN) | HOST-TESTED | The controller's torque constant and real data |
+| CSIA in shadow mode: only valid evidence in, advisory output only | Boundary tests (C-CSIA-BOUNDARY); the 328 of 550 clean-run case is an unsupported adapter-input configuration, not evidence that the algorithm is inferior (C-CSIA-CLEAN-RUN); with supported inputs the same run disagrees on 2 of 550 ticks, both at simulated torque steps (C-CSIA-SUPPORTED) | HOST-TESTED, SIMULATED | The controller's torque constant, an independent battery-side reference and real data |
 | Bench parts match the firmware: every bench part has a driver | `tools/telematics_bom.py` checks the BOM against the driver sources | HOST-TESTED | Live quotes |
 
 ## 2. Vehicle battery
@@ -221,7 +223,9 @@ Starts when Stage 2 has passed.
 - [ ] Vehicle team gives the pack's maximum and minimum voltage (section 2); select a TVS and DC-DC pair that passes the rule in `tools/telematics_bom.py`
 - [ ] Vehicle team gives the wheel geometry; select the Hall switch, magnet count and mounting
 - [ ] Decide log storage from the attempt length and the controller's frame rate ([T-STORAGE](BLOCKERS.md#t-storage))
-- [ ] Software adds GNSS and PPS capture on the board; check UTC on the bench ([T-GNSS](BLOCKERS.md#t-gnss))
+- [x] Software adds GNSS and PPS to the firmware: image `tm_u575_vehicle`, host-tested, never run on a board ([T-GNSS](BLOCKERS.md#t-gnss))
+- [ ] Commit the u-blox M9 interface description and the GPS-17285 schematic; software answers DC19 to DC21 ([`DOCUMENT_CHECKS_RECORD.md`](../telematics/bench/DOCUMENT_CHECKS_RECORD.md))
+- [ ] Wire the GNSS board (its TX to PD6 at CN9 pin 4, its RX to PD5 at CN9 pin 6, PPS to PA1 at CN10 pin 11, 3V3 and GND), flash `tm_u575_vehicle` and run bench step B13: GNSS records at 10 Hz, one labelled PPS record per second
 - [ ] Live quotes for every configuration A line; the team lead approves the order
 - [ ] Build the harness with DT connectors and the enclosure; pass E6 (unit supply) on the bench
 
@@ -242,7 +246,8 @@ Done when a vehicle log with its receipts is committed. Only then may a claim sa
 Starts when the event and its country are known ([B-RULES](BLOCKERS.md#b-rules)).
 
 - [ ] Pick the modem board for the event country's LTE bands
-- [ ] Software writes the MQTT client for the board's modem ([T-MODEM](BLOCKERS.md#t-modem))
+- [x] Software writes the live message, its backlog and its accounting in the firmware (`tm_live`, host-tested)
+- [ ] Software writes the modem's MQTT transport behind the firmware's link interface, from the modem's AT command manual ([T-MODEM](BLOCKERS.md#t-modem))
 - [ ] On the bench, live messages reach a pit broker, with outages and restarts accounted for
 - [ ] Decide on the optional driver display
 
@@ -271,6 +276,6 @@ Eleven inputs from people gate the plan; the first three block the next physical
 * [`hardware/telematics/bom.yaml`](../hardware/telematics/bom.yaml): every line with its dated price source; [`TELEMATICS_BOM.md`](TELEMATICS_BOM.md) and [`generated/telematics_bom.json`](generated/telematics_bom.json): the generated totals
 * [`CLAIMS.md`](CLAIMS.md): each claim's label and evidence; [`BLOCKERS.md`](BLOCKERS.md): the open items
 * [`HANDOFF_MINIMAL.md`](../telematics/bench/HANDOFF_MINIMAL.md) and [`DOCUMENT_CHECKS_RECORD.md`](../telematics/bench/DOCUMENT_CHECKS_RECORD.md): the minimal bench and its document gate
-* [`BENCH.md`](../telematics/firmware/BENCH.md): the full bench, B0 to B12 and E1 to E6
+* [`BENCH.md`](../telematics/firmware/BENCH.md): the full bench, B0 to B13 and E1 to E6
 * [`BATTERY.md`](BATTERY.md): the team-reported battery values and what they do not establish
 * [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md): what was run, on which commit

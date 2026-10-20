@@ -198,8 +198,40 @@ claims:
       tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_clean_run_case_reproduces_and_isolates_the_power_balance]
       files: [docs/generated/csia_clean_run_case.md, tools/csia_disagreement_case.py]
     not_shown: "anything about E6 with a real motor's torque constant and q-axis current; frozen evaluation files unchanged and no comparison drawn from this development example"
+  - id: C-CSIA-SUPPORTED
+    statement: "With the adapter inputs supported (a stated torque constant and the q-axis current that produces the simulated torque), the frozen CSIA adapter disagrees on 2 of 550 ticks of the same clean run instead of 328, both at instantaneous torque steps of the simulated driver model, with no attribution; a 1.4 x DC-power gain error is then flagged (105 of 120 ticks ambiguous) but not attributed to the DC meter, because no independent torque or battery-side reference is in the inputs"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_pit_queries_advisory.py::test_csia_clean_run_with_a_supported_configuration]
+      files: [docs/generated/csia_clean_run_case.md, tools/csia_disagreement_case.py]
+    not_shown: "CSIA with a real motor's torque constant and current loop; the frozen evaluation is unchanged and no comparison is drawn from this development example"
+  - id: C-GNSS-FIRMWARE
+    statement: "The firmware's GNSS code (vehicle image only) turns UBX-NAV-PVT bytes into GNSS records and labels each PPS edge with the UTC second it marks; an edge it cannot label is counted, never logged; from those records the pit puts the unit's clock on UTC; noise, bad checksums, no fix and ambiguous labels are handled"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_firmware_host.py::test_unit_tests_pass,
+              tests/telematics/test_firmware_host.py::test_gnss_and_pps_through_the_firmware_give_gnss_records_and_utc,
+              tests/telematics/test_firmware_target.py::test_vector_table_matches_st_interrupt_list]
+      files: [telematics/firmware/src/tm_gnss.c, telematics/firmware/platform/u575/gnss_u575.c]
+    not_shown: "the receiver's message layout and configuration keys against the u-blox document (DC19, DC20), the breakout's levels (DC21), the UART and the PPS capture on a board (bench step B13)"
+  - id: C-LIVE-FIRMWARE
+    statement: "The firmware's live summary is the sem.telemetry.v4 message the pit validates: the unit's own signals with validity and age, stale, invalid or missing values null with their reason and never 0, wheel speed by the pit's rule, UTC from the logged PPS edges, counters; while the link is down at most 30 messages wait, the oldest are dropped and counted, the rest are sent later flagged as replayed, and the uplink counters are logged; its registry and counter tables equal the pit's"
+    label: HOST-TESTED
+    evidence:
+      tests: [tests/telematics/test_firmware_host.py::test_unit_tests_pass,
+              tests/telematics/test_firmware_host.py::test_live_summary_tables_match_the_pit_registry_and_counter_ids,
+              tests/telematics/test_firmware_host.py::test_firmware_in_the_loop_vehicle_drive_through_the_pit]
+      files: [telematics/firmware/src/tm_live.c]
+    not_shown: "any transport: the modem's MQTT transport is not written (T-MODEM) and no image sends the message; controller values are not decoded on the unit"
+  - id: C-FIRMWARE-LOOP
+    statement: "A simulated drive through the firmware's own code (tm_app, tm_gnss, tm_live in the host simulator) passes through the pit with every log record and every live sequence number accounted for, UTC from the firmware's PPS records exact, every live value equal to the pit's import of the log, and a GNSS outage attributed to GNSS by the shadow replay"
+    label: SIMULATED
+    evidence:
+      tests: [tests/telematics/test_firmware_host.py::test_firmware_in_the_loop_vehicle_drive_through_the_pit]
+      files: [tools/run_firmware_vehicle_sim.py]
+    not_shown: "interrupts, peripherals and timing of the target; the receiver, the modem and the vehicle; every input is simulated"
   - id: C-FIRMWARE-TARGET
-    statement: "The telematics firmware builds and links for the NUCLEO-U575ZI-Q"
+    statement: "The telematics firmware builds and links for the NUCLEO-U575ZI-Q in three images: bench (tm_u575), CAN (tm_u575_can) and vehicle (tm_u575_vehicle, with GNSS); the GNSS code is only in the vehicle image"
     label: HOST-TESTED
     evidence:
       tests: [tests/telematics/test_firmware_target.py::test_vector_table_matches_st_interrupt_list,

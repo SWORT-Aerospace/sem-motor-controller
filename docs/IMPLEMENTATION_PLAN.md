@@ -12,7 +12,7 @@ The single plan for this repository. The deliverable is the telematics unit and 
 | T1 | Interface agreement and telemetry hardware selection | request written, not sent; BOM lines priced as dated search snapshots, parts not chosen | [T-CTRL-IF](BLOCKERS.md#t-ctrl-if), [T-PARTS](BLOCKERS.md#t-parts), [B-BAT-V](BLOCKERS.md#b-bat-v) |
 | T2 | Embedded acquisition and local log | firmware written and built for the NUCLEO-U575ZI-Q; **never flashed** | [T-BENCH1](BLOCKERS.md#t-bench1), [T-U5-DOCS](BLOCKERS.md#t-u5-docs), [T-STORAGE](BLOCKERS.md#t-storage), [T-GNSS](BLOCKERS.md#t-gnss) |
 | T3 | Bench integration | CAN receive image built; not run | [T-CTRL-IF](BLOCKERS.md#t-ctrl-if) for the controller's frames and connector |
-| T4 | Remote uplink | host model only | [T-MODEM](BLOCKERS.md#t-modem), [B-RULES](BLOCKERS.md#b-rules) |
+| T4 | Remote uplink | message, backlog and accounting in the firmware (host-tested); the modem's transport not written | [T-MODEM](BLOCKERS.md#t-modem), [B-RULES](BLOCKERS.md#b-rules) |
 | T5 | Vehicle data and analysis | pit analysis ready on simulated data; no vehicle data | T1 to T3; [B-DRIVETRAIN](BLOCKERS.md#b-drivetrain) |
 
 ## T0. Host software and simulation (done on a computer)
@@ -42,7 +42,7 @@ The single plan for this repository. The deliverable is the telematics unit and 
   1. **First milestone:** bench steps B0 to B7: preflight, wheel pulse, timestamped measurement, bounded queue, log on the NOR, read-back, import, plotted speed and distance; the timebase error against the generator; stuck and disconnected sensors (B6); the 32-bit timer overflow at 71.6 min with the console capture and a ranged dump (B7).
   2. B8 to B10: power loss during a write, internal flash filling into sparse logging, erase.
   3. B12: IMU and TMP117 on I2C1.
-  4. GNSS with PPS capture on the target (not written; the host model fixes the behaviour).
+  4. B13: GNSS with PPS on the vehicle image `tm_u575_vehicle` (written and host-tested; needs configuration A's GNSS board and document checks DC19 to DC21).
   5. The log storage for an attempt's length (T-STORAGE: the NOR holds 26.7 min of the fixture vehicle's mix at full rate; docs/generated/telematics_storage.md).
 * **Completion evidence:** the bench record of each step with the import report and plots committed; the wheel channels against a reference tachometer once the vehicle's wheel is available.
 * **Blockers:** the board on the bench; the STM32U575 reference documents (the register-level code is checked against ST's HAL and CMSIS sources, [`U575_REGISTER_CHECK.md`](U575_REGISTER_CHECK.md); RM0456, DS13737, ES0499 and UM2861 were not readable here); the wheel circumference and magnet count for real speed (B-DRIVETRAIN).
@@ -62,7 +62,7 @@ The single plan for this repository. The deliverable is the telematics unit and 
 
 * **Prerequisites:** T2; the configuration B modem board, SIM and antenna; a broker reachable from the mobile network ([`MQTT_SETUP.md`](MQTT_SETUP.md)).
 * **Files:** `host/telematics/node.py` and `host/telematics/mqtt_link.py` (the reference behaviour, `sem.telemetry.v4`), `host/pit/mqtt_ingest.py`, [`ICD.md`](ICD.md) A.8, [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) section 4 (U1 to U5).
-* **Steps:** the modem driver as a non-blocking state machine below acquisition and logging; then U1 to U5: network outage and reconnect, pit restart, modem supply droop, the unit's consumption, a supply cut.
+* **Steps:** the live message, its backlog and its accounting are firmware already (`telematics/firmware/src/tm_live.c`, host-tested, every value equal to the pit's import of the log on a simulated drive). What remains: the modem's MQTT transport behind `tm_link_t` as a non-blocking state machine below acquisition and logging, from the modem's AT command manual; then U1 to U5: network outage and reconnect, pit restart, modem supply droop, the unit's consumption, a supply cut.
 * **Completion evidence:** a pit database in which every sequence number is stored, counted as dropped on the car, or reported as a gap; acquisition and the log unaffected during the outage (the same properties the host demonstration checks).
 * **Blockers:** the event country (band set), broker hosting.
 

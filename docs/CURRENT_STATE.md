@@ -148,3 +148,22 @@ discrepancies were fixed, which makes a new bench candidate: the LSE drive is se
 (2.20.2). The bench documents now use the Micro-B ST-LINK cable, SWD at 8 MHz, the UM2861 connector positions, a
 sticker and jumper check in M0, no press of the user button, and a 10 s power-off in M3. Nothing was run on a board.
 
+
+## After GNSS, the live summary and the firmware-in-the-loop drive (2026-10-20)
+
+Three items that were host models only are now firmware, and the simulated vehicle drives the firmware's own code
+into the pit ([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) section 14). Nothing below is above HOST-TESTED or
+SIMULATED; nothing was flashed, connected or measured.
+
+| Area | Now | Where | Label |
+|---|---|---|---|
+| GNSS and PPS | a third image, `tm_u575_vehicle`: UBX-NAV-PVT on USART2 (PD6/PD5) to `GNSS` records; the PPS on PA1 (TIM2_CH2) labelled with the UTC second it marks (`PPS` records), unlabelled edges counted; five GNSS counters. The bench and CAN images contain none of it | `telematics/firmware/src/tm_gnss.c`, `platform/u575/gnss_u575.c` | HOST-TESTED |
+| Live summary | the `sem.telemetry.v4` message from the records the unit makes: the pit's wheel-speed rule, UTC from the logged PPS edges, null with a reason for stale, invalid or missing values, a 30-message backlog with drops counted and replays flagged, uplink counters logged. No transport yet (T-MODEM) | `telematics/firmware/src/tm_live.c` | HOST-TESTED |
+| Firmware in the loop | the simulated vehicle drives `tm_app`, `tm_gnss` and `tm_live` in the host simulator; the log goes through import, evidence review and the shadow replay, the live messages through the pit's validation and are compared value by value with the log | `tools/run_firmware_vehicle_sim.py` | SIMULATED |
+| CSIA with supported inputs | the clean run's 328 of 550 disagreeing ticks fall to 2 (both simulated torque steps) once the torque constant is stated; a DC-meter gain error is flagged but not attributed without an independent reference | `tools/csia_disagreement_case.py` section E | SIMULATED |
+| Bench procedure | B13 (GNSS and PPS with the vehicle image), the watchdog test in B2, connection rows `gnss_*`, document checks DC18 to DC21 | `telematics/bench/bench.yaml`, [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) | procedure written; not run |
+
+Still open: every item under UNVERIFIED and BLOCKED above, except that GNSS and the live message are no longer host
+models only. The u-blox M9 interface description and the GPS-17285 schematic (DC19 to DC21) were refused by this
+environment's network policy, as were RM0456 and DS13737. The battery-side monitor's part is not chosen (B-BAT-V);
+the modem and its transport are open (T-MODEM).

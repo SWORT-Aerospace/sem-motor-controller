@@ -481,3 +481,32 @@ section 1.
 
 **The minimal bench still cannot proceed under its own gate:** DC02 to DC09 need DS13737 or RM0456.
 
+
+## 14. v0.7: GNSS, the live summary and firmware-in-the-loop drives (2026-10-20)
+
+Three functions that were host models only are now firmware, and the simulated vehicle drives the firmware's own C
+code into the pit. **Nothing was flashed, connected or measured**; every result below is HOST-TESTED or SIMULATED
+([`CLAIMS.md`](CLAIMS.md): C-GNSS-FIRMWARE, C-LIVE-FIRMWARE, C-FIRMWARE-LOOP, C-CSIA-SUPPORTED).
+
+| Item | What changed | Shown by |
+|---|---|---|
+| GNSS and PPS | third image `tm_u575_vehicle`: UBX-NAV-PVT on USART2 (PD6 RX, PD5 TX, 38400 baud) to `GNSS` records; PPS on PA1 (TIM2_CH2) labelled with the UTC second it marks from the next valid NAV-PVT, unlabelled edges counted (COUNTERS2 ids 28 to 32); the configuration message resent every 5 s until NAV-PVT arrives. The bench and CAN images contain no GNSS code (vector table checked) | `test_tm.c` `test_gnss`; `test_gnss_and_pps_through_the_firmware_give_gnss_records_and_utc`; `test_firmware_target.py` |
+| Live summary | `tm_live`: the `sem.telemetry.v4` message from the records the unit makes; the pit's wheel-speed rule, UTC from the logged PPS edges (pps, holdover with a 50 ppm bound, none), stale, invalid and missing values null with their reason; a 30-message backlog, oldest dropped and counted, replays flagged; the uplink counters logged (ids 6, 7, 8, 21); numbers formatted without floating-point printf. No transport (T-MODEM) | `test_tm.c` `test_live`; `test_live_summary_tables_match_the_pit_registry_and_counter_ids` |
+| Pit import | `last_counters` taken only from the unit's own counter record, not from a driver's | the GNSS test above |
+| Metadata | images with GNSS name their UTC source (`logged PPS edges`) | `test_live` |
+| Bench | B13 (GNSS and PPS), the watchdog test in B2 (halt with the debugger, expect IWDG), rows `gnss_*`, DC18 to DC21 (open: RM0456, the u-blox M9 interface description and the GPS-17285 schematic; www.u-blox.com, content.u-blox.com, www.sparkfun.com and cdn.sparkfun.com are refused here, checked 2026-10-20) | `telematics_bench.py render --check`; `test_telematics_bench.py` |
+| CSIA | section E of the clean-run case: with the torque constant stated and iq from the simulated torque, 2 of 550 ticks disagree (both simulated torque steps) instead of 328; a 1.4 x DC-power gain error from 10 s to 22 s is flagged (105 of 120 ticks ambiguous) but not attributed: no independent torque or battery-side reference is in the inputs | `test_csia_clean_run_with_a_supported_configuration` |
+
+Firmware-in-the-loop drives (`tools/run_firmware_vehicle_sim.py`, 140 s, SIMULATED; outputs under `build/campaign/`):
+
+| Drive | Log | GNSS and UTC | Live summary | Evidence review | Shadow replay |
+|---|---|---|---|---|---|
+| GNSS outage 60 to 70 s, link outage 20 to 40 s | 66,915 records; none dropped or missing | 1,400 records, 1,300 with a fix; speed RMS error 0.051 m/s; UTC error 0 on the 91.6 % of records timed from PPS, the rest in holdover or before the first edges; 130 PPS edges, 0 unlabelled | 270 messages, all accepted by the pit's validation; 10 dropped on the unit and counted; 30 replayed; every sequence number accounted for; 4,241 values equal to the pit's import of the log (largest difference 4.6e-6, the 6-digit rounding) | 1,430 ticks; 1 ambiguous: A2 at 75.0 s, a +0.51 m/s^2 step one tick before the controller's next current frame (the simulation's instantaneous torque step; "controller data late" is among its candidates) | B1 attributes 60.6 to 70.2 s to GNSS; R3v quiet; CSIA2 dc_meter episodes as in the earlier campaign |
+| Left wheel sensor 5 % high from 90 to 110 s | 66,925 records; none lost | 1,400 records, all with a fix; UTC error 0 | 280 messages, all accepted; none dropped; 4,441 values equal to the log's | B3 (left against right wheel) 54 ticks from 90.4 to 109.9 s, B1 on the left wheel 10 ticks; localized, conditionally, to the left wheel's sensor, magnet, wiring or circumference | B1 quiet: 5 % is within its frozen tolerance |
+
+The end of each drive shows a common-cause verdict "session ended without a final counters record": the simulation
+stops without an orderly shutdown, which is what the verdict reports.
+
+Target images (MinSizeRel, never flashed): `tm_u575` 20,748 B flash, `tm_u575_can` 21,784 B, `tm_u575_vehicle`
+24,200 B flash and 70,840 B RAM. Later commits change the bytes of `tm_u575` but not its behaviour; the minimal-bench
+candidate stays `ca74302` ([`../telematics/bench/HANDOFF_MINIMAL.md`](../telematics/bench/HANDOFF_MINIMAL.md)).
