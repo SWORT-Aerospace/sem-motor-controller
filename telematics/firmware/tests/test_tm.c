@@ -1,5 +1,6 @@
 /* Unit tests of the portable telematics firmware (host build). Run by ctest and by
  * tests/telematics/test_firmware_host.py. */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,7 @@
 #include "tm_fakeflash.h"
 #include "tm_gnss.h"
 #include "tm_le.h"
+#include "tm_live.h"
 #include "tm_reset.h"
 #include "tm_time.h"
 
@@ -478,6 +480,136 @@ static void test_app_sparse(void)
     CHECK(n > 100u && n < TM_STATUS_MAX);
 }
 
+/* the live summary's link: up or down, may refuse; records what it was given */
+static struct {
+    bool up, refuse_next;
+    uint32_t n, seq[200];
+    bool replayed[200];
+} g_link;
+
+static bool t_up(void *ctx, uint64_t now)
+{
+    (void)ctx;
+    (void)now;
+    return g_link.up;
+}
+
+static bool t_publish(void *ctx, const char *topic, const char *msg, uint32_t len, uint32_t seq)
+{
+    (void)ctx;
+    if (g_link.refuse_next) {
+        g_link.refuse_next = false;
+        return false;
+    }
+    if (g_link.n < 200u && strcmp(topic, TM_LIVE_TOPIC) == 0) {
+        g_link.seq[g_link.n] = seq;
+        g_link.replayed[g_link.n] = len > 6u && memcmp(msg + len - 5u, "true}", 5) == 0;
+        g_link.n++;
+    }
+    return true;
+}
+
+static void test_live(void)
+{
+    char b[64];
+    const struct {
+        double v;
+        const char *s;
+    } num[] = {{6.5, "6.5"}, {1e-6, "0.000001"}, {123456.7, "123457"}, {1e7, "1e7"}, {-0.0734389, "-0.0734389"},
+               {9.9999996, "10"}, {0.0, "0"}, {210.9375, "210.938"}, {2.5e-12, "25e-13"}};
+    for (size_t i = 0; i < sizeof num / sizeof num[0]; i++) {
+        uint32_t n = tm_live_num(b, sizeof b, num[i].v, 6);
+        CHECK(n > 0u && strcmp(b, num[i].s) == 0);
+        if (n == 0u || strcmp(b, num[i].s) != 0) fprintf(stderr, "  %.9g -> %s, expected %s\n", num[i].v, b, num[i].s);
+    }
+    CHECK(tm_live_num(b, sizeof b, NAN, 6) == 4u && strcmp(b, "null") == 0);
+    CHECK(tm_counter_name(TM_CNT_UPLINK_DROPPED) && strcmp(tm_counter_name(TM_CNT_UPLINK_DROPPED), "uplink_dropped") == 0);
+
+    static tm_fakeflash_t ff;
+    static tm_app_t app;
+    static tm_live_t live;
+    memset(g_mem, 0xFF, sizeof g_mem);
+    g_now = 0u;
+    tm_fakeflash_init(&ff, g_mem, sizeof g_mem, 8192u, 16u, now_us);
+    tm_platform_t pf = {.now_us = now_us, .line_high = line_high, .mask_capture = mask, .storage = &ff.io};
+    tm_app_info_t info = {.unit_id = "L", .firmware = "test", .clock_source = "test", .storage = "ram",
+                          .reset_flags = TM_RST_PIN, .reset_cause = "PIN", .wheel_circumference_mm = 1500u,
+                          .wheel_ppr = 8u, .gnss_enabled = true};
+    tm_app_init(&app, &pf, &info);
+    CHECK(strstr(app.meta, "\"utc_from\":\"logged PPS edges\"") != 0);
+    tm_live_cfg_t cfg = {.gnss = true, .imu = true, .batt = true, .n_temp = 4, .temp_names = {"a", "b", "c", "d"}};
+    tm_live_init(&live, &app, &info, &cfg);
+    CHECK(live.n == 17u && strcmp(live.run_id, "L-B0001") == 0 && app.tap != 0);
+
+    /* nothing received yet: every signal missing, no UTC */
+    uint32_t n = tm_live_encode(&live, &app, 0, 1000u, live.cur, sizeof live.cur);
+    CHECK(n > 0u && strstr(live.cur, "\"utc_q\":\"none\"") && strstr(live.cur, "\"gnss.speed\":[null,\"missing\",null,null,null]"));
+    CHECK(strstr(live.cur, "\"registry\":\"" TM_REGISTRY_ID "\"") && strstr(live.cur, "\"silent_ms\":null"));
+
+    /* records through the application's tap: an IMU value, then a stale check */
+    uint8_t imu[8];
+    float ax = -0.25f, gz = 0.5f;
+    memcpy(imu, &ax, 4);
+    memcpy(imu + 4, &gz, 4);
+    (void)tm_app_record(&app, 2000u, TM_REC_IMU, imu, 8u);
+    n = tm_live_encode(&live, &app, 0, 52000u, live.cur, sizeof live.cur);
+    CHECK(n > 0u && strstr(live.cur, "\"imu.ax\":[-0.25,\"valid\",50,null,\"r\"]") != 0);
+    n = tm_live_encode(&live, &app, 0, 202000u, live.cur, sizeof live.cur);
+    CHECK(n > 0u && strstr(live.cur, "\"imu.ax\":[null,\"stale\",200,null,\"r\"]") != 0);   /* stale after 0.1 s */
+    uint8_t temp[4] = {1u, 4u, 0x00u, 0x80u};                                            /* channel 1: timeout */
+    (void)tm_app_record(&app, 210000u, TM_REC_TEMP, temp, 4u);
+    n = tm_live_encode(&live, &app, 0, 210000u, live.cur, sizeof live.cur);
+    CHECK(n > 0u && strstr(live.cur, "\"temp.b\":[null,\"invalid\",0,null,\"r\"]") != 0);
+    /* UTC from two labelled PPS edges: pps, then holdover with its error bound */
+    uint8_t pps[4];
+    tm_le32(pps, 1792141201u);
+    (void)tm_app_record(&app, 1000000u, TM_REC_PPS, pps, 4u);
+    tm_le32(pps, 1792141202u);
+    (void)tm_app_record(&app, 2000000u, TM_REC_PPS, pps, 4u);
+    n = tm_live_encode(&live, &app, 0, 2250000u, live.cur, sizeof live.cur);
+    CHECK(n > 0u && strstr(live.cur, "\"utc\":1792141202.250000,\"utc_q\":\"pps\"") != 0);
+    n = tm_live_encode(&live, &app, 0, 12000000u, live.cur, sizeof live.cur);
+    CHECK(n > 0u && strstr(live.cur, "\"utc\":1792141212.000000,\"utc_q\":\"holdover\",\"utc_err_s\":0.000501,") != 0);
+
+    /* the worst case fits: every value at full length, bounds, saturated counters */
+    for (uint8_t i = 0; i < live.n; i++) {
+        live.e[i].q = 0u;
+        live.e[i].v = -123.456789;
+        live.e[i].t_us = 0u;
+        live.e[i].has_upper = true;
+        live.e[i].upper = 1.23456789e-200;
+    }
+    live.boot = live.seq = 0xFFFFFFFFu;
+    live.sent = live.dropped = live.high_water = 0xFFFFFFFFu;
+    snprintf(live.run_id, sizeof live.run_id, "U575-0123456789ABCDEF01234567-NOR-B99999");
+    tm_counters_t keep = app.c;
+    memset(&app.c, 0xFF, sizeof app.c);
+    tm_gnss_t gg;
+    memset(&gg, 0xFF, sizeof gg);
+    n = tm_live_encode(&live, &app, &gg, 0xFFFFFFFFFFFFull, live.cur, sizeof live.cur);
+    CHECK(n > 1000u && n + 8u < TM_LIVE_MSG_MAX);
+    app.c = keep;
+
+    /* backlog: 5 s up, 20 s down (40 messages, 30 kept, the 10 oldest dropped), up again; one refusal */
+    tm_live_init(&live, &app, &info, &cfg);
+    memset(&g_link, 0, sizeof g_link);
+    tm_link_t link = {.ctx = 0, .up = t_up, .publish = t_publish};
+    for (uint64_t t = 250000u; t <= 40000000u; t += 250000u) {
+        g_link.up = t <= 5000000u || t > 25000000u;
+        if (t == 30000000u) g_link.refuse_next = true;
+        tm_live_tick(&live, &app, 0, &link, t);
+    }
+    const uint32_t total = live.seq;
+    bool ascending = true, flags_ok = true;
+    for (uint32_t i = 1; i < g_link.n; i++) ascending = ascending && g_link.seq[i] > g_link.seq[i - 1];
+    for (uint32_t i = 0; i < g_link.n; i++)
+        flags_ok = flags_ok && g_link.replayed[i] == ((g_link.seq[i] >= 20u && g_link.seq[i] < 50u) ||
+                                                    g_link.seq[i] == 59u);   /* refused at 30 s, sent at 30.5 s */
+    CHECK(total == 80u && live.dropped == 10u && live.high_water == TM_LIVE_BACKLOG && live.count == 0u);
+    CHECK(ascending && flags_ok && g_link.n + live.dropped == total && g_link.seq[10] == 20u);
+    CHECK(live.sent == g_link.n && live.encode_errors == 0u);
+}
+
 int main(void)
 {
     test_crc32();
@@ -493,6 +625,7 @@ int main(void)
     test_can_flood();
     test_drivers();
     test_gnss();
+    test_live();
     printf("%d checks, %d failed\n", g_n, g_fail);
     return (g_fail || g_drv_fail) ? 1 : 0;
 }

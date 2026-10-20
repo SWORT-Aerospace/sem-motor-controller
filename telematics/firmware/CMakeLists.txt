@@ -16,6 +16,8 @@ option(TM_TARGET_U575 "Build the NUCLEO-U575ZI-Q image" OFF)
 set(TM_PORTABLE src/tm_crc32.c src/tm_wheel.c src/tm_queue.c src/tm_stlg.c src/tm_flashlog.c src/tm_reset.c
                 src/tm_app.c src/tm_w25q.c src/tm_imu.c)
 set(TM_GNSS src/tm_gnss.c)                     # GNSS and PPS: the vehicle image and the host build
+set(TM_LIVE src/tm_live.c)                     # live summary: run by the host simulator; compiled into the vehicle
+                                               # image, not called there until the modem's transport exists (T-MODEM)
 set(TM_WARN -Wall -Wextra -Werror -Wshadow -Wconversion -Wno-sign-conversion)
 
 execute_process(COMMAND git describe --always --dirty --abbrev=12 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -25,7 +27,7 @@ if(NOT TM_GIT_REV)
 endif()
 
 if(NOT TM_TARGET_U575)
-  add_library(tm_portable STATIC ${TM_PORTABLE} ${TM_GNSS} platform/host/tm_fakeflash.c platform/host/tm_fakew25q.c)
+  add_library(tm_portable STATIC ${TM_PORTABLE} ${TM_GNSS} ${TM_LIVE} platform/host/tm_fakeflash.c platform/host/tm_fakew25q.c)
   target_include_directories(tm_portable PUBLIC include platform/host)
   target_compile_options(tm_portable PRIVATE ${TM_WARN} -fsanitize=address,undefined -fno-omit-frame-pointer)
   target_link_options(tm_portable PUBLIC -fsanitize=address,undefined)
@@ -48,7 +50,7 @@ else()
     if(variant STREQUAL "tm_u575_can")
       add_executable(${variant}.elf ${TM_PORTABLE} ${TM_TARGET_SRC} ${U5}/can_u575.c)
     elseif(variant STREQUAL "tm_u575_vehicle")
-      add_executable(${variant}.elf ${TM_PORTABLE} ${TM_GNSS} ${TM_TARGET_SRC} ${U5}/can_u575.c ${U5}/gnss_u575.c)
+      add_executable(${variant}.elf ${TM_PORTABLE} ${TM_GNSS} ${TM_LIVE} ${TM_TARGET_SRC} ${U5}/can_u575.c ${U5}/gnss_u575.c)
     else()
       add_executable(${variant}.elf ${TM_PORTABLE} ${TM_TARGET_SRC})
     endif()

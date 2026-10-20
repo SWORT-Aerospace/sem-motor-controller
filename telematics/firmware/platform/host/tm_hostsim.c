@@ -6,9 +6,10 @@
  * the peripherals are not modelled.
  *
  *   T <t_us>                                    start time, before I (default 0)
- *   I <slots> <circumference_mm> <ppr> <image> [internal|nor|norslow]
+ *   I <slots> <circumference_mm> <ppr> <image> [internal|nor|norslow] [gnss]
  *                                               start (load <image> if it exists, else erased storage) on a
- *                                               model of internal flash (default) or of a W25Q NOR on SPI
+ *                                               model of internal flash (default) or of a W25Q NOR on SPI;
+ *                                               gnss: the image has a GNSS receiver (the vehicle image)
  *   K <t_us> <type> <body hex>                  a record from a main-loop driver (IMU, temperature)
  *   E <t_us> <channel>                          a wheel edge at t (polls run up to t first)
  *   O <t_us> <channel>                          a capture overrun at t
@@ -16,6 +17,9 @@
  *   C <t_us> <id_flags hex> <data hex>          a received CAN frame at t
  *   G <t_us> <hex>                              bytes from the GNSS receiver's UART at t (tm_gnss)
  *   U <t_us>                                    a PPS edge captured at t
+ *   Y <path> [imu] [temp <n>] [batt]           run the live summary (tm_live) from now on, publishing to <path>:
+ *                                               one line per message, "<t_us> <seq> <json>"; the link is up
+ *   N <t_us> <0|1>                              the link down (0) or up (1) from t
  *   S <t0_us> <t1_us>                           storage busy throughout [t0, t1)
  *   P <t_us>                                    run polls up to t
  *   R <t_us> <cause>                            restart at t without shutdown (RAM lost, flash kept)
@@ -34,6 +38,7 @@
 #include "tm_fakeflash.h"
 #include "tm_fakew25q.h"
 #include "tm_gnss.h"
+#include "tm_live.h"
 #include "tm_reset.h"
 #include "tm_w25q.h"
 
@@ -57,19 +62,44 @@ static char g_image[512];
 static uint32_t g_circ, g_ppr;
 static tm_gnss_t g_gnss;
 static bool g_gnss_on;                         /* GNSS counters only once the script feeds a GNSS */
+static tm_live_t g_live;
+static tm_live_cfg_t g_live_cfg;
+static bool g_live_on, g_link_up = true;
+static FILE *g_live_out;
+static tm_app_info_t g_info;
+static const char *const TEMP_NAMES[TM_LIVE_TEMP_MAX] = {"0", "1", "2", "3"};   /* as the log's default names */
+
+static bool link_up(void *ctx, uint64_t now)
+{
+    (void)ctx;
+    (void)now;
+    return g_link_up;
+}
+
+static bool link_publish(void *ctx, const char *topic, const char *msg, uint32_t len, uint32_t seq)
+{
+    (void)ctx;
+    (void)topic;
+    fprintf(g_live_out, "%" PRIu64 " %" PRIu32 " %.*s\n", g_now, seq, (int)len, msg);
+    return true;
+}
+
+static const tm_link_t g_link = {.ctx = 0, .up = link_up, .publish = link_publish};
 
 static void start(uint32_t reset_flags, const char *cause)
 {
     tm_platform_t pf = {.now_us = now_us, .line_high = line_high, .mask_capture = mask_capture, .storage = g_io};
-    tm_app_info_t info = {.unit_id = "HOSTSIM-000000000000000000000000",
+    g_info = (tm_app_info_t){.unit_id = "HOSTSIM-000000000000000000000000",
                           .run_prefix = g_is_nor ? "HOSTSIM-000000000000000000000000-NOR" : 0,
                           .firmware = "tm_hostsim (portable application on the host)",
                           .kind = "HOST SIMULATION - the portable firmware code on a computer; not hardware",
                           .clock_source = "simulated, exact",
                           .storage = g_is_nor ? "RAM model of a W25Q NOR on SPI1" : "RAM model of internal flash bank 2",
                           .reset_flags = reset_flags, .reset_cause = cause, .can_enabled = true,
-                          .wheel_circumference_mm = g_circ, .wheel_ppr = g_ppr, .wheel_active_high = false};
-    tm_app_init(&g_app, &pf, &info);
+                          .wheel_circumference_mm = g_circ, .wheel_ppr = g_ppr, .wheel_active_high = false,
+                          .gnss_enabled = g_gnss_on};
+    tm_app_init(&g_app, &pf, &g_info);
+    if (g_live_on) tm_live_init(&g_live, &g_app, &g_info, &g_live_cfg);
 }
 
 static void run_to(uint64_t t)
@@ -77,6 +107,7 @@ static void run_to(uint64_t t)
     while (g_now + TM_HOST_POLL_US <= t) {
         g_now += TM_HOST_POLL_US;
         if (g_gnss_on) tm_gnss_tick(&g_gnss, &g_app, g_now);
+        if (g_live_on) tm_live_tick(&g_live, &g_app, g_gnss_on ? &g_gnss : 0, &g_link, g_now);
         tm_app_poll(&g_app);
     }
     if (t > g_now) g_now = t;
@@ -105,9 +136,11 @@ int main(void)
             g_now = t;                                 /* start time (before I): e.g. just below 2^32 us */
         } else if (op == 'I') {
             unsigned slots;
-            char kind[16] = "internal";
-            if (sscanf(line + 1, "%u %" SCNu32 " %" SCNu32 " %511s %15s", &slots, &g_circ, &g_ppr, g_image, kind) < 4)
+            char kind[16] = "internal", opt[16] = "";
+            if (sscanf(line + 1, "%u %" SCNu32 " %" SCNu32 " %511s %15s %15s", &slots, &g_circ, &g_ppr, g_image, kind,
+                       opt) < 4)
                 return 2;
+            if (strcmp(opt, "gnss") == 0) g_gnss_on = true;
             g_size = slots * TM_SLOT_BYTES;
             g_mem = malloc(g_size);
             memset(g_mem, 0xFF, g_size);
@@ -182,6 +215,20 @@ int main(void)
             run_to(t);
             g_gnss_on = true;
             tm_gnss_pps(&g_gnss, t);
+        } else if (op == 'Y') {
+            char path[512] = {0}, rest[128] = {0};
+            if (sscanf(line + 1, "%511s %127[^\n]", path, rest) < 1) return 2;
+            g_live_out = fopen(path, "w");
+            if (!g_live_out) return 4;
+            g_live_cfg = (tm_live_cfg_t){.gnss = true, .imu = strstr(rest, "imu") != 0, .batt = strstr(rest, "batt") != 0};
+            const char *tp = strstr(rest, "temp ");
+            g_live_cfg.n_temp = tp ? (uint8_t)atoi(tp + 5) : 0u;
+            for (uint8_t k = 0; k < TM_LIVE_TEMP_MAX; k++) g_live_cfg.temp_names[k] = TEMP_NAMES[k];
+            g_live_on = true;
+            tm_live_init(&g_live, &g_app, &g_info, &g_live_cfg);
+        } else if (op == 'N' && sscanf(line + 1, "%" SCNu64 " %u", &t, &v) == 2) {
+            run_to(t);
+            g_link_up = v != 0u;
         } else if (op == 'S' && sscanf(line + 1, "%" SCNu64 " %" SCNu64, &t, &t1) == 2) {
             g_ff.stall_t0 = t;
             g_ff.stall_t1 = t1;
@@ -206,6 +253,7 @@ int main(void)
             }
             g_app.flush_requested = false;
         } else if (op == 'W') {
+            if (g_live_out) fflush(g_live_out);
             write_image();
         } else if (op == 'Q') {
             char s[TM_STATUS_MAX];

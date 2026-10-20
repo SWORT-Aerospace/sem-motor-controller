@@ -86,14 +86,14 @@ void tm_app_init(tm_app_t *app, const tm_platform_t *pf, const tm_app_info_t *in
         snprintf(ppr, sizeof ppr, "null");
     int n = snprintf(
         app->meta, sizeof app->meta,
-        "{\"boot\":%lu,\"clock\":{\"domain\":\"telematics\",\"source\":\"%s\",\"unit\":\"us\",\"utc_from\":\"none: no GNSS "
-        "in this image\"},\"controller_adapter\":{\"id\":\"%s\"},\"firmware\":\"%s\",\"format\":{\"block_payload_bytes\":%u,"
+        "{\"boot\":%lu,\"clock\":{\"domain\":\"telematics\",\"source\":\"%s\",\"unit\":\"us\",\"utc_from\":\"%s\"},\"controller_adapter\":{\"id\":\"%s\"},\"firmware\":\"%s\",\"format\":{\"block_payload_bytes\":%u,"
         "\"name\":\"STLG\",\"slot_bytes\":%u,\"version\":1},\"kind\":\"%s\",\"reset\":{\"cause\":\"%s\",\"flags\":%lu},"
         "\"run_id\":\"%s-B%04lu\","
         "\"sensors\":{\"imu\":\"%s\",\"temp_channels\":%s,\"wheel_active_high\":%s,\"wheel_channels\":{\"0\":\"wheel_0\",\"1\":\"wheel_1\","
         "\"2\":\"wheel_2\"},\"wheel_circumference_m\":%s,\"wheel_ppr\":%s,\"wheel_record_period_s\":0.%03lu},\"storage\":\"%s\","
         "\"transmits\":\"nothing: receive-only firmware%s\",\"unit_id\":\"%s\"}",
-        (unsigned long)app->boot, info->clock_source, info->can_enabled ? "semmc-sim-fixture" : "none", info->firmware,
+        (unsigned long)app->boot, info->clock_source,
+        info->gnss_enabled ? "logged PPS edges" : "none: no GNSS in this image", info->can_enabled ? "semmc-sim-fixture" : "none", info->firmware,
         (unsigned)TM_BLOCK_PAYLOAD, (unsigned)TM_SLOT_BYTES,
         info->kind ? info->kind : "UNKNOWN - the platform did not state what produced this log", info->reset_cause,
         (unsigned long)info->reset_flags,
@@ -115,8 +115,20 @@ void tm_app_init(tm_app_t *app, const tm_platform_t *pf, const tm_app_info_t *in
 
 bool tm_app_can_frame(tm_app_t *app, const tm_can_frame_t *f) { return tm_can_ring_push(&app->can, f); }
 
+void tm_app_set_tap(tm_app_t *app, tm_tap_fn fn, void *ctx)
+{
+    app->tap = fn;
+    app->tap_ctx = ctx;
+}
+
+static inline void tap(const tm_app_t *app, uint64_t t_us, uint8_t type, const uint8_t *body, uint32_t len)
+{
+    if (app->tap) app->tap(app->tap_ctx, app, t_us, type, body, len);
+}
+
 bool tm_app_record(tm_app_t *app, uint64_t t_us, uint8_t type, const uint8_t *body, uint32_t len)
 {
+    tap(app, t_us, type, body, len);
     if (app->sparse) {
         app->c.log_thinned++;
         return false;
@@ -160,6 +172,7 @@ void tm_app_poll(tm_app_t *app)
         body[4] = (uint8_t)len;
         memcpy(body + 5, f.data, len);
         app->c.rx_frames++;
+        tap(app, f.t_us, TM_REC_CAN2, body, 5u + len);
         if (app->sparse)
             app->c.log_thinned++;
         else if (tm_queue_count(&app->q) >= TM_QUEUE_LEN - TM_QUEUE_OWN_RESERVE)
@@ -184,6 +197,7 @@ void tm_app_poll(tm_app_t *app)
             app->c.wheel_records++;
             app->c.wheel_edges_lost += r.lost;
             tm_wheel_track_update(&app->track[ch], &r);
+            tap(app, r.t_us, TM_REC_WHEEL_EDGES, body, TM_WHEEL_BODY_BYTES);
             (void)tm_queue_push(&app->q, r.t_us, TM_REC_WHEEL_EDGES, body, TM_WHEEL_BODY_BYTES);
         }
         for (uint8_t ch = 0; ch < TM_WHEEL_CHANNELS; ch++) {

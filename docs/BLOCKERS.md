@@ -166,10 +166,10 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 **LTE modem on the target (configuration B)** (track: telematics)
 
-- **Missing:** The modem's MQTT client on the target and a modem board whose bands suit the event country.
+- **Missing:** The modem's transport on the target (its AT command set for MQTT, from the modem's manual, behind tm_link_t) and a modem board whose bands suit the event country.
 - **Affects:** configuration B; live monitoring
-- **Why it matters:** The uplink exists only in the host model; the log does not depend on it.
-- **Done now:** Host uplink with a real broker, bounded backlog, replay flags and validation; modem candidates priced.
+- **Why it matters:** The message, its backlog and its accounting are firmware now; nothing on the target carries them to a broker yet. The log does not depend on the uplink.
+- **Done now:** Host uplink with a real broker, bounded backlog, replay flags and validation; modem candidates priced. On the target side (portable firmware, HOST-TESTED, compiled into tm_u575_vehicle but not called): the sem.telemetry.v4 live summary from the records the unit logs, the pit's wheel-speed rule, UTC from the logged PPS edges, a 30-message backlog with drops counted and replay flagged, the uplink counters logged (telematics/firmware/src/tm_live.c). Through the firmware in the host simulator, a 140 s simulated drive with a 20 s link outage: 270 messages, all accepted by the pit's validation, 10 dropped and counted, every sequence number accounted for, 4,241 live values equal to the pit's import of the log (tools/run_firmware_vehicle_sim.py, SIMULATED).
 - **Input required:** The event country (B-RULES) for the band set.
 - **Closure criterion:** Live messages from the target reach a pit broker on the bench; outage and restart accounted as in the demonstration.
 

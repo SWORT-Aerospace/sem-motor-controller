@@ -11,6 +11,9 @@ enum {
     TM_CNT_LOG_DROPPED_QUEUE = 3,
     TM_CNT_LOG_DROPPED_STORAGE = 4,
     TM_CNT_QUEUE_HIGH_WATER = 5,
+    TM_CNT_UPLINK_SENT = 6,               /* the live summary's own COUNTERS2 record (tm_live.c, images with an uplink) */
+    TM_CNT_UPLINK_DROPPED = 7,            /* messages dropped from a full backlog (oldest first) */
+    TM_CNT_UPLINK_QUEUE_HIGH_WATER = 8,
     TM_CNT_WHEEL_EDGES_LOST = 14,
     TM_CNT_WHEEL_RECORDS = 15,
     TM_CNT_STORAGE_BLOCKS_WRITTEN = 16,
@@ -18,6 +21,7 @@ enum {
     TM_CNT_CAN_RX_OVERRUN = 18,
     TM_CNT_CAN_BUS_ERRORS = 19,
     TM_CNT_LOG_QUEUE_CAPACITY = 20,
+    TM_CNT_UPLINK_QUEUE_CAPACITY = 21,
     TM_CNT_STORAGE_WRITE_ERRORS = 22,
     TM_CNT_UPTIME_S = 23,
     TM_CNT_WHEEL_SUSPECT_ACTIVE = 24,     /* episodes: a channel became suspect with its line active */

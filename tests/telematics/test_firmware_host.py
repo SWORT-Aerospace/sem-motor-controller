@@ -42,6 +42,24 @@ def test_counter_and_record_ids_match_the_python_reference(request):
     assert f"{stlg.BASE_SLACK_US}u" in cfg and "TM_SLOT_BYTES 4096u" in cfg
 
 
+def test_live_summary_tables_match_the_pit_registry_and_counter_ids(request):
+    """The firmware's live summary (tm_live.c) names the pit's registry and uses its ranges and stale times for
+    the unit's own signals, and its counter names are the pit's (stlg.COUNTER2_IDS)."""
+    from host.telematics import signals
+    root = request.config.rootpath
+    h = (root / FW / "include" / "tm_live.h").read_text()
+    assert f'#define TM_REGISTRY_ID "{signals.REGISTRY_ID}"' in h
+    c = (root / FW / "src" / "tm_live.c").read_text()
+    reg = {i: (float(lo), float(hi), int(ms)) for i, lo, hi, ms in
+           re.findall(r'\{"([a-z_.*]+)", (-?[0-9.]+)f, (-?[0-9.]+)f, ([0-9]+)u\}', c)}
+    own = {r.id: (r.lo, r.hi, int(round(r.stale_s * 1000))) for r in signals.REGISTRY if r.origin == "telematics"}
+    assert reg == own
+    ids = {k: int(v) for k, v in re.findall(r"TM_CNT_([A-Z0-9_]+) = (\d+)",
+                                            (root / FW / "include" / "tm_counters.h").read_text())}
+    names = re.findall(r'\{TM_CNT_([A-Z0-9_]+), "([a-z0-9_]+)"\}', c)
+    assert len(names) == len(ids) and all(stlg.COUNTER2_IDS[ids[k]] == n for k, n in names)
+
+
 def _script(tmp_path, duration=40.0, restart=None, stall=None, slots=256, seed_faults=Faults(), frames=True):
     """Host-simulator script from the vehicle fixture: wheel edges, line levels, controller frames."""
     sim = VehicleSim(VehicleSimConfig(), seed_faults, profile=lambda t: 0.0 if t < 1.0 or t > duration - 8 else 6.0)
@@ -449,12 +467,14 @@ def test_gnss_and_pps_through_the_firmware_give_gnss_records_and_utc(telematics_
 
 
 def test_firmware_in_the_loop_vehicle_drive_through_the_pit(telematics_build, tmp_path):
-    """tools/run_firmware_vehicle_sim.py on a 30 s drive with a GNSS outage from 12 s to 16 s: the simulated
-    vehicle drives the firmware's tm_app and tm_gnss, and the log goes through import, evidence review and the
-    shadow replay. Every record accounted for, GNSS speed as simulated, UTC from the firmware's PPS records exact,
-    no PPS edge left unlabelled, and the outage attributed to GNSS by B1. SIMULATED."""
+    """tools/run_firmware_vehicle_sim.py on a 30 s drive with a GNSS outage from 12 s to 16 s and a live-link
+    outage from 10 s to 28 s: the simulated vehicle drives the firmware's tm_app, tm_gnss and tm_live, the log goes
+    through import, evidence review and the shadow replay, the live messages through the pit's validation. Every
+    record accounted for, GNSS speed as simulated, UTC from the firmware's PPS records exact, no PPS edge left
+    unlabelled, the outage attributed to GNSS by B1, every live sequence number accounted for. SIMULATED."""
     from tools import run_firmware_vehicle_sim as fwsim
-    s = fwsim.run(tmp_path / "out", 30.0, Faults(gnss_outage=((12.0, 16.0),)), telematics_build)
+    s = fwsim.run(tmp_path / "out", 30.0, Faults(gnss_outage=((12.0, 16.0),)), telematics_build,
+                  link_outage=((10.0, 28.0),))
     acc = s["accounting"]
     assert s["import"]["blocks_corrupt"] == 0 and s["import"]["block_seq_gaps"] == 0
     assert acc["missing_from_file"] == 0 and acc["dropped_queue"] == 0 and acc["dropped_storage"] == 0
@@ -470,3 +490,10 @@ def test_firmware_in_the_loop_vehicle_drive_through_the_pit(telematics_build, tm
     assert rep["returncode"] == 0 and rep["episodes"]["R3v"] == []
     (b1,) = rep["episodes"]["B1"]
     assert b1["suspects"] == ["gnss"] and 12.0 <= b1["start_s"] <= 13.0 and 16.0 <= b1["end_s"] <= 17.0
+    # the firmware's live summary: an 18 s link outage holds 30 messages and drops the 6 oldest, counted; every
+    # message passes the pit's validation; every live value equals the pit's import of the log at that time
+    lv = s["live"]
+    assert lv["outcomes"] == {"stored": lv["messages"]} and lv["seq_last"] == 59 and lv["accounted"]
+    assert lv["uplink_dropped"] == 6 and lv["replayed"] == 30 and lv["uplink_queue_high_water"] == 30
+    assert lv["value_mismatches"] == 0 and lv["values_compared"] > 500
+    assert lv["utc_q"].get("holdover", 0) > 0 and lv["utc_q"].get("pps", 0) > 40

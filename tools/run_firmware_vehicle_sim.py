@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """Firmware-in-the-loop vehicle simulation (SIMULATED): the simulated vehicle drives the telematics firmware's own C
-code, and the log it writes goes through the pit: import, evidence review and the R3v and CSIA shadow replay.
+code; the log it writes goes through the pit (import, evidence review and the R3v and CSIA shadow replay) and its
+live summary through the pit's live validation.
 
     python3 tools/run_firmware_vehicle_sim.py --out build/firmware_vehicle_sim [--duration 140]
                                               [--gnss-outage 60:70] [--wheel-scale 0:90:110:1.05]
+                                              [--link-outage 20:40]
 
 Inputs, generated per simulated millisecond by host/telematics/sim_vehicle.py: wheel edges and line levels, the
 external controller's CAN frames (semmc simulation fixture), the IMU, three TMP117 channels, the battery-side
 monitor, and the GNSS receiver as UBX-NAV-PVT bytes (host/telematics/ubx.py) at 10 Hz, 60 ms after each solution's
 epoch, with a PPS edge at every whole UTC second while there is a fix. They go to the host simulator (tm_hostsim:
 tm_app and tm_gnss, the code of the tm_u575_vehicle image without its register-level drivers), which writes the log
-to a RAM flash; the log is then imported as a board's log would be.
+to a RAM flash; the log is then imported as a board's log would be. The firmware's live summary (tm_live, 2 Hz)
+goes to a simulated link that can be cut (--link-outage); each message is checked by the pit's own validation
+(host/pit/ingest.py) and every value it carries is compared with the pit's import of the log at the same time.
 
 What this shows: the firmware's logging and GNSS code, the import, the UTC mapping from the firmware's PPS records,
-the evidence review and CSIA work together on one simulated drive. What it does not show: anything about the target
-(interrupts, peripherals, timing) or about the vehicle. Every input is simulated.
+the evidence review and CSIA work together on one simulated drive, and that the unit's live values are the ones the
+pit derives from its log. What it does not show: anything about the target (interrupts, peripherals, timing), the
+modem or the vehicle. Every input is simulated.
 """
 from __future__ import annotations
 
@@ -44,7 +49,8 @@ def _us(t: float) -> int:
     return int(round(t * 1e6))
 
 
-def script(duration: float, faults: Faults, img: pathlib.Path, slots: int) -> tuple[str, list, dict]:
+def script(duration: float, faults: Faults, img: pathlib.Path, slots: int, live: pathlib.Path | None = None,
+           link_outage: tuple = ()) -> tuple[str, list, dict]:
     """The tm_hostsim script of one drive; also the simulated speed (t, v) and the input counts."""
     sim = VehicleSim(VehicleSimConfig(), faults, default_profile)
     cfg = sim.cfg
@@ -86,7 +92,12 @@ def script(duration: float, faults: Faults, img: pathlib.Path, slots: int) -> tu
             n["pps_edges"] += 1
         t_prev = t
     ev.sort(key=lambda e: e[0])
-    lines = [f"I {slots} {int(round(cfg.wheel_circumference_m * 1000))} {cfg.wheel_ppr} {img}"]
+    for t0, t1 in link_outage:
+        ev += [(_us(t0), f"N {_us(t0)} 0"), (_us(t1), f"N {_us(t1)} 1")]
+    ev.sort(key=lambda e: e[0])
+    lines = [f"I {slots} {int(round(cfg.wheel_circumference_m * 1000))} {cfg.wheel_ppr} {img} internal gnss"]
+    if live is not None:
+        lines.append(f"Y {live} imu temp {len(NodeConfig().temp_channels)} batt")
     lines += [x for _t, x in ev] + [f"P {_us(duration)}", "F", "W"]
     return "\n".join(lines) + "\n", truth, dict(n)
 
@@ -100,12 +111,61 @@ def _hostsim(build: pathlib.Path, text: str) -> None:
         raise SystemExit(f"tm_hostsim failed: {r.stderr}")
 
 
-def run(out: pathlib.Path, duration: float, faults: Faults, build: pathlib.Path, slots: int = 1024) -> dict:
+def live_check(db, rid: str, live: pathlib.Path, names: dict) -> dict:
+    """Every published live message through the pit's validation and store (host/pit/ingest.py); the sequence
+    numbers accounted for; every value compared with the pit's own import of the log at the same time."""
+    msgs, outcome, reasons = [], collections.Counter(), collections.Counter()
+    for ln in live.read_text().splitlines():
+        t_us, _seq, payload = ln.split(" ", 2)
+        o, why = ingest.ingest_payload(db, int(t_us) / 1e6, NodeConfig().topic, payload.encode(), commit=False)
+        outcome[o] += 1
+        if why:
+            reasons[why] += 1
+        msgs.append(json.loads(payload))
+    db.commit()
+    if not msgs:
+        return {"messages": 0}
+    seqs = [m["seq"] for m in msgs]
+    last = max(msgs, key=lambda m: m["seq"])["counters"]
+    meas = collections.defaultdict(list)
+    for sig, t_rx, t_s, v, q in db.execute("SELECT signal, t_rx_us, t_sample_us, value, validity FROM measurements "
+                                           "WHERE run_id=? ORDER BY t_rx_us", (rid,)):
+        meas[sig].append((t_s if t_s is not None else t_rx, v, q))
+    compared, mismatch, worst, utc_q = 0, [], 0.0, collections.Counter()
+    for m in msgs:
+        utc_q[m["utc_q"]] += 1
+        t_msg = m["t_local_ms"] * 1000
+        for sid, (v, q, age, _sq, _ts, *_up) in m["m"].items():
+            if q not in ("valid", "unverified"):
+                continue
+            log_sid = names.get(sid, sid)
+            t_ref = t_msg - age * 1000
+            near = [x for x in meas[log_sid] if abs(x[0] - t_ref) <= 1000 and x[0] <= t_msg + 1000]
+            if not near:
+                mismatch.append((m["seq"], sid, "no log measurement at that time"))
+                continue
+            lv = min(near, key=lambda x: abs(x[0] - t_ref))
+            compared += 1
+            rel = abs(v - lv[1]) / max(abs(lv[1]), 1e-9) if lv[1] is not None else math.inf
+            worst = max(worst, rel if math.isfinite(rel) else 1.0)
+            if lv[2] != q or rel > 1e-5:
+                mismatch.append((m["seq"], sid, f"live {v} {q}, log {lv[1]} {lv[2]}"))
+    return {"messages": len(msgs), "outcomes": dict(outcome), "rejected_reasons": dict(reasons),
+            "replayed": sum(m["replayed"] for m in msgs), "seq_last": max(seqs),
+            "seq_unique": len(set(seqs)), "uplink_dropped": last["uplink_dropped"],
+            "accounted": len(set(seqs)) + last["uplink_dropped"] == max(seqs) + 1,
+            "uplink_queue_high_water": last["uplink_queue_high_water"], "utc_q": dict(utc_q),
+            "values_compared": compared, "value_mismatches": len(mismatch), "first_mismatches": mismatch[:5],
+            "max_relative_difference": worst}
+
+
+def run(out: pathlib.Path, duration: float, faults: Faults, build: pathlib.Path, slots: int = 1024,
+        link_outage: tuple = ()) -> dict:
     out.mkdir(parents=True, exist_ok=True)
-    img, db_path = out / "flash.bin", out / "pit.sqlite"
-    for p in (img, db_path):
+    img, db_path, live = out / "flash.bin", out / "pit.sqlite", out / "live.txt"
+    for p in (img, db_path, live):
         p.unlink(missing_ok=True)
-    text, truth, n_in = script(duration, faults, img, slots)
+    text, truth, n_in = script(duration, faults, img, slots, live, link_outage)
     _hostsim(build, text)
     nc = NodeConfig()
     overrides = {"wheel_channels": {str(k): v for k, v in enumerate(nc.wheel_channels)},
@@ -123,6 +183,10 @@ def run(out: pathlib.Path, duration: float, faults: Faults, build: pathlib.Path,
     spd_err = [e for e in spd_err if math.isfinite(e)]
     cnt = dict(db.execute("SELECT name, value FROM signals WHERE run_id=? AND name LIKE 'cnt_%' ORDER BY t_local_us",
                           (rid,)).fetchall())
+    names = {f"wheel.wheel_{k}.{q}": f"wheel.{n}.{q}" for k, n in enumerate(nc.wheel_channels)
+             for q in ("speed", "distance")}
+    names.update({f"temp.{k}": f"temp.{n}" for k, n in enumerate(nc.temp_channels)})
+    lv = live_check(db, rid, live, names)
     db.close()
     review = subprocess.run([sys.executable, str(ROOT / "tools" / "run_evidence_review.py"), "--db", str(db_path),
                              "--run", rid, "--out", str(out / "evidence_review"), "--pair", "wheel_l:wheel_r"],
@@ -141,6 +205,7 @@ def run(out: pathlib.Path, duration: float, faults: Faults, build: pathlib.Path,
         "firmware_counters": {k[4:]: cnt.get(k) for k in ("cnt_gnss_frames", "cnt_gnss_checksum_errors",
                                                           "cnt_pps_edges", "cnt_pps_unlabelled", "cnt_log_records",
                                                           "cnt_log_dropped_queue", "cnt_log_dropped_storage")},
+        "live": lv,
         "evidence_review": review.stdout.strip().splitlines()[-1] if review.stdout.strip() else review.stderr[-300:],
         "replay": {"returncode": replay.returncode, "relationships": rep.get("relationships"),
                    "episodes": rep.get("episodes"), "insufficient": rep.get("insufficient")},
@@ -160,15 +225,20 @@ def _faults(a) -> Faults:
     return Faults(**kw)
 
 
+def _windows(spec: str) -> tuple:
+    return tuple(tuple(float(x) for x in w.split(":")) for w in spec.split(",") if w)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "build" / "firmware_vehicle_sim")
     ap.add_argument("--duration", type=float, default=140.0)
     ap.add_argument("--gnss-outage", default="", help="t0:t1 (s): no fix, no PPS")
     ap.add_argument("--wheel-scale", default="", help="channel:t0:t1:factor, e.g. 0:90:110:1.05")
+    ap.add_argument("--link-outage", default="", help="t0:t1[,t0:t1] (s): the live link down")
     ap.add_argument("--build", type=pathlib.Path, default=ROOT / "build-telematics", help="host build with tm_hostsim")
     a = ap.parse_args()
-    s = run(a.out, a.duration, _faults(a), a.build)
+    s = run(a.out, a.duration, _faults(a), a.build, link_outage=_windows(a.link_outage))
     print(json.dumps(s, indent=1, default=str))
     return 0
 

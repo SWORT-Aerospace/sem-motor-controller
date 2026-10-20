@@ -47,6 +47,7 @@ typedef struct {
     uint32_t reset_flags;
     const char *reset_cause;
     bool can_enabled;                      /* FDCAN1 in bus-monitoring mode */
+    bool gnss_enabled;                     /* a GNSS receiver whose PPS records put the log on UTC */
     uint32_t wheel_circumference_mm;       /* 0: unknown (no speed at import unless given there) */
     uint32_t wheel_ppr;                    /* 0: unknown */
     bool wheel_active_high;
@@ -54,7 +55,13 @@ typedef struct {
     const char *temp_channels_json;        /* e.g. {"0":"tmp117_0"}, "{}" when none */
 } tm_app_info_t;
 
-typedef struct {
+struct tm_app;
+/* Sees every record the application makes, at the moment it makes it, whether or not the log has room for it
+ * (the live summary, tm_live.h). It must not block. */
+typedef void (*tm_tap_fn)(void *ctx, const struct tm_app *app, uint64_t t_us, uint8_t type, const uint8_t *body,
+                          uint32_t len);
+
+typedef struct tm_app {
     tm_platform_t pf;
     tm_wheel_acc_t wheel[TM_WHEEL_CHANNELS];
     tm_wheel_track_t track[TM_WHEEL_CHANNELS];       /* plausibility across channels (tm_wheel_classify) */
@@ -80,6 +87,8 @@ typedef struct {
     uint8_t header[TM_SLOT_BYTES];
     char meta[TM_META_MAX];
     size_t meta_len;
+    tm_tap_fn tap;                         /* 0: none */
+    void *tap_ctx;
 } tm_app_t;
 
 /* Scan the storage, count this boot, build the session header and the BOOT record. */
@@ -91,6 +100,8 @@ bool tm_app_can_frame(tm_app_t *app, const tm_can_frame_t *f);
 /* A record from a main-loop driver (IMU, temperature): into the log queue, dropped and counted if full;
  * in sparse logging not logged, counted as log_thinned. */
 bool tm_app_record(tm_app_t *app, uint64_t t_us, uint8_t type, const uint8_t *body, uint32_t len);
+/* Install the record tap (after tm_app_init, which clears it). */
+void tm_app_set_tap(tm_app_t *app, tm_tap_fn fn, void *ctx);
 /* One status line (no newline) for the UART: time, timer overflows (tov), edges and state per channel,
  * queue, storage, and the estimated recording time left at the current rate (left, s; "?" until known). */
 size_t tm_app_status(const tm_app_t *app, char *out, size_t cap);
