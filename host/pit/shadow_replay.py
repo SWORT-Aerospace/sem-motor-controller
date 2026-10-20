@@ -56,6 +56,34 @@ RELATIONSHIPS = {
 SIGNALS = ["rotor", "iq", "iq_ref", "kcl", "p_dc", "wheel_l", "wheel_r", "wheel_drive", "gnss", "imu_ax", "imu_gz",
            "grade"]
 MIN_COVERAGE = 0.5
+# the measurement (docs: host/telematics/signals.py) behind each monitor input; "grade" is not measured
+INPUTS = {"rotor": "ctrl.motor_speed", "iq": "ctrl.phase_current_q", "iq_ref": "ctrl.torque_reference (divided by kt)",
+          "kcl": "ctrl.kcl_residual", "p_dc": "ctrl.dc_power", "wheel_l": "wheel.wheel_l.speed",
+          "wheel_r": "wheel.wheel_r.speed", "wheel_drive": "wheel.wheel_drive.speed", "gnss": "gnss.speed",
+          "imu_ax": "imu.ax", "imu_gz": "imu.gz", "grade": "road grade (no sensor; assumed flat)"}
+# metadata fields that only a simulation has; a vehicle run's report never uses them
+SIMULATOR_FIELDS = ("injected_faults", "injected_probe_faults", "plant", "simulation")
+
+
+def availability(db: sqlite3.Connection, run_id: str) -> dict:
+    """Monitor input -> number of samples with a value in the run (0: the source does not provide it)."""
+    rows = dict(db.execute("SELECT name, COUNT(value) FROM signals WHERE run_id=? GROUP BY name", (run_id,)).fetchall())
+    alias = {"iq_ref": "accepted_Nm", "imu_ax": "imu_ax", "imu_gz": "imu_gz"}
+    return {s: int(rows.get(alias.get(s, s), 0)) for s in SIGNALS if s != "grade"}
+
+
+def relationship_status(avail: dict, measured: bool) -> dict:
+    """Each relationship enabled, or disabled with the inputs it lacks. An input the run never provides (the
+    external controller does not broadcast it, or a sensor is not fitted) disables every relationship that needs
+    it; on a vehicle run the assumed flat road disables the relationship that uses grade."""
+    out = {}
+    for r, (ins, aux) in RELATIONSHIPS.items():
+        lacking = [x for x in ins + aux if x != "grade" and avail.get(x, 0) == 0]
+        if measured and "grade" in ins + aux:
+            lacking.append("grade")
+        out[r] = {"needs": [INPUTS[x] for x in ins + aux],
+                  "status": "enabled" if not lacking else "disabled: no " + ", ".join(INPUTS[x] for x in lacking)}
+    return out
 
 
 def frozen_settings() -> tuple[float, E6Model, dict]:
@@ -92,6 +120,13 @@ def run(db: sqlite3.Connection, run_id: str, params: AdapterParams, kt: float, w
     row = db.execute("SELECT meta_json FROM runs WHERE run_id=?", (run_id,)).fetchone()
     meta = json.loads(row[0]) if row else {}
     prov = classify(meta)
+    notes = tuple(notes)
+    if not prov["synthetic"]:
+        found = [k for k in SIMULATOR_FIELDS if k in meta]
+        if found:
+            # a vehicle report never takes ground truth or plant data from a simulator
+            notes += (f"simulator fields {found} in a vehicle run's metadata were ignored",)
+            meta = {k: v for k, v in meta.items() if k not in SIMULATOR_FIELDS}
     lam, e6, freeze = frozen_settings()
     data = csia_replay.build_samples(db, run_id, kt, wheel_q_mps)
     res = {"run_id": run_id, "provenance": prov, "monitors": ["B1", "R3v", "CSIA2"],
@@ -139,21 +174,26 @@ def run(db: sqlite3.Connection, run_id: str, params: AdapterParams, kt: float, w
     ticks = len(timeline)
     res["ticks"] = ticks
     res["signals"] = {s: {"samples": n_samples[s], "fresh_tick_share": round(cover[s] / ticks, 3)} for s in SIGNALS}
-    res["relationships"] = {r: {"needs": ins + aux, "active_ticks": active[r]} for r, (ins, aux) in RELATIONSHIPS.items()}
+    status = relationship_status(availability(db, run_id), not prov["synthetic"])
+    res["relationships"] = {r: {**status[r], "active_ticks": active[r]} for r in RELATIONSHIPS}
 
     insufficient = list(notes)
     if not prov["synthetic"]:
         insufficient.append("vehicle parameters and the E6 power-balance model are the frozen synthetic ones; "
                             "they must be identified on this vehicle's development data before any result is used")
-    insufficient.append("road grade is assumed flat (no route map): relationships using grade (E4) rest on that "
-                        "assumption")
+    if prov["synthetic"]:
+        insufficient.append("road grade is assumed flat (no route map): relationships using grade (E4) rest on that "
+                            "assumption")
+    for r, v in res["relationships"].items():
+        if v["status"] != "enabled":
+            insufficient.append(f"relationship {r} {v['status']}: its attributions carry no evidence")
     for s in SIGNALS:
         if s != "grade" and res["signals"][s]["fresh_tick_share"] < MIN_COVERAGE:
             users = [r for r, (ins, aux) in RELATIONSHIPS.items() if s in ins + aux]
             insufficient.append(f"signal {s} fresh in {res['signals'][s]['fresh_tick_share']:.0%} of ticks: "
                                 f"{', '.join(users)} not reliably evaluable")
     for r, v in res["relationships"].items():
-        if v["active_ticks"] == 0:
+        if v["active_ticks"] == 0 and v["status"] == "enabled":
             insufficient.append(f"relationship {r} never active: no evidence about its endpoints from it")
     if prov["sensor_status"] and "PROVISIONAL" in prov["sensor_status"]:
         insufficient.append(f"sensor configuration provisional ({prov['sensor_status']})")
@@ -225,8 +265,10 @@ def _write(res, timeline, out):
     if res.get("ticks"):
         L += ["## Input signals", "", "| Signal | Samples | Ticks with a fresh sample |", "|---|---|---|"]
         L += [f"| {s} | {v['samples']} | {v['fresh_tick_share']:.0%} |" for s, v in res["signals"].items()]
-        L += ["", "## Relationships", "", "| Relationship | Needs | Active ticks (of %d) |" % res["ticks"], "|---|---|---|"]
-        L += [f"| {r} | {', '.join(v['needs'])} | {v['active_ticks']} |" for r, v in res["relationships"].items()]
+        L += ["", "## Relationships", "", "| Relationship | Needs (measurements) | Status | Active ticks (of %d) |" % res["ticks"],
+              "|---|---|---|---|"]
+        L += [f"| {r} | {', '.join(v['needs'])} | {v['status']} | {v['active_ticks']} |"
+              for r, v in res["relationships"].items()]
         L += ["", "## Attribution episodes (after the 3-tick persistence filter)", ""]
         for mon, eps in res["episodes"].items():
             L.append(f"* {mon}: " + ("; ".join(f"{e['start_s']}-{e['end_s']} s {e['suspects']}" for e in eps[:12])

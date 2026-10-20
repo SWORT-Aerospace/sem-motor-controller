@@ -1,11 +1,201 @@
 # CI for sem-motor-controller (repository root of SWORT-Aerospace/sem-motor-controller).
-# Host tests only: nothing here touches hardware.
+# Host tests and builds only: nothing here touches hardware.
+#
+# Jobs (docs/scope.yaml). The telematics delivery never builds the project's motor controller and is split into:
+#   static-checks       generated files current, links, claims register (no toolchain)
+#   schema-validation   the canonical telemetry schema against the code
+#   firmware-build      telematics firmware: host build and unit tests (ASan/UBSan), NUCLEO-U575ZI-Q images,
+#                       recording durations, bench packages (full and minimal, with a SIMULATED rehearsal)
+#   host-tools          the pit and bench tools end to end: pulse-to-database chain, demonstration through a real
+#                       broker, shadow evidence review, evidence queries, the protocols' simulated pre-check
+#   unit-tests          pytest, telematics and reference suites, without the integration tests
+#   integration-tests   pytest integration tests (firmware builds, broker, whole simulated sessions)
+#   telematics          passes when all of the above pass (the check name branch rules may refer to)
+# Tests marked hardware_required (HARDWARE_REQUIRED: the board on the bench) never run here.
+# `controller` is the deferred controller development (controller core, STM32G474 port, power-stage hardware,
+# legacy supervised simulations); `erc` is the KiCad ERC of the controller schematic.
 name: ci
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  host:
+  static-checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Generated files are current
+        run: |
+          python tools/scope.py --check
+          python tools/gen_protocol.py --check
+          python tools/gen_dbc.py --check
+          python tools/telematics_bom.py --check
+          python tools/telematics_bench.py render --check
+          python tools/wheel_sensor_check.py --check
+          python tools/check_links.py
+      - name: Claims register (labels against evidence; no overclaiming in the docs)
+        run: python tools/claims.py --check
+      - name: Python sources compile
+        run: python -m compileall -q host tools telematics conftest.py
+  schema-validation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Telemetry schema against the protocol, the adapter and the firmware records; page current
+        run: python tools/telematics_schema.py --check
+      - name: Schema tests (registry hash kept, changed contracts refused)
+        run: python -m pytest -rs tests/telematics/test_evidence_model.py -k schema
+  firmware-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain
+        # gcc-arm-none-eabi + libnewlib-arm-none-eabi: the NUCLEO-U575ZI-Q images. No KiCad.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi
+          arm-none-eabi-gcc --version | head -1
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Telematics firmware, host build + unit tests (ASan/UBSan)
+        run: |
+          cmake -S telematics/firmware -B build-telematics -G Ninja
+          cmake --build build-telematics
+          ctest --test-dir build-telematics --output-on-failure
+      - name: Recording durations are current (firmware code in the host simulator)
+        run: python tools/telematics_storage.py --check --build build-telematics
+      - name: Telematics firmware, NUCLEO-U575ZI-Q images (linked; not run on hardware here)
+        run: |
+          cmake -S telematics/firmware -B build-u575 -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_TOOLCHAIN_FILE=$PWD/telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake -DTM_TARGET_U575=ON
+          cmake --build build-u575
+          sha256sum build-u575/tm_u575*.elf build-u575/tm_u575*.bin build-u575/tm_u575*.hex
+      - name: Upload telematics images
+        uses: actions/upload-artifact@v4
+        with:
+          name: telematics-u575-images
+          path: |
+            build-u575/tm_u575*.elf
+            build-u575/tm_u575*.bin
+            build-u575/tm_u575*.hex
+            build-u575/tm_u575*.map
+      - name: Telematics bench package (images rebuilt and compared, procedure, parts, blank results form)
+        run: python tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild
+      - name: Upload telematics bench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: telematics-bench-package
+          path: build/telematics_bench
+      - name: Telematics minimal bench package (one image, its connections, document checks, blank form, SIMULATED rehearsal)
+        run: python tools/telematics_bench.py package --minimal --images build-u575 --host-build build-telematics --out build/telematics_bench_minimal --rebuild
+      - name: Upload telematics minimal bench package
+        uses: actions/upload-artifact@v4
+        with:
+          name: telematics-bench-minimal
+          path: build/telematics_bench_minimal
+  host-tools:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain
+        # mosquitto: the MQTT broker of the telemetry pipeline (Ubuntu 24.04 package, 2.0.18)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake gcc mosquitto
+          /usr/sbin/mosquitto -h | head -1
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Fetch pinned CSIA core (shadow-mode monitors; frozen evaluation)
+        run: python tools/fetch_csia.py
+      - name: Pulse-to-database chain (firmware code in the host simulator; SIMULATED)
+        run: python tools/run_bench_chain.py --out build/bench_chain
+      - name: Telematics demonstration (receive-only node, simulated external controller, real Mosquitto broker)
+        run: python tools/run_telematics_demo.py --out build/telematics_demo
+      - name: Shadow evidence review and evidence queries on the demonstration (SIMULATED)
+        run: |
+          python tools/run_evidence_review.py --db build/telematics_demo/pit.sqlite --run TLMSIM-0001-B0001 --out build/telematics_demo/evidence_review --pair wheel_l:wheel_r
+          python tools/pit_query.py --db build/telematics_demo/pit.sqlite events --run TLMSIM-0001-B0001 --verdict SUPPORTED
+          python tools/pit_query.py --db build/telematics_demo/pit.sqlite gaps --run TLMSIM-0001-B0001 --signal ctrl.dc_voltage
+      - name: Vehicle-validation protocols, simulated pre-check (SIMULATED; no physical result)
+        run: python tools/run_vehicle_experiment.py --out build/vehicle_experiments
+      - name: CSIA clean-run case is current (frozen adapter, SIMULATED)
+        run: python tools/csia_disagreement_case.py --check
+      - name: Upload host tool outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: telematics-host-tools
+          path: |
+            build/bench_chain/chain.md
+            build/bench_chain/chain.json
+            build/bench_chain/import/*.png
+            build/telematics_demo
+            build/vehicle_experiments/results.md
+            build/vehicle_experiments/results.json
+  unit-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Fetch pinned CSIA core
+        run: python tools/fetch_csia.py
+      - name: Python unit tests, telematics and reference suites (no controller build, no integration tests)
+        env:
+          SEMMC_BUILD_DIR: /nonexistent-controller-build
+        run: |
+          python -m pytest -rs -m "(telematics or reference) and not integration and not hardware_required"
+          test ! -e /nonexistent-controller-build
+  integration-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake gcc gcc-arm-none-eabi libnewlib-arm-none-eabi mosquitto
+          arm-none-eabi-gcc --version | head -1
+          /usr/sbin/mosquitto -h | head -1
+      - name: Python deps (pinned)
+        run: pip install -r requirements.txt
+      - name: Fetch pinned CSIA core
+        run: python tools/fetch_csia.py
+      - name: Python integration tests, telematics and reference suites (no controller build)
+        # a missing MQTT broker or ARM toolchain is a failure here, not a skip; the controller build is
+        # never made in this job (conftest.py refuses it for these suites)
+        env:
+          SEMMC_REQUIRE_MQTT: "1"
+          SEMMC_REQUIRE_ARM: "1"
+          SEMMC_BUILD_DIR: /nonexistent-controller-build
+        run: |
+          python -m pytest -rs -m "(telematics or reference) and integration and not hardware_required"
+          test ! -e /nonexistent-controller-build
+  telematics:
+    needs: [static-checks, schema-validation, firmware-build, host-tools, unit-tests, integration-tests]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every telematics job passed
+        run: echo "static-checks, schema-validation, firmware-build, host-tools, unit-tests, integration-tests passed"
+  controller:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -72,16 +262,16 @@ jobs:
           path: |
             hardware/kicad/CONNECTIVITY_CHECK.md
             hardware/kicad/semmc.net
-      - name: Python tests
+      - name: Python tests, controller suite (deferred controller development and legacy supervised simulations)
         # a missing MQTT broker or ARM toolchain is a failure here, not a skip
         env:
           SEMMC_REQUIRE_MQTT: "1"
           SEMMC_REQUIRE_ARM: "1"
-        run: python -m pytest -rs
-      - name: Host demonstrations (simulated uplink; real Mosquitto broker; shadow replay)
+        run: python -m pytest -rs -m controller
+      - name: Legacy supervised demonstrations (research only; the ECO supervisor and the controller core)
         run: |
-          python tools/run_host_demo.py --out build/host_demo
-          python tools/run_mqtt_demo.py --out build/mqtt_demo
+          python tools/run_host_demo.py --legacy-supervised --out build/host_demo
+          python tools/run_mqtt_demo.py --legacy-supervised --out build/mqtt_demo
           python tools/run_pit_replay.py --db build/host_demo/pit.sqlite --run HOSTSIM-0001 --out build/pit_replay
       - name: Portable core cross-compile (Cortex-M4F, size per module)
         run: |

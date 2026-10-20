@@ -1,5 +1,7 @@
 # Motor-controller firmware (`firmware/`)
 
+**Deferred controller development (v0.7).** The vehicle's motor controller is built by another team; this firmware is our own controller design, kept and tested (suite `controller`, CI job `controller`) but not part of the telematics delivery, which never builds it. The telematics firmware is [`../telematics/firmware/`](../telematics/firmware/README.md).
+
 Portable C11 core of the motor controller, its public headers, a host platform with a simulated plant, the STM32G474 target platform, and the C unit and property tests. The core contains the operating state machine, torque arbitration, field-oriented control (FOC), protection, energy accounting and the binding to CAN (Controller Area Network).
 
 **Status:** the core runs in host builds and host simulations, and the STM32G474 target image links (`platform/stm32g4`, built in CI). Nothing has been flashed to or tested on hardware. The target image keeps the gate driver disabled in this revision (its SPI configuration and the battery meter driver need datasheets that have not been read); see [platform/stm32g4/README.md](platform/stm32g4/README.md) for what is compiled, checked, emulated and untested.

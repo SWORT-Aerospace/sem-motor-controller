@@ -237,8 +237,8 @@ items:
     unit_cost_usd: null
     estimate: {pricing: "telemetry/Temperature probes"}
     status: Candidate
-    candidate: DS18B20 (team reference)
-    requirement: Logging only. Not for power-stage protection (750 ms conversion at 12 bit); the controller keeps its own thermal protection. No log record type yet (docs/ICD.md section 8).
+    candidate: TMP117 breakout on I2C (driver written; docs/TELEMATICS_BOM.md); DS18B20 (team reference) is an option without a driver
+    requirement: Logging only, as TEMP records (docs/ICD.md A.6). Not for power-stage protection; the controller keeps its own thermal protection.
     blocked_by: measurement points and count
     evidence: "docs/TELEMETRY_CANDIDATES.md#ds18b20"
   - id: gnss
@@ -299,13 +299,14 @@ items:
     unit_cost_usd: null
     estimate: {pricing: "telemetry/microSD socket and card"}
     status: Candidate
-    candidate: microSD (optional in the proposal) in addition to the proposal's 8 MB NOR flash
+    candidate: W25Q128JV SPI NOR, 16 MiB (driver written and in the telematics images); microSD an option without a driver
     in_assembly: null
     requirement: >-
-      At least 9.35 KiB/s sustained with erase time (host demonstration rate); a 40-minute attempt needs about 22 MB,
-      and the 8 MB flash alone lasts 14.6 minutes. Behaviour on power loss during a write to be checked on the bench.
+      Recording durations per record mix measured with the firmware's code (docs/generated/telematics_storage.md):
+      the NOR holds 26.7 min of the fixture vehicle's mix at full rate, then sparse logging (T-STORAGE). Behaviour on
+      power loss during a write to be checked on the bench (BENCH.md B8).
     blocked_by: whether the PCB assembly has a card socket (board files not received)
-    evidence: "docs/ICD.md#9-storage-queues-and-drop-reporting"
+    evidence: "docs/ICD.md#a7-queues-storage-and-loss-reporting"
   - id: can_xcvr
     item: CAN transceiver/interface, if not included in the PCB assembly
     purpose: Connects the telemetry unit to the vehicle CAN bus

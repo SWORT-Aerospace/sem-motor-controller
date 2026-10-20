@@ -5,6 +5,8 @@
 # the exact external input, the closure criterion, and the evidence once closed. `unlocks` counts the open
 # design items, BOM lines, configuration values and acceptance steps that wait for it (ordering only).
 schema: semmc.blockers.v1
+# v0.7: `track` says whom an open item blocks: telematics (the delivery), controller (the deferred controller
+# development only) or both. Controller items never block the telematics critical path.
 
 battery_as_reported: "Team-reported: 48 V nominal, 10 Ah. Not datasheet-verified. The maximum charged voltage, minimum cut-off voltage, current capability, chemistry and BMS limits are NOT inferred from it."
 
@@ -41,6 +43,10 @@ groups:
     audience: physical
     title: Event
     request: "The event name and the official rule PDF of the edition that applies."
+  - id: C1
+    audience: controller_team
+    title: Controller interface (the controller team)
+    request: "The answers to docs/CONTROLLER_INTERFACE_REQUEST.md: controller model and contact; bus type, bit rate, termination, transceiver, connector and ground; the DBC or message definitions with a recording; the essential DC voltage and current with their rates, accuracy and delay."
   - id: D1
     audience: documentation
     title: Primary documents (PDF upload or network access)
@@ -49,10 +55,11 @@ groups:
 blockers:
   - id: B-BAT-V
     status: open
+    track: both
     group: P1
     title: Battery maximum and minimum voltage
     missing: "Maximum charged pack voltage V_bat,max and minimum (BMS cut-off) voltage V_bat,min are unavailable; only 48 V nominal is reported."
-    affects: "MOSFET V_DS class and DC-link capacitor voltage rating (sheets 02, 03); TVS stand-off and clamp, fuse voltage, precharge resistor energy, bypass FET V_DS and Zener current (sheet 01); over-voltage trip divider (sheet 02); LM5164 UVLO divider and input capacitors (sheet 12); config battery.*, limits.overvoltage_trip_V, limits.undervoltage_trip_V, limits.undervoltage_derate_V."
+    affects: "MOSFET V_DS class and DC-link capacitor voltage rating (sheets 02, 03); TVS stand-off and clamp, fuse voltage, precharge resistor energy, bypass FET V_DS and Zener current (sheet 01); over-voltage trip divider (sheet 02); LM5164 UVLO divider and input capacitors (sheet 12); config battery.*, limits.overvoltage_trip_V, limits.undervoltage_trip_V, limits.undervoltage_derate_V. Telematics: the unit's vehicle supply (T-VEH-PWR)."
     why: "Every power-path rating is written as a multiple of V_bat,max; a 48 V nominal pack can charge well above 48 V depending on chemistry and cell count, so no voltage class can be chosen safely from the nominal."
     done_now: "Rating rules written against V_bat,max (hardware/review/DESIGN_REVIEW.md items 2, 3, 6, 8); over-voltage comparator topology and hysteresis fixed; firmware reads every threshold from the calibration and refuses to run without it."
     input: "Battery model number and label photo; battery and BMS datasheets giving maximum charge voltage, minimum discharge cut-off voltage and cell count."
@@ -61,6 +68,7 @@ blockers:
 
   - id: B-BAT-I
     status: open
+    track: controller
     group: P1
     title: Battery and BMS current limits
     missing: "Continuous and peak discharge current, regenerative charge current limit, BMS short-circuit response; 10 Ah is a capacity, not a current."
@@ -73,6 +81,7 @@ blockers:
 
   - id: B-MOTOR
     status: open
+    track: controller
     group: P2
     title: Motor data
     missing: "Motor model, continuous and peak phase current, pole pairs, phase resistance and inductance, flux linkage or K_v, hall output type and supply, temperature sensor type."
@@ -85,6 +94,7 @@ blockers:
 
   - id: B-DRIVETRAIN
     status: open
+    track: both
     group: P3
     title: Drivetrain and vehicle mass
     missing: "Wheel circumference, gear ratio, freewheel present or not, and the vehicle mass with driver (config vehicle.wheel_circumference_m, vehicle.gear_ratio, vehicle.freewheel_present, vehicle.mass_with_driver_kg: null)."
@@ -97,6 +107,7 @@ blockers:
 
   - id: B-DRV
     status: open
+    track: controller
     group: D1
     title: DRV8353 gate-driver datasheet
     missing: "TI DRV8353 datasheet (SLVSDY6x) not read: pin numbers, operating limits, SPI register map, IDRIVE, VDS trip levels and deglitch, CSA gain/offset/settling, input pull-downs, behaviour with ENABLE low."
@@ -109,6 +120,7 @@ blockers:
 
   - id: B-INA
     status: open
+    track: controller
     group: D1
     title: INA228 register map
     missing: "TI INA228 datasheet not read: register addresses, shunt calibration, VBUS and current scaling, conversion timing."
@@ -121,6 +133,7 @@ blockers:
 
   - id: B-ST-DOCS
     status: open
+    track: controller
     group: D1
     title: STM32G474 datasheet, reference manual and errata
     missing: "ST DS12288, RM0440 and ES0430 not read: ADC clock limit and sampling time vs source impedance, HSI16 and LSI tolerances, VDDA limits, 5 V tolerance of the hall and switch pins, break-path delay, dead-time insertion rule, comparator blanking, output state while halted by a debugger, LQFP-100 package drawing."
@@ -133,6 +146,7 @@ blockers:
 
   - id: B-PART-DOCS
     status: open
+    track: controller
     group: D1
     title: Datasheets of the other candidate parts
     missing: "MAX6369 (SET0..2 timeout table, start-up delay), TJA1051 (VCC/VIO ranges), LM5164 (VFB, RON equation), TLV755P, TLV7041 (input range), TL431 (minimum cathode current), PC817, NUP2105L."
@@ -145,6 +159,7 @@ blockers:
 
   - id: B-OVTRIP
     status: open
+    track: controller
     group: D1
     title: Over-voltage trip not verified at its worst case
     missing: "Device bounds for the trip network: TL431 reference tolerance, drift and minimum cathode current; TLV7041 offset, bias current, output low voltage, output leakage, internal hysteresis and minimum supply; TLV75533 output accuracy; PC3 leakage (DS12288). Also V_bat,max, the regeneration margin and the lowest stress rating, which set the divider and the pass criteria."
@@ -157,6 +172,7 @@ blockers:
 
   - id: B-CAN
     status: open
+    track: controller
     group: P5
     title: Vehicle CAN bus
     missing: "Bit rate, classic CAN or CAN FD, the identifier block for this controller (supervision.can_id_base), the other nodes and the termination positions."
@@ -169,6 +185,7 @@ blockers:
 
   - id: B-HARNESS
     status: open
+    track: controller
     group: P6
     title: Connectors and harness
     missing: "Connector families and pinouts for J101 (battery), J301 (motor phases), J701 (motor temperature), J901 (halls), J1001 (driver controls), J1101 (CAN)."
@@ -181,6 +198,7 @@ blockers:
 
   - id: B-LOOP
     status: open
+    track: controller
     group: P4
     title: Safety loop and emergency stop wiring
     missing: "Safety-loop voltage and current, and how the emergency stop and dead-man are wired into it."
@@ -193,6 +211,7 @@ blockers:
 
   - id: B-PEDAL
     status: open
+    track: controller
     group: P4
     title: Pedal and switch hardware
     missing: "Pedal sensor model (one or two tracks, output range, supply), brake switch contact type, mode/arm/dead-man switch types."
@@ -205,6 +224,7 @@ blockers:
 
   - id: B-NTC
     status: open
+    track: controller
     group: P4
     title: Temperature sensors
     missing: "Power-stage NTC part number (R25, beta, tolerance) and the motor's temperature sensor type."
@@ -217,6 +237,7 @@ blockers:
 
   - id: B-MECH
     status: open
+    track: controller
     group: P6
     title: Board outline, mounting and cooling
     missing: "Space and mounting points for the controller in the vehicle, enclosure, heatsink or cold-plate approach, cable entry directions."
@@ -229,6 +250,7 @@ blockers:
 
   - id: B-ASSY
     status: open
+    track: controller
     group: team
     title: Assembly process and copper weight
     missing: "Hand assembly or a PCBA service; outer copper weight; the fabricator's design rules."
@@ -241,6 +263,7 @@ blockers:
 
   - id: B-RULES
     status: open
+    track: both
     group: P7
     title: Event and rule edition
     missing: "The event, season and the governing Chapter I edition (2026 read from a third-party copy; a 2027 edition listed but not read)."
@@ -253,6 +276,7 @@ blockers:
 
   - id: B-QUOTE
     status: open
+    track: controller
     group: team
     title: Live prices
     missing: "Live distributor and fabricator quotes (the snapshots are dated web-search values and allowances)."
@@ -265,6 +289,7 @@ blockers:
 
   - id: B-VEH
     status: open
+    track: controller
     group: team
     title: Vehicle test readiness
     missing: "A board that passed stages S1 to S9, and the vehicle available with its safety systems."
@@ -276,8 +301,106 @@ blockers:
     unlocks: 1
 
   # ---------------------------------------------------------------- closed in this revision
+  - id: T-CTRL-IF
+    status: open
+    track: telematics
+    group: C1
+    title: Controller interface not agreed
+    missing: "What the external controller broadcasts and how: bus type, bit rate, identifiers, connector and ground, message definitions, the essential DC voltage and current (rate, accuracy, delay)."
+    affects: "the DBC adapter mapping; the transceiver's termination setting; the CAN tap cable and connector; bench integration step 3; every controller-side measurement in the energy report (controller-input boundary)"
+    why: "Without it the unit can log raw frames but cannot turn them into measurements, and nobody may connect to the bus."
+    done_now: "Request sheet written (docs/CONTROLLER_INTERFACE_REQUEST.md); DBC adapter with unit-checked mappings implemented and tested on our own DBC; receive-only firmware image with FDCAN1 in bus-monitoring mode; electrical checks E1 to E6 written."
+    input: "The controller team's answers to the request sheet, their DBC (or protocol document) and a recording."
+    closure: "A mapping file for their DBC committed; their recording decoded by DbcAdapter with every essential signal valid; the decoded values confirmed by the controller team."
+    unlocks: 9
+  - id: T-PARTS
+    status: open
+    track: telematics
+    group: team
+    title: Configuration A parts not chosen and quoted
+    missing: "Live quotes for the bench and configuration A lines (every price so far is a search snapshot or an allowance)."
+    affects: "docs/TELEMATICS_BOM.md totals; the order; the first bench run with sensors"
+    why: "The budget range ($462.73 to $666.45 for A, of which the bench $97.68 to $117.74) closes only with live prices; nothing may be ordered without a dated quote and the team lead's agreement."
+    done_now: "Telematics BOM with dated snapshots and rejected candidates. The bench configuration is exactly the parts the firmware drives (W25Q128JV NOR, ISM330DHCX IMU, TMP117, CAN Pal), checked against the driver sources by tools/telematics_bom.py; parts without a driver (microSD, DS18B20) are options outside every total; the vehicle supply lines are blocked by B-BAT-V (T-VEH-PWR)."
+    input: "Live distributor quotes; the team lead's decision on the alternatives."
+    closure: "Every configuration A line has a dated quote in hardware/telematics/bom.yaml; the order agreed by the team lead."
+    unlocks: 6
+  - id: T-BENCH1
+    status: open
+    track: telematics
+    group: team
+    title: Telematics firmware never run on hardware
+    missing: "A first bench run of tm_u575 and tm_u575_can on a NUCLEO-U575ZI-Q (telematics/firmware/BENCH.md steps B0 to B12, from the bench package)."
+    affects: "every target claim: clock, capture, overflow, flash log, restart reasons, timebase error; the connection table's pins and solder bridges"
+    why: "The firmware is built and host-tested only; host tests do not show that it runs."
+    done_now: "Images link and rebuild with identical hashes (CI); portable code tested on the host, byte-for-byte equal to the Python reference; the bench package (tools/telematics_bench.py: images with SHA-256, procedure, connection and parts lists, console capture tool, blank results form) built in CI."
+    input: "The bench parts (docs/TELEMATICS_BOM.md, bench lines), a function generator with a stated frequency accuracy, a scope or logic analyzer, two USB-CAN adapters, STM32CubeProgrammer or OpenOCD, about four hours (B7 alone takes 75 min)."
+    closure: "The package's results form filled for B0 to B12 with the image revision (not -dirty), the captures, the import reports and the plots committed under docs/reference/bench/."
+    unlocks: 8
+  - id: T-STORAGE
+    status: open
+    track: telematics
+    group: team
+    title: Vehicle log storage not decided
+    missing: "Storage for a whole attempt at the vehicle's logged rate. The W25Q128JV NOR (16 MiB, in the images since v0.7) holds 26.7 min of the fixture vehicle's record mix (394 controller frames/s, IMU, three TMP117) at full rate, then sparse logging (wheel and counters every 10 s) for 138 min; internal flash alone 1.5 min. The real controller's frame rate is unknown (T-CTRL-IF); a NOR whose every sector needs erasing writes about 9 KB/s at worst in the host model, below that mix's 10.4 KB/s."
+    affects: "the BOM storage lines; which controller frames are logged; the length of a full-rate log"
+    why: "A log that fills before the attempt ends keeps only sparse wheel and counter records for the rest (counted in log_thinned)."
+    done_now: "NOR used when it answers its JEDEC id, else internal flash; sparse logging at the reserve; blank check before each sector erase; recording durations measured with the firmware's code (docs/generated/telematics_storage.md); bench step B7 checks the timer overflow on either storage."
+    input: "The attempt length (event rules), the controller's frame rate (T-CTRL-IF) and the team's choice: log fewer controller frames, a larger part (4-byte addressing to be written; the driver refuses parts above 16 MiB), or microSD (driver not written)."
+    closure: "The chosen storage holds one attempt plus margin at the rate measured on the bench."
+    unlocks: 3
+  - id: T-GNSS
+    status: open
+    track: telematics
+    group: team
+    title: GNSS and PPS on the target
+    missing: "Any run on a board: the receiver wired to the vehicle image (bench step B13), the u-blox M9 interface description and the GPS-17285 schematic for document checks DC19 to DC21 (www.u-blox.com and www.sparkfun.com are refused here), and the GNSS board itself (configuration A, not in the bench kit)."
+    affects: "UTC in the log; GNSS speed for the cross-checks"
+    why: "Written and host-tested, never run on a board; the field offsets and configuration keys are not yet checked against the u-blox document."
+    done_now: "On the target in the tm_u575_vehicle image (HOST-TESTED, never flashed): UBX frame parser, NAV-PVT to GNSS records, PPS on PA1 (TIM2_CH2) labelled with its UTC second, the configuration message, five GNSS counters (telematics/firmware/src/tm_gnss.c, platform/u575/gnss_u575.c). The bench and minimal images contain none of it. Through the firmware in the host simulator, a 140 s simulated drive gives UTC exact to the microsecond from the firmware's PPS records and no unlabelled edge (tools/run_firmware_vehicle_sim.py, SIMULATED). Bench step B13 and document checks DC19 to DC21 written."
+    input: "the u-blox M9 interface description and the GPS-17285 schematic (PDFs); the GNSS board and antenna (configuration A lines gnss, gnss_antenna)"
+    closure: "B13 passed on the bench: GNSS records at 10 Hz, one labelled PPS record per second, UTC error within the receiver's figure; DC19 to DC21 answered."
+    unlocks: 2
+  - id: T-MODEM
+    status: open
+    track: telematics
+    group: team
+    title: LTE modem on the target (configuration B)
+    missing: "The modem's transport on the target (its AT command set for MQTT, from the modem's manual, behind tm_link_t) and a modem board whose bands suit the event country."
+    affects: "configuration B; live monitoring"
+    why: "The message, its backlog and its accounting are firmware now; nothing on the target carries them to a broker yet. The log does not depend on the uplink."
+    done_now: "Host uplink with a real broker, bounded backlog, replay flags and validation; modem candidates priced. On the target side (portable firmware, HOST-TESTED, compiled into tm_u575_vehicle but not called): the sem.telemetry.v4 live summary from the records the unit logs, the pit's wheel-speed rule, UTC from the logged PPS edges, a 30-message backlog with drops counted and replay flagged, the uplink counters logged (telematics/firmware/src/tm_live.c). Through the firmware in the host simulator, a 140 s simulated drive with a 20 s link outage: 270 messages, all accepted by the pit's validation, 10 dropped and counted, every sequence number accounted for, 4,241 live values equal to the pit's import of the log (tools/run_firmware_vehicle_sim.py, SIMULATED)."
+    input: "The event country (B-RULES) for the band set."
+    closure: "Live messages from the target reach a pit broker on the bench; outage and restart accounted as in the demonstration."
+    unlocks: 2
+  - id: T-VEH-PWR
+    status: open
+    track: telematics
+    group: P1
+    title: Vehicle supply of the unit blocked
+    missing: "The unit's supply from the pack (DC-DC, input TVS, fuse, reverse protection) cannot be chosen without V_bat,max (B-BAT-V). The one pair checked, SMBJ58A with the 75 V input Mean Well SKMW15G-05, is rejected: its 93.6 V clamp at 6.4 A is above the module's input maximum."
+    affects: "configuration A's supply lines (hardware/telematics/bom.yaml, each blocked_by B-BAT-V); any test on the vehicle; electrical check E6"
+    why: "A TVS whose clamp exceeds the converter's absolute maximum protects nothing; one whose standoff is below V_bat,max conducts on a full pack."
+    done_now: "The rule written into hardware/telematics/bom.yaml (supply) and enforced by tools/telematics_bom.py: the vehicle power connection cannot be set to allowed while battery_max_V is null. The bench runs from USB only."
+    input: "V_bat,max from the battery and BMS datasheets (B-BAT-V); then a TVS and an isolated DC-DC whose absolute-maximum input is above that TVS's clamp at the surge current."
+    closure: "battery_max_V filled from a document with page; a TVS and DC-DC pair passing both conditions in supply.checked_pairs; E6 passed on the bench."
+    unlocks: 6
+  - id: T-U5-DOCS
+    status: open
+    track: telematics
+    group: D1
+    title: STM32U575 reference manual and data sheet, and the W25Q128JV data sheet, not read
+    missing: "RM0456 (reference manual) and DS13737 (data sheet): per-pin input limits, alternate-function numbers, RCC reset values and MSI PLL mode, TIM2 capture behaviour, flash programming, ECC and option bytes, flash and LSI timings, PLL limits per voltage range, the TIMINGR formula (document checks DC02 to DC09, DC16 to DC18); and the W25Q128JV data sheet (DC11 to DC15). UM2861 Rev 10 and ES0499 Rev 12 were read on 2026-10-19 (DC01 and DC10 complete, telematics/bench/DOCUMENT_CHECKS_RECORD.md)."
+    affects: "the connection table's levels; the CAN image's PLL1 setting; the I2C timing; the flash write rate"
+    why: "The firmware follows ST's HAL and board files, which agree with each other, but these facts are only in the manuals."
+    done_now: "Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md). Each question is a document check (DC01 to DC21 in telematics/bench/bench.yaml) tied to the firmware line it affects and to the bench step it must precede. UM2861 Rev 10 and ES0499 Rev 12 answered DC01 and DC10; reading them fixed the LSE drive and the I2C bus-error handling in the firmware and the USB cable, SWD speed and connector positions in the bench documents (docs/U575_REGISTER_CHECK.md section 5)."
+    input: "RM0456 and DS13737 (before the minimal bench) and the W25Q128JV data sheet (before the NOR is fitted), committed to docs/reference/datasheets/ under the file names in telematics/firmware/BENCH_MINIMAL.md section 5.1; www.st.com and www.winbond.com are refused by this environment's network policy."
+    closure: "Each document check answered from its document with revision and page; BENCH.md and BENCH_MINIMAL.md updated where an answer differs."
+    unlocks: 4
+
   - id: C-ERC
     status: closed
+    track: controller
     title: KiCad ERC never run
     missing: "Earlier status: the schematic had only a connectivity check."
     affects: "hardware/kicad"
@@ -290,6 +413,7 @@ blockers:
 
   - id: C-PLATFORM
     status: closed
+    track: controller
     title: No STM32 platform layer, no target image
     missing: "Earlier status: only an ARM compile of the portable core."
     affects: "firmware/platform/stm32g4"
@@ -302,6 +426,7 @@ blockers:
 
   - id: C-MQTT
     status: closed
+    track: controller
     title: Flaky MQTT timing check
     missing: "The demo's step-timing check failed on a single scheduling stall of a shared CI runner."
     affects: "tools/run_mqtt_demo.py"
@@ -314,6 +439,7 @@ blockers:
 
   - id: C-PINAF
     status: closed
+    track: controller
     title: MCU alternate functions unverified
     missing: "Pin alternate-function numbers had no check against ST's data."
     affects: "firmware/platform/stm32g4/src/board_pins_generated.h"
@@ -326,6 +452,7 @@ blockers:
 
   - id: C-RACE
     status: closed
+    track: controller
     title: Fast-loop overcurrent could be lost on the target
     missing: "Found in this revision: the slow step cleared the fast-loop flags after reading them, so an overcurrent raised in between was erased."
     affects: "firmware/src/core/mc_core.c"
@@ -338,6 +465,7 @@ blockers:
 
   - id: C-ACK
     status: closed
+    track: controller
     title: A repeated fast-loop fault during acknowledgment was erased
     missing: "Found in the concurrency review: the slow step cleared a fast-loop fault flag it had observed, so a second instance raised between its read and the clear was lost; the handoff relied on volatile and a compiler fence without a stated mechanism."
     affects: "firmware/src/core/mc_core.c, firmware/include/semmc/mc_core.h"
@@ -350,6 +478,7 @@ blockers:
 
   - id: C-OVHYS
     status: closed
+    track: controller
     title: Over-voltage comparator hysteresis undefined
     missing: "Found in this revision: the hysteresis resistor acted on the TL431's low-impedance node."
     affects: "hardware/kicad/02_dc_link.kicad_sch"
@@ -362,6 +491,7 @@ blockers:
 
   - id: C-KICAD
     status: closed
+    track: controller
     title: Two KiCad versions in the project
     missing: "The schematic embedded KiCad 7.0.11 library symbols while the ERC ran KiCad 8.0.9."
     affects: ".github/workflows/ci.yml, tools/gen_kicad_schematic.py, tools/run_kicad_erc.sh"

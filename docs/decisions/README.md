@@ -14,3 +14,4 @@
 | [0010](ADR-0010-wired-driver-authority.md) | Driver controls wired to the controller, never via CAN | Accepted |
 | [0011](ADR-0011-control-contract-layers.md) | Four-layer control contract; hard ceilings clamp, envelopes ramp boundedly | Accepted |
 | [0012](ADR-0012-transport-neutral-interface.md) | Transport-neutral core; CAN block base per vehicle; CHUDS only as an optional adapter | Accepted (bus to be confirmed) |
+| [0013](ADR-0013-telematics-scope.md) | Telematics is the deliverable; the controller is another team's; the unit only listens | Accepted (v0.7) |

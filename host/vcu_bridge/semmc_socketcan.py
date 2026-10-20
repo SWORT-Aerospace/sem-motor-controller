@@ -16,8 +16,12 @@ What it does:
 * Frames are translated to the protocol's canonical numbers and decoded with
   the generated, golden-vector-tested codec (protocol/generated/semmc_protocol.py).
 * CAN_RAW_FD_FRAMES is enabled so the socket also works on an FD bus (reference
-  project case); FD frames are ignored. The supervisor's frames are sent as
-  classic 8-byte frames.
+  project case); FD frames are ignored.
+* RECEIVE ONLY. The earlier `send()` (supervisor frames onto the bus) was removed
+  in v0.7: the telematics scope has no propulsion authority. `open_socket` hands
+  out a wrapper with `recv` and `close` only, so code holding it cannot transmit
+  (tests/telematics/test_receive_only_boundary.py). The kernel socket itself could
+  transmit; nothing here exposes that.
 
 Linux only (AF_CAN). The pure functions (pack/unpack, filter, translation) are
 unit-tested without a CAN interface.
@@ -97,13 +101,28 @@ def decode_frame(raw: bytes, base: int = SEMMC_ID_BASE) -> Optional[dict]:
             "values": values, "invalid": info.get("invalid", []), "out_of_range": info.get("out_of_range", [])}
 
 
-def open_socket(ifname: str = "can0", base: int = SEMMC_ID_BASE):  # pragma: no cover - needs a Linux CAN interface
+class ReceiveOnlySocket:
+    """A CAN socket that can only be read: `recv` and `close`, nothing that writes."""
+
+    __slots__ = ("_s",)
+
+    def __init__(self, sock):
+        self._s = sock
+
+    def recv(self, n: int) -> bytes:
+        return self._s.recv(n)
+
+    def close(self) -> None:
+        self._s.close()
+
+
+def open_socket(ifname: str = "can0", base: int = SEMMC_ID_BASE) -> ReceiveOnlySocket:  # pragma: no cover - needs a Linux CAN interface
     _check_base(base)
     s = socket.socket(socket.AF_CAN, socket.SOCK_RAW, socket.CAN_RAW)
     s.setsockopt(socket.SOL_CAN_RAW, socket.CAN_RAW_FD_FRAMES, 1)
     s.setsockopt(socket.SOL_CAN_RAW, socket.CAN_RAW_FILTER, struct.pack("=II", base, SEMMC_ID_MASK))
     s.bind((ifname,))
-    return s
+    return ReceiveOnlySocket(s)
 
 
 def receive(sock, base: int = SEMMC_ID_BASE) -> Iterator[dict]:  # pragma: no cover - needs a Linux CAN interface
@@ -111,8 +130,3 @@ def receive(sock, base: int = SEMMC_ID_BASE) -> Iterator[dict]:  # pragma: no co
         msg = decode_frame(sock.recv(CANFD_MTU), base)
         if msg is not None:
             yield msg
-
-
-def send(sock, name: str, values: dict, seq: int, base: int = SEMMC_ID_BASE) -> None:  # pragma: no cover
-    data, _sat, _inv = proto.encode(name, values, seq)
-    sock.send(pack_classic(to_bus_id(proto.MESSAGES[name]["id"], base), data))

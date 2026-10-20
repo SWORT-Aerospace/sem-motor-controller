@@ -1,5 +1,8 @@
 """Telemetry pipeline through a real MQTT broker (host software, not vehicle firmware).
 
+The pit validation and broker tests belong to the telematics suite; the tests of the LEGACY supervised node
+(host/telemetry_adapter/legacy_node.py) and its demonstration belong to the controller suite (docs/scope.yaml).
+
 Broker tests need a Mosquitto binary (docs/MQTT_SETUP.md). Without one they
 are skipped with that reason, unless SEMMC_REQUIRE_MQTT=1 (set in CI), which
 makes a missing broker a failure. The tests without a broker always run.
@@ -14,7 +17,7 @@ import time
 import pytest
 
 from host.pit import ingest
-from host.telematics.node import NodeConfig, TelematicsNode
+from host.telemetry_adapter.legacy_node import NodeConfig, SupervisedTelematicsNode as TelematicsNode
 from tools import mqtt_broker
 
 TOPIC = "sem/car/telemetry"
@@ -63,7 +66,7 @@ def test_v2_wheel_speed_validated_and_v1_still_accepted():
     m = json.loads(_v2(1, {}))
     del m["wheel"]
     assert "wheel" in ingest.validate_live(json.dumps(m).encode())[1]                 # v2 must carry the block
-    assert "schema" in ingest.validate_live(_msg(1, schema="sem.telemetry.v4"))[1]
+    assert "schema" in ingest.validate_live(_msg(1, schema="sem.telemetry.v5"))[1]
 
 
 def _v3(seq, probes, fet=None, motor=None, **kw):

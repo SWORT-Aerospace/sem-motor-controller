@@ -1,7 +1,14 @@
-"""Pytest configuration: project root on sys.path and the host C build.
+"""Pytest configuration: project root on sys.path, suite markers, and the on-demand builds.
 
-The C host build (CMake) is created on demand so `pytest` works from a clean
-checkout: cmake -S firmware -B build && cmake --build build.
+Every test is marked with its suite from docs/scope.yaml (tools/scope.py): `telematics` (the delivery),
+`reference` (reusable simulation and reference) or `controller` (deferred controller development). Run the
+delivery without the controller: python -m pytest -m "telematics or reference". A telematics or reference
+test that asks for the controller build (`build_dir` and the fixtures based on it) fails: the telematics
+delivery must not need our controller.
+
+The controller's C host build (CMake) is created on demand for the controller suite:
+cmake -S firmware -B build && cmake --build build. The telematics firmware's host build (telematics/firmware,
+its portable library and unit tests) is created on demand by `telematics_build`.
 """
 import os
 import pathlib
@@ -14,6 +21,49 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 BUILD = pathlib.Path(os.environ.get("SEMMC_BUILD_DIR", ROOT / "build"))
+TM_BUILD = pathlib.Path(os.environ.get("TM_BUILD_DIR", ROOT / "build-telematics"))
+
+from tools import scope  # noqa: E402
+
+_SCOPE = scope.load()
+
+
+# Test kinds, besides the suite. `integration`: a test that builds firmware, runs a broker or simulates whole
+# sessions (CI job integration-tests); the rest are unit tests (CI job unit-tests). `hardware_required`: a test that
+# needs the board on the bench; skipped unless SEMMC_HARDWARE=1, never run in cloud CI.
+INTEGRATION_PATHS = ("tests/integration/", "tests/telematics/test_telematics_demo.py",
+                     "tests/telematics/test_evidence_pipeline.py", "tests/telematics/test_firmware_host.py",
+                     "tests/telematics/test_firmware_target.py", "tests/telematics/test_telematics_bench.py")
+INTEGRATION_FIXTURES = {"telematics_build", "mosquitto", "images", "experiments", "in_process"}
+
+
+def pytest_configure(config):
+    for s, meaning in _SCOPE["suites"].items():
+        config.addinivalue_line("markers", f"{s}: {meaning} (docs/scope.yaml)")
+    config.addinivalue_line("markers", "integration: builds firmware, runs a broker or simulates whole sessions")
+    config.addinivalue_line("markers", "hardware_required: HARDWARE_REQUIRED, needs the board on the bench "
+                                       "(SEMMC_HARDWARE=1); never run in cloud CI")
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        rel = pathlib.Path(str(item.fspath)).resolve().relative_to(ROOT).as_posix()
+        suite = scope.test_suite(f"{rel}::{item.name}", _SCOPE)
+        if suite not in _SCOPE["suites"]:
+            raise pytest.UsageError(f"{rel}: no suite in docs/scope.yaml")
+        item.add_marker(getattr(pytest.mark, suite))
+        if rel.startswith(INTEGRATION_PATHS) or INTEGRATION_FIXTURES & set(getattr(item, "fixturenames", ())):
+            item.add_marker(pytest.mark.integration)
+        if item.get_closest_marker("hardware_required") and os.environ.get("SEMMC_HARDWARE") != "1":
+            item.add_marker(pytest.mark.skip(reason="HARDWARE_REQUIRED: needs the board on the bench; set "
+                                                    "SEMMC_HARDWARE=1 and the variables the test names"))
+        needs = sorted(CONTROLLER_FIXTURES & set(getattr(item, "fixturenames", ())))
+        if suite != "controller" and needs:
+            raise pytest.UsageError(f"{item.nodeid} is in the {suite} suite but uses {needs} (the controller build): "
+                                    "the telematics delivery must not need our controller (docs/scope.yaml)")
+
+
+CONTROLLER_FIXTURES = {"build_dir", "host_exe", "cfgcheck_exe", "synthetic_blob"}
 
 
 def _ensure_build():
@@ -28,6 +78,19 @@ def _ensure_build():
 @pytest.fixture(scope="session")
 def build_dir():
     return _ensure_build()
+
+
+def _ensure_telematics_build():
+    gen = ["-G", "Ninja"] if shutil.which("ninja") else []
+    if not (TM_BUILD / "CMakeCache.txt").exists():
+        subprocess.run(["cmake", "-S", str(ROOT / "telematics" / "firmware"), "-B", str(TM_BUILD), *gen], check=True)
+    subprocess.run(["cmake", "--build", str(TM_BUILD)], check=True)
+    return TM_BUILD
+
+
+@pytest.fixture(scope="session")
+def telematics_build():
+    return _ensure_telematics_build()
 
 
 @pytest.fixture(scope="session")

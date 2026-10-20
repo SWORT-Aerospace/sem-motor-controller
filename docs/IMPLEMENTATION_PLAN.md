@@ -1,113 +1,88 @@
-# Implementation plan
+# Implementation plan (v0.7, telematics)
 
-Eight stages from the host software that exists today to a fair comparison of energy strategies on the vehicle. Each stage needs the previous ones passed and recorded, except that stages 2 to 4 (telemetry) and stage 5 (controller hardware) can run in parallel. Only stage 1 is done, and only on the host with synthetic data.
+The single plan for this repository. The deliverable is the telematics unit and the pit software; the motor controller is built by another team ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)). Open items with their owners are in [`BLOCKERS.md`](BLOCKERS.md); this page orders them. What to buy and build at each stage, with the full BOM and the evidence each stage returns: [`TELEMETRY_BOM_PLAN.md`](TELEMETRY_BOM_PLAN.md).
 
-**Safety.** Every energised test (stages 5 to 8) is carried out by qualified team members under their own laboratory and event safety procedures. Nothing in this repository authorises energising a board, and no step is to be carried out autonomously.
+**Critical path.** Interface agreement and telemetry hardware selection, then embedded acquisition and the local log, then bench integration, then the remote uplink, then vehicle data and analysis. T1 and T2 can run at the same time: T2 needs only a development board and a signal generator. Controller items (power-stage parts, precharge, footprints, the current loop) block none of these stages; they are listed at the end as deferred controller development.
 
-The controller stages map onto the hardware validation stages of [`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 2 and the bench procedure [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md); the telemetry stages use the bench checks E1 to E9 of [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) 4.
+**Safety.** The unit only listens: it sends nothing to the controller, and no stage below adds a transmit path. Connecting to the vehicle is done only with the controller team's agreement, after the electrical checks of stage T3, by team members under their own laboratory and event safety procedures. Nothing in this repository authorises energising the vehicle, and no step is to be carried out autonomously.
 
-| Stage | Goal | Status |
-|---|---|---|
-| 1 | Host simulation and replay | done on the host (synthetic) |
-| 2 | Development board with one real sensor | not started: telemetry firmware not written |
-| 3 | Bench CAN with a simulated controller and BMS | not started |
-| 4 | Logging and a broker outage with the real modem | not started |
-| 5 | Reviewed controller hardware and staged bring-up | blocked: battery, motor and datasheet inputs; no layout. Target image builds; acceptance procedures ready |
-| 6 | Controller and telemetry integration | not started |
-| 7 | Controlled vehicle measurements | not started |
-| 8 | Fair strategy comparison | not started |
+| Stage | Goal | Status | Blockers |
+|---|---|---|---|
+| T0 | Host software and simulation | done on a computer: receive-only node, adapters, pit, independent demonstration (9 checks through a real broker) | none |
+| T1 | Interface agreement and telemetry hardware selection | request written, not sent; BOM lines priced as dated search snapshots, parts not chosen | [T-CTRL-IF](BLOCKERS.md#t-ctrl-if), [T-PARTS](BLOCKERS.md#t-parts), [B-BAT-V](BLOCKERS.md#b-bat-v) |
+| T2 | Embedded acquisition and local log | firmware written and built for the NUCLEO-U575ZI-Q; **never flashed** | [T-BENCH1](BLOCKERS.md#t-bench1), [T-U5-DOCS](BLOCKERS.md#t-u5-docs), [T-STORAGE](BLOCKERS.md#t-storage), [T-GNSS](BLOCKERS.md#t-gnss) |
+| T3 | Bench integration | CAN receive image built; not run | [T-CTRL-IF](BLOCKERS.md#t-ctrl-if) for the controller's frames and connector |
+| T4 | Remote uplink | message, backlog and accounting in the firmware (host-tested); the modem's transport not written | [T-MODEM](BLOCKERS.md#t-modem), [B-RULES](BLOCKERS.md#b-rules) |
+| T5 | Vehicle data and analysis | pit analysis ready on simulated data; no vehicle data | T1 to T3; [B-DRIVETRAIN](BLOCKERS.md#b-drivetrain) |
 
-## Stage 1. Host simulation and replay
+## T0. Host software and simulation (done on a computer)
+
+* **Files:** `host/telematics/` (node, measurement model, signal registry, controller adapters, wheel estimator, simulated external controller), `host/pit/` (validation, SQLite, energy, shadow replay), `tools/run_telematics_demo.py`, `tools/telematics_import.py`.
+* **Evidence:** [`generated/telematics_demo/summary.md`](generated/telematics_demo/summary.md) (9 checks through Mosquitto 2.0.18: no command frames, missing data null and never zero, every dropped record accounted for, acquisition through an uplink outage, no duplicates on re-ingestion, speed and distance from edge timing, energy at two boundaries, a restart as a new session); `python3 -m pytest -m "telematics or reference"`; [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) section 9.
+* **Limits:** every input is simulated, including the external controller (`host/telematics/sim_vehicle.py`); host simulation is not embedded firmware.
+
+## T1. Interface agreement and telemetry hardware selection
 
 * **Prerequisites:** none.
-* **Files:** `firmware/` (core, host platform, simulated plant), `host/` (telemetry node, supervisor, pit), `tools/run_host_demo.py`, `tools/run_mqtt_demo.py`, `tools/run_pit_replay.py`, `tools/verify_all.py`.
-* **Equipment:** a Linux computer; Mosquitto for the MQTT demonstration.
-* **Test procedure:** README section F; then `python3 tools/verify_all.py --out build/verify`.
-* **Completion evidence:** GitHub-hosted CI green on the commit; [`generated/host_demo/summary.md`](generated/host_demo/summary.md) (11 checks), [`generated/mqtt_demo/summary.md`](generated/mqtt_demo/summary.md) (12 checks), [`generated/host_demo/pit_replay_report.md`](generated/host_demo/pit_replay_report.md); the verification record ([`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md)).
-* **Blockers:** none. **Limits:** every vehicle parameter is synthetic; the simulated plant has the motor rigidly coupled; nothing here says how the vehicle behaves.
+* **Files:** [`CONTROLLER_INTERFACE_REQUEST.md`](CONTROLLER_INTERFACE_REQUEST.md), [`TELEMATICS_BOM.md`](TELEMATICS_BOM.md) (from `hardware/telematics/bom.yaml`, `tools/telematics_bom.py`), `host/telematics/controller_adapter.py` (`DbcAdapter`), `host/telematics/signals.py`.
+* **Steps:**
+  1. Send the request to the controller team. Receive their answers, DBC (or protocol document) and a recording.
+  2. Write the mapping from their DBC to the signal registry (units checked against the DBC) and replay the recording through `DbcAdapter`; send them the decoded values for confirmation.
+  3. If an essential signal (DC voltage and current at the controller input) is missing, send the exact broadcast request of section 4 of the request sheet. Polling stays a separate decision.
+  4. Take live quotes for the bench and configuration A lines. The vehicle supply (DC-DC, TVS, fuse) waits for the battery's maximum voltage (T-VEH-PWR); until then the unit runs from USB on the bench only.
+* **Completion evidence:** the controller team's written answers in the repository; a mapping file and a decoded-recording report they have confirmed; a quoted configuration A list.
+* **Blockers:** the controller team's answer; the battery maximum voltage (input protection; the 48 V nominal, 10 Ah figures are team-reported).
 
-## Stage 2. Development board with one real sensor
+## T2. Embedded acquisition and local log
 
-* **Prerequisites:** stage 1; a continuous Hall switch candidate chosen from the wheel geometry ([`generated/wheel_sensor_check.md`](generated/wheel_sensor_check.md)); the telemetry firmware started.
-* **Files:** a new directory for the telemetry firmware (to be created; the host model stays the reference); `host/telematics/stlg.py` (log format to reproduce byte for byte), `host/telematics/sensors.py` (wheel-window semantics: counts per 100 ms window), `host/pit/ingest.py` (`import_log`), [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md).
-* **Equipment:** NUCLEO-U575ZI-Q, the Hall sensor on a breakout, one magnet, a disc or wheel driven at known speeds with a reference (optical tachometer), a microSD breakout or the board's flash, a current-limited 5 V supply.
-* **Test procedure:**
-  1. Log WHEEL records at three or more speeds up to the speed that corresponds to the vehicle's maximum.
-  2. Import the log with `import_log` and compare the counts with the reference speed; record the edge periods as well if the firmware measures them (recommended).
-  3. Cut the supply 100 times while writing (check E4).
-* **Completion evidence:** the imported log in a pit database; a table of counts against reference speed with zero missed pulses up to the maximum speed; the E4 result (every closed block readable).
-* **Blockers:** wheel circumference, maximum speed, magnet count and air gap (input sheet); sensor selection.
+* **Prerequisites:** the bench parts (the `bench` lines of [`TELEMATICS_BOM.md`](TELEMATICS_BOM.md)); T1 is not needed.
+* **Files:** the bench package (`python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild`, also a CI artifact): images with SHA-256, [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) (rendered from `telematics/bench/bench.yaml`), connection and parts lists, `tools/uart_capture.py`, a blank results form; `tools/telematics_import.py`; [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md).
+* **Equipment:** a function generator with a stated frequency accuracy, a multimeter, a scope or logic analyzer, two USB-CAN adapters (B11), STM32CubeProgrammer or OpenOCD, a soldering iron (the NOR onto its adapter).
+* **Steps:**
+  1. **First milestone:** bench steps B0 to B7: preflight, wheel pulse, timestamped measurement, bounded queue, log on the NOR, read-back, import, plotted speed and distance; the timebase error against the generator; stuck and disconnected sensors (B6); the 32-bit timer overflow at 71.6 min with the console capture and a ranged dump (B7).
+  2. B8 to B10: power loss during a write, internal flash filling into sparse logging, erase.
+  3. B12: IMU and TMP117 on I2C1.
+  4. B13: GNSS with PPS on the vehicle image `tm_u575_vehicle` (written and host-tested; needs configuration A's GNSS board and document checks DC19 to DC21).
+  5. The log storage for an attempt's length (T-STORAGE: the NOR holds 26.7 min of the fixture vehicle's mix at full rate; docs/generated/telematics_storage.md).
+* **Completion evidence:** the bench record of each step with the import report and plots committed; the wheel channels against a reference tachometer once the vehicle's wheel is available.
+* **Blockers:** the board on the bench; the STM32U575 reference documents (the register-level code is checked against ST's HAL and CMSIS sources, [`U575_REGISTER_CHECK.md`](U575_REGISTER_CHECK.md); RM0456, DS13737, ES0499 and UM2861 were not readable here); the wheel circumference and magnet count for real speed (B-DRIVETRAIN).
 
-## Stage 3. Bench CAN with a simulated controller and BMS
+## T3. Bench integration
 
-* **Prerequisites:** stage 2; a CAN transceiver breakout for the Nucleo (it has none); the bus bit rate (500 kbit/s may be used on the bench until the vehicle bus is known).
-* **Files:** `host/vcu_bridge/semmc_socketcan.py` (SocketCAN encode and decode), `protocol/generated/semmc_protocol.py`, `firmware/platform/host/host_main.c` (`semmc_host` produces the controller's frames), `host/telemetry_adapter/supervisor.py` (reference supervisor), [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md) 2.4.
-* **Equipment:** a USB-CAN adapter on a Linux computer, a bench CAN cable with 120 Ω at both ends.
-* **Test procedure:**
-  1. Send the controller's frames from a recorded host run at the full rate (466 frames/s with the supervisor's) while the Nucleo writes its log, including during a forced flash stall (check E2).
-  2. Run the supervisor task on the Nucleo against `semmc_host` through SocketCAN and capture its timing on a GPIO (check E1).
-  3. A simulated BMS is added only when the BMS interface is known.
-* **Completion evidence:** E1 and E2 records; an imported log with no bad-CRC frames and every drop counted; the ECO session established and lost on timeout as in the host demonstration.
-* **Blockers:** vehicle bus type and bit rate; BMS interface (unknown).
+* **Prerequisites:** T2 steps 1 to 3; the CAN Pal (bench line `can_xcvr`) with its silent pin high; two USB-CAN adapters; for step 2, the controller team's DBC and recording.
+* **Files:** `telematics/firmware/platform/u575/can_u575.c` (FDCAN1 in bus-monitoring mode), [`../telematics/firmware/BENCH.md`](../telematics/firmware/BENCH.md) B11 and section 7, `host/telematics/controller_adapter.py`.
+* **Steps:**
+  1. B11: `tm_u575_can.bin` against a USB-CAN adapter: the board acknowledges nothing and sends nothing; every frame counted.
+  2. Replay the controller team's recording onto a bench bus at its real rate and bit rate; import the board's log through the DBC adapter; compare with the recording frame by frame.
+  3. Electrical checks E1 to E6 with the controller team's connector pinout and ground point: transmitter disabled in hardware, unpowered behaviour, no added termination, stub length, one ground, no back-feeding.
+* **Completion evidence:** frame counts on every node with error counters; the comparison report; the E1 to E6 records with scope captures, reviewed by the controller team.
+* **Blockers:** the interface agreement (T1). "Receive-only" in firmware does not prove electrical noninterference: E1 to E6 are required before any vehicle bus.
 
-## Stage 4. Logging and a broker outage with the real modem
+## T4. Remote uplink
 
-* **Prerequisites:** stage 3; the A7672 variant for the event region with antenna and SIM; a broker reachable from the mobile network ([`MQTT_SETUP.md`](MQTT_SETUP.md) 4); a 1.8 V level translator for the modem UART.
-* **Files:** `host/telematics/mqtt_link.py` and `host/pit/mqtt_ingest.py` (reference behaviour), `tools/mqtt/mosquitto.conf`, [`ICD.md`](ICD.md) 10.
-* **Equipment:** modem board, SIM, LTE antenna, current probe for the modem supply, the pit laptop.
-* **Test procedure:** checks E5 (20 s network outage), E6 (pit restart), E7 (modem supply during transmission), E9 (supply cut as the emergency stop would), and E8 (the unit's average and peak power over a simulated attempt).
-* **Completion evidence:** a pit database in which every sequence number is stored, counted as dropped on the car, or reported as a gap; supply-droop captures within 3.4 to 4.2 V; the unit's consumption recorded as an energy term.
-* **Blockers:** event country and operator, broker hosting, telematics board files (whether the modem and supply are on the board).
+* **Prerequisites:** T2; the configuration B modem board, SIM and antenna; a broker reachable from the mobile network ([`MQTT_SETUP.md`](MQTT_SETUP.md)).
+* **Files:** `host/telematics/node.py` and `host/telematics/mqtt_link.py` (the reference behaviour, `sem.telemetry.v4`), `host/pit/mqtt_ingest.py`, [`ICD.md`](ICD.md) A.8, [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) section 4 (U1 to U5).
+* **Steps:** the live message, its backlog and its accounting are firmware already (`telematics/firmware/src/tm_live.c`, host-tested, every value equal to the pit's import of the log on a simulated drive). What remains: the modem's MQTT transport behind `tm_link_t` as a non-blocking state machine below acquisition and logging, from the modem's AT command manual; then U1 to U5: network outage and reconnect, pit restart, modem supply droop, the unit's consumption, a supply cut.
+* **Completion evidence:** a pit database in which every sequence number is stored, counted as dropped on the car, or reported as a gap; acquisition and the log unaffected during the outage (the same properties the host demonstration checks).
+* **Blockers:** the event country (band set), broker hosting.
 
-## Stage 5. Reviewed controller hardware and staged bring-up
+## T5. Vehicle data and analysis
 
-* **Prerequisites:** battery and BMS datasheets (maximum and minimum voltage, currents), motor data, the primary datasheets in [`../hardware/selection/DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md), footprints and a layout, the signed design review ([`../hardware/review/REVIEW_CHECKLIST.md`](../hardware/review/REVIEW_CHECKLIST.md)), and the gate-driver and battery-meter drivers of the STM32G474 platform (the rest of the platform builds and links since v0.6; `firmware/platform/stm32g4/README.md`).
-* **Files:** `hardware/`, `firmware/platform/stm32g4/README.md`, [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md).
-* **Equipment:** current-limited bench supply above the maximum pack voltage, oscilloscope with a differential probe (borrowed; not in the budget), multimeters, dummy load, SWD programmer.
-* **Test procedure:** acceptance stages S0 to S8 of [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md): preconditions, unpowered inspection, current-limited logic power, rails and clock, PWM and break behaviour with the power stage disabled, sensor calibration, precharge and faults, low-energy motor test, controlled load; records checked with `tools/acceptance.py check`.
-* **Completion evidence:** the signed review; measurement tables and scope captures for each stage; a vehicle configuration with `provenance: bench_measured` that passes hardware-mode validation.
-* **Blockers:** every hardware input above. The board does not exist.
+* **Prerequisites:** T1 to T3 passed; the controller team's agreement to connect at a time they choose; the team's and the organiser's safety process; manual driving.
+* **Files:** [`ENERGY_METHODS.md`](ENERGY_METHODS.md) section 0, `host/pit/energy.py`, `tools/run_pit_replay.py`, `models/vehicle/longitudinal.py` (`fit_coastdown`), [`generated/coastdown_sensitivity.md`](generated/coastdown_sensitivity.md).
+* **Steps:**
+  1. Logged runs: energy at the controller input and, with the battery-side monitor, at the battery; the missing intervals and their causes reported with each figure.
+  2. Coast-downs in both directions on a surveyed section, with the wind recorded; constant-speed runs; the unit's own consumption.
+  3. The shadow-mode monitors (R3v, CSIA2) on measured data; relationships whose inputs are missing are disabled and say so.
+  4. Strategy comparison, offline: counterbalanced run order, the same route and finish-time target, a kinetic-energy correction, the energy boundary stated, a minimum useful effect written down before testing ([`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 5). Results go to the driver as advice; there is no automatic speed control.
+* **Completion evidence:** per-run reports with data quality; road-load coefficients with uncertainty; the comparison's mean difference with a 95 % confidence interval, every run kept.
+* **Blockers:** track access, the rule edition, the number of attempts.
 
-## Stage 6. Controller and telemetry integration
+CSIA stays in shadow mode at every stage, with no propulsion authority. The frozen evaluation (`csia/V2_FREEZE.json`, [`csia/EVALUATION_RESULTS_v2.md`](csia/EVALUATION_RESULTS_v2.md)) and its result favouring R3v are kept unchanged.
 
-* **Prerequisites:** stages 4 and 5.
-* **Files:** [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md), [`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 3 and 4.
-* **Equipment:** both units on a bench CAN bus, the bench supply, a calibrated reference shunt and meter.
-* **Test procedure:**
-  1. Repeat the host fault list on hardware: stale, repeated and reordered requests, bus-off, companion disconnect, controller reset during a request.
-  2. Calibrate the bus-current meter (INA228) against the reference.
-  3. Compare the controller's energy with the reference.
-  4. Run `tools/run_pit_replay.py` on an imported bench log.
-* **Completion evidence:** a test record per fault; meter gain and offset with uncertainty; a replay report whose data class reads measured (bench) and lists what is still insufficient.
-* **Blockers:** the supervision timing is provisional: a hazard and latency analysis must replace it before ECO is offered in the vehicle.
+## Deferred controller development (not on the critical path)
 
-## Stage 7. Controlled vehicle measurements
+Our earlier controller work is kept, with its own suite (`python3 -m pytest -m controller`) and CI job, in case the team needs it later. It blocks no telematics stage. Its stages, as recorded in v0.6:
 
-* **Prerequisites:** stage 6; the vehicle integrated; the organiser's and the team's safety process; manual driving first.
-* **Files:** [`ENERGY_METHODS.md`](ENERGY_METHODS.md) 2.3, [`generated/coastdown_sensitivity.md`](generated/coastdown_sensitivity.md), `models/vehicle/longitudinal.py` (`fit_coastdown`).
-* **Equipment:** the vehicle, a measured track section with known grade, an anemometer.
-* **Test procedure:**
-  1. Coast-downs in both directions on the same section, with the grade surveyed and the wind recorded.
-  2. Constant-speed runs.
-  3. IMU offset calibration at rest.
-  4. Cross-check the wheel channels.
-  5. Measure the telemetry unit's consumption.
-  6. If accessible, compare the controller meter with the joulemeter in a static test.
-* **Completion evidence:** road-load coefficients with uncertainty and an identifiability verdict; a measured loss map; the vehicle configuration updated with sources.
-* **Blockers:** track access; the event rules for the governing year.
-
-## Stage 8. Fair strategy comparison
-
-* **Prerequisites:** stage 7; a minimum useful effect and exclusion rules written down before testing ([`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 5).
-* **Files:** `models/optimization/`, `tools/run_optimization.py`, `host/pit/energy.py`.
-* **Equipment:** the vehicle and the same driver for every run where possible.
-* **Test procedure:**
-  1. Counterbalanced run order (for example ABBA).
-  2. The same route and finish-time target for every run.
-  3. A kinetic-energy correction between start and end.
-  4. The same auxiliary loads in every run.
-  5. The energy boundary stated: joulemeter, or the controller input with the difference known.
-* **Completion evidence:** the run-level mean difference with a 95 % confidence interval, combined with the energy-measurement uncertainty; every run kept, including failed ones.
-* **Blockers:** the number of attempts available.
-
-CSIA stays in shadow mode through every stage. It may be considered for tightening (never commanding) supervisory bounds only after the evidence gate of [`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 6 is met on vehicle data.
+* **D1. Reviewed controller hardware and staged bring-up.** Needs the battery and BMS datasheets, motor data, the primary datasheets ([`../hardware/selection/DATASHEET_REGISTER.md`](../hardware/selection/DATASHEET_REGISTER.md)), footprints and a layout, a signed design review ([`../hardware/review/REVIEW_CHECKLIST.md`](../hardware/review/REVIEW_CHECKLIST.md)), and the DRV8353 and INA228 bus transports on the STM32G474 (not written: `../firmware/platform/stm32g4/README.md`). Procedure: [`BENCH_ACCEPTANCE.md`](BENCH_ACCEPTANCE.md) S0 to S8; records checked with `tools/acceptance.py check`. The board does not exist; the release gate fails ([`generated/release_gate.md`](generated/release_gate.md)).
+* **D2. Controller and supervisor integration.** The ECO supervisor (`host/telemetry_adapter/`) is a legacy mode, run only with `--legacy-supervised`; it is not part of the telematics unit. Its timing is provisional and needs a hazard and latency analysis before it could be offered in any vehicle ([`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md), [`VALIDATION_PLAN.md`](VALIDATION_PLAN.md) 3 and 4).

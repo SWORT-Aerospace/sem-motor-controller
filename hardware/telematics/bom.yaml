@@ -1,0 +1,229 @@
+# Telematics-only bill of materials (v0.7). Read by tools/telematics_bom.py, which writes docs/TELEMATICS_BOM.md
+# and docs/generated/telematics_bom.json. NOTHING HAS BEEN ORDERED. No price below is a quote.
+#
+# Scope: the telematics unit only. The motor controller is built by another team; none of its parts are here, and
+# this list is priced from its own lines, not by subtracting anything from the old combined budget (that budget,
+# docs/BUDGET.md and hardware/bom/, stays as the historical record of the deferred controller development).
+#
+# Configurations (each adds to the one before; nothing is counted twice):
+#   bench      the first bench (telematics/firmware/BENCH.md B1 to B12): USB-powered, exactly the parts the
+#              firmware drives (each such line names its driver and the identifier the firmware checks)
+#   A          bench + what the vehicle unit adds: wheel sensors, GNSS + PPS, more temperature probes, the
+#              vehicle supply (selection blocked, see `supply`), connectors, harness, enclosure, spares
+#   B          A plus the LTE uplink; the driver display is optional and totalled separately
+#   option     not in any total: a part without a firmware driver yet, or an alternative not chosen
+#   recurring  connectivity per month (B only)
+#   equipment  bench tools, only if not owned; never in a configuration total
+#
+# Evidence: snippet = a price seen in a search-result snapshot retrieved on `retrieved` (no live page could be read
+# from this environment: DNS failures and a proxy refusal, not retried); allowance = an estimate with its reasoning.
+# Every line keeps its source. A null price stays null and is reported, never filled in. Prices in USD at qty 1;
+# a line whose only snapshot is in another currency is an allowance in USD with that snapshot in `source`.
+#
+# Vehicle: 48 V nominal, 10 Ah, as reported by the vehicle team (docs/BATTERY.md). The maximum pack voltage is
+# not known (blocker B-BAT-V), so no supply-protection part is selected: the lines marked `blocked_by` are
+# placeholders priced from candidates, and the vehicle power connection stays blocked (`supply` below). The bench
+# needs none of them: the board runs from its USB port.
+
+retrieved: "2026-10-18"
+sources_file: "search snapshots collected 2026-10-18; per-line source text below"
+
+lines:
+  # ------------------------------------------------------------------ bench (USB-powered; executable now)
+  - {id: mcu, config: bench, item: "Development board NUCLEO-U575ZI-Q (STM32U575, on-board ST-LINK)", part: NUCLEO-U575ZI-Q,
+     qty: 1, low: 24.15, high: 26.11, evidence: snippet,
+     source: "Future Electronics US $24.15/$25.36 (pricing.yaml snapshots); ST eStore $26.11 at 1-2 pcs, in stock; Digi-Key $26.11, about 1,012 in stock",
+     driver: telematics/firmware/platform/u575/main_u575.c, checks: "TIM2_IRQHandler"}
+  - {id: usb_cable, config: bench, item: "USB data cable from the PC to the board's ST-LINK USB port (CN1, USB Micro-B)", part: "USB Type-A or USB Type-C to Micro-B, data capable",
+     qty: 1, low: 3.00, high: 8.00, evidence: allowance,
+     source: "not quoted; UM2861 Rev 10 section 3.1 and Table 6: the ST-LINK connector CN1 is USB Micro-B (the board's USB Type-C connector CN15 is the MCU's own USB, not used here)",
+     notes: "Power and console come through it: the bench needs no other supply."}
+  - {id: nor_chip, config: bench, item: "SPI NOR flash 128 Mbit, SOIC-8 (log storage)", part: "Winbond W25Q128JVSIQ", qty: 1, low: 1.88, high: 1.88,
+     evidence: snippet, source: "Digi-Key US $1.88 at 1 (tube), 27,875 in stock, 20-week standard lead time",
+     driver: telematics/firmware/src/tm_w25q.c, checks: "0xEFu",
+     notes: "Wired for standard SPI: /WP (pin 3) and /HOLD (pin 7) to 3.3 V. The firmware reads its JEDEC id at start and logs to it when it answers."}
+  - {id: nor_adapter, config: bench, item: "SOIC-8 to 0.1 in breakout PCB (6 pack)", part: "Adafruit 1212", qty: 1, low: 2.95, high: 2.95,
+     evidence: snippet, source: "Digi-Key US $2.95 at 1, 1,010 in stock", notes: "Solder the W25Q onto one; headers from `headers`."}
+  - {id: nor_passives, config: bench, item: "100 nF ceramic capacitor (NOR decoupling), 10 kOhm resistor (/CS pull-up), 120 Ohm resistor (bench CAN bus end)", part: "any through-hole",
+     qty: 1, low: 0.30, high: 1.50, evidence: allowance, source: "not quoted; three common parts",
+     notes: "The pull-up keeps /CS high while the MCU is in reset (PD14 floats until the firmware drives it)."}
+  - {id: headers, config: bench, item: "Break-away 0.1 in male header strips (10 pack)", part: "Adafruit 392", qty: 1, low: 4.95, high: 4.95,
+     evidence: snippet, source: "Adafruit $4.95 per 10-pack", notes: "For the NOR adapter and any breakout that ships without headers."}
+  - {id: imu, config: bench, item: "6-axis IMU breakout, I2C, Qwiic", part: "SparkFun SEN-19764 (ST ISM330DHCX)",
+     qty: 1, low: 25.50, high: 25.50, evidence: snippet, source: "SparkFun $25.50, in stock (product page and hookup guide snapshots)",
+     driver: telematics/firmware/src/tm_imu.c, checks: "WHO_ISM330DHCX 0x6Bu",
+     notes: "The firmware probes 0x6A then 0x6B and accepts WHO_AM_I 0x6B (ISM330DHCX) or 0x6C (LSM6DSOX); the board's address jumper selects 0x6A or 0x6B."}
+  - {id: qwiic_jumper, config: bench, item: "Qwiic to breadboard jumper cable (IMU to the board's I2C pins)", part: "SparkFun PRT-17912",
+     qty: 1, low: 1.95, high: 1.95, evidence: snippet, source: "SparkFun $1.95 (PRT-14425, retired, is replaced by PRT-17912)"}
+  - {id: qwiic_cable, config: bench, item: "STEMMA QT / Qwiic cable 100 mm (IMU to the TMP117)", part: "Adafruit 4210", qty: 1, low: 0.95, high: 0.95,
+     evidence: snippet, source: "Adafruit $0.95 at 1-9; Jameco $1.25"}
+  - {id: tmp117, config: bench, item: "Temperature sensor breakout TMP117, I2C, STEMMA QT", part: "Adafruit 4821", qty: 1, low: 15.25, high: 15.25,
+     evidence: snippet, source: "Jameco $15.25 at 1; Kiwi Electronics EUR 10.99 ex VAT; Adafruit's own price not in the snapshots",
+     driver: telematics/firmware/src/tm_imu.c, checks: "0x0117",
+     notes: "Address 0x48 by default; the firmware probes 0x48 to 0x4B and logs every TMP117 that answers as its own channel."}
+  - {id: can_xcvr, config: bench, item: "CAN transceiver breakout, 3.3 V logic, passive when unpowered, switchable termination, silent pin",
+     part: "Adafruit 5708 CAN Pal (NXP TJA1051T/3)", qty: 1, low: 3.95, high: 5.15, evidence: snippet,
+     source: "Adafruit $3.95 at 1-9; Jameco $5.15; Digi-Key 24-week manufacturer lead time; The Pi Hut sold out",
+     driver: telematics/firmware/platform/u575/can_u575.c, checks: "FDCAN_CCCR_MON",
+     notes: "SLNT pin to the TJA1051 S pin: high = silent, transmitter off (Adafruit CAN Pal pinout guide, search snippet 2026-10-18); 2 x 60 ohm termination behind an on-board switch; an on-board charge pump makes the transceiver's 5 V from a 3.3 V supply, VIO sets the logic level (Adafruit product page, search snippet 2026-10-18). Bench-check all three (BENCH.md E1, E3)."}
+  - {id: breadboard, config: bench, item: "Half-size breadboard (NOR adapter, CAN Pal)", part: "Adafruit 64", qty: 1, low: 4.95, high: 4.95,
+     evidence: snippet, source: "Adafruit $4.95 at 1-9; Jameco $6.55"}
+  - {id: jumpers, config: bench, item: "Male/male jumper wires, 40 x 150 mm", part: "Adafruit 758", qty: 1, low: 3.95, high: 3.95,
+     evidence: snippet, source: "Adafruit $3.95 at 1-9", notes: "Into the NUCLEO's female Arduino/Zio headers; also the B6 jumper to GND."}
+  - {id: jumpers_fm, config: bench, item: "Female/male jumper wires, 40 x 150 mm", part: "Adafruit 826", qty: 1, low: 3.95, high: 3.95,
+     evidence: snippet, source: "Adafruit $3.95 at 1-9 (search snippet 2026-10-18)",
+     notes: "Spare: PD0/PD1 (FDCAN1) are on the Zio connector CN9 pins 25 and 27 (UM2861 Rev 10 Table 17), female like the Arduino headers."}
+  # ------------------------------------------------------------------ A: vehicle bus
+  - {id: can_cable, config: A, item: "CAN twisted pair, 120 ohm, shielded (tap from the controller's bus), per foot", part: "Belden 9841",
+     qty: 10, low: 5.49, high: 5.49, evidence: snippet, source: "ShowMeCables $5.49/ft at 1-99 ft; 0 in stock in the snapshot",
+     notes: "10 ft placeholder until the tap point is agreed (docs/CONTROLLER_INTERFACE_REQUEST.md)."}
+  # ------------------------------------------------------------------ A: storage
+  - {id: nor_vehicle_note, config: A, item: "Vehicle log storage: the bench W25Q128JV (above) moves into the unit", part: "(no extra part)",
+     qty: 1, low: 0.0, high: 0.0, evidence: allowance, source: "no extra cost",
+     notes: "16 MiB holds 138 min at the bench rates but 27 min at full rate with the fixture's 394 controller frames/s (docs/generated/telematics_storage.md), then sparse logging: the real controller's rate and the attempt length decide whether a larger NOR or microSD is needed (T-STORAGE)."}
+  - {id: storage_socket, config: option, item: "microSD socket breakout (larger vehicle log)", part: "Adafruit 254", qty: 1, low: 7.50,
+     high: 7.50, evidence: snippet, source: "Adafruit $7.50 (pricing.yaml snapshot)",
+     notes: "Option only: the microSD driver is not written, so it is in no configuration."}
+  - {id: storage_card, config: option, item: "microSD card, industrial (pSLC) at the high end, consumer at the low end", part: "Kingston SDCIT2/8GB",
+     qty: 1, low: 5.00, high: 55.73, evidence: allowance, source: "high: Kingston SDCIT2/8GBCP $55.73 (Future Electronics snapshot); low: the repo's consumer-card allowance",
+     notes: "Option only, with storage_socket."}
+  # ------------------------------------------------------------------ A: sensors
+  - {id: wheel_hall, config: A, item: "Wheel Hall switch, continuous (not sampled), on a carrier with potting, per channel",
+     part: "DRV5023-class (representative, not selected)", qty: 3, low: 1.00, high: 5.00, evidence: allowance,
+     source: "DRV5023AJQDBZR $0.44-0.89 chip (aggregator snapshot of Mouser, Digi-Key, Newark) plus a carrier and potting, not quoted",
+     notes: "Three channels (two front wheels, driven wheel). Selection waits for the wheel geometry (docs/generated/wheel_sensor_check.md)."}
+  - {id: magnets, config: A, item: "Wheel magnets N52, 1/4 x 1/8 in disc", part: "K&J Magnetics D42-N52", qty: 12, low: 0.43, high: 0.52,
+     evidence: snippet, source: "K&J $0.43 (product page) and $0.52 (category listing) at 1-49",
+     notes: "4 per wheel x 3 wheels: placeholder until the wheel geometry fixes the count."}
+  - {id: gnss, config: A, item: "GNSS receiver with PPS output, SMA for an active antenna", part: "SparkFun GPS-17285 (u-blox NEO-M9N)",
+     qty: 1, low: 76.50, high: 76.50, evidence: snippet, source: "SparkFun $76.50 in stock; Digi-Key US $76.50, 331 in stock",
+     notes: "pricing.yaml cites GPS-15733, which is the chip-antenna board; the SMA board is GPS-17285. PPS on a through-hole pin only."}
+  - {id: gnss_antenna, config: A, item: "Active GNSS antenna, SMA, with cable", part: "Adafruit 960 (28 dB)", qty: 1, low: 21.50, high: 27.75,
+     evidence: snippet, source: "Adafruit $21.50 at 1-9; Jameco $27.75 (pricing.yaml snapshots)"}
+  - {id: tmp117_more, config: A, item: "Two more TMP117 breakouts: battery surface, motor case (the bench one becomes ambient)", part: "Adafruit 4821",
+     qty: 2, low: 15.25, high: 15.25, evidence: snippet, source: "as tmp117",
+     driver: telematics/firmware/src/tm_imu.c, checks: "0x0117",
+     notes: "Addresses 0x49 and 0x4A set on each board's address pads. I2C on leads: keep the bus short (standard mode, about 400 pF in total) or add a bus extender (not selected)."}
+  - {id: temp_probes, config: option, item: "Temperature probes, waterproof 1-Wire", part: "DS18B20 stainless probe",
+     qty: 3, low: 2.19, high: 5.50, evidence: snippet, source: "Konnected $5.50 each; a 5-pack at $10.95 (= $2.19 each) plus shipping (pricing.yaml snapshots)",
+     notes: "Option only: the 1-Wire driver is not written (the firmware drives TMP117 on I2C). Some probes sold as DS18B20 are compatible dies, not Maxim/ADI parts."}
+  # ------------------------------------------------------------------ A: supply from the pack (selection blocked)
+  - {id: dcdc, config: A, item: "Isolated DC-DC to 5 V: rated input range covering V_bat,max, absolute maximum input above the TVS clamp voltage",
+     part: "not selected", qty: 1, low: 13.95, high: 60.00, evidence: allowance, blocked_by: B-BAT-V,
+     source: "low: Mean Well SKMW15G-05 (18-75 V input) at $13.95-23.55 (Jameco and a broker, snapshots), rejected with an SMBJ58A (supply.checked_pairs); high: a wider-input isolated module, not quoted",
+     notes: "Isolated: the CAN ground must still be tied to the controller's CAN ground. Rejected earlier on input range: Pololu D36V28F5/D36V50F5 (50 V max), RECOM RPMH5.0-1.5 (60 V), R-78HB5.0-0.5 and D45V5F5 (below 1 A), Traco TSR 1-2450 (36 V)."}
+  - {id: fuse_holder, config: A, item: "In-line fuse holder, voltage rating at least V_bat,max", part: "candidate: Littelfuse 0FHM0003ZXJP (58 V)", qty: 1,
+     low: 6.92, high: 6.92, evidence: snippet, blocked_by: B-BAT-V, source: "Digi-Key $6.92 at 1, 452 in stock",
+     notes: "The candidate fits only if V_bat,max is at most 58 V."}
+  - {id: fuse, config: A, item: "Fuse, DC rated at least V_bat,max; current a placeholder until the input current is measured",
+     part: "candidate: Littelfuse 0997002.WXN (58 V DC, 2 A)", qty: 1, low: 0.42, high: 0.42, evidence: snippet, blocked_by: B-BAT-V,
+     source: "LCSC $0.42 at 1, 2,410 in stock", notes: "32 V automotive blade fuses must not be used on the pack."}
+  - {id: tvs, config: A, item: "Input TVS: standoff at least V_bat,max; clamp voltage at the surge current at most the DC-DC's absolute maximum input",
+     part: "not selected", qty: 1, low: 0.42, high: 2.00, evidence: allowance, blocked_by: B-BAT-V,
+     source: "low: Digi-Key Yageo SMBJ58A/TR7 $0.42 cut tape (snapshot); high: a larger package, not quoted",
+     notes: "SMBJ58A with a 75 V module is rejected: its 93.6 V clamp is above the module's input maximum (supply.checked_pairs)."}
+  - {id: rev_diode, config: A, item: "Reverse-polarity series Schottky, 100 V 3 A", part: "onsemi MBRS3100T3G", qty: 1, low: 1.00, high: 2.00,
+     evidence: allowance, blocked_by: B-BAT-V,
+     source: "only non-USD snapshots: Digi-Key CA CAD 1.56, UK GBP 0.80, SG SGD 1.48 at 1; USD range is an allowance",
+     notes: "100 V reverse rating: re-check against V_bat,max with the rest of the supply."}
+  - {id: supply_passives, config: A, item: "Input and output capacitors for the DC-DC module, perfboard carrier", part: "per the chosen module's data sheet",
+     qty: 1, low: 3.00, high: 10.00, evidence: allowance, blocked_by: B-BAT-V,
+     source: "not quoted: a few electrolytic and ceramic capacitors and a perfboard"}
+  # ------------------------------------------------------------------ A: connectors, harness, enclosure
+  - {id: conn_receptacle, config: A, item: "Sealed connector DT 4-way receptacle (CAN tap, wheel, temperatures, power)", part: "TE/Deutsch DT04-4P",
+     qty: 4, low: 5.36, high: 6.09, evidence: snippet, source: "aggregator snapshot: Mouser about $5.36, Newark $5.96, Digi-Key $6.09"}
+  - {id: conn_plug, config: A, item: "Sealed connector DT 4-way plug", part: "TE/Deutsch DT06-4S", qty: 4, low: 2.13, high: 2.82,
+     evidence: snippet, source: "Digi-Key $2.13 at 1, 10,854 in stock; Cytech $2.82"}
+  - {id: wedge_p, config: A, item: "DT wedgelock for DT04-4P", part: W4P, qty: 4, low: 0.19, high: 0.19, evidence: snippet,
+     source: "Digi-Key $0.19 at 1"}
+  - {id: wedge_s, config: A, item: "DT wedgelock for DT06-4S", part: W4S, qty: 4, low: null, high: null, evidence: snippet,
+     source: "no price found in any snapshot", notes: "unknown: excluded from the totals and reported"}
+  - {id: contacts_pin, config: A, item: "DT size-16 pin contacts", part: "TE/Deutsch 0460-202-16141", qty: 16, low: 0.25, high: 0.25,
+     evidence: snippet, source: "Future Electronics $0.25 at 1"}
+  - {id: contacts_socket, config: A, item: "DT size-16 socket contacts", part: "TE/Deutsch 0462-201-16141", qty: 16, low: 0.37, high: 0.67,
+     evidence: snippet, source: "LCSC $0.67 at 1; a lot of 100 at $36.90 (about $0.37 each)"}
+  - {id: wire, config: A, item: "Hook-up wire (sensor leads, supply), heat-shrink, sleeving, cable ties", part: "assorted", qty: 1,
+     low: 15.00, high: 35.00, evidence: allowance, source: "not quoted; sized for three wheel leads, three probe leads, the supply and the CAN tap"}
+  - {id: enclosure, config: A, item: "Enclosure, clear lid, for the NUCLEO-144 and breakouts", part: "Hammond 1554WA2GYCL (180 x 180 x 90 mm)",
+     qty: 1, low: 42.00, high: 42.00, evidence: snippet, source: "Digi-Key $42.00 at 1",
+     notes: "A smaller box only with a custom PCB later; the NUCLEO-144 is about 133 x 70 mm."}
+  # ------------------------------------------------------------------ A: spares (rule below)
+  - {id: spare_can, config: A, item: "Spare CAN transceiver breakout", part: "Adafruit 5708", qty: 1, low: 3.95, high: 5.15, evidence: snippet,
+     source: "as can_xcvr"}
+  - {id: spare_fuses, config: A, item: "Spare fuses", part: "Littelfuse 0997002.WXN", qty: 2, low: 0.42, high: 0.42, evidence: snippet, source: "as fuse"}
+  - {id: spare_tvs_diode, config: A, item: "Spare TVS and Schottky (sacrificial in bring-up), once selected", part: "as tvs + rev_diode", qty: 1,
+     low: 1.42, high: 4.00, evidence: allowance, blocked_by: B-BAT-V, source: "as tvs + rev_diode"}
+  - {id: spare_probe, config: A, item: "Spare temperature sensor", part: "Adafruit 4821 (TMP117)", qty: 1, low: 15.25, high: 15.25, evidence: snippet, source: "as tmp117"}
+  - {id: spare_nor, config: A, item: "Spare NOR chip (the adapter pack has six PCBs)", part: "Winbond W25Q128JVSIQ", qty: 1, low: 1.88, high: 1.88,
+     evidence: snippet, source: "as nor_chip"}
+  - {id: spare_hall, config: A, item: "Spare Hall switch and magnets", part: "DRV5023-class + 2 x D42-N52", qty: 1, low: 1.86, high: 6.04,
+     evidence: allowance, source: "as wheel_hall + 2 x magnets"}
+  - {id: spare_contacts, config: A, item: "Spare contacts and one housing of each kind", part: "DT pins/sockets x4 each, DT04-4P, DT06-4S",
+     qty: 1, low: 9.97, high: 12.59, evidence: snippet, source: "as the connector lines (4 x 0.25 + 4 x 0.37-0.67 + 5.36-6.09 + 2.13-2.82; wedgelocks unpriced)"}
+  # ------------------------------------------------------------------ A: shipping and tax
+  - {id: shipping, config: A, item: "Shipping: three small orders (Digi-Key ground; Adafruit; SparkFun)", part: null, qty: 3, low: 4.99,
+     high: 12.00, evidence: allowance, source: "Digi-Key US ground $4.99-8.49 (delivery page snapshots); vendor shipping not quoted; Mouser free above $90 (press page 2026-04-07)"}
+  - {id: tax, config: tax, item: "Sales tax on parts (state dependent)", part: null, qty: 1, percent_low: 0.0, percent_high: 10.0,
+     evidence: allowance, source: "0 to 10 % of the parts of each configuration; the purchasing state is not known"}
+  # ------------------------------------------------------------------ B: uplink
+  - {id: modem, config: B, item: "LTE Cat-1 modem board with UART (region dependent)", part: "Waveshare A7670E HAT (low) / SparkFun LTE Stick LARA-R6 (high)",
+     qty: 1, low: 28.99, high: 149.95, evidence: snippet,
+     source: "Waveshare $28.99, RobotShop $33.86 (A7670E: Europe/Asia bands); SparkFun CEL-23618 $149.95 (North America; one page says retired)",
+     notes: "No A7672-family breakout at a retail USD price was found. The band set depends on the event country. Never fit a cell to the modem board's battery header (rules, Article 57b)."}
+  - {id: lte_antenna, config: B, item: "LTE antenna 700-2700 MHz, SMA", part: "Teltonika PR1CS450 / Pulse WA700/2700SMA", qty: 1, low: 11.00, high: 27.20,
+     evidence: snippet, source: "pricing.yaml snapshots: $11.00 and $27.20"}
+  - {id: rf_pigtail, config: B, item: "u.FL to SMA pigtail (if the modem board has u.FL)", part: generic, qty: 1, low: 3.00, high: 8.00,
+     evidence: allowance, source: "not quoted"}
+  - {id: display, config: B_display, item: "Driver display, sunlight-readable memory LCD, SPI (optional)", part: "Adafruit 4694 Sharp Memory 2.7 in",
+     qty: 1, low: 44.95, high: 44.95, evidence: snippet, source: "Adafruit $44.95 at 1-9",
+     notes: "Optional. Advice only: no automatic speed control. Alternative OLED $19.95 washes out in sun."}
+  # ------------------------------------------------------------------ recurring
+  - {id: sim_once, config: recurring_once, item: "IoT SIM card (Hologram), one-time", part: Hologram, qty: 1, low: 3.00, high: 3.00, evidence: snippet,
+     source: "Hologram pricing page snapshot: $3 one-time"}
+  - {id: sim_month, config: recurring, item: "SIM fee per month", part: Hologram, qty: 1, low: 1.00, high: 1.25, evidence: snippet,
+     source: "Hologram: $1/month (current page), $1.25 (legacy Global-1 profile)"}
+  - {id: data_mb, config: recurring_per_mb, item: "Mobile data per MB", part: Hologram, qty: 1, low: 0.03, high: 0.21, evidence: snippet,
+     source: "Hologram: $0.03/MB (current), $0.21/MB (legacy USA-1 and Global-2 profiles)"}
+  # ------------------------------------------------------------------ equipment (only if not owned)
+  - {id: usb_can, config: equipment, item: "USB-CAN adapter (bench: acknowledging node and frame source)", part: "CANable-class, candleLight firmware",
+     qty: 2, low: 30.00, high: 60.00, evidence: allowance, source: "pricing.yaml allowance, not quoted; two needed for BENCH.md step B11"}
+  - {id: multimeter, config: equipment, item: "Multimeter (continuity, 3.3 V and 5 V checks, CAN resistance)", part: "any", qty: 1, low: 0.0, high: 0.0,
+     evidence: allowance, source: "assumed owned or borrowed"}
+  - {id: soldering, config: equipment, item: "Soldering iron, solder, flux (SOIC-8 onto its adapter, headers)", part: "any", qty: 1, low: 0.0, high: 0.0,
+     evidence: allowance, source: "assumed owned or borrowed from the lab"}
+  - {id: crimper, config: equipment, item: "Crimp tool for DT solid contacts", part: "generic indent crimper (genuine HDT-48-00 $427.05)",
+     qty: 1, low: 25.00, high: 60.00, evidence: allowance, source: "generic: not quoted; genuine TE HDT-48-00 $427.05 at Wirecare (snapshot): borrow one"}
+  - {id: signal_gen, config: equipment, item: "Function generator, 0-3.3 V square wave, 1 Hz to 5 kHz, with a stated frequency accuracy (bench wheel input)",
+     part: "any", qty: 1, low: 0.0, high: 0.0, evidence: allowance,
+     source: "assumed borrowed from the lab; its frequency accuracy bounds the B4 timebase check, so record it"}
+  - {id: scope, config: equipment, item: "Oscilloscope or logic analyzer, 2 channels, 10 MS/s or more (B11 and E1: our TX line and CANH-CANL)",
+     part: "any", qty: 1, low: 0.0, high: 0.0, evidence: allowance, source: "assumed borrowed from the lab"}
+
+usage:
+  # live uplink volume for the recurring cost (sem.telemetry.v4 at 2 Hz); the message size is measured from the
+  # telematics demonstration's stored payloads by tools/telematics_bom.py when available, else this value
+  message_bytes_assumed: 1500
+  mqtt_overhead_bytes: 40
+  rate_hz: 2.0
+  running_hours_per_month: {low: 2, high: 20}    # practice and attempts, assumption to be replaced by the team's plan
+
+supply:
+  battery_max_V: null
+  battery_source: "docs/BATTERY.md: 48 V nominal, 10 Ah as the vehicle team reports it; the maximum charged voltage is not stated (B-BAT-V)"
+  rule:
+    - "TVS standoff voltage at least V_bat,max (the TVS must not conduct on a full pack)"
+    - "TVS clamp voltage at its surge current at most the DC-DC's absolute maximum input, or a surge stopper between them"
+    - "DC-DC rated input range covering V_bat,min to V_bat,max"
+    - "fuse, fuse holder and reverse diode rated above V_bat,max"
+  checked_pairs:
+    - {tvs: SMBJ58A, tvs_standoff_V: 58.0, tvs_clamp_V: 93.6, tvs_clamp_at_A: 6.4,
+       tvs_source: "SMBJ-series catalogue values as quoted in this list's tvs line (data sheet not read here)",
+       dcdc: "Mean Well SKMW15G-05", dcdc_input_max_V: 75.0,
+       dcdc_source: "18-75 V input as listed by the snapshots; the module's surge rating was not read"}
+  vehicle_power_connection: blocked
+  bench_power: "USB only (the ST-LINK port); nothing on the bench is connected to the pack"
+
+spares_rule: >-
+  Spares where bring-up damage is likely or the item is a consumable: +1 CAN breakout, +2 fuses, +1 TVS and +1
+  Schottky (once selected), +1 TMP117, +1 NOR chip, +1 Hall switch and +2 magnets, +4 contacts of each kind and one
+  housing of each. No spare NUCLEO, GNSS, IMU, modem or display (single units in stock; reorder if damaged).

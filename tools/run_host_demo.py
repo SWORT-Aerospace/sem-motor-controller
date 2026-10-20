@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""Host end-to-end demonstration (HOST SIMULATION; validates no hardware).
+"""LEGACY supervised host demonstration (HOST SIMULATION; research only; validates no hardware).
 
-    python3 tools/run_host_demo.py --out build/host_demo [--build build] [--samples docs/generated/host_demo]
+    python3 tools/run_host_demo.py --legacy-supervised --out build/host_demo [--build build] [--samples DIR]
+
+This is the v0.4 to v0.6 demonstration in which the telematics model runs the ECO supervisor
+(host/telemetry_adapter/legacy_node.py) and the project's own controller core arbitrates its torque
+requests. The project no longer builds the controller and the deployed telematics unit is receive-only;
+its demonstration is tools/run_telematics_demo.py. This one needs the controller core's host build and
+runs only when `--legacy-supervised` is given (tests call `run()` directly, in the controller suite).
 
 Chain, every link exercised in one run:
   synthetic driver + plant -> controller core (C, semmc_host) -> CAN frames
@@ -51,7 +57,8 @@ from host.logger.semmc_log import can_event, io_event  # noqa: E402
 from host.pit import csia_replay, ingest, shadow_replay  # noqa: E402
 from host.telematics import stlg  # noqa: E402
 from host.telematics.clocks import LocalClock, PpsModel  # noqa: E402
-from host.telematics.node import NodeConfig, SimLink, TelematicsNode  # noqa: E402
+from host.telematics.node import SimLink  # noqa: E402
+from host.telemetry_adapter.legacy_node import NodeConfig, SupervisedTelematicsNode  # noqa: E402
 from host.telematics.sensors import TEMP_CHANNELS, WHEEL_CHANNELS, SensorConfig, Sensors  # noqa: E402
 from host.telemetry_adapter.cosim import HostController  # noqa: E402
 from host.telemetry_adapter.supervisor import Supervisor, SupervisorConfig, speed_hold_policy  # noqa: E402
@@ -151,7 +158,7 @@ def build_chain(out: pathlib.Path, build: pathlib.Path, link, run_id: str = RUN_
     }
     writer = stlg.Writer(out / "run.stlg", meta, ncfg.storage_bytes)
     sup = Supervisor(SupervisorConfig(max_torque_Nm=t_max), speed_hold_policy(6.0, 1.5, C, gear, t_max))
-    node = TelematicsNode(ncfg, clock, writer, link, sup, run_id, flash_stalls=tuple(flash_stalls),
+    node = SupervisedTelematicsNode(ncfg, clock, writer, link, sup, run_id, flash_stalls=tuple(flash_stalls),
                           supervisor_stalls=tuple(supervisor_stalls))
     hc = HostController(build / "semmc_host", cal, out / "controller.csv", out / "controller_tx.log", decimate=10)
     us = lambda t: int(round(t * 1e6))  # noqa: E731
@@ -386,7 +393,7 @@ def run(out: pathlib.Path, build: pathlib.Path, duration: float = 120.0) -> dict
     L = ["# Host end-to-end demonstration (HOST SIMULATION)", "",
          f"Run `{RUN_ID}`, {duration:.0f} s, commit `{git[:12]}`"
          f"{' plus uncommitted changes (the commit that adds these outputs)' if dirty else ''}. "
-         "Command: `python3 tools/run_host_demo.py --out build/host_demo`. Synthetic plant, synthetic sensors, "
+         "Command: `python3 tools/run_host_demo.py --legacy-supervised --out build/host_demo`. Synthetic plant, synthetic sensors, "
          "simulated LTE and MQTT; nothing here was measured on hardware.", "",
          "| Check | Result | Evidence |", "|---|---|---|"]
     L += [f"| `{c['id']}` | {'PASS' if c['pass'] else 'FAIL'} | {c['detail']} |" for c in checks]
@@ -423,7 +430,15 @@ def main() -> int:
     ap.add_argument("--build", type=pathlib.Path, default=ROOT / "build")
     ap.add_argument("--duration", type=float, default=120.0)
     ap.add_argument("--samples", type=pathlib.Path, help="copy summary.md/summary.json/csia_timeline.csv here")
+    ap.add_argument("--legacy-supervised", action="store_true",
+                    help="confirm this LEGACY research simulation: the telematics model runs the ECO supervisor and "
+                         "sends torque requests to the simulated controller (never the deployed telematics path)")
     a = ap.parse_args()
+    if not a.legacy_supervised:
+        print("LEGACY research simulation with the ECO supervisor and the project's own controller core. The "
+              "deployed telematics unit is receive-only: run tools/run_telematics_demo.py. To run this one anyway, "
+              "add --legacy-supervised.")
+        return 2
     out = a.out if a.out.is_absolute() else ROOT / a.out
     build = a.build if a.build.is_absolute() else ROOT / a.build
     res = run(out, build, a.duration)

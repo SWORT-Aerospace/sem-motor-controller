@@ -16,6 +16,7 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 | D8 | Current sensing and over-current protection | open item: independent over-current comparator |
 | D9 | Fault-reset behaviour of `SELFTEST` and `HALL_INVALID` | open: needs a controls decision |
 | D10 | Live summary versioning (`sem.telemetry.v2`, `v3`) | chosen and implemented |
+| D11 | Receive-only telematics with a common measurement model (`sem.telemetry.v4`) | chosen; implemented on the host and, for acquisition and the log, in the target firmware (not bench-tested) |
 
 ## D1. Wheel-pulse capture instead of a sampled switch
 
@@ -38,7 +39,7 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 
 * **Requirement.** Protection temperatures fast and local to the controller; slow temperatures for loss models at the pit.
 * **Evidence.** DS18B20: up to 750 ms per 12-bit conversion, ±0.5 °C from -10 to +85 °C, no thermal time constant in the datasheet (Maxim 19-7487 Rev 5). The controller draft reads a 10 kΩ NTC at the low-side MOSFETs and a motor-temperature input; an unknown temperature derates instead of faulting.
-* **Choice.** Protection uses only the controller's NTC and motor sensor. DS18B20-class probes are for logging only. Since v0.6 they have a log record (STLG `TEMP`, [`ICD.md`](ICD.md) 8) with a per-sample status, and the live summary carries them (`sem.telemetry.v3`). **Open:** the probe part and its placements (proposed: battery surface, motor case, ambient), and each probe's time constant on its mounting.
+* **Choice.** Protection uses only the controller's NTC and motor sensor. DS18B20-class probes are for logging only. Since v0.6 they have a log record (STLG `TEMP`, [`ICD.md`](ICD.md) 8) with a per-sample status, and the live summary carries them (`sem.telemetry.v3`). Since v0.7 the telematics firmware drives TMP117 sensors on I2C (up to four, one `TEMP` channel each) and the bench and configuration A list TMP117 breakouts; DS18B20 probes are an option without a driver, in no total ([`TELEMATICS_BOM.md`](TELEMATICS_BOM.md)). **Open:** the placements (proposed: battery surface, motor case, ambient), a TMP117 mounting for each, and each sensor's time constant on its mounting.
 * **Implementation.** `firmware/src/protection/mc_protection.c` (trip and derating); sheet 07 of the schematic; `host/telematics/stlg.py` (record), `host/telematics/sensors.py` (synthetic probes), `host/telematics/node.py` (live block), `host/pit/ingest.py` (import and validation).
 * **Test.** `firmware/tests/test_state_machine.c` and `test_core.c` (derating and trips); `tests/integration/test_host_demo.py` (`test_stlg_temperature_record_roundtrip_and_pit_import`), `tests/integration/test_mqtt_pipeline.py` (v3 validation, node staleness and invalid readings); MQTT demonstration check `live_wheel_and_temperature_match_log_and_v1_still_accepted`. Still to do once probes are fitted: a step test of each probe's time constant.
 
@@ -56,7 +57,7 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 * **Evidence.** A7672X Hardware Design V1.04: peak current "can reach 2A" at maximum GSM transmit power (p. 26); bulk capacitance at least 300 µF if the supply can deliver 2 A, otherwise at least 600 µF (p. 27); average LTE transmit current up to 859 mA at 23 dBm (p. 62). Rules: Articles 56d and 57b (2026 Chapter I). The proposal's BQ25622E charger implies an on-board battery, which Article 57b does not allow on a Battery Electric vehicle.
 * **Choice.** A dedicated supply for the modem sized for 2 A peaks with the bulk capacitance above, fed from a fused DC-DC on the propulsion battery. **Blocked:** the DC-DC input rating needs the maximum pack voltage and its transients (battery datasheet), not the 48 V nominal; whether the board already has this supply (board files).
 * **Implementation.** None yet (procurement line "Protected DC-DC supply").
-* **Test.** Check E7 of [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) (current probe on VBAT during transmission), stage 4.
+* **Test.** Check U3 of [`TELEMETRY_EMBEDDED_PORT.md`](TELEMETRY_EMBEDDED_PORT.md) (current probe on VBAT during transmission), stage T4.
 
 ## D6. Storage capacity and write behaviour
 
@@ -95,5 +96,13 @@ The architecture decision records of v0.1 to v0.3 stay in [`decisions/`](decisio
 * **Requirement.** Vehicle speed in the live summary when the motor is decoupled or GNSS has no fix (v2), and temperatures (v3), without breaking a pit that still receives an older version.
 * **Evidence.** Rotor speed is not vehicle speed with a freewheel; GNSS speed is null without a fix. The controller's temperatures were only in the log as CAN frames, and the probes had no record at all.
 * **Choice.** A new schema name for each added required block; the pit accepts v1, v2 and v3 and stores the schema per row. Wheel speed is null when older than 0.3 s or when the circumference or pulses per revolution are not configured; controller temperatures are null when the `ctrl_thermal` frame is older than 0.3 s or invalid; probe temperatures are null when the latest sample is older than 3 s (PROV) or invalid, and the live value is the logged value, so live and log agree exactly.
-* **Implementation.** `host/telematics/node.py`, `host/pit/ingest.py`; [`ICD.md`](ICD.md) 10.
+* **Implementation.** `host/telematics/node.py`, `host/pit/ingest.py`; [`ICD.md`](ICD.md) 10. Since v0.7 v1 to v3 are produced only by the legacy node (`host/telemetry_adapter/legacy_node.py`); the pit still accepts them (D11).
 * **Test.** `tests/integration/test_mqtt_pipeline.py` (`test_v2_wheel_speed_validated_and_v1_still_accepted`, `test_v3_temperatures_validated_and_older_schemas_still_accepted`, migration of an old database); MQTT demonstration check `live_wheel_and_temperature_match_log_and_v1_still_accepted`.
+
+## D11. Receive-only telematics with a common measurement model (`sem.telemetry.v4`)
+
+* **Requirement.** The telematics unit records the controller's data next to its own sensors without any authority over the controller, for a controller whose protocol another team defines; a value's age, source time and validity must survive to the report.
+* **Evidence.** The scope correction of v0.7 ([`decisions/ADR-0013-telematics-scope.md`](decisions/ADR-0013-telematics-scope.md)). The v3 node mixed the ECO supervisor with logging, and its live message carried the controller's fields under our own protocol's names. Many controller protocols carry no sample time and no sequence counter.
+* **Choice.** One measurement record per value (source, signal, unit, receive time, sample time only when the source gives one, timestamp uncertainty, source sequence only when present, validity, provenance), a signal registry with roles (essential energy, total energy, optional diagnostics, motion, environment), controller adapters per protocol (the semmc fixture, a DBC adapter with a unit-checked mapping, none), and a live message `sem.telemetry.v4` carrying `[value, validity, age, sequence, timestamp source]` per signal and the registry's identifier. The pit rejects a v4 message with a supervisor or controller-command block or an unknown registry; v1 to v3 stay accepted.
+* **Implementation.** `host/telematics/measurement.py`, `host/telematics/signals.py`, `host/telematics/controller_adapter.py`, `host/telematics/node.py`, `host/pit/ingest.py`; [`ICD.md`](ICD.md) A.3 and A.8.
+* **Test.** `tests/telematics/test_measurement_and_adapters.py`, `tests/telematics/test_wheel_node_pit.py`, `tests/telematics/test_telematics_demo.py` (no command frames; missing data null, never zero).

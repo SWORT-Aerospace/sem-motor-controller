@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Generate the project procurement tables from hardware/bom/procurement.yaml.
 
-    python3 tools/gen_procurement.py           -> README.md (budget table between markers), docs/PROCUREMENT.md
-    python3 tools/gen_procurement.py --check   (exit 1 if either is not current)
+    python3 tools/gen_procurement.py           -> docs/PROCUREMENT.md
+    python3 tools/gen_procurement.py --check   (exit 1 if it is not current)
+
+This is the v0.6 combined procurement table (controller and telemetry). Since v0.7 the root README shows the
+telematics bill of materials instead (tools/telematics_bom.py), so this tool no longer writes a README block;
+`render_readme` stays for a document that still carries the markers.
 
 The YAML file is the only source of lines. Estimated lines take their low-high
 range from the motor-controller pricing (docs/generated/budget.json, written by
@@ -463,20 +467,18 @@ def main() -> int:
     if err:
         print("procurement file refused:\n  " + "\n  ".join(err))
         return 2
-    new_readme = render_readme(d, README.read_text(), budget, pricing)
     new_doc = doc(d, budget, pricing)
     t = summary(d, budget, pricing)["total"]
     if a.check:
-        stale = [p.name for p, x in ((README, new_readme), (DOC, new_doc)) if not p.exists() or p.read_text() != x]
+        stale = [p.name for p, x in ((DOC, new_doc),) if not p.exists() or p.read_text() != x]
         if stale:
             print("not current: " + ", ".join(stale) + " (run tools/gen_procurement.py)")
             return 1
         print(f"procurement tables current: {t['lines']} lines, {t['n_quoted']} quoted, {t['n_est']} estimated, "
               f"{t['unpriced']} unpriced, {t['not_counted']} not counted")
         return 0
-    README.write_text(new_readme)
     DOC.write_text(new_doc)
-    print(f"wrote README.md (budget table) and {DOC.relative_to(ROOT)}")
+    print(f"wrote {DOC.relative_to(ROOT)}")
     return 0
 
 

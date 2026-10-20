@@ -9,7 +9,8 @@ Vehicle parameters come from the configuration the run's metadata names
 (checked against its SHA-256), the freewheel state from the run's plant record
 or the configuration. Writes OUT/report.md, OUT/report.json, OUT/timeline.csv,
 and OUT/energy.json: controller-input energy, wheel distance and Wh/km over the
-run (host/pit/energy.py), with what is missing listed.
+run (host/pit/energy.py), and the energy from valid, time-aligned V x I at the controller input and, when a
+battery-side monitor is fitted, at the battery, with the missing intervals listed.
 Exit code 0 when a report was written (whatever it found), 2 when the run is
 not in the database.
 
@@ -48,7 +49,8 @@ def params_for_run(meta: dict, config: pathlib.Path | None):
     C = cfg["vehicle"]["wheel_circumference_m"]
     gear = cfg["vehicle"]["gear_ratio"]
     kt = 1.5 * cfg["motor"]["pole_pairs"] * cfg["motor"]["flux_linkage_Wb"]
-    plant = meta.get("plant") or {}
+    # the simulated plant's freewheel flag only for a simulation; a vehicle run takes it from its configuration
+    plant = (meta.get("plant") or {}) if shadow_replay.classify(meta)["synthetic"] else {}
     freewheel = plant.get("freewheel", cfg["vehicle"].get("freewheel_present", True))
     sens = meta.get("sensors") or {}
     ppr = sens.get("wheel_ppr")
@@ -85,7 +87,16 @@ def main() -> int:
     chans = [v for _k, v in sorted((sens.get("wheel_channels") or {"0": "wheel_0"}).items())]
     per = [energy.run_summary(db, a.run, c, sens.get("wheel_window_s")) for c in chans]
     cross = energy.compare_channels(per)
-    (a.out / "energy.json").write_text(json.dumps({"channels": per, "cross_check": cross}, indent=1, sort_keys=True))
+    vi = {b: energy.vi_energy(db, a.run, b) for b in energy.BOUNDARIES}
+    (a.out / "energy.json").write_text(json.dumps({"channels": per, "cross_check": cross, "vi_energy": vi}, indent=1,
+                                                  sort_keys=True))
+    for b, r in vi.items():
+        if r["energy_J"] is None:
+            print(f"REPLAY ENERGY {b}: not available ({'; '.join(r['notes'][1:]) or 'no aligned valid V and I'})")
+        else:
+            print(f"REPLAY ENERGY {b}: {r['energy_Wh']:.4f} Wh from valid aligned V x I over {r['covered_s']:.1f} s; "
+                  f"{len(r['missing_intervals'])} missing interval(s), {r['missing_s']:.2f} s (bound "
+                  f"{r['missing_energy_bound_J'] / 3600:.4f} Wh); {r['boundary_text']}")
     for en in per:
         if en["Wh_per_km"] is not None:
             print(f"REPLAY ENERGY: {en['energy_Wh']:.3f} Wh over {en['distance_m']:.1f} m ({en['channel']}) = "
