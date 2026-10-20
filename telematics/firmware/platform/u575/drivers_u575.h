@@ -36,4 +36,12 @@ extern const tm_i2c_t g_i2c1;
 void spi1_init(void);
 void i2c1_init(void);
 
+/* GNSS receiver on USART2 (PD6 RX, PD5 TX), 38400 8N1: received bytes with their arrival time into a ring the main
+ * loop drains (gnss_uart_get); a full ring drops and counts. gnss_uart_send is for the receiver's configuration
+ * only (bounded, blocking). Images built with TM_ENABLE_GNSS. */
+void gnss_uart_init(void);
+void gnss_uart_send(const uint8_t *p, size_t n);
+bool gnss_uart_get(uint8_t *b, uint64_t *t_us);
+uint32_t gnss_uart_dropped(void);
+
 #endif

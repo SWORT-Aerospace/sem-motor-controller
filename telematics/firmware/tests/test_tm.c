@@ -7,6 +7,7 @@
 #include "tm_app.h"
 #include "tm_crc32.h"
 #include "tm_fakeflash.h"
+#include "tm_gnss.h"
 #include "tm_le.h"
 #include "tm_reset.h"
 #include "tm_time.h"
@@ -330,6 +331,103 @@ static void test_can_flood(void)
 }
 
 void test_drivers(void);
+
+/* a UBX-NAV-PVT frame with the fields the driver reads */
+static uint32_t nav_pvt(uint8_t *f, uint16_t year, uint8_t mo, uint8_t d, uint8_t h, uint8_t mi, uint8_t sec,
+                        int32_t nano, uint8_t valid, uint8_t fix_type, uint8_t flags, uint8_t num_sv,
+                        int32_t gspeed_mm_s, uint32_t sacc_mm_s)
+{
+    uint8_t *p = f + 6;
+    memset(f, 0, 100);
+    f[0] = 0xB5u;
+    f[1] = 0x62u;
+    f[2] = 0x01u;
+    f[3] = 0x07u;
+    tm_le16(f + 4, TM_UBX_NAV_PVT_LEN);
+    tm_le16(p + 4, year);
+    p[6] = mo;
+    p[7] = d;
+    p[8] = h;
+    p[9] = mi;
+    p[10] = sec;
+    p[11] = valid;
+    tm_le32(p + 16, (uint32_t)nano);
+    p[20] = fix_type;
+    p[21] = flags;
+    p[23] = num_sv;
+    tm_le32(p + 60, (uint32_t)gspeed_mm_s);
+    tm_le32(p + 68, sacc_mm_s);
+    uint8_t a = 0, b = 0;
+    for (uint32_t i = 2; i < 6u + TM_UBX_NAV_PVT_LEN; i++) {
+        a = (uint8_t)(a + f[i]);
+        b = (uint8_t)(b + a);
+    }
+    f[6u + TM_UBX_NAV_PVT_LEN] = a;
+    f[7u + TM_UBX_NAV_PVT_LEN] = b;
+    return 8u + TM_UBX_NAV_PVT_LEN;
+}
+
+static void test_gnss(void)
+{
+    CHECK(tm_gnss_unix_s(1970, 1, 1, 0, 0, 0) == 0);
+    CHECK(tm_gnss_unix_s(2026, 10, 16, 9, 0, 0) == 1792141200);         /* host/telematics/clocks.py PpsModel */
+    CHECK(tm_gnss_unix_s(2000, 2, 29, 23, 59, 59) == 951868799);         /* leap day */
+
+    tm_gnss_t g;
+    tm_gnss_init(&g);
+    tm_gnss_pvt_t p;
+    uint8_t f[100];
+    uint32_t n = nav_pvt(f, 2026, 10, 16, 9, 0, 1, 20000000, 0x07u, 3u, 0x01u, 12u, 6512, 180u);
+    const uint8_t noise[] = {'$', 'G', 'N', 'R', 'M', 'C', ',', 0xB5u, 0x00u, 0xB5u};
+    int got = 0;
+    for (uint32_t i = 0; i < sizeof noise; i++) got += tm_gnss_feed(&g, noise[i], &p);
+    for (uint32_t i = 0; i < n; i++) got += tm_gnss_feed(&g, f[i], &p);
+    CHECK(got == 1 && g.frames == 1 && g.checksum_errors == 0);      /* NMEA bytes and a false sync skipped */
+    CHECK(p.fix && p.fix_type == 3u && p.num_sv == 12u && p.utc_valid);
+    CHECK(p.speed_mps > 6.5119f && p.speed_mps < 6.5121f && p.sacc_mps > 0.1799f && p.sacc_mps < 0.1801f);
+    CHECK(p.utc_ns == 1792141201LL * 1000000000LL + 20000000LL);
+    uint8_t body[TM_GNSS_BODY_LEN];
+    CHECK(tm_gnss_body(&p, body) == 10u && body[8] == 12u && body[9] == 1u);
+
+    f[50] ^= 0x01u;                                                   /* a corrupted payload byte */
+    got = 0;
+    for (uint32_t i = 0; i < n; i++) got += tm_gnss_feed(&g, f[i], &p);
+    CHECK(got == 0 && g.checksum_errors == 1);
+    n = nav_pvt(f, 2026, 10, 16, 9, 0, 1, 0, 0x03u, 2u, 0x01u, 4u, 100, 900u);   /* 2D fix, UTC not resolved */
+    got = 0;
+    for (uint32_t i = 0; i < n; i++) got += tm_gnss_feed(&g, f[i], &p);
+    CHECK(got == 1 && !p.fix && !p.utc_valid);
+
+    /* PPS: an edge at local 5.000 s marks 09:00:02; the NAV-PVT of 09:00:02.000 arrives 60 ms later */
+    n = nav_pvt(f, 2026, 10, 16, 9, 0, 2, 0, 0x07u, 3u, 0x01u, 12u, 6500, 180u);
+    for (uint32_t i = 0; i < n; i++) (void)tm_gnss_feed(&g, f[i], &p);
+    uint64_t edge;
+    uint32_t s;
+    tm_gnss_pps_edge(&g, 5000000u);
+    CHECK(tm_gnss_pps_label(&g, &p, 5060000u, &edge, &s) && edge == 5000000u && s == 1792141202u);
+    CHECK(!tm_gnss_pps_label(&g, &p, 5070000u, &edge, &s));          /* labelled once */
+    tm_gnss_pps_edge(&g, 6000000u);
+    tm_gnss_pps_edge(&g, 7000000u);                                   /* the first never got a NAV-PVT */
+    CHECK(g.pps_unlabelled == 1 && g.pps_edges == 3);
+    CHECK(!tm_gnss_pps_label(&g, &p, 9000000u, &edge, &s) && g.pps_unlabelled == 2);   /* 2 s late */
+    tm_gnss_pps_edge(&g, 10000000u);                                  /* half a second off: ambiguous */
+    n = nav_pvt(f, 2026, 10, 16, 9, 0, 7, 0, 0x07u, 3u, 0x01u, 12u, 6500, 180u);
+    for (uint32_t i = 0; i < n; i++) (void)tm_gnss_feed(&g, f[i], &p);
+    CHECK(!tm_gnss_pps_label(&g, &p, 10450000u, &edge, &s) && g.pps_unlabelled == 3);
+
+    uint8_t cfg[TM_GNSS_CFG_MAX];
+    uint32_t cl = tm_gnss_config_msg(cfg, sizeof cfg, 100u);
+    CHECK(cl == 28u && cfg[0] == 0xB5u && cfg[2] == 0x06u && cfg[3] == 0x8Au && tm_rd16(cfg + 4) == 20u);
+    CHECK(tm_rd32(cfg + 10) == 0x10740002u && cfg[14] == 0u && tm_rd32(cfg + 15) == 0x20910007u && cfg[19] == 1u);
+    CHECK(tm_rd32(cfg + 20) == 0x30210001u && tm_rd16(cfg + 24) == 100u);
+    uint8_t a = 0, b = 0;
+    for (uint32_t i = 2; i < cl - 2u; i++) {
+        a = (uint8_t)(a + cfg[i]);
+        b = (uint8_t)(b + a);
+    }
+    CHECK(cfg[cl - 2u] == a && cfg[cl - 1u] == b);
+    CHECK(tm_gnss_config_msg(cfg, 20u, 100u) == 0u);
+}
 extern int g_drv_fail;
 
 /* Sparse logging: a small storage (16 slots, 2 in reserve) fills at the full rate; from the reserve on, the
@@ -394,6 +492,7 @@ int main(void)
     test_app();
     test_can_flood();
     test_drivers();
+    test_gnss();
     printf("%d checks, %d failed\n", g_n, g_fail);
     return (g_fail || g_drv_fail) ? 1 : 0;
 }

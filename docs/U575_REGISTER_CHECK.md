@@ -27,7 +27,7 @@ Clock enables with read-back; reset flags and their clearing; IWDG start (key se
 
 ## 3. Open until RM0456 and DS13737 are read (the ES0499 items: section 5)
 
-Each is a question about the silicon that ST's drivers do not answer. The bench step named checks the consequence, not the cause. The same questions, with the W25Q128JV's, are the document checks DC01 to DC17 (`telematics/bench/bench.yaml`, rendered in [`../telematics/firmware/BENCH_MINIMAL.md`](../telematics/firmware/BENCH_MINIMAL.md) section 5): each names the firmware line that depends on its answer and the bench step it must be answered before, ten of them before the minimal bench is flashed.
+Each is a question about the silicon that ST's drivers do not answer. The bench step named checks the consequence, not the cause. The same questions, with the W25Q128JV's, are the document checks DC01 to DC21 (`telematics/bench/bench.yaml`, rendered in [`../telematics/firmware/BENCH_MINIMAL.md`](../telematics/firmware/BENCH_MINIMAL.md) section 5): each names the firmware line that depends on its answer and the bench step it must be answered before, ten of them before the minimal bench is flashed.
 
 | Question | Code it affects | Bench |
 |---|---|---|

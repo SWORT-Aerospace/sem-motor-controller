@@ -48,6 +48,7 @@ Each table lists the maintained files of one subdirectory. "Inputs" and "Outputs
 | [`telematics/timing.py`](telematics/timing.py) | `StreamTiming`: sequence gaps, duplicates, reordering, wrap, ambiguous silences, late arrivals, bursts, jitter, backwards receive time, latency variation, and the wait bound of a frame after a stall | receive times, sequence numbers, producer times when given | `Arrival` per frame; a report per stream (pit table `source_timing`) |
 | [`telematics/lineage.py`](telematics/lineage.py) | Raw sources, parameters and shared paths of a value; whether one value can witness another | signal or derived-quantity id | sets of sources and paths; independence with caveats |
 | [`telematics/context.py`](telematics/context.py) | Vehicle context from admissible evidence (STARTUP, STOPPED, LAUNCH, CRUISE, COAST, UNKNOWN); BRAKE and READY not determinable | evidence per signal, an acceleration | `Context` with its reason and inputs |
+| [`telematics/ubx.py`](telematics/ubx.py) | SIMULATION FIXTURE: UBX-NAV-PVT bytes for a simulated GNSS sample, for feeding the firmware's GNSS parser in the host simulator | UTC, speed, accuracy, satellites, fix | one UBX message |
 | [`telematics/sim_session.py`](telematics/sim_session.py) | SIMULATION FIXTURE: one simulated drive with chosen faults, power cuts, CAN delays or stalls, storage stalls, link outages | faults and conditions | STLG logs, ground truth |
 
 ### 3.2 `pit/`

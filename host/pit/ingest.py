@@ -528,8 +528,9 @@ def import_log(db: sqlite3.Connection, path: pathlib.Path, mapping_dir: pathlib.
         elif rtype in (stlg.COUNTERS, stlg.COUNTERS2):
             for k2, v in f.items():
                 sig.append((run_id, blk, idx, "cnt_" + k2, t, u, float(v), None, "telematics"))
-            rep["last_counters"] = {"record": n_rec, "t_us": t, **f}
-            rep["final_counters"] = n_rec == len(recs) - 1
+            if rtype == stlg.COUNTERS or "log_records" in f:      # the application's own record; a driver's
+                rep["last_counters"] = {"record": n_rec, "t_us": t, **f}   # (GNSS) carries only its counters
+                rep["final_counters"] = n_rec == len(recs) - 1
         elif rtype == stlg.BOOT:
             rep["boot"] = f
             t_boot = t

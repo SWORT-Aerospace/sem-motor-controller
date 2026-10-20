@@ -51,7 +51,7 @@ DOC = ROOT / "telematics" / "firmware" / "BENCH.md"
 DOC_MIN = ROOT / "telematics" / "firmware" / "BENCH_MINIMAL.md"
 STORAGE = ROOT / "docs" / "generated" / "telematics_storage.json"
 FW = ROOT / "telematics" / "firmware"
-STEP_IDS = [f"B{k}" for k in range(13)]
+STEP_IDS = [f"B{k}" for k in range(14)]
 MIN_STEP_IDS = [f"M{k}" for k in range(5)]
 IMAGE_EXT = (".elf", ".bin", ".hex", ".map")
 COMPARED = (".elf", ".bin", ".hex")       # the map names the build directory's object paths
@@ -344,13 +344,14 @@ def document_checks_md(d: dict, heading: str = "#", number: str = "") -> list[st
         L.append(f"| {c['id']} | {docs[c['doc']]['id']} | {_md_cell(c['question'])} | {code} | {when} |")
     n_min = sum(1 for c in d["document_checks"] if _before_minimal(c))
     L += ["", f"{n_min} checks come before the minimal bench (M0, M1); the other "
-          f"{len(d['document_checks']) - n_min} only before the full bench steps named (the NOR in B0 and B7, CAN in "
-          "B11, I2C in B12).", "",
+          f"{len(d['document_checks']) - n_min} only before the full bench steps named (the NOR in B0 and B7, the "
+          "watchdog in B2, CAN in B11, I2C in B12, GNSS in B13).", "",
           f"{heading}# {number.rstrip('. ') + '.1 ' if number else ''}The documents", "",
           "Read so far, from copies the team provided (not committed to the repository): " + "; ".join(
               f"{x['id']} {x['received']}" for x in d["documents"] if x.get("received")) + ". "
-          "The others are not in the repository, and this environment cannot fetch them: www.st.com and "
-          "www.winbond.com are refused by its network policy (the proxy answers 403 to the connection). Please "
+          "The others are not in the repository, and this environment cannot fetch them: www.st.com, "
+          "www.winbond.com, www.u-blox.com, content.u-blox.com, www.sparkfun.com and cdn.sparkfun.com are refused by "
+          "its network policy (the proxy answers 403 to the connection). Please "
           "download each from the manufacturer and commit it under the exact file name to "
           "`docs/reference/datasheets/`; the checks are then answered from them with page references.", "",
           "| # | Document | Part (exact) | Manufacturer | Status | Official page | Needed by |",
@@ -376,7 +377,7 @@ def render_minimal(d: dict, bom: dict) -> str:
          "simulation (SIMULATED); nothing below is a bench result until a filled results form says so.", "",
          f"**Chain.** {m['chain'].strip()}.", "",
          f"**Power.** {d['power'].strip()}", "",
-         "The full first bench (NOR, IMU, TMP117, CAN; steps B0 to B12) is [`BENCH.md`](BENCH.md). This page is the "
+         "The full first bench (NOR, IMU, TMP117, CAN, GNSS; steps B0 to B13) is [`BENCH.md`](BENCH.md). This page is the "
          "smallest bench that exercises the whole evidence chain once on real hardware.", "",
          "## 1. Still needs a real board", ""]
     L += [f"- {x}" for x in m["needs_a_board"]]
@@ -427,7 +428,7 @@ def render_minimal(d: dict, bom: dict) -> str:
                 f"`{pathlib.Path(x['file']).name}`: \"{x['contains']}\"" for x in st["firmware_text"]))
         L.append("")
     L += ["## 8. Then", "",
-          "The full bench ([`BENCH.md`](BENCH.md), B0 to B12), and the bench stage of the first physical protocol, "
+          "The full bench ([`BENCH.md`](BENCH.md), B0 to B13), and the bench stage of the first physical protocol, "
           "EXP-01 ([`../../research/vehicle_validation/EXP-01_wheel_speed_corruption.md`]"
           "(../../research/vehicle_validation/EXP-01_wheel_speed_corruption.md)): this wiring plus a second generator "
           "channel on wheel_1 (Arduino A1, PA2) at a known ratio to wheel_0.", ""]

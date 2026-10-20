@@ -23,6 +23,14 @@
 #ifndef TM_ENABLE_CAN
 #define TM_ENABLE_CAN 0
 #endif
+#ifndef TM_ENABLE_GNSS
+#define TM_ENABLE_GNSS 0
+#endif
+#if TM_ENABLE_GNSS
+#include "tm_gnss.h"
+#define TM_GNSS_RATE_MS 100u     /* NAV-PVT at 10 Hz; the receiver is configured at start and while it sends none */
+static tm_gnss_t g_gnss;
+#endif
 #ifndef TM_GIT_REV
 #define TM_GIT_REV "unknown"
 #endif
@@ -48,6 +56,9 @@ void TIM2_IRQHandler(void)
     if (sr & TIM_SR_CC4IF) v[0] = TIM2->CCR4;   /* reading CCRx clears CCxIF */
     if (sr & TIM_SR_CC3IF) v[1] = TIM2->CCR3;
     if (sr & TIM_SR_CC1IF) v[2] = TIM2->CCR1;
+#if TM_ENABLE_GNSS
+    uint32_t v_pps = (sr & TIM_SR_CC2IF) ? TIM2->CCR2 : 0u;   /* CH2: the GNSS PPS edge */
+#endif
     bool ovf = (TIM2->SR & TIM_SR_UIF) != 0u;
     uint32_t hi = g_tim2_hi;
     uint32_t clear = 0u;
@@ -59,6 +70,12 @@ void TIM2_IRQHandler(void)
             clear |= M[k].ccof;
         }
     }
+#if TM_ENABLE_GNSS
+    if (sr & TIM_SR_CC2IF) {
+        tm_gnss_pps(&g_gnss, tm_time_extend(hi, v_pps, ovf));
+        clear |= TIM_SR_CC2OF;                    /* a PPS overcapture is impossible at 1 Hz; cleared anyway */
+    }
+#endif
     if (ovf) {
         g_tim2_hi = hi + 1u;
         clear |= TIM_SR_UIF;
@@ -207,7 +224,8 @@ int main(void)
     tm_platform_t pf = {.now_us = now_us, .line_high = board_wheel_line_high, .mask_capture = board_mask_capture,
                         .storage = g_log};
     tm_app_info_t info = {.unit_id = uid, .run_prefix = nor_ok ? uid_nor : uid,
-                          .firmware = (TM_ENABLE_CAN ? "tm_u575_can " TM_GIT_REV : "tm_u575 " TM_GIT_REV),
+                          .firmware = (TM_ENABLE_GNSS ? "tm_u575_vehicle " TM_GIT_REV :
+                                       TM_ENABLE_CAN ? "tm_u575_can " TM_GIT_REV : "tm_u575 " TM_GIT_REV),
                           .kind = "BENCH - telematics firmware on a NUCLEO-U575ZI-Q; not a vehicle run unless the "
                                   "bench record says so",
                           .clock_source = clock, .storage = store,
@@ -220,6 +238,15 @@ int main(void)
     const char *can = "off (not in this image)";
 #if TM_ENABLE_CAN
     can = can_monitor_init(TM_CAN_BITRATE);
+#endif
+#if TM_ENABLE_GNSS
+    tm_gnss_init(&g_gnss);
+    gnss_uart_init();
+    uint8_t gcfg[TM_GNSS_CFG_MAX];
+    uint32_t gcfg_len = tm_gnss_config_msg(gcfg, sizeof gcfg, TM_GNSS_RATE_MS);
+    gnss_uart_send(gcfg, gcfg_len);
+    uint64_t next_gcfg = board_now_us() + 5000000u;
+    uart_write("GNSS: USART2 PD6/PD5 38400 baud, UBX-NAV-PVT every 100 ms requested; PPS on PA1 (TIM2_CH2)\r\n");
 #endif
     char s[640];
     snprintf(s, sizeof s, "\r\ntelematics %s boot=%lu reset=%s\r\nclock: %s\r\nlog: %s, slot %lu of %lu%s\r\nCAN: %s\r\n"
@@ -236,6 +263,17 @@ int main(void)
     for (;;) {
         tm_app_poll(&g_app);
         uint64_t t = board_now_us();
+#if TM_ENABLE_GNSS
+        uint8_t gb;
+        uint64_t gt;
+        for (unsigned k = 0; k < 256u && gnss_uart_get(&gb, &gt); k++) tm_gnss_rx(&g_gnss, &g_app, gt, gb);
+        g_gnss.rx_overrun = gnss_uart_dropped();
+        tm_gnss_tick(&g_gnss, &g_app, t);
+        if (t >= next_gcfg) {                     /* no NAV-PVT yet (the receiver started late): configure again */
+            if (g_gnss.frames == 0u) gnss_uart_send(gcfg, gcfg_len);
+            next_gcfg = t + 5000000u;
+        }
+#endif
         if (imu_ok && t >= next_imu) {
             float a[3], g[3];
             if (tm_imu_read(&imu, a, g) == 1) {

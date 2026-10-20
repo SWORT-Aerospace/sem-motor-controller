@@ -14,6 +14,8 @@
  *   O <t_us> <channel>                          a capture overrun at t
  *   L <t_us> <channel> <0|1>                    line level from t on
  *   C <t_us> <id_flags hex> <data hex>          a received CAN frame at t
+ *   G <t_us> <hex>                              bytes from the GNSS receiver's UART at t (tm_gnss)
+ *   U <t_us>                                    a PPS edge captured at t
  *   S <t0_us> <t1_us>                           storage busy throughout [t0, t1)
  *   P <t_us>                                    run polls up to t
  *   R <t_us> <cause>                            restart at t without shutdown (RAM lost, flash kept)
@@ -31,6 +33,7 @@
 #include "tm_app.h"
 #include "tm_fakeflash.h"
 #include "tm_fakew25q.h"
+#include "tm_gnss.h"
 #include "tm_reset.h"
 #include "tm_w25q.h"
 
@@ -52,6 +55,8 @@ static uint8_t *g_mem;
 static uint32_t g_size;
 static char g_image[512];
 static uint32_t g_circ, g_ppr;
+static tm_gnss_t g_gnss;
+static bool g_gnss_on;                         /* GNSS counters only once the script feeds a GNSS */
 
 static void start(uint32_t reset_flags, const char *cause)
 {
@@ -71,6 +76,7 @@ static void run_to(uint64_t t)
 {
     while (g_now + TM_HOST_POLL_US <= t) {
         g_now += TM_HOST_POLL_US;
+        if (g_gnss_on) tm_gnss_tick(&g_gnss, &g_app, g_now);
         tm_app_poll(&g_app);
     }
     if (t > g_now) g_now = t;
@@ -88,7 +94,8 @@ static void write_image(void)
 
 int main(void)
 {
-    char line[512];
+    char line[640];
+    tm_gnss_init(&g_gnss);
     for (uint8_t ch = 0; ch < TM_WHEEL_CHANNELS; ch++) g_line[ch] = true;
     while (fgets(line, sizeof line, stdin)) {
         char op = line[0];
@@ -161,6 +168,20 @@ int main(void)
                 f.data[i] = (uint8_t)b;
             }
             (void)tm_app_can_frame(&g_app, &f);
+        } else if (op == 'G') {
+            char hex[512] = {0};
+            if (sscanf(line + 1, "%" SCNu64 " %511s", &t, hex) != 2) return 2;
+            run_to(t);
+            g_gnss_on = true;
+            for (size_t i = 0; i + 1u < strlen(hex); i += 2u) {
+                unsigned b;
+                sscanf(hex + i, "%2x", &b);
+                tm_gnss_rx(&g_gnss, &g_app, t, (uint8_t)b);
+            }
+        } else if (op == 'U' && sscanf(line + 1, "%" SCNu64, &t) == 1) {
+            run_to(t);
+            g_gnss_on = true;
+            tm_gnss_pps(&g_gnss, t);
         } else if (op == 'S' && sscanf(line + 1, "%" SCNu64 " %" SCNu64, &t, &t1) == 2) {
             g_ff.stall_t0 = t;
             g_ff.stall_t1 = t1;
@@ -176,6 +197,7 @@ int main(void)
                 g_nor.wel = false;
             }
             start(TM_RST_BOR, "BOR");
+            tm_gnss_init(&g_gnss);
         } else if (op == 'F') {
             tm_app_request_flush(&g_app);
             for (int i = 0; i < 1000000 && !tm_app_idle(&g_app); i++) {

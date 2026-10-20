@@ -24,6 +24,12 @@ enum {
     TM_CNT_WHEEL_SUSPECT_INACTIVE = 25,   /* episodes: suspect with its line inactive (or disconnected) */
     TM_CNT_LOG_THINNED = 26,              /* records not logged on purpose in sparse logging */
     TM_CNT_CAN_NOT_LOGGED = 27,           /* frames received but not logged: the queue's own-record reserve was reached */
+    /* the GNSS driver's own COUNTERS2 record (tm_gnss.c, images with GNSS) */
+    TM_CNT_GNSS_FRAMES = 28,              /* UBX-NAV-PVT messages with a valid checksum */
+    TM_CNT_GNSS_CHECKSUM_ERRORS = 29,     /* UBX messages with a bad checksum */
+    TM_CNT_GNSS_RX_OVERRUN = 30,          /* bytes the GNSS receive ring dropped */
+    TM_CNT_PPS_EDGES = 31,
+    TM_CNT_PPS_UNLABELLED = 32,           /* edges not logged: no NAV-PVT with valid UTC labelled them in time */
 };
 #define TM_CNT_ITEMS 18u                  /* counters in one COUNTERS2 record (tm_app.c) */
 

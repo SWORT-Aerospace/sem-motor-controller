@@ -1,5 +1,9 @@
 #include "board_u575.h"
 
+#ifndef TM_ENABLE_GNSS
+#define TM_ENABLE_GNSS 0
+#endif
+
 #include "stm32u5xx.h"
 #include "tm_time.h"
 
@@ -171,6 +175,9 @@ void board_mask_capture(bool masked)
 void board_capture_start(void)
 {
     for (unsigned i = 0; i < 3u; i++) board_gpio_af(GPIOA, WHEEL_PIN[i], 1u, true, false);   /* AF1 TIM2, pull-up */
+#if TM_ENABLE_GNSS
+    board_gpio_af(GPIOA, 1u, 1u, false, false);     /* PA1 AF1 TIM2_CH2: the GNSS receiver's PPS (push-pull) */
+#endif
     RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
     (void)RCC->APB1ENR1;
     TIM2->CR1 = TIM_CR1_URS;    /* only a counter overflow sets UIF, not the UG below (ST: TIM_Base_SetConfig) */
@@ -178,15 +185,24 @@ void board_capture_start(void)
     TIM2->ARR = 0xFFFFFFFFu;
     /* CCxS = 01 (input from its own pin), ICxF = 0011 (8 samples at the timer clock: 2 us at 4 MHz) */
     TIM2->CCMR1 = (1uL << TIM_CCMR1_CC1S_Pos) | (3uL << TIM_CCMR1_IC1F_Pos);
+#if TM_ENABLE_GNSS
+    TIM2->CCMR1 |= (1uL << TIM_CCMR1_CC2S_Pos) | (3uL << TIM_CCMR1_IC2F_Pos);
+#endif
     TIM2->CCMR2 = (1uL << TIM_CCMR2_CC3S_Pos) | (3uL << TIM_CCMR2_IC3F_Pos) | (1uL << TIM_CCMR2_CC4S_Pos) |
                   (3uL << TIM_CCMR2_IC4F_Pos);
     /* falling edge (CCxP = 1, CCxNP = 0): an open-collector Hall switch pulls low when a magnet arrives */
     TIM2->CCER = TIM_CCER_CC1E | TIM_CCER_CC1P | TIM_CCER_CC3E | TIM_CCER_CC3P | TIM_CCER_CC4E | TIM_CCER_CC4P;
+#if TM_ENABLE_GNSS
+    TIM2->CCER |= TIM_CCER_CC2E;                    /* PPS: rising edge (CC2P = 0), the start of the pulse */
+#endif
     TIM2->EGR = TIM_EGR_UG;                         /* load the prescaler */
     __DSB();
     TIM2->SR = 0u;                                  /* a pending UIF here would put every time 2^32 us late */
     g_tim2_hi = 0u;
     TIM2->DIER = TIM_DIER_CC1IE | TIM_DIER_CC3IE | TIM_DIER_CC4IE | TIM_DIER_UIE;
+#if TM_ENABLE_GNSS
+    TIM2->DIER |= TIM_DIER_CC2IE;
+#endif
     NVIC_SetPriority(TIM2_IRQn, 1u);
     NVIC_EnableIRQ(TIM2_IRQn);
     TIM2->CR1 = TIM_CR1_URS | TIM_CR1_CEN;

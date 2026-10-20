@@ -35,6 +35,7 @@ modules:
   host/telematics/sim_vehicle.py: reference        # simulation fixture (external controller stand-in)
   host/telematics/sensors.py: reference            # synthetic sensors of the legacy demonstration
   host/telematics/sim_session.py: reference        # simulation fixture: one simulated drive with chosen faults
+  host/telematics/ubx.py: reference                # simulation fixture: UBX-NAV-PVT encoder for the GNSS receiver
   host/pit/: telematics
   host/assurance/: telematics                      # shadow evidence review: witnesses, verdicts, receipts
   research/vehicle_validation/: telematics          # vehicle-validation protocols (none run physically)
@@ -62,6 +63,7 @@ modules:
   tools/telematics_schema.py: telematics
   tools/run_evidence_review.py: telematics
   tools/run_vehicle_experiment.py: telematics
+  tools/run_firmware_vehicle_sim.py: telematics
   tools/run_bench_chain.py: telematics
   tools/csia_disagreement_case.py: telematics
   tools/pit_query.py: telematics

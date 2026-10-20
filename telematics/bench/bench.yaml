@@ -16,12 +16,14 @@ images:
      what: "wheel capture, the log (NOR when it answers, else internal flash), IMU and TMP117, console"}
   - {name: tm_u575_can, files: [tm_u575_can.elf, tm_u575_can.bin, tm_u575_can.hex, tm_u575_can.map], steps: "B11",
      what: "the same plus FDCAN1 in bus-monitoring mode (sends nothing, not even the acknowledge bit)"}
+  - {name: tm_u575_vehicle, files: [tm_u575_vehicle.elf, tm_u575_vehicle.bin, tm_u575_vehicle.hex, tm_u575_vehicle.map],
+     steps: "B13", what: "tm_u575_can plus the GNSS receiver on USART2 (UBX-NAV-PVT at 10 Hz) and its PPS on TIM2_CH2"}
 
 sources: >-
   MCU pins: ST's open pin data and the firmware (each row names the line that sets the pin up). Positions:
   UM2861 Rev 10 (March 2025), Tables 15, 17 and 18 (Zio CN7, CN9, CN10, printed pages 34 and 35): A0 = PA3 at
   CN9 pin 1, A1 = PA2 at CN9 pin 3, GND at CN9 pins 12 and 23, PD0 and PD1 at CN9 pins 25 and 27, PA0 at CN10
-  pin 29, D15 = PB8, D14 = PB9, D13 = PA5, D12 = PA6, D11 = PA7 and D10 = PD14 at CN7 pins 2, 4, 10, 12, 14 and
+  pin 29, PD6 and PD5 at CN9 pins 4 and 6, PA1 at CN10 pin 11, D15 = PB8, D14 = PB9, D13 = PA5, D12 = PA6, D11 = PA7 and D10 = PD14 at CN7 pins 2, 4, 10, 12, 14 and
   16; console USART1 PA9/PA10 to the ST-LINK virtual COM port by default (Table 10, page 29); LD1 PC7, LD2 PB7
   (section 7.5); LSE crystal X2 fitted by default (section 7.7.1). These are documents: whether the board on the
   bench matches is checked on the results form. The data sheet DS13737 was not available.
@@ -78,6 +80,17 @@ connections:
      note: "High = TJA1051 silent mode: transmitter off whatever TX does (Adafruit CAN Pal pinout guide)"}
   - {id: can_power, signal: "CAN Pal supply and logic level", mcu: "-", nucleo: "3V3, GND", to: "CAN Pal supply, VIO and GND pins",
      part: can_xcvr, note: "3.3 V only: the CAN Pal's charge pump makes the transceiver's 5 V, VIO at 3.3 V sets the logic level (Adafruit product page). No 5 V wire. Read the pin labels off the CAN Pal's silkscreen and write them on the form"}
+  - {id: gnss_rx, signal: "GNSS TX to MCU RX (USART2_RX, AF7)", mcu: PD6, nucleo: "CN9 pin 4", to: "GNSS board TX",
+     check: {file: telematics/firmware/platform/u575/gnss_u575.c, contains: "board_gpio_af(GPIOD, 6u, 7u, true, false)"},
+     note: "B13 only (tm_u575_vehicle). The GNSS board is configuration A's line gnss, not in the bench kit. 3.3 V logic only (DC21)"}
+  - {id: gnss_tx, signal: "MCU TX (USART2_TX, AF7) to GNSS RX", mcu: PD5, nucleo: "CN9 pin 6", to: "GNSS board RX",
+     check: {file: telematics/firmware/platform/u575/gnss_u575.c, contains: "board_gpio_af(GPIOD, 5u, 7u, false, false)"},
+     note: "Carries only the configuration message (UBX-CFG-VALSET) to the receiver"}
+  - {id: gnss_pps, signal: "GNSS PPS (TIM2_CH2, AF1)", mcu: PA1, nucleo: "CN10 pin 11", to: "GNSS board PPS",
+     check: {file: telematics/firmware/platform/u575/board_u575.c, contains: "board_gpio_af(GPIOA, 1u, 1u, false, false)"},
+     note: "Rising edges captured at 1 MHz; scope probe here in B13"}
+  - {id: gnss_power, signal: "GNSS supply and ground", mcu: "-", nucleo: "3V3, GND", to: "GNSS board 3V3 and GND",
+     note: "3.3 V only, from the NUCLEO; the antenna (configuration A's line gnss_antenna) on the board's SMA connector with a view of the sky"}
 
 parts_without_a_row:          # bench BOM lines that are not the "part" of a connection row, and what each is for
   mcu: "the NUCLEO-U575ZI-Q itself"
@@ -104,9 +117,10 @@ commands:
           -DCMAKE_TOOLCHAIN_FILE=$PWD/telematics/firmware/cmake/arm-none-eabi-cortex-m33.cmake -DTM_TARGET_U575=ON
     cmake --build build-u575
   package: "python3 tools/telematics_bench.py package --images build-u575 --out build/telematics_bench --rebuild"
-  verify: "sha256sum tm_u575.bin tm_u575_can.bin     # must equal MANIFEST.json"
+  verify: "sha256sum tm_u575.bin tm_u575_can.bin tm_u575_vehicle.bin     # must equal MANIFEST.json"
   flash_cubeprogrammer: "STM32_Programmer_CLI -c port=SWD freq=8000 -w tm_u575.bin 0x08000000 -v -rst     # SWD at 8 MHz or less: UM2861 Table 22"
   flash_openocd: "openocd -f interface/stlink.cfg -f target/stm32u5x.cfg -c \"program tm_u575.elf verify reset exit\""
+  halt: "openocd -f interface/stlink.cfg -f target/stm32u5x.cfg -c \"init; halt; sleep 5000; resume; exit\"     # halts the core for 5 s"
   console: "python3 tools/uart_capture.py /dev/ttyACM0 capture_B<n>.txt     # or: picocom -b 115200 --logfile capture_B<n>.txt /dev/ttyACM0"
   export_uart: "in the terminal: DUMP (every used slot) or DUMP <first> <last> (those slots and their session header)"
   export_programmer: "STM32_Programmer_CLI -c port=SWD freq=8000 -r 0x08100000 0x100000 dump.bin     # internal flash only (the NOR is not memory-mapped)"
@@ -125,7 +139,7 @@ steps:
       position of each "locate" pin on the form. Check that nothing above 3.3 V can reach an MCU pin and that 3V3
       and 5V are not shorted to GND. Check the image hashes against MANIFEST.json (commands.verify).
     expect: "continuity on every row; no short; hashes equal"
-    record: [positions of PD0 and PD1, CAN Pal pin labels, continuity per row, hash of tm_u575.bin, hash of tm_u575_can.bin]
+    record: [positions of PD0 and PD1, CAN Pal pin labels, continuity per row, hash of tm_u575.bin, hash of tm_u575_can.bin, hash of tm_u575_vehicle.bin]
   - id: B1
     title: Flash and start
     do: "Flash tm_u575.bin (commands.flash_*), open the console with capture (commands.console)."
@@ -142,10 +156,17 @@ steps:
       - {file: telematics/firmware/platform/u575/main_u575.c, contains: "chip: rev 0x%04x, fault record %s"}
       - {file: telematics/firmware/src/tm_app.c, contains: "slots=%lu/%lu log=%s left=%ss thin=%lu"}
   - id: B2
-    title: Restarts
-    do: "Press the reset button twice."
-    expect: "boot=2, then boot=3; the reset cause of each (PIN expected for the button)"
-    record: [the three reset causes]
+    title: Restarts and the watchdog
+    do: >-
+      Press the reset button twice. Then halt the core for 5 s with the debugger (commands.halt): the main loop stops
+      refreshing the watchdog.
+    expect: >-
+      boot=2, then boot=3, with reset cause PIN for the button; after the halt, about 2 s into it, boot=4 with reset
+      cause IWDG (the watchdog keeps counting while the core is halted, DC18). A board that stays halted for the 5 s
+      and resumes without a restart fails this step: the watchdog would not catch a hung main loop either.
+    record: [the four reset causes, whether the board restarted during the halt]
+    firmware_text:
+      - {file: telematics/firmware/src/tm_reset.c, contains: "{TM_RST_IWDG, \"IWDG\"}"}
   - id: B3
     title: One wheel channel at 100 Hz
     do: "100.0 Hz square wave, 0 to 3.3 V, into wheel_0 (PA3) for 60 s, then stop. Keep capturing."
@@ -257,6 +278,24 @@ steps:
     do: "tm_u575.bin with the IMU and TMP117 connected; 60 s at rest; DUMP and import."
     expect: "IMU records at about 100 Hz; TMP117 at 1 Hz within the sensor's accuracy of a reference thermometer"
     record: [IMU axes against the board orientation, temperature against the reference]
+  - id: B13
+    title: GNSS receiver and PPS (tm_u575_vehicle)
+    do: >-
+      Board unplugged: wire the gnss_* rows (the GNSS board and antenna are configuration A's lines gnss and
+      gnss_antenna; the antenna by a window or outdoors). Flash tm_u575_vehicle.bin, capture the console for 15 min
+      from a cold start of the receiver with the board at rest, probe PA1 with the scope, then DUMP and import.
+    expect: >-
+      Banner "GNSS: USART2 PD6/PD5 38400 baud, UBX-NAV-PVT every 100 ms requested; PPS on PA1 (TIM2_CH2)". In the
+      import: GNSS records at 10 Hz from the first message (no fix until the receiver has one), counters
+      gnss_frames rising by about 10 per second and gnss_checksum_errors and gnss_rx_overrun at 0; after the fix one
+      PPS record per second with pps_unlabelled not rising; utc_quality pps for the records after the first two
+      PPS edges; speed at rest below 0.5 m/s (PROVISIONAL). The scope: one rising edge per second on PA1 once the
+      receiver has a fix.
+    record: [time to first fix, gnss_frames, gnss_checksum_errors and gnss_rx_overrun after 15 min, pps_edges and
+             pps_unlabelled, the import's utc_quality counts, speed at rest, scope trace of the PPS]
+    firmware_text:
+      - {file: telematics/firmware/platform/u575/main_u575.c, contains: "GNSS: USART2 PD6/PD5 38400 baud, UBX-NAV-PVT every 100 ms requested; PPS on PA1 (TIM2_CH2)"}
+      - {file: host/telematics/stlg.py, contains: "pps_unlabelled"}
 
 electrical:
   intro: >-
@@ -442,10 +481,16 @@ documents:
   - {id: W25Q128JV, file: winbond-w25q128jv.pdf, part: "W25Q128JVSIQ (SOIC-8 208 mil)", maker: Winbond,
      title: "W25Q128JV 3V 128M-bit serial flash memory data sheet (latest revision)",
      page: "https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/ (unverified)"}
+  - {id: UBX-M9, file: ublox-m9-spg-interface-description.pdf, part: "NEO-M9N (on the SparkFun GPS-17285)", maker: u-blox,
+     title: "u-blox M9 SPG interface description, for the receiver firmware the module reports (latest revision)",
+     page: "https://www.u-blox.com/en/product/neo-m9n-module (documentation; unverified)"}
+  - {id: GPS-17285, file: sparkfun-gps-17285-schematic.pdf, part: "SparkFun GPS Breakout NEO-M9N, SMA (GPS-17285)", maker: SparkFun,
+     title: "GPS-17285 schematic and hookup guide",
+     page: "https://www.sparkfun.com/products/17285 (unverified)"}
 
 # Each check: the question, the document that answers it, the firmware line that depends on the answer (checked
-# by `render --check`), and the step it must be answered before. before M0 or M1: the minimal bench; B0, B7, B11,
-# B12: the full bench (NOR, CAN, I2C).
+# by `render --check`), and the step it must be answered before. before M0 or M1: the minimal bench; B0, B2, B7,
+# B11, B12, B13: the full bench (NOR, watchdog, CAN, I2C, GNSS).
 document_checks:
   - {id: DC01, doc: UM2861, before: M0, question: "Arduino A0 is PA3 and a GND pin is next to the headers; the ST-LINK virtual COM port reaches USART1 PA9/PA10 with the default solder bridges; the ST-LINK USB connector type and that it powers the board by default (5V_STLK); the 32.768 kHz LSE crystal is fitted and connected by default.",
      code: {file: telematics/firmware/platform/u575/uart_u575.c, contains: "board_gpio_af(GPIOA, 9u, 7u"}}
@@ -481,3 +526,11 @@ document_checks:
      code: {file: telematics/firmware/platform/u575/board_u575.c, contains: "PWR_SVMSR_ACTVOSRDY"}}
   - {id: DC17, doc: RM0456, before: B12, question: "I2C TIMINGR at a 4 MHz kernel clock (SCLDEL and SDADEL limits with the analog filter) and whether a STOP follows a NACK with AUTOEND = 0.",
      code: {file: telematics/firmware/platform/u575/i2c_u575.c, contains: "board_gpio_af(GPIOB, 8u, 4u, false, true)"}}
+  - {id: DC18, doc: RM0456, before: B2, question: "DBGMCU_APB1FZR1 DBG_IWDG_STOP resets to 0, so the IWDG keeps counting while the debugger halts the core (B2 relies on it); an IWDG reset sets IWDGRSTF in RCC_CSR (bit 29) and RMVF clears the flags.",
+     code: {file: telematics/firmware/include/tm_reset.h, contains: "#define TM_RST_IWDG (1uL << 29)"}}
+  - {id: DC19, doc: UBX-M9, before: B13, question: "UBX-NAV-PVT is class 0x01, id 0x07, with a 92-byte payload: year at offset 4 (U2), month 6, day 7, hour 8, min 9, sec 10, valid 11 (bit 0 validDate, bit 1 validTime, bit 2 fullyResolved), nano 16 (I4, ns), fixType 20, flags 21 (bit 0 gnssFixOK), numSV 23, gSpeed 60 (I4, mm/s), sAcc 68 (U4, mm/s); the 8-bit Fletcher checksum runs over class, id, length and payload.",
+     code: {file: telematics/firmware/src/tm_gnss.c, contains: "#define PVT_GSPEED 60u"}}
+  - {id: DC20, doc: UBX-M9, before: B13, question: "UBX-CFG-VALSET (class 0x06, id 0x8A, version 0, layer bit 0 = RAM) with the keys CFG-UART1OUTPROT-NMEA 0x10740002 (L), CFG-MSGOUT-UBX_NAV_PVT_UART1 0x20910007 (U1) and CFG-RATE-MEAS 0x30210001 (U2, ms); UART1 defaults to 38400 baud 8N1; the default time pulse is one pulse per second aligned to the top of the UTC second, and whether it is output before a fix.",
+     code: {file: telematics/firmware/src/tm_gnss.c, contains: "#define CFG_RATE_MEAS 0x30210001u"}}
+  - {id: DC21, doc: GPS-17285, before: B13, question: "The board's TX, RX and PPS pins are 3.3 V logic and need no level shifter to an STM32 pin; the board runs from 3.3 V on its 3V3 pin; the PPS pin is the module's TIMEPULSE output; which UART of the module the TX and RX pins reach (UART1 is assumed).",
+     code: {file: telematics/firmware/platform/u575/gnss_u575.c, contains: "board_gpio_af(GPIOD, 6u, 7u, true, false)"}}

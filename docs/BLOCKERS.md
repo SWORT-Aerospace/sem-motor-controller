@@ -19,7 +19,7 @@ Battery: Team-reported: 48 V nominal, 10 Ah. Not datasheet-verified. The maximum
 | [T-U5-DOCS](#t-u5-docs) STM32U575 reference manual and data sheet, and the W25Q128JV data sheet, not read | telematics | RM0456 and DS13737 (before the minimal bench) and the W25Q128JV data sheet (before the NOR is fitted), committed to docs/reference/datasheets/ under the file names in telematics/firmware/BENCH_MINIMAL.md section 5.1; www.st.com and www.winbond.com are refused by this environment's network policy. | 4 |
 | [B-RULES](#b-rules) Event and rule edition | both | Event name and the official rule PDF of the applicable edition. | 3 |
 | [T-STORAGE](#t-storage) Vehicle log storage not decided | telematics | The attempt length (event rules), the controller's frame rate (T-CTRL-IF) and the team's choice: log fewer controller frames, a larger part (4-byte addressing to be written; the driver refuses parts above 16 MiB), or microSD (driver not written). | 3 |
-| [T-GNSS](#t-gnss) GNSS and PPS on the target | telematics | none (team work) once T-BENCH1 has run | 2 |
+| [T-GNSS](#t-gnss) GNSS and PPS on the target | telematics | the u-blox M9 interface description and the GPS-17285 schematic (PDFs); the GNSS board and antenna (configuration A lines gnss, gnss_antenna) | 2 |
 | [T-MODEM](#t-modem) LTE modem on the target (configuration B) | telematics | The event country (B-RULES) for the band set. | 2 |
 
 ## What the controller team should send
@@ -122,10 +122,10 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 **STM32U575 reference manual and data sheet, and the W25Q128JV data sheet, not read** (track: telematics)
 
-- **Missing:** RM0456 (reference manual) and DS13737 (data sheet): per-pin input limits, alternate-function numbers, RCC reset values and MSI PLL mode, TIM2 capture behaviour, flash programming, ECC and option bytes, flash and LSI timings, PLL limits per voltage range, the TIMINGR formula (document checks DC02 to DC09, DC16, DC17); and the W25Q128JV data sheet (DC11 to DC15). UM2861 Rev 10 and ES0499 Rev 12 were read on 2026-10-19 (DC01 and DC10 complete, telematics/bench/DOCUMENT_CHECKS_RECORD.md).
+- **Missing:** RM0456 (reference manual) and DS13737 (data sheet): per-pin input limits, alternate-function numbers, RCC reset values and MSI PLL mode, TIM2 capture behaviour, flash programming, ECC and option bytes, flash and LSI timings, PLL limits per voltage range, the TIMINGR formula (document checks DC02 to DC09, DC16 to DC18); and the W25Q128JV data sheet (DC11 to DC15). UM2861 Rev 10 and ES0499 Rev 12 were read on 2026-10-19 (DC01 and DC10 complete, telematics/bench/DOCUMENT_CHECKS_RECORD.md).
 - **Affects:** the connection table's levels; the CAN image's PLL1 setting; the I2C timing; the flash write rate
 - **Why it matters:** The firmware follows ST's HAL and board files, which agree with each other, but these facts are only in the manuals.
-- **Done now:** Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md). Each question is a document check (DC01 to DC17 in telematics/bench/bench.yaml) tied to the firmware line it affects and to the bench step it must precede. UM2861 Rev 10 and ES0499 Rev 12 answered DC01 and DC10; reading them fixed the LSE drive and the I2C bus-error handling in the firmware and the USB cable, SWD speed and connector positions in the bench documents (docs/U575_REGISTER_CHECK.md section 5).
+- **Done now:** Sources used and pinned (telematics/firmware/platform/u575/vendor/PROVENANCE.md). Each question is a document check (DC01 to DC21 in telematics/bench/bench.yaml) tied to the firmware line it affects and to the bench step it must precede. UM2861 Rev 10 and ES0499 Rev 12 answered DC01 and DC10; reading them fixed the LSE drive and the I2C bus-error handling in the firmware and the USB cable, SWD speed and connector positions in the bench documents (docs/U575_REGISTER_CHECK.md section 5).
 - **Input required:** RM0456 and DS13737 (before the minimal bench) and the W25Q128JV data sheet (before the NOR is fitted), committed to docs/reference/datasheets/ under the file names in telematics/firmware/BENCH_MINIMAL.md section 5.1; www.st.com and www.winbond.com are refused by this environment's network policy.
 - **Closure criterion:** Each document check answered from its document with revision and page; BENCH.md and BENCH_MINIMAL.md updated where an answer differs.
 
@@ -155,12 +155,12 @@ Inside the team (no outside input): [T-BENCH1](#t-bench1) Telematics firmware ne
 
 **GNSS and PPS on the target** (track: telematics)
 
-- **Missing:** UBX parsing, PPS capture on a TIM2-domain channel and the UTC mapping on the target.
+- **Missing:** Any run on a board: the receiver wired to the vehicle image (bench step B13), the u-blox M9 interface description and the GPS-17285 schematic for document checks DC19 to DC21 (www.u-blox.com and www.sparkfun.com are refused here), and the GNSS board itself (configuration A, not in the bench kit).
 - **Affects:** UTC in the log; GNSS speed for the cross-checks
-- **Why it matters:** The host model has them; the first firmware milestone does not.
-- **Done now:** Host model (clocks.py UtcEstimator, pit UTC mapping); GNSS receiver priced.
-- **Input required:** none (team work) once T-BENCH1 has run
-- **Closure criterion:** GNSS records and PPS edges logged on the bench; UTC error within the receiver's figure.
+- **Why it matters:** Written and host-tested, never run on a board; the field offsets and configuration keys are not yet checked against the u-blox document.
+- **Done now:** On the target in the tm_u575_vehicle image (HOST-TESTED, never flashed): UBX frame parser, NAV-PVT to GNSS records, PPS on PA1 (TIM2_CH2) labelled with its UTC second, the configuration message, five GNSS counters (telematics/firmware/src/tm_gnss.c, platform/u575/gnss_u575.c). The bench and minimal images contain none of it. Through the firmware in the host simulator, a 140 s simulated drive gives UTC exact to the microsecond from the firmware's PPS records and no unlabelled edge (tools/run_firmware_vehicle_sim.py, SIMULATED). Bench step B13 and document checks DC19 to DC21 written.
+- **Input required:** the u-blox M9 interface description and the GPS-17285 schematic (PDFs); the GNSS board and antenna (configuration A lines gnss, gnss_antenna)
+- **Closure criterion:** B13 passed on the bench: GNSS records at 10 Hz, one labelled PPS record per second, UTC error within the receiver's figure; DC19 to DC21 answered.
 
 ### T-MODEM
 

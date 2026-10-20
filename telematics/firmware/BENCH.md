@@ -14,6 +14,7 @@ Start with the minimal bench ([`BENCH_MINIMAL.md`](BENCH_MINIMAL.md)): one wheel
 |---|---|---|---|
 | `tm_u575` | `tm_u575.elf`, `tm_u575.bin`, `tm_u575.hex`, `tm_u575.map` | B1 to B10, B12 | wheel capture, the log (NOR when it answers, else internal flash), IMU and TMP117, console |
 | `tm_u575_can` | `tm_u575_can.elf`, `tm_u575_can.bin`, `tm_u575_can.hex`, `tm_u575_can.map` | B11 | the same plus FDCAN1 in bus-monitoring mode (sends nothing, not even the acknowledge bit) |
+| `tm_u575_vehicle` | `tm_u575_vehicle.elf`, `tm_u575_vehicle.bin`, `tm_u575_vehicle.hex`, `tm_u575_vehicle.map` | B13 | tm_u575_can plus the GNSS receiver on USART2 (UBX-NAV-PVT at 10 Hz) and its PPS on TIM2_CH2 |
 
 ## 2. Build and package
 
@@ -58,7 +59,7 @@ Equipment (not bought for the unit): 2 x USB-CAN adapter (bench: acknowledging n
 
 ## 4. Connections
 
-MCU pins: ST's open pin data and the firmware (each row names the line that sets the pin up). Positions: UM2861 Rev 10 (March 2025), Tables 15, 17 and 18 (Zio CN7, CN9, CN10, printed pages 34 and 35): A0 = PA3 at CN9 pin 1, A1 = PA2 at CN9 pin 3, GND at CN9 pins 12 and 23, PD0 and PD1 at CN9 pins 25 and 27, PA0 at CN10 pin 29, D15 = PB8, D14 = PB9, D13 = PA5, D12 = PA6, D11 = PA7 and D10 = PD14 at CN7 pins 2, 4, 10, 12, 14 and 16; console USART1 PA9/PA10 to the ST-LINK virtual COM port by default (Table 10, page 29); LD1 PC7, LD2 PB7 (section 7.5); LSE crystal X2 fitted by default (section 7.7.1). These are documents: whether the board on the bench matches is checked on the results form. The data sheet DS13737 was not available.
+MCU pins: ST's open pin data and the firmware (each row names the line that sets the pin up). Positions: UM2861 Rev 10 (March 2025), Tables 15, 17 and 18 (Zio CN7, CN9, CN10, printed pages 34 and 35): A0 = PA3 at CN9 pin 1, A1 = PA2 at CN9 pin 3, GND at CN9 pins 12 and 23, PD0 and PD1 at CN9 pins 25 and 27, PA0 at CN10 pin 29, PD6 and PD5 at CN9 pins 4 and 6, PA1 at CN10 pin 11, D15 = PB8, D14 = PB9, D13 = PA5, D12 = PA6, D11 = PA7 and D10 = PD14 at CN7 pins 2, 4, 10, 12, 14 and 16; console USART1 PA9/PA10 to the ST-LINK virtual COM port by default (Table 10, page 29); LD1 PC7, LD2 PB7 (section 7.5); LSE crystal X2 fitted by default (section 7.7.1). These are documents: whether the board on the bench matches is checked on the results form. The data sheet DS13737 was not available.
 
 | Row | Signal | MCU pin | NUCLEO position | Connect to | Part | Firmware line | Notes |
 |---|---|---|---|---|---|---|---|
@@ -83,6 +84,10 @@ MCU pins: ST's open pin data and the firmware (each row names the line that sets
 | `can_tx` | CAN TX (FDCAN1_TX, AF9) | PD1 | CN9 pin 27 (D66, CAN_TX) | CAN Pal TX | can_xcvr | `can_u575.c`: `board_gpio_af(GPIOD, 1u, 9u` | Bus-monitoring mode keeps it recessive; the silent pin below disables the transmitter in hardware |
 | `can_slnt` | CAN Pal SLNT | - | 3V3 | CAN Pal SLNT | can_xcvr |  | High = TJA1051 silent mode: transmitter off whatever TX does (Adafruit CAN Pal pinout guide) |
 | `can_power` | CAN Pal supply and logic level | - | 3V3, GND | CAN Pal supply, VIO and GND pins | can_xcvr |  | 3.3 V only: the CAN Pal's charge pump makes the transceiver's 5 V, VIO at 3.3 V sets the logic level (Adafruit product page). No 5 V wire. Read the pin labels off the CAN Pal's silkscreen and write them on the form |
+| `gnss_rx` | GNSS TX to MCU RX (USART2_RX, AF7) | PD6 | CN9 pin 4 | GNSS board TX |  | `gnss_u575.c`: `board_gpio_af(GPIOD, 6u, 7u, true, false)` | B13 only (tm_u575_vehicle). The GNSS board is configuration A's line gnss, not in the bench kit. 3.3 V logic only (DC21) |
+| `gnss_tx` | MCU TX (USART2_TX, AF7) to GNSS RX | PD5 | CN9 pin 6 | GNSS board RX |  | `gnss_u575.c`: `board_gpio_af(GPIOD, 5u, 7u, false, false)` | Carries only the configuration message (UBX-CFG-VALSET) to the receiver |
+| `gnss_pps` | GNSS PPS (TIM2_CH2, AF1) | PA1 | CN10 pin 11 | GNSS board PPS |  | `board_u575.c`: `board_gpio_af(GPIOA, 1u, 1u, false, false)` | Rising edges captured at 1 MHz; scope probe here in B13 |
+| `gnss_power` | GNSS supply and ground | - | 3V3, GND | GNSS board 3V3 and GND |  |  | 3.3 V only, from the NUCLEO; the antenna (configuration A's line gnss_antenna) on the board's SMA connector with a view of the sky |
 
 - Pins left alone because the board uses them (ST open pin data): PA11/PA12 USB, PA15 UCPD1_CC1, PB3 SWO, PB5 UCPD. Port G needs VDDIO2 and is not used.
 - Console: USART1 from the 4 MHz MSIS, BRR 35: 114286 baud, 0.8 % below 115200, inside the usual UART tolerance (not measured).
@@ -92,7 +97,7 @@ MCU pins: ST's open pin data and the firmware (each row names the line that sets
 
 | Use | Command |
 |---|---|
-| verify | `sha256sum tm_u575.bin tm_u575_can.bin     # must equal MANIFEST.json` |
+| verify | `sha256sum tm_u575.bin tm_u575_can.bin tm_u575_vehicle.bin     # must equal MANIFEST.json` |
 | flash cubeprogrammer | `STM32_Programmer_CLI -c port=SWD freq=8000 -w tm_u575.bin 0x08000000 -v -rst     # SWD at 8 MHz or less: UM2861 Table 22` |
 | flash openocd | `openocd -f interface/stlink.cfg -f target/stm32u5x.cfg -c "program tm_u575.elf verify reset exit"` |
 | console | `python3 tools/uart_capture.py /dev/ttyACM0 capture_B<n>.txt     # or: picocom -b 115200 --logfile capture_B<n>.txt /dev/ttyACM0` |
@@ -111,7 +116,7 @@ Steps in order; each step's capture file is named `capture_B<n>.txt`. Write ever
 
 - **Do.** Wire every row of the connection table except can_* (the CAN Pal is added in B11); the IMU and TMP117 stay connected from here on. Board unplugged. Check every row of the connection table with the multimeter's continuity test and write the position of each "locate" pin on the form. Check that nothing above 3.3 V can reach an MCU pin and that 3V3 and 5V are not shorted to GND. Check the image hashes against MANIFEST.json (commands.verify).
 - **Expect.** continuity on every row; no short; hashes equal
-- **Record.** positions of PD0 and PD1; CAN Pal pin labels; continuity per row; hash of tm_u575.bin; hash of tm_u575_can.bin.
+- **Record.** positions of PD0 and PD1; CAN Pal pin labels; continuity per row; hash of tm_u575.bin; hash of tm_u575_can.bin; hash of tm_u575_vehicle.bin.
 
 ### B1. Flash and start
 
@@ -120,11 +125,12 @@ Steps in order; each step's capture file is named `capture_B<n>.txt`. Write ever
 - **Record.** banner text; LSE started yes/no; storage line; IMU and TMP117 line; silicon revision and fault-record line (for the errata and the SRAM_RST option).
 - **Firmware text checked.** `main_u575.c`: "PLL mode on the LSE (LSE accuracy)"; `main_u575.c`: "W25Q NOR on SPI1 (JEDEC %02x %02x %02x, %lu KiB, %lu slots)"; `main_u575.c`: "IMU: %s, TMP117: %s"; `main_u575.c`: "chip: rev 0x%04x, fault record %s"; `tm_app.c`: "slots=%lu/%lu log=%s left=%ss thin=%lu"
 
-### B2. Restarts
+### B2. Restarts and the watchdog
 
-- **Do.** Press the reset button twice.
-- **Expect.** boot=2, then boot=3; the reset cause of each (PIN expected for the button)
-- **Record.** the three reset causes.
+- **Do.** Press the reset button twice. Then halt the core for 5 s with the debugger (commands.halt): the main loop stops refreshing the watchdog.
+- **Expect.** boot=2, then boot=3, with reset cause PIN for the button; after the halt, about 2 s into it, boot=4 with reset cause IWDG (the watchdog keeps counting while the core is halted, DC18). A board that stays halted for the 5 s and resumes without a restart fails this step: the watchdog would not catch a hung main loop either.
+- **Record.** the four reset causes; whether the board restarted during the halt.
+- **Firmware text checked.** `tm_reset.c`: "{TM_RST_IWDG, "IWDG"}"
 
 ### B3. One wheel channel at 100 Hz
 
@@ -191,6 +197,13 @@ Steps in order; each step's capture file is named `capture_B<n>.txt`. Write ever
 - **Do.** tm_u575.bin with the IMU and TMP117 connected; 60 s at rest; DUMP and import.
 - **Expect.** IMU records at about 100 Hz; TMP117 at 1 Hz within the sensor's accuracy of a reference thermometer
 - **Record.** IMU axes against the board orientation; temperature against the reference.
+
+### B13. GNSS receiver and PPS (tm_u575_vehicle)
+
+- **Do.** Board unplugged: wire the gnss_* rows (the GNSS board and antenna are configuration A's lines gnss and gnss_antenna; the antenna by a window or outdoors). Flash tm_u575_vehicle.bin, capture the console for 15 min from a cold start of the receiver with the board at rest, probe PA1 with the scope, then DUMP and import.
+- **Expect.** Banner "GNSS: USART2 PD6/PD5 38400 baud, UBX-NAV-PVT every 100 ms requested; PPS on PA1 (TIM2_CH2)". In the import: GNSS records at 10 Hz from the first message (no fix until the receiver has one), counters gnss_frames rising by about 10 per second and gnss_checksum_errors and gnss_rx_overrun at 0; after the fix one PPS record per second with pps_unlabelled not rising; utc_quality pps for the records after the first two PPS edges; speed at rest below 0.5 m/s (PROVISIONAL). The scope: one rising edge per second on PA1 once the receiver has a fix.
+- **Record.** time to first fix; gnss_frames; gnss_checksum_errors and gnss_rx_overrun after 15 min; pps_edges and pps_unlabelled; the import's utc_quality counts; speed at rest; scope trace of the PPS.
+- **Firmware text checked.** `main_u575.c`: "GNSS: USART2 PD6/PD5 38400 baud, UBX-NAV-PVT every 100 ms requested; PPS on PA1 (TIM2_CH2)"; `stlg.py`: "pps_unlabelled"
 
 ## 7. Electrical checks before any vehicle bus
 

@@ -56,7 +56,7 @@ def _vectors(elf, n):
     return struct.unpack(f"<{n}I", blob[:4 * n])
 
 
-@pytest.mark.parametrize("name", ["tm_u575", "tm_u575_can"])
+@pytest.mark.parametrize("name", ["tm_u575", "tm_u575_can", "tm_u575_vehicle"])
 def test_vector_table_matches_st_interrupt_list(images, name):
     irqs = _irqs()
     n = 16 + max(irqs) + 1
@@ -76,14 +76,20 @@ def test_vector_table_matches_st_interrupt_list(images, name):
         assert w == expected | 1, handler
     tim2 = [p for p, nm in irqs.items() if nm == "TIM2"][0]
     can = [p for p, nm in irqs.items() if nm == "FDCAN1_IT0"][0]
+    usart2 = [p for p, nm in irqs.items() if nm == "USART2"][0]
     assert v[16 + tim2] != sym["Default_Handler"] | 1                     # the capture interrupt is handled
-    if name == "tm_u575_can":
+    if name in ("tm_u575_can", "tm_u575_vehicle"):
         assert v[16 + can] == sym["FDCAN1_IT0_IRQHandler"] | 1
     else:
         assert v[16 + can] == sym["Default_Handler"] | 1                  # no CAN in the basic image
+    if name == "tm_u575_vehicle":
+        assert v[16 + usart2] == sym["USART2_IRQHandler"] | 1             # the GNSS receiver's UART
+        assert "tm_gnss_rx" in sym and "tm_gnss_pps" in sym
+    else:
+        assert v[16 + usart2] == sym["Default_Handler"] | 1 and "tm_gnss_rx" not in sym   # no GNSS code
 
 
-@pytest.mark.parametrize("name", ["tm_u575", "tm_u575_can"])
+@pytest.mark.parametrize("name", ["tm_u575", "tm_u575_can", "tm_u575_vehicle"])
 def test_layout_leaves_the_log_bank_free_and_has_no_controller_code(images, name):
     elf = images / f"{name}.elf"
     hdr = subprocess.run(["arm-none-eabi-objdump", "-h", str(elf)], capture_output=True, text=True, check=True).stdout

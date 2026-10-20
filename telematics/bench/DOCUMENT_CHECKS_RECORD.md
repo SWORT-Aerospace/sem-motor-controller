@@ -1,6 +1,6 @@
 # Document checks: record
 
-The answers to the document checks of `bench.yaml` (DC01 to DC17). A check is complete only when its conclusion
+The answers to the document checks of `bench.yaml` (DC01 to DC21). A check is complete only when its conclusion
 comes from the named document, with its revision and page or section. A header file, ST's HAL, a board description or
 a simulated test does not complete a check; such sources are noted as secondary. A discrepancy is fixed in the code,
 the relevant tests are rerun, and the fix is named here. A document answers what the board and silicon should be. It
@@ -68,6 +68,20 @@ value with CRC off (`spi_u575.c:86`), and 2.23.7 (p. 37) is met, since SCK is PC
 |---|---|---|---|---|---|---|
 | DC16 | RM0456 | | | `board_u575.c:207` (`board_pll1q_20mhz`) | ES0499 2.24.1 and 2.24.2 (p. 37; FDCAN edge filtering, Tx FIFO order) are to be checked against the CAN image's configuration with RM0456; the CAN image does not transmit. UM2861 Table 17 puts PD0/PD1 at CN9 pins 25 and 27 | open |
 | DC17 | RM0456 | | | `i2c_u575.c:32` (`wait_flag`), `:90` (TIMINGR) | **ES0499 2.20.2 (p. 32; A on X, W, U): a discrepancy, fixed.** In controller mode a bus error can be flagged spuriously and has no effect on the transfer; the driver used to abort the transfer and now clears the flag and continues (`i2c_u575.c:43`). 2.20.1 (p. 32) is met: standard mode with a 4 MHz kernel clock, the minimum it states. The TIMINGR formula needs RM0456 | open (one fix made) |
+
+## 3a. Before the watchdog test and GNSS (full bench B2 and B13)
+
+Not part of the minimal procedure. DC18 needs RM0456 (www.st.com is refused here). DC19 and DC20 need the u-blox M9
+interface description and DC21 the SparkFun GPS-17285 schematic; www.u-blox.com, content.u-blox.com,
+www.sparkfun.com and cdn.sparkfun.com are refused by this environment's network policy (checked 2026-10-20). The GNSS
+code and its pins are in the `tm_u575_vehicle` image only; the minimal and bench images contain none of it.
+
+| Check | Document | Revision | Page or section | Affected code | Conclusion | Status |
+|---|---|---|---|---|---|---|
+| DC18 | RM0456 | | | `tm_reset.h` (`TM_RST_IWDG`, bit 29); `board_u575.c` (`watchdog_start`); bench step B2 (halt with the debugger) | Secondary only: the vendored device header defines `DBGMCU_APB1FZR1_DBG_IWDG_STOP` (bit 12); the firmware never writes it. Its reset value and the RCC_CSR flag positions need RM0456 | open |
+| DC19 | UBX-M9 | | | `tm_gnss.c` (`PVT_*` offsets, `decode`); `host/telematics/ubx.py` (the simulation's encoder, written from the same offsets) | Not answerable from the repository: the parser and the encoder agree with each other (`test_gnss`, `test_gnss_and_pps_through_the_firmware_give_gnss_records_and_utc`), which does not show they agree with the receiver | open |
+| DC20 | UBX-M9 | | | `tm_gnss.c` (`CFG_*` keys, `tm_gnss_config_msg`); `gnss_u575.c` (BRR 104, 38462 baud) | Not answerable. If the keys are wrong the receiver ignores the message, keeps its default output and the firmware logs no GNSS record: B13's `gnss_frames` stays at 0 and the image resends the message every 5 s | open |
+| DC21 | GPS-17285 | | | connection rows `gnss_rx`, `gnss_tx`, `gnss_pps`, `gnss_power` | Not answerable. The NEO-M9N itself is a 3.3 V part; whether the breakout's pins carry that level directly is in its schematic | open |
 
 ## 4. ES0499 Rev 12: every limitation for the functions the minimal image uses
 

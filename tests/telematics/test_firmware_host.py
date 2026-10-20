@@ -16,7 +16,7 @@ import sys
 import pytest
 
 from host.pit import energy, ingest
-from host.telematics import stlg
+from host.telematics import stlg, ubx
 from host.telematics.sim_vehicle import Faults, VehicleSim, VehicleSimConfig
 from host.telematics.wheel import EdgeAccumulator, EdgeRecord, WheelConfig, WheelGroup, classify
 from tools import telematics_import
@@ -397,3 +397,76 @@ def test_uart_dump_format_round_trips(tmp_path):
     assert telematics_import.from_uart(text) == bytes(image)
     sessions, rep = telematics_import.split(telematics_import.from_uart(text))
     assert len(sessions) == 1 and rep["empty"] == 3 and math.isclose(rep["slots"], 4)
+
+
+def test_gnss_and_pps_through_the_firmware_give_gnss_records_and_utc(telematics_build, tmp_path):
+    """UBX-NAV-PVT bytes and PPS edges into the firmware's GNSS driver (tm_gnss.c) in the host simulator, then the
+    pit import: GNSS speed, accuracy and satellites as logged, the PPS edges labelled with their UTC second, the
+    unit's clock mapped to UTC, and the GNSS counters. A fix outage from 12 s to 14 s: no PPS, speed invalid."""
+    utc0 = 1_792_141_200.25                  # UTC at host-simulator time 0 (clocks.py PpsModel)
+    img = tmp_path / "flash.bin"
+    ev, expect_utc = [], []
+    for k in range(10, 211):                 # 1.0 s to 21.0 s of UTC epochs at 10 Hz
+        e_utc = round(math.floor(utc0) + 1 + k / 10, 1)        # solution epochs on tenths of a UTC second
+        t_local = e_utc - utc0
+        out = 12.0 <= t_local < 14.0
+        sec = int(math.floor(e_utc))
+        nano = int(round((e_utc - sec) * 1e9))
+        msg = ubx.nav_pvt(sec, nano, 0x00 if out else 0x07, 0 if out else 3, 0 if out else 0x01, 3 if out else 14,
+                       int(round(6.0 * 1000)), 2000 if out else 150)
+        ev.append((int(round((t_local + 0.06) * 1e6)), f"G {int(round((t_local + 0.06) * 1e6))} {msg.hex()}"))
+        if nano == 0 and not out:
+            ev.append((int(round(t_local * 1e6)), f"U {int(round(t_local * 1e6))}"))
+            expect_utc.append((int(round(t_local * 1e6)), sec))
+    lines = [f"I 64 1500 8 {img}"] + [x for _t, x in sorted(ev)] + [f"P {int(23e6)}", "F", "W"]
+    _run(telematics_build, "\n".join(lines) + "\n")
+    db_path = tmp_path / "pit.sqlite"
+    res = telematics_import.run(img.read_bytes(), db_path, tmp_path / "imp", {}, plots=False)
+    (s,) = res["sessions"]
+    i = s["import"]
+    assert i["accounting"]["missing_from_file"] == 0 and i["blocks_corrupt"] == 0
+    (tmp_path / "w").mkdir()
+    p = telematics_import.write_session(telematics_import.split(img.read_bytes())[0][0], tmp_path / "w", {})
+    _meta, recs, _rr = stlg.read(p)
+    pps = [(t, f["utc_s"]) for _b, _i, t, rt, f in recs if rt == stlg.PPS]
+    assert sorted(pps) == expect_utc and len(pps) >= 18            # every edge, with the second it marks
+    gnss = [f for _b, _i, _t, rt, f in recs if rt == stlg.GNSS]
+    assert len(gnss) == 201 and sum(not f["fix"] for f in gnss) == 20
+    assert all(abs(f["speed_mps"] - 6.0) < 1e-6 and abs(f["sacc_mps"] - 0.15) < 1e-6 and f["num_sv"] == 14
+               for f in gnss if f["fix"])
+    db = ingest.connect(db_path)
+    rows = db.execute("SELECT t_rx_us, value, validity, utc, utc_q FROM measurements WHERE run_id=? AND "
+                      "signal='gnss.speed' ORDER BY t_rx_us", (s["run_id"],)).fetchall()
+    assert len(rows) == 201 and sum(r[2] == "valid" for r in rows) == 181
+    inside = [r for r in rows if r[4] == "pps"]
+    assert len(inside) > 150
+    for t_us, _v, _val, utc, _q in inside:                         # the receive time on the UTC scale
+        assert abs(utc - (utc0 + t_us / 1e6)) < 1e-5
+    cnt = {k: v for k, v in db.execute("SELECT name, value FROM signals WHERE run_id=? AND name LIKE 'cnt_%' "
+                                       "ORDER BY t_local_us", (s["run_id"],)).fetchall()}
+    assert cnt["cnt_gnss_frames"] == 201 and cnt["cnt_gnss_checksum_errors"] == 0
+    assert cnt["cnt_pps_edges"] == len(expect_utc) and cnt["cnt_pps_unlabelled"] == 0
+
+
+def test_firmware_in_the_loop_vehicle_drive_through_the_pit(telematics_build, tmp_path):
+    """tools/run_firmware_vehicle_sim.py on a 30 s drive with a GNSS outage from 12 s to 16 s: the simulated
+    vehicle drives the firmware's tm_app and tm_gnss, and the log goes through import, evidence review and the
+    shadow replay. Every record accounted for, GNSS speed as simulated, UTC from the firmware's PPS records exact,
+    no PPS edge left unlabelled, and the outage attributed to GNSS by B1. SIMULATED."""
+    from tools import run_firmware_vehicle_sim as fwsim
+    s = fwsim.run(tmp_path / "out", 30.0, Faults(gnss_outage=((12.0, 16.0),)), telematics_build)
+    acc = s["accounting"]
+    assert s["import"]["blocks_corrupt"] == 0 and s["import"]["block_seq_gaps"] == 0
+    assert acc["missing_from_file"] == 0 and acc["dropped_queue"] == 0 and acc["dropped_storage"] == 0
+    g = s["gnss"]
+    assert g["records"] == 300 and g["valid"] == 260                # 10 Hz, 4 s without a fix
+    assert g["speed_rms_error_mps"] < 0.1 and g["utc_max_error_s"] < 1e-5 and g["utc_pps_share"] > 0.75
+    c = s["firmware_counters"]
+    assert c["gnss_checksum_errors"] == 0 and c["pps_unlabelled"] == 0
+    # the counters record is periodic: the last one may precede the last edge
+    assert s["inputs"]["pps_edges"] - 1 <= c["pps_edges"] <= s["inputs"]["pps_edges"]
+    assert "0 ambiguous" in s["evidence_review"]
+    rep = s["replay"]
+    assert rep["returncode"] == 0 and rep["episodes"]["R3v"] == []
+    (b1,) = rep["episodes"]["B1"]
+    assert b1["suspects"] == ["gnss"] and 12.0 <= b1["start_s"] <= 13.0 and 16.0 <= b1["end_s"] <= 17.0

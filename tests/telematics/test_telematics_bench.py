@@ -27,7 +27,7 @@ from tools import uart_capture
 
 def _fake_images(d: pathlib.Path, rev: str) -> pathlib.Path:
     d.mkdir(parents=True, exist_ok=True)
-    for name in ("tm_u575", "tm_u575_can"):
+    for name in ("tm_u575", "tm_u575_can", "tm_u575_vehicle"):
         for ext in B.IMAGE_EXT:
             body = b"\x00\x20" + f"{name} {rev}".encode() + b"\x00padding" if ext == ".bin" else f"{name}{ext}".encode()
             (d / f"{name}{ext}").write_bytes(body)
@@ -86,7 +86,7 @@ def test_package_has_hashes_parts_connections_and_a_blank_form(tmp_path):
     assert set(m["files"]) == on_disk
     for f, v in m["files"].items():
         assert hashlib.sha256((out / f).read_bytes()).hexdigest() == v["sha256"], f
-    assert {i["name"]: i["revision"] for i in m["images"]} == {"tm_u575": rev, "tm_u575_can": rev}
+    assert {i["name"]: i["revision"] for i in m["images"]} == {"tm_u575": rev, "tm_u575_can": rev, "tm_u575_vehicle": rev}
     assert json.loads((out / "MANIFEST.json").read_text())["verified_on_board"] == "nothing"
     assert (out / "BENCH.md").read_text() == B.DOC.read_text()
     assert (out / "tools" / "uart_capture.py").read_bytes() == (B.ROOT / "tools" / "uart_capture.py").read_bytes()
@@ -152,7 +152,7 @@ def test_real_images_carry_the_tree_revision_and_rebuild_identically(tmp_path):
     build = tmp_path / "u575"
     B.rebuild(build)
     rev = B._git("describe", "--always", "--dirty", "--abbrev=12")
-    for name in ("tm_u575", "tm_u575_can"):
+    for name in ("tm_u575", "tm_u575_can", "tm_u575_vehicle"):
         assert B.image_revision(name, (build / f"{name}.bin").read_bytes()) == rev
     m = B.package(B.load(), tb.load(), build, tmp_path / "pkg", allow_dirty=True, do_rebuild=True)
     assert m["reproduced_in_a_new_build_directory"] and all(m["reproduced_in_a_new_build_directory"].values())
