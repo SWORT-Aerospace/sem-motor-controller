@@ -507,6 +507,11 @@ Firmware-in-the-loop drives (`tools/run_firmware_vehicle_sim.py`, 140 s, SIMULAT
 The end of each drive shows a common-cause verdict "session ended without a final counters record": the simulation
 stops without an orderly shutdown, which is what the verdict reports.
 
+Results on this machine before the documentation commit: telematics and reference suites 249 collected, 248 passed,
+1 skipped (`hardware_required`, needs the board); firmware unit tests 517 + 35 checks, 0 failed; the minimal-bench
+rehearsal (SIMULATED) PASS, C2 to C9; the CSIA freeze tests pass and no frozen file changed; every generated-file
+check current; 154 Markdown files, 0 broken links.
+
 Target images (MinSizeRel, never flashed): `tm_u575` 20,748 B flash, `tm_u575_can` 21,784 B, `tm_u575_vehicle`
 24,200 B flash and 70,840 B RAM. Later commits change the bytes of `tm_u575` but not its behaviour; the minimal-bench
 candidate stays `ca74302` ([`../telematics/bench/HANDOFF_MINIMAL.md`](../telematics/bench/HANDOFF_MINIMAL.md)).
