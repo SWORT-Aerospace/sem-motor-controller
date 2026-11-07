@@ -1,6 +1,6 @@
 # SEM motor controller
 
-A purpose-built, telemetry-informed motor controller for a battery-electric Shell Eco-marathon vehicle. Its design objective is to minimize battery energy over a valid completed run, subject to finish time, driver authority, and electrical, thermal and vehicle constraints ([requirements](docs/REQUIREMENTS.md)).
+A purpose-built, telemetry-informed motor controller for a battery-electric Shell Eco-marathon vehicle. Its proposed design objective is to minimize battery energy over a valid completed run, subject to finish time, driver authority, and electrical, thermal and vehicle constraints ([requirements](docs/REQUIREMENTS.md)).
 
 > **Status in brief (v0.3):** not hardware-frozen, not fabrication-ready and not vehicle-validated. Nothing has been energized, and every result comes from synthetic models or host tests. See [Status](#status) for detail.
 
